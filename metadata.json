@@ -1,0 +1,6 @@
+{
+  "name": "LeadRadar - Finder de Empresas Sem Landing Page",
+  "description": "Encontre empresas locais sem site em qualquer região, analise o potencial de vendas e gere propostas com IA.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "leadradar-ai": {
+      "url": "https://ais-dev-ptbcvbutfhlbqgnrl7hpjb-225831133847.us-west1.run.app/api/mcp/sse",
+      "type": "sse",
+      "description": "LeadRadar AI - Servidor MCP para Prospecção Autônoma B2B de Landing Pages"
+    }
+  }
+}
