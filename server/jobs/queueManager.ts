@@ -1,6 +1,23 @@
-import { GoogleGenAI, Type } from "@google/genai";
 
-export type JobType = 'batch_prospecting' | 'batch_lead_analysis' | 'mcp_autopilot';
+import { upsertJob, replaceJobs, getAllJobs, upsertLead, updateLeadAnalysis, getLeadById, getLandingPageById, getDueFollowUps } from "../store/db";
+import { StoredLead } from "../store/types";
+import {
+  createLandingPageRecord,
+  deployLandingPage,
+  approveLandingPage,
+} from "../landingPage/service";
+import { searchBusinesses, analyzeLead } from "../services/prospectingService";
+import { buildStableLeadId } from "../services/leadIdentity";
+import { enrichLeadBatch } from "../enrichment";
+import { dispatchLeadContact } from "../services/interactionService";
+
+
+export type JobType =
+  | 'batch_prospecting'
+  | 'batch_lead_analysis'
+  | 'mcp_autopilot'
+  | 'landing_page_creation'
+  | 'follow_up_batch';
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 
 export interface JobLog {
@@ -21,6 +38,8 @@ export interface Job {
   payload: any;
   result?: any;
   error?: string;
+  attempts?: number;
+  retryAt?: string;
   logs: JobLog[];
 }
 
@@ -31,8 +50,35 @@ class QueueManager {
   private isWorkerRunning = false;
 
   constructor() {
+    this.seedFromStore();
     // Periodically run worker to process pending jobs
     setInterval(() => this.processQueue(), 1000);
+  }
+
+  private seedFromStore() {
+    try {
+      for (const j of getAllJobs()) {
+        this.jobs.set(j.id, j);
+      }
+    } catch (err) {
+      console.error("Erro ao semear fila a partir do store:", err);
+    }
+  }
+
+  private persist(job: Job) {
+    try {
+      upsertJob(job);
+    } catch (err) {
+      console.error("Erro ao persistir job:", err);
+    }
+  }
+
+  private persistAll() {
+    try {
+      replaceJobs(Array.from(this.jobs.values()));
+    } catch (err) {
+      console.error("Erro ao persistir fila:", err);
+    }
   }
 
   // Create a new job in the queue
@@ -56,6 +102,7 @@ class QueueManager {
     };
 
     this.jobs.set(id, job);
+    this.persist(job);
     this.processQueue();
     return job;
   }
@@ -80,6 +127,7 @@ class QueueManager {
       job.status = 'cancelled';
       job.completedAt = new Date().toISOString();
       this.addLog(job, 'Job cancelado pelo usuário.', 'warning');
+      this.persist(job);
       return true;
     }
     return false;
@@ -94,6 +142,7 @@ class QueueManager {
         count++;
       }
     }
+    this.persistAll();
     return count;
   }
 
@@ -104,6 +153,7 @@ class QueueManager {
       message,
       level,
     });
+    this.persist(job);
   }
 
   // Main Queue Processor Loop
@@ -113,9 +163,11 @@ class QueueManager {
 
     try {
       while (this.processingCount < this.maxConcurrency) {
-        const pendingJob = Array.from(this.jobs.values()).find(
-          (j) => j.status === 'pending'
-        );
+        const pendingJob = Array.from(this.jobs.values()).find((j) => {
+          if (j.status !== 'pending') return false;
+          if (j.retryAt && new Date(j.retryAt).getTime() > Date.now()) return false;
+          return true;
+        });
 
         if (!pendingJob) break;
 
@@ -129,17 +181,6 @@ class QueueManager {
     }
   }
 
-  // Helper to instantiate Gemini
-  private getGenAI(): GoogleGenAI | null {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return null;
-    return new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: { "User-Agent": "leadradar-queue-worker" },
-      },
-    });
-  }
 
   // Worker task runner
   private async runJob(job: Job) {
@@ -155,6 +196,10 @@ class QueueManager {
         await this.handleBatchLeadAnalysis(job);
       } else if (job.type === 'mcp_autopilot') {
         await this.handleMcpAutopilot(job);
+      } else if (job.type === 'landing_page_creation') {
+        await this.handleLandingPageCreation(job);
+      } else if (job.type === 'follow_up_batch') {
+        await this.handleFollowUpBatch(job);
       } else {
         throw new Error(`Tipo de job desconhecido: ${job.type}`);
       }
@@ -165,27 +210,51 @@ class QueueManager {
         job.completedAt = new Date().toISOString();
         this.addLog(job, 'Processamento concluído com sucesso!', 'success');
       }
+      this.notifyWebhook(job);
     } catch (err: any) {
       if (!this.isJobCancelled(job.id)) {
-        job.status = 'failed';
-        job.error = err?.message || 'Erro desconhecido durante execução da fila.';
-        job.completedAt = new Date().toISOString();
-        this.addLog(job, `Falha no processamento: ${job.error}`, 'error');
+        const attempts = (job.attempts || 0) + 1;
+        job.attempts = attempts;
+        const MAX_RETRIES = 3;
+        if (attempts < MAX_RETRIES) {
+          const delay = Math.min(2 ** attempts * 2000, 30000);
+          job.status = 'pending';
+          job.retryAt = new Date(Date.now() + delay).toISOString();
+          job.error = err?.message || 'Erro durante execução.';
+          this.addLog(job, `Tentativa ${attempts}/${MAX_RETRIES} falhou — retentativa em ${delay}ms.`, 'warning');
+        } else {
+          job.status = 'failed';
+          job.error = err?.message || 'Erro desconhecido após todas as tentativas.';
+          job.completedAt = new Date().toISOString();
+          this.addLog(job, `Falha definitiva: ${job.error}`, 'error');
+        }
       }
+      this.notifyWebhook(job);
     }
   }
 
-  // Task Handler 1: Batch Prospecting across multiple locations/categories
+  // Task Handler 1: Batch Prospecting across multiple locations/categories (persists leads)
   private async handleBatchProspecting(job: Job) {
-    const { locations = ["Campinas", "Sorocaba"], state = "SP", categories = ["Todas as Categorias"], filterNoWebsiteOnly = true } = job.payload;
+    const { locations, state, categories, filterNoWebsiteOnly, autoEnrich = false } = job.payload;
+    if (!Array.isArray(locations) || locations.length === 0 || !locations.every((value: unknown) => typeof value === 'string' && value.trim())) {
+      throw new Error('Job de prospecção inválido: informe ao menos uma cidade válida.');
+    }
+    if (typeof state !== 'string' || !/^[A-Za-z]{2}$/.test(state.trim())) {
+      throw new Error('Job de prospecção inválido: informe uma UF válida com 2 letras.');
+    }
+    if (!Array.isArray(categories) || categories.length === 0 || !categories.every((value: unknown) => typeof value === 'string' && value.trim())) {
+      throw new Error('Job de prospecção inválido: informe ao menos uma categoria válida.');
+    }
+    if (typeof filterNoWebsiteOnly !== 'boolean') {
+      throw new Error('Job de prospecção inválido: filterNoWebsiteOnly deve ser booleano.');
+    }
 
-    const allDiscoveredLeads: any[] = [];
+    const normalizedState = state.trim().toUpperCase();
+    const allDiscoveredLeads: StoredLead[] = [];
     const totalSteps = locations.length * categories.length;
     let completedSteps = 0;
 
     this.addLog(job, `Mapeamento em Lote iniciado: ${locations.length} cidades x ${categories.length} categorias.`, 'info');
-
-    const ai = this.getGenAI();
 
     for (const loc of locations) {
       if (this.isJobCancelled(job.id)) return;
@@ -195,62 +264,92 @@ class QueueManager {
 
         this.addLog(job, `Escaneando cidade: "${loc}" (${state}) | Categoria: "${cat}"...`, 'info');
 
-        let leads: any[] = [];
-        if (ai) {
-          try {
-            const promptText = `
-              Pesquise empresas e estabelecimentos comerciais reais na região de "${loc}" (${state}).
-              ${cat !== "Todas as Categorias" ? `Categoria específica: "${cat}".` : ""}
-              Foco: Identificar empresas sem site oficial ou apenas com redes sociais (Instagram).
-              Retorne JSON com array "businesses" (id, name, category, address, city, state, phone, rating, reviewsCount, websiteStatus: "none"|"social_only"|"has_website", opportunityScore, opportunityLevel, estimatedValue, keyInsights).
-            `;
-            const response = await ai.models.generateContent({
-              model: "gemini-3.6-flash",
-              contents: promptText,
-              config: {
-                tools: [{ googleSearch: {} }],
-                responseMimeType: "application/json",
-              },
-            });
-            const parsed = JSON.parse(response.text?.trim() || "{}");
-            if (parsed.businesses && Array.isArray(parsed.businesses)) {
-              leads = parsed.businesses;
-            }
-          } catch (e: any) {
-            this.addLog(job, `Usando dados regionais estruturados para ${loc} (${e.message})`, 'warning');
-            leads = this.generateFallbackLeadsForLocation(loc, state, cat);
+        const { source, businesses } = await searchBusinesses({ location: loc.trim(), state: normalizedState, category: cat, filterNoWebsiteOnly });
+        this.addLog(job, `Fonte de dados: ${source === "gemini" ? "Gemini (pesquisa real)" : source}.`, 'info');
+
+        const saved: StoredLead[] = [];
+        for (const [index, biz] of businesses.entries()) {
+          const requiredFields = ['id', 'name', 'category', 'address', 'city', 'state', 'websiteStatus'];
+          if (requiredFields.some((field) => typeof biz[field] !== 'string' || !biz[field].trim())) {
+            throw new Error(`A busca retornou o lead ${index + 1} com dados obrigatórios ausentes.`);
           }
-        } else {
-          leads = this.generateFallbackLeadsForLocation(loc, state, cat);
+          if (!['none', 'social_only', 'has_website'].includes(biz.websiteStatus)) {
+            throw new Error(`A busca retornou um websiteStatus inválido para o lead ${biz.name}.`);
+          }
+          const lead: StoredLead = {
+            id: buildStableLeadId(biz),
+            name: biz.name,
+            category: biz.category,
+            address: biz.address,
+            neighborhood: biz.neighborhood,
+            city: biz.city,
+            state: biz.state,
+            phone: biz.phone,
+            rating: biz.rating,
+            reviewsCount: biz.reviewsCount,
+            websiteStatus: biz.websiteStatus,
+            googlePlaceId: biz.googlePlaceId,
+            websiteUrl: biz.websiteUrl,
+            instagramHandle: biz.instagramHandle,
+            lat: biz.lat,
+            lng: biz.lng,
+            opportunityScore: biz.opportunityScore,
+            opportunityLevel: biz.opportunityLevel,
+            estimatedValue: biz.estimatedValue,
+            keyInsights: biz.keyInsights,
+            pipelineStatus: "prospect",
+            savedAt: new Date().toISOString(),
+          };
+          const storedLead = upsertLead(lead, { preserveInteraction: true });
+          saved.push(storedLead);
+          allDiscoveredLeads.push(storedLead);
         }
 
-        if (filterNoWebsiteOnly) {
-          leads = leads.filter((b) => b.websiteStatus === 'none' || b.websiteStatus === 'social_only');
-        }
-
-        allDiscoveredLeads.push(...leads);
         completedSteps++;
         job.progress = Math.min(95, Math.round((completedSteps / totalSteps) * 90) + 5);
+        this.addLog(job, `✔ ${saved.length} leads de ${loc} (${cat}) salvos no banco. Total acumulado: ${allDiscoveredLeads.length}`, 'success');
 
-        this.addLog(job, `✔ Encontrados ${leads.length} leads em ${loc} (${cat}). Total acumulado: ${allDiscoveredLeads.length}`, 'success');
-
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        await new Promise((resolve) => setTimeout(resolve, 600));
       }
     }
 
-    // Deduplicate leads by name/phone
-    const uniqueMap = new Map();
-    for (const lead of allDiscoveredLeads) {
-      uniqueMap.set(lead.id || lead.name, lead);
+    // Optional auto-enrichment
+    if (autoEnrich && allDiscoveredLeads.length > 0) {
+      this.addLog(job, 'Enriquecendo leads salvos (Google Places, CNPJ, e-mail)...', 'info');
+      const { enriched, total } = await enrichLeadBatch(allDiscoveredLeads);
+      this.addLog(job, `Enriquecimento concluído: ${enriched}/${total} leads com dados adicionais.`, enriched > 0 ? 'success' : 'warning');
     }
-    const finalLeads = Array.from(uniqueMap.values());
 
     job.result = {
-      totalFound: finalLeads.length,
+      totalFound: allDiscoveredLeads.length,
       locationsProcessed: locations,
       categoriesProcessed: categories,
-      leads: finalLeads,
+      leads: allDiscoveredLeads,
     };
+  }
+
+  // Notify a configured webhook when a job finishes (fire-and-forget)
+  private async notifyWebhook(job: Job) {
+    const url = process.env.JOB_WEBHOOK_URL;
+    if (!url) return;
+    try {
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'job_completed',
+          jobId: job.id,
+          type: job.type,
+          title: job.title,
+          status: job.status,
+          error: job.error || null,
+          completedAt: job.completedAt || null,
+          result: job.result || null,
+        }),
+      });
+    } catch {
+      /* fire-and-forget */
+    }
   }
 
   // Helper to check if job was cancelled
@@ -261,181 +360,277 @@ class QueueManager {
 
   // Task Handler 2: Batch Lead Analysis
   private async handleBatchLeadAnalysis(job: Job) {
-    const { leads = [] } = job.payload;
-    if (leads.length === 0) {
-      this.addLog(job, 'Nenhum lead fornecido para análise.', 'warning');
-      job.result = { analyses: [] };
-      return;
+    const { leads } = job.payload;
+    if (!Array.isArray(leads) || leads.length === 0) {
+      throw new Error('Job de análise inválido: informe uma lista não vazia de leads.');
     }
 
-    this.addLog(job, `Análise de IA em Lote iniciada para ${leads.length} leads.`, 'info');
+    this.addLog(job, `Análise de IA em lote iniciada para ${leads.length} leads.`, 'info');
     const analyses: any[] = [];
-    const ai = this.getGenAI();
 
     for (let i = 0; i < leads.length; i++) {
       if (this.isJobCancelled(job.id)) return;
 
       const lead = leads[i];
-      this.addLog(job, `[${i + 1}/${leads.length}] Analisando estrategicamente: ${lead.name || lead.businessName}...`, 'info');
+      if (!lead || typeof lead.id !== 'string' || typeof lead.name !== 'string' || !lead.name.trim()) {
+        throw new Error(`Lead ${i + 1} inválido: id e nome são obrigatórios para a análise.`);
+      }
+      this.addLog(job, `[${i + 1}/${leads.length}] Analisando estrategicamente: ${lead.name}...`, 'info');
 
-      let analysisResult = null;
-      if (ai) {
-        try {
-          const promptText = `
-            Faça um diagnóstico de marketing e vendas B2B para o seguinte lead:
-            - Empresa: ${lead.name || lead.businessName}
-            - Categoria: ${lead.category || "Serviços Locais"}
-            - Cidade: ${lead.city || "São Paulo"}
-            - Avaliação: ${lead.rating || 4.8}★ (${lead.reviewsCount || 40} avaliações)
-            - Status Web: ${lead.websiteStatus || "none"}
-            
-            Retorne JSON com: businessName, opportunityScore, revenuePotential, urgencyLevel, missingFeatures (array), whyTheyNeedLandingPage, customPitchWhatsApp, customPitchEmail, customPitchColdCall, landingPageConcept (heroHeadline, heroSubheadline, callToAction, recommendedSections).
-          `;
-          const response = await ai.models.generateContent({
-            model: "gemini-3.6-flash",
-            contents: promptText,
-            config: {
-              responseMimeType: "application/json",
-            },
-          });
-          analysisResult = JSON.parse(response.text?.trim() || "{}");
-        } catch (err: any) {
-          analysisResult = this.generateFallbackAnalysis(lead);
-        }
-      } else {
-        analysisResult = this.generateFallbackAnalysis(lead);
+      let analysisResult;
+      try {
+        analysisResult = await analyzeLead({
+          businessName: lead.name,
+          category: lead.category,
+          city: lead.city,
+          phone: lead.phone,
+          rating: lead.rating,
+          reviewsCount: lead.reviewsCount,
+        });
+      } catch (err: any) {
+        throw new Error(`Falha ao analisar ${lead.name}: ${err?.message || 'erro desconhecido'}`);
       }
 
-      analyses.push({
-        leadId: lead.id,
-        businessName: lead.name || lead.businessName,
-        analysis: analysisResult,
-      });
-
+      analyses.push({ leadId: lead.id, businessName: lead.name, analysis: analysisResult });
       job.progress = Math.min(95, Math.round(((i + 1) / leads.length) * 90) + 5);
-      this.addLog(job, `✔ Diagnóstico concluído para ${lead.name || lead.businessName}.`, 'success');
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      this.addLog(job, `✔ Diagnóstico concluído para ${lead.name}.`, 'success');
     }
 
-    job.result = {
-      totalAnalyzed: analyses.length,
-      analyses,
-    };
+    job.result = { totalAnalyzed: analyses.length, analyses };
   }
 
   // Task Handler 3: MCP Autopilot Job
   private async handleMcpAutopilot(job: Job) {
-    const { location = "Campinas", category = "Estética & Saúde" } = job.payload;
+    const { location, state, category, createLandingPages = false, sendPitches = false, maxLeads } = job.payload;
+    if (typeof location !== 'string' || !location.trim() || typeof state !== 'string' || !/^[A-Za-z]{2}$/.test(state.trim()) || typeof category !== 'string' || !category.trim()) {
+      throw new Error('Job autopilot inválido: location, state e category são obrigatórios.');
+    }
+    if (!Number.isInteger(maxLeads) || maxLeads <= 0) {
+      throw new Error('Job autopilot inválido: maxLeads deve ser um inteiro maior que zero.');
+    }
+    const normalizedState = state.trim().toUpperCase();
 
-    this.addLog(job, `Autopilot MCP ativado para ${location} (${category}).`, 'info');
-    job.progress = 15;
+    this.addLog(job, `Autopilot MCP ativado para ${location.trim()} (${category}).`, 'info');
+    job.progress = 10;
 
-    // Step 1: Search
-    this.addLog(job, `[Passo 1/4] Varrendo a região em busca de alvos sem site (Filtro Ouro)...`, 'info');
-    const leads = this.generateFallbackLeadsForLocation(location, "SP", category);
-    job.progress = 40;
-    await new Promise((r) => setTimeout(r, 1000));
+    // Step 1: Search using the configured real data provider
+    this.addLog(job, `[Passo 1/6] Varrendo a região em busca de alvos sem site (Filtro Ouro/Prata)...`, 'info');
+    const { source, businesses } = await searchBusinesses({ location: location.trim(), state: normalizedState, category, filterNoWebsiteOnly: true });
+    this.addLog(job, `Fonte de dados: ${source}. ${businesses.length} leads encontrados.`, 'success');
+    job.progress = 30;
+    await new Promise((r) => setTimeout(r, 500));
 
-    // Step 2: Analyze top 3
-    this.addLog(job, `[Passo 2/4] Executando análise preditiva de vendas com IA para os melhores alvos...`, 'info');
-    const topLeads = leads.slice(0, 3);
-    const analyses = topLeads.map((l) => this.generateFallbackAnalysis(l));
-    job.progress = 70;
-    await new Promise((r) => setTimeout(r, 1000));
+    // Step 2: Persist leads no banco compartilhado
+    this.addLog(job, `[Passo 2/6] Salvando leads no banco compartilhado...`, 'info');
+    const saved: StoredLead[] = [];
+    for (const [index, biz] of businesses.slice(0, maxLeads).entries()) {
+      const requiredFields = ['id', 'name', 'category', 'address', 'city', 'state', 'websiteStatus'];
+      if (requiredFields.some((field) => typeof biz[field] !== 'string' || !biz[field].trim())) {
+        throw new Error(`A busca retornou o lead ${index + 1} com dados obrigatórios ausentes.`);
+      }
+      if (!['none', 'social_only', 'has_website'].includes(biz.websiteStatus)) {
+        throw new Error(`A busca retornou um websiteStatus inválido para o lead ${biz.name}.`);
+      }
+      const lead: StoredLead = {
+        id: buildStableLeadId(biz),
+        name: biz.name,
+        category: biz.category,
+        address: biz.address,
+        neighborhood: biz.neighborhood,
+        city: biz.city,
+        state: biz.state,
+        phone: biz.phone,
+        rating: biz.rating,
+        reviewsCount: biz.reviewsCount,
+        websiteStatus: biz.websiteStatus,
+        googlePlaceId: biz.googlePlaceId,
+        websiteUrl: biz.websiteUrl,
+        instagramHandle: biz.instagramHandle,
+        lat: biz.lat,
+        lng: biz.lng,
+        opportunityScore: biz.opportunityScore,
+        opportunityLevel: biz.opportunityLevel,
+        estimatedValue: biz.estimatedValue,
+        keyInsights: biz.keyInsights,
+        pipelineStatus: "prospect",
+        savedAt: new Date().toISOString(),
+      };
+      const storedLead = upsertLead(lead, { preserveInteraction: true });
+      saved.push(storedLead);
+    }
+    this.addLog(job, `✔ ${saved.length} leads persistidos.`, 'success');
+    job.progress = 45;
 
-    // Step 3: Pitches
-    this.addLog(job, `[Passo 3/4] Gerando links de WhatsApp e scripts personalizados...`, 'info');
-    job.progress = 85;
-    await new Promise((r) => setTimeout(r, 800));
+    // Step 3: Enriquecimento automático
+    this.addLog(job, `[Passo 3/6] Enriquecendo leads (Google Places, CNPJ, e-mail)...`, 'info');
+    const { enriched } = await enrichLeadBatch(saved);
+    this.addLog(job, `Enriquecimento: ${enriched}/${saved.length} leads com dados adicionais.`, enriched > 0 ? 'info' : 'warning');
+    job.progress = 60;
 
-    // Step 4: CRM Update
-    this.addLog(job, `[Passo 4/4] Atualizando o pipeline do Mini-CRM para os leads qualificados...`, 'info');
-    job.progress = 98;
+    // Step 4: Análise de IA persistida no lead
+    this.addLog(job, `[Passo 4/6] Gerando diagnóstico de vendas com IA para os melhores alvos...`, 'info');
+    const topLeads = saved.slice(0, Math.min(3, saved.length));
+    const analyses: any[] = [];
+    for (const lead of topLeads) {
+      let analysis;
+      try {
+        analysis = await analyzeLead({
+          businessName: lead.name,
+          category: lead.category,
+          city: lead.city,
+          phone: lead.phone,
+          rating: lead.rating,
+          reviewsCount: lead.reviewsCount,
+        });
+      } catch (err: any) {
+        throw new Error(`Falha ao analisar ${lead.name}: ${err?.message || 'erro desconhecido'}`);
+      }
+      updateLeadAnalysis(lead.id, analysis);
+      analyses.push({ leadId: lead.id, businessName: lead.name, analysis });
+      this.addLog(job, `✔ Diagnóstico gerado e persistido para ${lead.name}.`, 'success');
+    }
+    job.progress = 80;
+
+    // Step 5: Links de WhatsApp personalizados
+    this.addLog(job, `[Passo 5/6] Gerando links de WhatsApp e scripts personalizados...`, 'info');
+    const pitches = topLeads.map((l) => {
+      const analysis = analyses.find((a) => a.leadId === l.id)?.analysis;
+      return {
+        leadId: l.id,
+        businessName: l.name,
+        pitch: analysis?.customPitchWhatsApp || null,
+        waLink: this.buildWhatsAppLink(l, analysis),
+      };
+    });
+    job.progress = 92;
+
+    // Step 5.5: (opcional) enviar os pitches de contato
+    let sentContacts: any[] = [];
+    if (sendPitches) {
+      this.addLog(job, `Enviando mensagens de contato aos ${topLeads.length} alvos qualificados...`, 'info');
+      for (const lead of topLeads) {
+        try {
+          const result = await dispatchLeadContact(lead);
+          sentContacts.push({ leadId: lead.id, channel: result.channel, status: result.status, to: result.to, interactionId: result.interactionId });
+          this.addLog(job, `${lead.name}: ${result.status} (${result.channel}).`, result.status === 'failed' ? 'error' : 'success');
+          if (result.status !== 'sent') {
+            throw new Error(`Falha ao contatar ${lead.name}: ${result.detail}`);
+          }
+        } catch (e: any) {
+          throw new Error(`Falha ao contatar ${lead.name}: ${e?.message || e}`);
+        }
+      }
+    }
+
+    // Step 6: (opcional) criar Landing Pages
+    let landingPages: any[] = [];
+    if (createLandingPages) {
+      this.addLog(job, `[Passo 6/6] Gerando Landing Pages para os alvos qualificados...`, 'info');
+      for (const lead of topLeads) {
+        const concept = analyses.find((a) => a.leadId === lead.id)?.analysis?.landingPageConcept;
+        const lp = createLandingPageRecord(lead, concept, job.id);
+        landingPages.push({ id: lp.id, slug: lp.slug, status: lp.status });
+        this.addLog(job, `Landing Page "${lp.slug}" criada (aguardando aprovação).`, 'success');
+      }
+    }
 
     job.result = {
       location,
       category,
-      leadsProcessed: topLeads.length,
-      leads: topLeads,
+      source,
+      leadsProcessed: saved.length,
+      leads: saved,
       analyses,
+      pitches,
+      landingPages,
+      sentContacts,
     };
   }
 
-  // Fallback helpers
-  private generateFallbackLeadsForLocation(loc: string, uf: string, cat: string) {
-    const city = loc.split(',')[0].trim() || "São Paulo";
-    const categoryName = cat !== "Todas as Categorias" ? cat : "Estética & Saúde";
-    return [
-      {
-        id: `async-lead-${Date.now()}-1`,
-        name: `${categoryName.split('/')[0]} Centro de Excelência ${city}`,
-        category: categoryName,
-        address: `Av. Paulista, 1000 - Centro`,
-        city: city,
-        state: uf || "SP",
-        phone: "(11) 98765-4321",
-        rating: 4.9,
-        reviewsCount: 142,
-        websiteStatus: "none",
-        opportunityScore: 96,
-        opportunityLevel: "high",
-        estimatedValue: "R$ 2.500 - R$ 4.200",
-        keyInsights: [
-          "Mencionam excelente atendimento mas não possuem catálogo digital.",
-          "Perdem mais de 30 buscas diárias no Google Maps por falta de site."
-        ],
-      },
-      {
-        id: `async-lead-${Date.now()}-2`,
-        name: `${categoryName.split('/')[0]} Especializada ${city}`,
-        category: categoryName,
-        address: `Rua das Flores, 450 - Jardim`,
-        city: city,
-        state: uf || "SP",
-        phone: "(11) 97123-8899",
-        rating: 4.8,
-        reviewsCount: 89,
-        websiteStatus: "social_only",
-        instagramHandle: "@especializada.local",
-        opportunityScore: 92,
-        opportunityLevel: "high",
-        estimatedValue: "R$ 1.800 - R$ 3.500",
-        keyInsights: [
-          "Dependem 100% do Instagram, sem presença oficial no Google.",
-          "Proposta visual de Landing Page possui alta taxa de conversão."
-        ],
-      },
-    ];
+  // Build a wa.me deep link only when the lead and its persisted analysis contain all data.
+  private buildWhatsAppLink(lead: StoredLead, analysis?: any): string | null {
+    const digits = String(lead.phone || '').replace(/\D/g, '');
+    const full = digits && !digits.startsWith('55') ? `55${digits}` : digits;
+    const message = analysis?.customPitchWhatsApp;
+    if (!full || typeof message !== 'string' || !message.trim()) return null;
+    return `https://wa.me/${full}?text=${encodeURIComponent(message)}`;
   }
 
-  private generateFallbackAnalysis(lead: any) {
-    const name = lead.name || lead.businessName || "Empresa Prospect";
-    return {
-      businessName: name,
-      opportunityScore: 94,
-      revenuePotential: "R$ 2.200 - R$ 4.000",
-      urgencyLevel: "alta",
-      missingFeatures: [
-        "Botão Direto de Agendamento pelo WhatsApp",
-        "Catálogo Visual de Serviços com Fotos",
-        "Módulo de Prova Social Automático com Notas do Google",
-        "Seção de Perguntas Frequentes (FAQ)"
-      ],
-      whyTheyNeedLandingPage: `A empresa ${name} possui nota excelente no Google Maps, mas perde clientes diariamente para concorrentes por não possuir uma Landing Page rápida com agendamento no WhatsApp.`,
-      competitorAdvantage: "Concorrentes da região já estão anunciando no Google Ads e direcionando para páginas de conversão.",
-      customPitchWhatsApp: `Olá! Vi o perfil da *${name}* no Google com avaliações excelentes! 👏\n\nNotei que vocês ainda não possuem uma Landing Page rápida com agendamento direto pelo WhatsApp. Criei um protótipo prévio para vocês verem como ficaria sem compromisso. Posso enviar a imagem?`,
-      customPitchEmail: `Assunto: Oportunidade de Captação no Google para ${name}\n\nOlá equipe da ${name},\n\nNotamos o sucesso do negócio de vocês. Criamos Landing Pages de alta conversão para o setor em sua região. Podermos conversar 5 min nesta semana?`,
-      customPitchColdCall: `Roteiro: 1. Falar com o responsável. 2. Elogiar nota no Google. 3. Oferecer envio da imagem da Landing Page criada pra eles via WhatsApp.`,
-      landingPageConcept: {
-        heroHeadline: `Excelência e Atendimento Especializado em ${lead.city || "sua Região"}`,
-        heroSubheadline: "Agende sua consulta ou solicite um orçamento direto pelo WhatsApp sem filas.",
-        callToAction: "Agendar via WhatsApp Agora",
-        recommendedSections: ["Hero de Alto Impacto", "Nossos Serviços", "Avaliações 5 Estrelas", "Perguntas Frequentes", "Contato & Mapa"],
-        suggestedColorPalette: "Tons de Azul Moderno e Branco Limpo",
-        keySellingPoints: ["Atendimento Ágil", "Reputação 5 Estrelas", "Preço Justo"],
-      },
+  // Task Handler 4: Landing Page Creation (generates HTML + optional local deploy)
+  private async handleLandingPageCreation(job: Job) {
+    const { leadId, concept, autoDeploy = false } = job.payload;
+
+    this.addLog(job, `Iniciando criação de Landing Page para o lead "${leadId}".`, 'info');
+    job.progress = 10;
+
+    const lead = getLeadById(leadId);
+    if (!lead) {
+      throw new Error(`Lead "${leadId}" não encontrado. Crie e persista o lead antes de criar a Landing Page.`);
+    }
+
+    job.progress = 35;
+    this.addLog(job, `Gerando HTML de conversão a partir do conceito...`, 'info');
+
+    const lp = createLandingPageRecord(lead, concept, job.id);
+    job.progress = 60;
+    this.addLog(job, `Landing Page "${lp.slug}" gerada e em aguardo de aprovação.`, 'success');
+
+    if (autoDeploy) {
+      this.addLog(job, `Auto-deploy solicitado — aprovando e publicando...`, 'warning');
+      const approved = approveLandingPage(lp.id);
+      if (!approved) throw new Error(`Landing Page ${lp.id} não pôde ser aprovada antes do deploy.`);
+      const deployed = await deployLandingPage(lp.id);
+      if (!deployed?.url) throw new Error('O deploy foi concluído sem retornar uma URL pública.');
+      this.addLog(job, `Landing Page publicada em ${deployed.url}.`, 'success');
+    }
+
+    const finalLp = getLandingPageById(lp.id);
+    job.progress = 95;
+    job.result = {
+      landingPageId: lp.id,
+      slug: lp.slug,
+      status: finalLp?.status || lp.status,
+      url: finalLp?.url || lp.url || null,
+      previewUrl: `/landing-pages/${lp.slug}`,
     };
   }
+
+  // Task Handler 5: Follow-up batch (recontatos autorizados)
+  // Varre os leads cujo `next_contact_at` já venceu e NÃO envia nada:
+  // produz apenas uma fila informativa que exige aprovação humana para o envio.
+  private async handleFollowUpBatch(job: Job) {
+    this.addLog(job, 'Verificando recontatos autorizados (prazo de recontato vencido)...', 'info');
+    const due = getDueFollowUps();
+    job.progress = 60;
+
+    this.addLog(
+      job,
+      `${due.length} lead(s) com prazo de recontato vencido. Nenhuma mensagem será enviada sem aprovação humana.`,
+      due.length > 0 ? 'info' : 'warning'
+    );
+
+    job.result = {
+      totalDue: due.length,
+      followUps: due.map((item) => ({
+        interactionId: item.id,
+        leadId: item.lead.id,
+        name: item.lead.name,
+        category: item.lead.category,
+        city: item.lead.city,
+        state: item.lead.state,
+        phone: item.lead.phone,
+        email: item.lead.email,
+        channel: item.channel,
+        outcome: item.outcome,
+        lastContactAt: item.occurredAt,
+        nextContactAt: item.nextContactAt,
+        notes: item.notes,
+      })),
+    };
+    job.progress = 95;
+  }
+
+
 }
 
 // Global Singleton Queue Instance

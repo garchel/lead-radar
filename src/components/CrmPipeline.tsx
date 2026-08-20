@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { BusinessLead, PipelineStats } from '../types';
+import { BusinessLead, InteractionOutcome, PipelineStats } from '../types';
 import { FolderKanban, DollarSign, CheckCircle2, MessageCircle, Sparkles, Trash2, Edit3, Download, ExternalLink, ArrowRight } from 'lucide-react';
 
 interface CrmPipelineProps {
   savedLeads: BusinessLead[];
   onUpdateStatus: (id: string, status: BusinessLead['pipelineStatus']) => void;
   onUpdateNotes: (id: string, notes: string) => void;
+  onRecordOutcome: (id: string, outcome: Exclude<InteractionOutcome, 'pending'>) => void;
   onRemoveLead: (id: string) => void;
   onAnalyze: (lead: BusinessLead) => void;
 }
@@ -22,6 +23,7 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
   savedLeads,
   onUpdateStatus,
   onUpdateNotes,
+  onRecordOutcome,
   onRemoveLead,
   onAnalyze
 }) => {
@@ -35,13 +37,14 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
 
   // Revenue estimation
   const totalPipelineValue = savedLeads.reduce((acc, lead) => {
-    // Parse range e.g. "R$ 1.800 - R$ 3.000" -> average 2400
-    const numbers = lead.estimatedValue.match(/\d+(\.\d+)?/g);
-    if (numbers && numbers.length > 0) {
-      const val = parseInt(numbers[0].replace('.', ''), 10) * 1000 || 2000;
-      return acc + val;
-    }
-    return acc + 2000;
+    if (!lead.estimatedValue) return acc;
+    const numbers = lead.estimatedValue.match(/\d[\d.]*/g) || [];
+    const values = numbers
+      .map((value) => Number(value.replace(/\./g, '')))
+      .filter((value) => Number.isFinite(value));
+    if (values.length === 0) return acc;
+    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+    return acc + average;
   }, 0);
 
   const exportCSV = () => {
@@ -114,10 +117,10 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {PIPELINE_COLUMNS.map(col => {
-            const columnLeads = savedLeads.filter(l => (l.pipelineStatus || 'prospect') === col.id);
+            const columnLeads = savedLeads.filter(l => l.pipelineStatus === col.id);
 
             return (
-              <div key={col.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex flex-col space-y-3 min-h-[500px]">
+              <div key={col.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex flex-col space-y-3 min-h-125">
                 {/* Column Header */}
                 <div className={`p-2.5 rounded-xl border font-bold text-xs flex items-center justify-between ${col.color}`}>
                   <span>{col.title}</span>
@@ -137,17 +140,18 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
 
                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 font-semibold text-indigo-700 flex items-center justify-between">
                         <span className="text-slate-500 text-[10px]">Projeto:</span>
-                        <span className="font-bold">{lead.estimatedValue}</span>
+                        <span className="font-bold">{lead.estimatedValue || 'Valor não informado'}</span>
                       </div>
 
                       {/* Status Selector */}
                       <div>
                         <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Mover Status:</label>
                         <select
-                          value={lead.pipelineStatus || 'prospect'}
+                          value={lead.pipelineStatus || ''}
                           onChange={(e) => onUpdateStatus(lead.id, e.target.value as any)}
                           className="w-full bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-xs p-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                         >
+                          <option value="">Status não informado</option>
                           <option value="prospect">1. Prospect Novo</option>
                           <option value="contacted">2. Contato Feito</option>
                           <option value="negotiating">3. Em Negociação</option>
@@ -155,6 +159,36 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
                           <option value="declined">5. Perdido</option>
                         </select>
                       </div>
+
+                      {lead.lastContactAt && (
+                        <div className="space-y-2 rounded-lg border border-indigo-100 bg-indigo-50 p-2">
+                          <label className="text-[10px] text-indigo-700 font-bold uppercase block">Resultado do contato</label>
+                          {lead.lastContactOutcome === 'pending' && !lead.doNotContact && (
+                            <select
+                              defaultValue=""
+                              onChange={(event) => {
+                                const outcome = event.target.value as Exclude<InteractionOutcome, 'pending'>;
+                                if (outcome) onRecordOutcome(lead.id, outcome);
+                              }}
+                              className="w-full bg-white border border-indigo-200 rounded-lg text-slate-800 text-xs p-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="">Registrar resposta...</option>
+                              <option value="no_response">Ainda não respondeu</option>
+                              <option value="negative">Resposta negativa</option>
+                              <option value="positive">Demonstrou interesse</option>
+                              <option value="meeting_scheduled">Reunião agendada</option>
+                              <option value="negotiating">Em negociação</option>
+                              <option value="do_not_contact">Não contatar novamente</option>
+                            </select>
+                          )}
+                          {lead.nextContactAt && !lead.doNotContact && (
+                            <p className="text-[10px] text-indigo-700">
+                              Próximo contato: {new Date(lead.nextContactAt).toLocaleDateString('pt-BR')}
+                            </p>
+                          )}
+                          {lead.doNotContact && <p className="text-[10px] text-red-700">Recontato bloqueado pela empresa.</p>}
+                        </div>
+                      )}
 
                       {/* Notes Section */}
                       <div className="pt-2 border-t border-slate-100 space-y-1">

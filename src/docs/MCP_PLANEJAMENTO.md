@@ -59,11 +59,16 @@ Altera a fase do lead dentro do pipeline de vendas do Mini-CRM.
   - `notes` (string, opcional): Observações da conversa.
 - **Retorno:** Status do lead atualizado no banco/localStorage.
 
-### 5. `export_dossier`
-Gera o relatório executivo (Dossiê PDF/HTML) do lead.
+### 5. `export_dossier` ⚙️ implementada
+Gera o relatório executivo (Dossiê **HTML**) do lead — `server/dossier/dossier.ts` + tool MCP.
 - **Parâmetros:**
   - `leadId` (string): ID do lead.
-- **Retorno:** HTML/PDF formatado e pronto para envio ao cliente.
+- **Retorno:** HTML formatado e pronto para envio/impressão ao cliente.
+
+### 6. `schedule_prospecting` ⚙️ implementada
+Agenda prospecção **periódica** via expressão cron — `server/scheduler/scheduler.ts` + CRUD `/api/schedules`.
+- **Parâmetros:** `name`, `cron`, `jobType` (`mcp_autopilot` | `batch_prospecting`), `location`/`state`/`category` (autopilot) ou `locations`/`categories` (batch).
+- **Guardrails:** limite de LPs/dia e aprovação humana antes do deploy.
 
 ---
 

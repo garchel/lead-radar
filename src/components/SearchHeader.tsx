@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, MapPin, Filter, Sparkles, LayoutGrid, Map, RefreshCw, Globe, Download, Crown, Award } from 'lucide-react';
 import { SearchFilters } from '../types';
-import { CATEGORY_OPTIONS } from '../data/mockLeads';
+import { CATEGORY_OPTIONS } from '../data/catalog';
 import { BRAZIL_STATES, CITIES_BY_STATE, getCitiesForState } from '../data/brazilLocations';
 
 interface SearchHeaderProps {

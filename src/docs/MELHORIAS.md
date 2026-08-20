@@ -32,4 +32,14 @@ Este documento detalha as 3 melhorias prioritárias selecionadas para elevar a p
 
 ---
 
-*Status de Implementação:* Em andamento 🚀
+## ✅ Estado de Implementação
+
+As 3 melhorias priorizadas estão **implementadas**:
+
+- **1. Botão WhatsApp com 1-clic + mensagem IA** — presente em cards, modais, CRM e dossiê.
+- **2. Mini-CRM / Pipeline** — persistido em **SQLite** (banco compartilhado com o MCP/Hermes), com kanban/tabela e indicadores.
+- **5. Filtro por presença digital (Ouro/Prata)** — seletor na busca e visão de dados.
+
+> **Adição (Fase 2 do roadmap):** o agendador de prospecção periódica (`schedule_prospecting`) dispara jobs recorrentes via cron, com limite de **LPs/dia** e aprovação humana antes do deploy.
+
+*Status de Implementação: ✅ Concluído 🚀*

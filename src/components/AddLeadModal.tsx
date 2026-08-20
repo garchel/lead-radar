@@ -1,56 +1,68 @@
 import React, { useState } from 'react';
 import { X, PlusCircle, Building2, MapPin, Phone, Star, Tag, Sparkles } from 'lucide-react';
 import { BusinessLead } from '../types';
-import { CATEGORY_OPTIONS } from '../data/mockLeads';
+import { CATEGORY_OPTIONS } from '../data/catalog';
 
 interface AddLeadModalProps {
   onClose: () => void;
-  onAddLead: (lead: BusinessLead) => void;
+  onAddLead: (lead: BusinessLead) => void | Promise<void>;
 }
 
 export const AddLeadModal: React.FC<AddLeadModalProps> = ({ onClose, onAddLead }) => {
   const [name, setName] = useState('');
-  const [category, setCategory] = useState(CATEGORY_OPTIONS[1] || 'Dentista & Odontologia');
-  const [city, setCity] = useState('São Paulo');
+  const [category, setCategory] = useState('');
+  const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [instagramHandle, setInstagramHandle] = useState('');
-  const [rating, setRating] = useState('4.8');
-  const [reviewsCount, setReviewsCount] = useState('35');
+  const [websiteStatus, setWebsiteStatus] = useState<BusinessLead['websiteStatus'] | ''>('');
+  const [rating, setRating] = useState('');
+  const [reviewsCount, setReviewsCount] = useState('');
   const [notes, setNotes] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    setError(null);
+
+    const parsedRating = Number(rating);
+    const parsedReviews = Number(reviewsCount);
+    if (!name.trim() || !category || !city.trim() || !address.trim() || !websiteStatus) {
+      setError('Preencha nome, categoria, cidade, endereço e presença digital.');
+      return;
+    }
+    if (!Number.isFinite(parsedRating) || parsedRating < 1 || parsedRating > 5) {
+      setError('Informe uma nota Google válida entre 1 e 5.');
+      return;
+    }
+    if (!Number.isInteger(parsedReviews) || parsedReviews < 0) {
+      setError('Informe uma quantidade válida de avaliações.');
+      return;
+    }
 
     const newLead: BusinessLead = {
       id: `manual-${Date.now()}`,
       name: name.trim(),
       category,
-      city: city.trim() || 'São Paulo',
-      address: address.trim() || 'Endereço Central',
-      phone: phone.trim(),
+      city: city.trim(),
+      address: address.trim(),
+      phone: phone.trim() || undefined,
       instagramHandle: instagramHandle.trim() ? (instagramHandle.trim().startsWith('@') ? instagramHandle.trim() : `@${instagramHandle.trim()}`) : undefined,
-      rating: parseFloat(rating) || 4.8,
-      reviewsCount: parseInt(reviewsCount, 10) || 30,
-      websiteStatus: 'none',
-      lat: -23.5505,
-      lng: -46.6333,
-      opportunityScore: 90,
-      opportunityLevel: 'high',
-      estimatedValue: 'R$ 2.000 - R$ 3.500',
-      keyInsights: [
-        'Lead inserido manualmente para prospecção direta',
-        'Sem landing page ou presença web estruturada',
-        'Excelente oportunidade para envio de proposta com IA'
-      ],
+      rating: parsedRating,
+      reviewsCount: parsedReviews,
+      websiteStatus,
+
       pipelineStatus: 'prospect',
-      notes: notes.trim(),
+      notes: notes.trim() || undefined,
       savedAt: new Date().toISOString()
     };
 
-    onAddLead(newLead);
-    onClose();
+    try {
+      await onAddLead(newLead);
+      onClose();
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao salvar o lead.');
+    }
   };
 
   return (
@@ -67,6 +79,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ onClose, onAddLead }
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-white">
+          {error && <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-700">{error}</div>}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">Nome da Empresa / Profissional *</label>
             <input
@@ -87,6 +100,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ onClose, onAddLead }
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 text-xs font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500"
               >
+                <option value="">Selecione uma categoria</option>
                 {CATEGORY_OPTIONS.filter((c) => c !== 'Todas as Categorias').map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -99,6 +113,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ onClose, onAddLead }
               <label className="block text-xs font-bold text-slate-700 mb-1">Cidade / Região</label>
               <input
                 type="text"
+                required
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="Ex: São Paulo"
@@ -108,9 +123,25 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ onClose, onAddLead }
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Endereço / Bairro</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Presença Digital *</label>
+            <select
+              required
+              value={websiteStatus}
+              onChange={(e) => setWebsiteStatus(e.target.value as BusinessLead['websiteStatus'])}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 text-xs font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Selecione uma opção</option>
+              <option value="none">Sem site</option>
+              <option value="social_only">Apenas redes sociais</option>
+              <option value="has_website">Possui site</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Endereço / Bairro *</label>
             <input
               type="text"
+              required
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Ex: Av. Paulista, 1000 - Bela Vista"
@@ -150,6 +181,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ onClose, onAddLead }
                 step="0.1"
                 min="1"
                 max="5"
+                required
                 value={rating}
                 onChange={(e) => setRating(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 text-xs font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500"
@@ -160,6 +192,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ onClose, onAddLead }
               <label className="block text-xs font-bold text-slate-700 mb-1">Qtd Avaliações</label>
               <input
                 type="number"
+                required
                 value={reviewsCount}
                 onChange={(e) => setReviewsCount(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 text-xs font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500"

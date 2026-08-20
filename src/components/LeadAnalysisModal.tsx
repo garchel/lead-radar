@@ -45,16 +45,16 @@ export const LeadAnalysisModal: React.FC<LeadAnalysisModalProps> = ({
           })
         });
 
-        const data = await response.json();
-        if (data.success && data.analysis) {
-          setAnalysis(data.analysis);
-        } else {
-          // Fallback static analysis if server offline
-          setAnalysis(getFallbackAnalysis(lead));
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data?.success === false) {
+          throw new Error(data?.error || `A análise falhou (HTTP ${response.status}).`);
         }
+        if (!data.analysis) {
+          throw new Error('A API não retornou uma análise válida.');
+        }
+        setAnalysis(data.analysis);
       } catch (err: any) {
-        console.warn('Usando análise de demonstração offline:', err);
-        setAnalysis(getFallbackAnalysis(lead));
+        setError(err?.message || 'Falha ao gerar a análise do lead.');
       } finally {
         setLoading(false);
       }
@@ -71,31 +71,6 @@ export const LeadAnalysisModal: React.FC<LeadAnalysisModalProps> = ({
     setTimeout(() => setCopiedScript(null), 2500);
   };
 
-  const getFallbackAnalysis = (b: BusinessLead): LeadAnalysisResult => ({
-    businessName: b.name,
-    opportunityScore: b.opportunityScore || 92,
-    revenuePotential: b.estimatedValue || 'R$ 2.000 - R$ 3.500',
-    urgencyLevel: 'alta',
-    missingFeatures: [
-      'Botão Direto de Agendamento via WhatsApp',
-      'Galeria de Fotos / Tabela de Serviços Principais',
-      'Prova Social Integrada com Avaliações do Google',
-      'Formulário Rápido para Solicitação de Orçamento'
-    ],
-    whyTheyNeedLandingPage: `A empresa ${b.name} possui uma excelente reputação local com nota ${b.rating || 4.8} no Google, porém perde diariamente potenciais clientes que buscam por ${b.category} no celular e preferem concorrentes que possuem uma página web rápida para agendar diretamente.`,
-    competitorAdvantage: 'Concorrentes com Landing Page estão veiculando anúncios no Google Ads e captando os clientes no momento exato em que eles precisam do serviço.',
-    customPitchWhatsApp: `Olá! Sou consultor de marketing digital e encontrei o perfil da *${b.name}* no Google com ${b.reviewsCount || 40}+ avaliações sensacionais. 👏\n\nReparei que vocês ainda não possuem uma Landing Page focada em agendamentos pelo WhatsApp. Montei um protótipo rápido de como vocês poderiam receber pedidos de orçamento direto pelo celular.\n\nPosso te enviar uma prévia em imagem de 30 segundos sem compromisso?`,
-    customPitchEmail: `Assunto: Oportunidade de novos agendamentos para a ${b.name}\n\nOlá equipe da ${b.name},\n\nAcompanhando o mercado de ${b.category} em ${b.city}, notei o excelente trabalho e as ótimas avaliações que vocês possuem no Google Maps.\n\nAnalisamos que a inclusão de uma Landing Page rápida e focada em conversão pode aumentar seus agendamentos diretos em até 40% já no primeiro mês.\n\nDesenvolvemos um protótipo exclusivo para vocês. Quando teriam 10 minutos para uma demonstração rápida nesta semana?\n\nAtenciosamente,`,
-    customPitchColdCall: `Roteiro Cold Call (30 segundos):\n1. "Olá, bom dia! Falo com o responsável pelo marketing ou proprietário da ${b.name}?"\n2. "Meu nome é [Seu Nome], vi suas avaliações no Google e reparei que vocês não têm uma landing page oficial para receber orçamentos pelo WhatsApp."\n3. "Criei uma prévia visual de como a página de vocês ficaria. Gostaria de enviar pelo seu WhatsApp para dar uma olhada rápida?"\n4. [Objeção: "Já temos Instagram"]: "O Instagram é ótimo para seguidores, mas a Landing Page captura o cliente do Google que quer contratar na hora! Posso enviar a prévia?"`,
-    landingPageConcept: {
-      heroHeadline: `${b.name} - Excelência e Qualidade em ${b.category}`,
-      heroSubheadline: `Atendimento ágil, equipe especializada e o melhor suporte de ${b.city}. Agende seu horário direto pelo WhatsApp.`,
-      callToAction: 'Falar com Especialista no WhatsApp',
-      recommendedSections: ['Hero com Botão WhatsApp', 'Serviços em Destaque', 'Depoimentos de Clientes', 'Localização & Contato'],
-      suggestedColorPalette: 'Tom azul corporativo/esmeralda para transmitir alta credibilidade e confiança',
-      keySellingPoints: ['Agendamento Rápido', 'Atendimento Humanizado', 'Garantia de Qualidade']
-    }
-  });
 
   const whatsappCleanNumber = lead.phone ? lead.phone.replace(/\D/g, '') : '';
   const currentScript =
@@ -317,8 +292,13 @@ export const LeadAnalysisModal: React.FC<LeadAnalysisModalProps> = ({
                 )}
               </div>
             </>
+          ) : error ? (
+            <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center text-sm text-rose-800">
+              <strong className="block text-base">Não foi possível gerar a análise.</strong>
+              <span className="mt-2 block">{error}</span>
+            </div>
           ) : (
-            <div className="py-12 text-center text-slate-500">Não foi possível carregar a análise do lead.</div>
+            <div className="py-12 text-center text-slate-500">Aguardando resposta da análise.</div>
           )}
         </div>
 

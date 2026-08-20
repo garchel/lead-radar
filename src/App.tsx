@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Navbar } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
 import { SearchHeader } from './components/SearchHeader';
 import { BusinessCard } from './components/BusinessCard';
 import { MapView } from './components/MapView';
@@ -9,16 +9,38 @@ import { StrategyGuide } from './components/StrategyGuide';
 import { AddLeadModal } from './components/AddLeadModal';
 import { McpStatusModal } from './components/McpStatusModal';
 import { QueueDrawerModal } from './components/QueueDrawerModal';
-import { MOCK_LEADS } from './data/mockLeads';
-import { BusinessLead, SearchFilters } from './types';
+import { MonitoringDashboard } from './components/MonitoringDashboard';
+import { DuplicateMergeModal } from './components/DuplicateMergeModal';
+import { FollowUpQueue } from './components/FollowUpQueue';
+
+import { BusinessLead, InteractionOutcome, SearchFilters } from './types';
 import { exportLeadsToCSV } from './utils/exportUtils';
-import { SearchX, Sparkles, Filter, Info, ShieldCheck } from 'lucide-react';
+import { SearchX, Sparkles, Filter, Info, ShieldCheck, AlertCircle } from 'lucide-react';
+
+async function requestJson(input: RequestInfo | URL, init?: RequestInit): Promise<any> {
+  const response = await fetch(input, init);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data?.success === false) {
+    const error = new Error(data?.error || `A requisição falhou (HTTP ${response.status}).`);
+    (error as any).code = data?.code;
+    (error as any).data = data;
+    (error as any).status = response.status;
+    throw error;
+  }
+  return data;
+}
+
+interface DuplicateCandidate {
+  existingLead: BusinessLead;
+  incomingLead: BusinessLead;
+  resolve: (mode: 'merge' | 'separate' | 'cancel') => void;
+}
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'guide'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'guide' | 'monitoring'>('search');
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [isSearching, setIsSearching] = useState<boolean>(false);
-  const [hasGeminiKey, setHasGeminiKey] = useState<boolean>(true);
+  const [hasGeminiKey, setHasGeminiKey] = useState<boolean>(false);
   const [hasMapsKey, setHasMapsKey] = useState<boolean>(false);
 
   // Search Filters State
@@ -32,171 +54,238 @@ export default function App() {
     sortBy: 'score',
   });
 
-  // Business Leads list state
-  const [leads, setLeads] = useState<BusinessLead[]>(MOCK_LEADS);
-
-  // Saved CRM Leads (persisted in localStorage)
-  const [savedLeads, setSavedLeads] = useState<BusinessLead[]>(() => {
-    try {
-      const stored = localStorage.getItem('lead_radar_saved_crm');
-      return stored ? JSON.parse(stored) : [MOCK_LEADS[0], MOCK_LEADS[2]];
-    } catch {
-      return [MOCK_LEADS[0], MOCK_LEADS[2]];
-    }
-  });
+  // Leads de busca e CRM começam vazios. O banco compartilhado é a única fonte de verdade.
+  const [leads, setLeads] = useState<BusinessLead[]>([]);
+  const [savedLeads, setSavedLeads] = useState<BusinessLead[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Modal States
   const [analyzingLead, setAnalyzingLead] = useState<BusinessLead | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isMcpModalOpen, setIsMcpModalOpen] = useState<boolean>(false);
   const [isQueueModalOpen, setIsQueueModalOpen] = useState<boolean>(false);
+  const [duplicateCandidate, setDuplicateCandidate] = useState<DuplicateCandidate | null>(null);
 
-  const handleImportLeadsFromQueue = (newLeads: BusinessLead[]) => {
-    setLeads((prev) => [...newLeads, ...prev]);
+  // Persists a lead via POST /api/leads. Se o servidor detectar uma duplicata
+  // por nome+cidade (match fraco), abre o diálogo de confirmação de mesclagem.
+  const saveLeadToApi = async (
+    lead: BusinessLead,
+    extra: Record<string, unknown> = {}
+  ): Promise<BusinessLead | null> => {
+    try {
+      const data = await requestJson('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...lead, pipelineStatus: lead.pipelineStatus || 'prospect', ...extra }),
+      });
+      if (!data.lead) throw new Error('A API não retornou o lead salvo.');
+      return data.lead as BusinessLead;
+    } catch (err: any) {
+      if (err?.code === 'possible_duplicate') {
+        const choice = await new Promise<'merge' | 'separate' | 'cancel'>((resolve) => {
+          setDuplicateCandidate({
+            existingLead: err.data?.existingLead as BusinessLead,
+            incomingLead: err.data?.incoming as BusinessLead,
+            resolve,
+          });
+        });
+        setDuplicateCandidate(null);
+        if (choice === 'cancel') return null;
+        return saveLeadToApi(lead, choice === 'merge' ? { confirmMerge: true } : { forceCreate: true });
+      }
+      throw err;
+    }
+  };
+
+  const handleImportLeadsFromQueue = async (newLeads: BusinessLead[]) => {
+    setErrorMessage(null);
+    const persisted: BusinessLead[] = [];
+    for (const [index, lead] of newLeads.entries()) {
+      try {
+        const saved = await saveLeadToApi(lead);
+        if (!saved) continue;
+        persisted.push(saved);
+      } catch (err: any) {
+        throw new Error(`Falha ao importar o lead ${index + 1} (${lead.name}): ${err?.message || 'erro desconhecido'}`);
+      }
+    }
+    setLeads((prev) => [...persisted, ...prev]);
     setSavedLeads((prev) => {
       const existingIds = new Set(prev.map((l) => l.id));
-      const uniqueNew = newLeads.filter((l) => !existingIds.has(l.id));
+      const uniqueNew = persisted.filter((l) => !existingIds.has(l.id));
       return [...uniqueNew, ...prev];
     });
   };
 
-  // Sync saved leads to LocalStorage
+
+  // Load leads persisted by the backend/agent on mount + live updates via SSE
   useEffect(() => {
-    try {
-      localStorage.setItem('lead_radar_saved_crm', JSON.stringify(savedLeads));
-    } catch (err) {
-      console.error('Erro ao salvar CRM no localStorage:', err);
-    }
-  }, [savedLeads]);
+    const loadFromApi = async () => {
+      try {
+        const data = await requestJson('/api/leads');
+        if (!Array.isArray(data.leads)) {
+          throw new Error('A API retornou uma lista de leads inválida.');
+        }
+        setSavedLeads(data.leads as BusinessLead[]);
+      } catch (err: any) {
+        setErrorMessage(`Falha ao carregar o CRM: ${err?.message || 'erro desconhecido'}`);
+      }
+    };
+
+    void loadFromApi();
+
+    const es = new EventSource('/api/events');
+    es.onmessage = (evt) => {
+      try {
+        const d = JSON.parse(evt.data);
+        if (d?.event === 'leads') void loadFromApi();
+      } catch (err: any) {
+        setErrorMessage(`Falha ao interpretar uma atualização do servidor: ${err?.message || 'evento inválido'}`);
+      }
+    };
+    es.onerror = () => {
+      setErrorMessage('Falha na conexão de eventos em tempo real (/api/events).');
+    };
+    return () => es.close();
+  }, []);
 
   // Check health endpoint
   useEffect(() => {
-    fetch('/api/health')
-      .then((res) => res.json())
+    requestJson('/api/health')
       .then((data) => {
         setHasGeminiKey(Boolean(data.hasGeminiKey));
         setHasMapsKey(Boolean(data.hasGoogleMapsKey));
       })
-      .catch(() => {});
+      .catch((err: any) => {
+        setHasGeminiKey(false);
+        setHasMapsKey(false);
+        setErrorMessage(`Falha ao verificar a saúde da aplicação: ${err?.message || 'erro desconhecido'}`);
+      });
   }, []);
 
   // Handle AI Search Execution
   const handleSearch = async () => {
     setIsSearching(true);
+    setErrorMessage(null);
+    setLeads([]);
     try {
       const searchLocation = [filters.location, filters.state].filter(Boolean).join(', ');
-      const res = await fetch('/api/search-businesses', {
+      const data = await requestJson('/api/search-businesses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          location: searchLocation || 'São Paulo, SP',
+          location: searchLocation,
           state: filters.state,
           category: filters.category,
           filterNoWebsiteOnly: filters.filterNoWebsiteOnly,
         }),
       });
 
-      const data = await res.json();
-      if (data.success && data.businesses && data.businesses.length > 0) {
-        setLeads(data.businesses);
-      } else {
-        // Fallback filter over client dataset for seamless user experience
-        filterLocalDataset();
+      if (!Array.isArray(data.businesses)) {
+        throw new Error('A API retornou uma lista de empresas inválida.');
       }
-    } catch (err) {
-      console.warn('Busca remota falhou, usando filtro local:', err);
-      filterLocalDataset();
+      setLeads(data.businesses as BusinessLead[]);
+    } catch (err: any) {
+      setErrorMessage(`Falha ao buscar empresas: ${err?.message || 'erro desconhecido'}`);
     } finally {
       setIsSearching(false);
     }
   };
 
-  const filterLocalDataset = () => {
-    let results = [...MOCK_LEADS];
-
-    if (filters.state && filters.state !== 'ALL') {
-      const stateLower = filters.state.toLowerCase();
-      results = results.filter(
-        (l) => l.state && l.state.toLowerCase() === stateLower
-      );
-    }
-
-    if (filters.location && filters.location.trim() !== '') {
-      const locLower = filters.location.toLowerCase().trim();
-      results = results.filter(
-        (l) =>
-          l.city.toLowerCase().includes(locLower) ||
-          l.address.toLowerCase().includes(locLower) ||
-          (l.neighborhood && l.neighborhood.toLowerCase().includes(locLower)) ||
-          (l.state && l.state.toLowerCase().includes(locLower))
-      );
-    }
-
-    if (filters.category && filters.category !== 'Todas as Categorias') {
-      results = results.filter((l) => l.category === filters.category);
-    }
-
-    if (filters.presenceFilter === 'gold') {
-      results = results.filter((l) => l.websiteStatus === 'none');
-    } else if (filters.presenceFilter === 'silver') {
-      results = results.filter((l) => l.websiteStatus === 'social_only');
-    } else if (filters.presenceFilter === 'has_website') {
-      results = results.filter((l) => l.websiteStatus === 'has_website');
-    } else if (filters.filterNoWebsiteOnly) {
-      results = results.filter((l) => l.websiteStatus === 'none' || l.websiteStatus === 'social_only');
-    }
-
-    // Sort results
-    if (filters.sortBy === 'score') {
-      results.sort((a, b) => b.opportunityScore - a.opportunityScore);
-    } else if (filters.sortBy === 'rating') {
-      results.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-    } else if (filters.sortBy === 'reviews') {
-      results.sort((a, b) => (b.reviewsCount || 0) - (a.reviewsCount || 0));
-    } else if (filters.sortBy === 'name') {
-      results.sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    setLeads(results);
-  };
-
   // Toggle Save Lead to CRM
-  const handleToggleSave = (lead: BusinessLead) => {
-    const isAlreadySaved = savedLeads.some((l) => l.id === lead.id);
-    if (isAlreadySaved) {
-      setSavedLeads((prev) => prev.filter((l) => l.id !== lead.id));
-    } else {
-      const leadWithStatus: BusinessLead = {
+  const handleToggleSave = async (lead: BusinessLead) => {
+    setErrorMessage(null);
+    try {
+      const isAlreadySaved = savedLeads.some((l) => l.id === lead.id);
+      if (isAlreadySaved) {
+        await requestJson(`/api/leads/${lead.id}`, { method: 'DELETE' });
+        setSavedLeads((prev) => prev.filter((l) => l.id !== lead.id));
+        return;
+      }
+
+      const leadToSave: BusinessLead = {
         ...lead,
         pipelineStatus: 'prospect',
         savedAt: new Date().toISOString(),
       };
-      setSavedLeads((prev) => [leadWithStatus, ...prev]);
+      const saved = await saveLeadToApi(leadToSave);
+      if (!saved) return;
+      setSavedLeads((prev) => [saved, ...prev.filter((l) => l.id !== saved.id)]);
+    } catch (err: any) {
+      setErrorMessage(`Falha ao salvar o lead: ${err?.message || 'erro desconhecido'}`);
     }
   };
 
   // Update CRM Pipeline Status
-  const handleUpdateStatus = (id: string, status: BusinessLead['pipelineStatus']) => {
-    setSavedLeads((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, pipelineStatus: status } : l))
-    );
+  const handleUpdateStatus = async (id: string, status: BusinessLead['pipelineStatus']) => {
+    setErrorMessage(null);
+    try {
+      const data = await requestJson(`/api/leads/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pipelineStatus: status || 'prospect' }),
+      });
+      setSavedLeads((prev) => prev.map((lead) => lead.id === id ? { ...lead, ...(data.lead as BusinessLead) } : lead));
+    } catch (err: any) {
+      setErrorMessage(`Falha ao atualizar o status do lead: ${err?.message || 'erro desconhecido'}`);
+    }
   };
 
   // Update CRM Notes
-  const handleUpdateNotes = (id: string, notes: string) => {
-    setSavedLeads((prev) => prev.map((l) => (l.id === id ? { ...l, notes } : l)));
+  const handleUpdateNotes = async (id: string, notes: string) => {
+    setErrorMessage(null);
+    try {
+      const data = await requestJson(`/api/leads/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes }),
+      });
+      setSavedLeads((prev) => prev.map((lead) => lead.id === id ? { ...lead, ...(data.lead as BusinessLead) } : lead));
+    } catch (err: any) {
+      setErrorMessage(`Falha ao salvar a anotação: ${err?.message || 'erro desconhecido'}`);
+    }
+  };
+
+  // Register a response and calculate the next contact window.
+  const handleRecordOutcome = async (id: string, outcome: Exclude<InteractionOutcome, 'pending'>) => {
+    setErrorMessage(null);
+    try {
+      const data = await requestJson(`/api/leads/${id}/interactions/outcome`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outcome }),
+      });
+      setSavedLeads((prev) => prev.map((lead) => lead.id === id ? { ...lead, ...(data.lead as BusinessLead) } : lead));
+    } catch (err: any) {
+      setErrorMessage(`Falha ao registrar a resposta: ${err?.message || 'erro desconhecido'}`);
+    }
   };
 
   // Remove Lead from CRM
-  const handleRemoveLead = (id: string) => {
-    setSavedLeads((prev) => prev.filter((l) => l.id !== id));
+  const handleRemoveLead = async (id: string) => {
+    setErrorMessage(null);
+    try {
+      await requestJson(`/api/leads/${id}`, { method: 'DELETE' });
+      setSavedLeads((prev) => prev.filter((lead) => lead.id !== id));
+    } catch (err: any) {
+      setErrorMessage(`Falha ao remover o lead: ${err?.message || 'erro desconhecido'}`);
+    }
   };
 
   // Add Manual Lead
-  const handleAddManualLead = (lead: BusinessLead) => {
-    setLeads((prev) => [lead, ...prev]);
-    setSavedLeads((prev) => [lead, ...prev]);
-    setAnalyzingLead(lead);
+  const handleAddManualLead = async (lead: BusinessLead) => {
+    setErrorMessage(null);
+    try {
+      const savedLead = await saveLeadToApi(lead);
+      if (!savedLead) return;
+      setLeads((prev) => [savedLead, ...prev]);
+      setSavedLeads((prev) => [savedLead, ...prev.filter((item) => item.id !== savedLead.id)]);
+      setAnalyzingLead(savedLead);
+    } catch (err: any) {
+      const message = err?.message || 'erro desconhecido';
+      setErrorMessage(`Falha ao adicionar o lead: ${message}`);
+      throw new Error(message);
+    }
   };
 
   const savedLeadIds = new Set(savedLeads.map((l) => l.id));
@@ -205,9 +294,9 @@ export default function App() {
   ).length;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased selection:bg-indigo-600 selection:text-white">
-      {/* Top Header Navbar */}
-      <Navbar
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans antialiased selection:bg-indigo-600 selection:text-white">
+      {/* Sidebar */}
+      <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         savedCount={savedLeads.length}
@@ -217,6 +306,17 @@ export default function App() {
         hasGeminiKey={hasGeminiKey}
         hasMapsKey={hasMapsKey}
       />
+
+      <div className="flex-1 flex flex-col min-w-0">
+      {errorMessage && (
+        <div role="alert" className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pt-4">
+          <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
+            <div className="flex-1">{errorMessage}</div>
+            <button type="button" onClick={() => setErrorMessage(null)} className="font-bold text-rose-700 hover:text-rose-900">Fechar</button>
+          </div>
+        </div>
+      )}
 
       {/* Main Container Body */}
       <main className="flex-1">
@@ -255,25 +355,8 @@ export default function App() {
                     <SearchX className="w-12 h-12 text-slate-400 mx-auto" />
                     <h3 className="text-lg font-bold text-slate-900">Nenhuma empresa encontrada com estes filtros</h3>
                     <p className="text-slate-500 text-sm max-w-md mx-auto">
-                      Tente alterar a cidade, limpar a palavra-chave ou desmarcar o filtro "Apenas sem Landing Page".
+                      Tente alterar a cidade ou a categoria e execute uma nova busca real.
                     </p>
-                    <button
-                      onClick={() => {
-                        setFilters({
-                          state: 'SP',
-                          location: 'São Paulo',
-                          category: 'Todas as Categorias',
-                          filterNoWebsiteOnly: false,
-                          minRating: 4.0,
-                          minReviews: 10,
-                          sortBy: 'score',
-                        });
-                        setLeads(MOCK_LEADS);
-                      }}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs inline-block transition-all shadow-sm"
-                    >
-                      Restaurar Busca Padrão
-                    </button>
                   </div>
                 )
               ) : (
@@ -282,6 +365,7 @@ export default function App() {
                   onAnalyze={(l) => setAnalyzingLead(l)}
                   onToggleSave={handleToggleSave}
                   savedLeadIds={savedLeadIds}
+                  hasMapsKey={hasMapsKey}
                 />
               )}
             </div>
@@ -289,16 +373,22 @@ export default function App() {
         )}
 
         {activeTab === 'crm' && (
-          <CrmPipeline
-            savedLeads={savedLeads}
-            onUpdateStatus={handleUpdateStatus}
-            onUpdateNotes={handleUpdateNotes}
-            onRemoveLead={handleRemoveLead}
-            onAnalyze={(l) => setAnalyzingLead(l)}
-          />
+          <>
+            <FollowUpQueue />
+            <CrmPipeline
+              savedLeads={savedLeads}
+              onUpdateStatus={handleUpdateStatus}
+              onUpdateNotes={handleUpdateNotes}
+              onRecordOutcome={handleRecordOutcome}
+              onRemoveLead={handleRemoveLead}
+              onAnalyze={(l) => setAnalyzingLead(l)}
+            />
+          </>
         )}
 
         {activeTab === 'guide' && <StrategyGuide />}
+
+        {activeTab === 'monitoring' && <MonitoringDashboard />}
       </main>
 
       {/* AI Lead Analyzer Modal */}
@@ -332,6 +422,17 @@ export default function App() {
         onImportLeads={handleImportLeadsFromQueue}
       />
 
+      {/* Duplicate merge confirmation */}
+      {duplicateCandidate && (
+        <DuplicateMergeModal
+          existing={duplicateCandidate.existingLead}
+          incoming={duplicateCandidate.incomingLead}
+          onMerge={() => duplicateCandidate.resolve('merge')}
+          onSeparate={() => duplicateCandidate.resolve('separate')}
+          onClose={() => duplicateCandidate.resolve('cancel')}
+        />
+      )}
+
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-6 px-4 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -344,6 +445,7 @@ export default function App() {
           </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 }

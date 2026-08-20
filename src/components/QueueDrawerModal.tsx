@@ -26,7 +26,7 @@ export interface QueueJob {
 interface QueueDrawerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImportLeads: (leads: BusinessLead[]) => void;
+  onImportLeads: (leads: BusinessLead[]) => void | Promise<void>;
 }
 
 export const QueueDrawerModal: React.FC<QueueDrawerModalProps> = ({
@@ -48,28 +48,34 @@ export const QueueDrawerModal: React.FC<QueueDrawerModalProps> = ({
   const [selectedJob, setSelectedJob] = useState<QueueJob | null>(null);
 
   // Form State for new async prospecting job
-  const [citiesInput, setCitiesInput] = useState('Campinas, Sorocaba, Piracicaba');
-  const [selectedState, setSelectedState] = useState('SP');
-  const [selectedCategory, setSelectedCategory] = useState('Estética & Saúde');
+  const [citiesInput, setCitiesInput] = useState('');
+  const [selectedState, setSelectedState] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [filterNoWebsite, setFilterNoWebsite] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Poll queue status
   const fetchQueue = async () => {
     try {
       const res = await fetch('/api/jobs');
-      const data = await res.json();
-      if (data.success) {
-        setJobs(data.jobs || []);
-        setMetrics(data.metrics || {});
-        // Update currently selected job if opened
-        if (selectedJob) {
-          const updated = (data.jobs || []).find((j: QueueJob) => j.id === selectedJob.id);
-          if (updated) setSelectedJob(updated);
-        }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || `Falha ao consultar a fila (HTTP ${res.status}).`);
       }
-    } catch (err) {
-      console.warn('Erro ao buscar status da fila:', err);
+      if (!Array.isArray(data.jobs) || !data.metrics) {
+        throw new Error('A API da fila retornou uma resposta inválida.');
+      }
+      setJobs(data.jobs);
+      setMetrics(data.metrics);
+      if (selectedJob) {
+        const updated = data.jobs.find((j: QueueJob) => j.id === selectedJob.id);
+        if (updated) setSelectedJob(updated);
+      }
+      setError(null);
+    } catch (err: any) {
+      setError(`Erro ao carregar a fila: ${err?.message || 'falha desconhecida'}`);
     }
   };
 
@@ -84,12 +90,19 @@ export const QueueDrawerModal: React.FC<QueueDrawerModalProps> = ({
 
   const handleCreateBatchJob = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setIsCreating(true);
 
     const locations = citiesInput
       .split(',')
       .map((c) => c.trim())
       .filter(Boolean);
+
+    if (locations.length === 0 || !selectedState || !selectedCategory) {
+      setError('Informe ao menos uma cidade, o estado e a categoria antes de enfileirar o job.');
+      setIsCreating(false);
+      return;
+    }
 
     try {
       const res = await fetch('/api/jobs', {
@@ -107,65 +120,75 @@ export const QueueDrawerModal: React.FC<QueueDrawerModalProps> = ({
         }),
       });
 
-      const data = await res.json();
-      if (data.success) {
-        await fetchQueue();
-        setActiveTab('queue');
-        if (data.job) setSelectedJob(data.job);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || `Falha ao enfileirar job (HTTP ${res.status}).`);
       }
+      await fetchQueue();
+      setActiveTab('queue');
+      if (data.job) setSelectedJob(data.job);
     } catch (err: any) {
-      alert(`Erro ao enfileirar job: ${err?.message || 'Falha na requisição'}`);
+      setError(`Erro ao enfileirar job: ${err?.message || 'falha na requisição'}`);
     } finally {
       setIsCreating(false);
     }
   };
 
   const handleCancelJob = async (id: string) => {
+    setError(null);
     try {
-      await fetch(`/api/jobs/${id}/cancel`, { method: 'POST' });
-      fetchQueue();
-    } catch (err) {
-      console.warn('Erro ao cancelar job:', err);
+      const res = await fetch(`/api/jobs/${id}/cancel`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || `Falha ao cancelar job (HTTP ${res.status}).`);
+      }
+      await fetchQueue();
+    } catch (err: any) {
+      setError(`Erro ao cancelar job: ${err?.message || 'falha desconhecida'}`);
     }
   };
 
   const handleClearCompleted = async () => {
+    setError(null);
     try {
-      await fetch('/api/jobs/completed', { method: 'DELETE' });
-      fetchQueue();
-    } catch (err) {
-      console.warn('Erro ao limpar jobs:', err);
+      const res = await fetch('/api/jobs/completed', { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || `Falha ao limpar jobs (HTTP ${res.status}).`);
+      }
+      await fetchQueue();
+    } catch (err: any) {
+      setError(`Erro ao limpar jobs: ${err?.message || 'falha desconhecida'}`);
     }
   };
 
-  const handleImportResults = (job: QueueJob) => {
-    if (!job.result || !job.result.leads || !Array.isArray(job.result.leads)) return;
+  const handleImportResults = async (job: QueueJob) => {
+    setError(null);
+    if (!job.result || !Array.isArray(job.result.leads)) {
+      setError('O job concluído não contém uma lista de leads importável.');
+      return;
+    }
 
-    const leadsToImport: BusinessLead[] = job.result.leads.map((b: any, index: number) => ({
-      id: b.id || `imported-lead-${Date.now()}-${index}`,
-      name: b.name || 'Empresa Prospect',
-      category: b.category || selectedCategory,
-      address: b.address || `${b.city || 'Cidade'}, ${b.state || 'SP'}`,
-      neighborhood: b.neighborhood || 'Centro',
-      city: b.city || 'São Paulo',
-      state: b.state || 'SP',
-      phone: b.phone || '(11) 99999-8888',
-      rating: b.rating || 4.8,
-      reviewsCount: b.reviewsCount || 42,
-      websiteStatus: b.websiteStatus || 'none',
-      websiteUrl: b.websiteUrl || undefined,
-      instagramHandle: b.instagramHandle || undefined,
-      opportunityScore: b.opportunityScore || 90,
-      opportunityLevel: b.opportunityLevel || 'high',
-      estimatedValue: b.estimatedValue || 'R$ 2.000 - R$ 3.500',
-      keyInsights: b.keyInsights || ['Potencial imediato de fechamento para Landing Page com agendamento'],
-      isSaved: false,
-      status: 'novo',
-      createdAt: new Date().toISOString(),
-    }));
+    const requiredFields = ['id', 'name', 'category', 'address', 'city', 'state', 'websiteStatus'];
+    const invalidIndex = job.result.leads.findIndex((lead: any) =>
+      requiredFields.some((field) => typeof lead[field] !== 'string' || !lead[field].trim()) ||
+      !['none', 'social_only', 'has_website'].includes(lead.websiteStatus)
+    );
+    if (invalidIndex >= 0) {
+      setError(`O lead ${invalidIndex + 1} do job não possui todos os dados obrigatórios. Nenhum lead foi importado.`);
+      return;
+    }
 
-    onImportLeads(leadsToImport);
-    alert(`🎉 ${leadsToImport.length} leads foram importados da fila com sucesso!`);
+    const leadsToImport = job.result.leads as BusinessLead[];
+    setIsImporting(true);
+    try {
+      await onImportLeads(leadsToImport);
+      setError(`${leadsToImport.length} lead(s) importado(s) para o CRM.`);
+    } catch (err: any) {
+      setError(`Falha ao importar resultados: ${err?.message || 'erro desconhecido'}`);
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -263,6 +286,11 @@ export const QueueDrawerModal: React.FC<QueueDrawerModalProps> = ({
 
         {/* Content Body */}
         <div className="p-6 overflow-y-auto grow space-y-4">
+          {error && (
+            <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+              {error}
+            </div>
+          )}
           {activeTab === 'new_job' && (
             <form onSubmit={handleCreateBatchJob} className="max-w-xl mx-auto space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-200">
               <div className="flex items-center space-x-2 pb-2 border-b border-slate-200">
@@ -296,7 +324,9 @@ export const QueueDrawerModal: React.FC<QueueDrawerModalProps> = ({
                     value={selectedState}
                     onChange={(e) => setSelectedState(e.target.value)}
                     className="w-full text-xs p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                    required
                   >
+                    <option value="">Selecione o estado</option>
                     <option value="SP">São Paulo (SP)</option>
                     <option value="RJ">Rio de Janeiro (RJ)</option>
                     <option value="MG">Minas Gerais (MG)</option>
@@ -313,7 +343,9 @@ export const QueueDrawerModal: React.FC<QueueDrawerModalProps> = ({
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
                     className="w-full text-xs p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                    required
                   >
+                    <option value="">Selecione a categoria</option>
                     <option value="Estética & Saúde">Clínica de Estética & Salão</option>
                     <option value="Dentista / Clínica Odontológica">Dentista / Odontologia</option>
                     <option value="Oficina Mecânica & Estética Automotiva">Oficina Mecânica</option>
@@ -479,8 +511,9 @@ export const QueueDrawerModal: React.FC<QueueDrawerModalProps> = ({
 
                         {selectedJob.status === 'completed' && selectedJob.result?.leads && (
                           <button
-                            onClick={() => handleImportResults(selectedJob)}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-xs flex items-center space-x-1"
+                            onClick={() => void handleImportResults(selectedJob)}
+                            disabled={isImporting}
+                            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-xs flex items-center space-x-1"
                           >
                             <Building2 className="w-3.5 h-3.5" />
                             <span>Importar {selectedJob.result.leads.length} Leads para CRM</span>

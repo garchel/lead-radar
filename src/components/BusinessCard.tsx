@@ -40,7 +40,8 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
     );
   };
 
-  const getScoreColor = (score: number) => {
+  const getScoreColor = (score?: number) => {
+    if (score === undefined) return 'text-slate-600 border-slate-200 bg-slate-100';
     if (score >= 85) return 'text-indigo-700 border-indigo-200 bg-indigo-50';
     if (score >= 70) return 'text-amber-700 border-amber-200 bg-amber-50';
     return 'text-slate-600 border-slate-200 bg-slate-100';
@@ -73,11 +74,11 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
           <div className="flex items-center space-x-2">
             <div className="flex items-center text-amber-500 font-bold space-x-1">
               <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-              <span>{lead.rating || '4.8'}</span>
+              <span>{lead.rating !== undefined ? lead.rating : 'Nota não informada'}</span>
             </div>
             <span className="text-slate-300">•</span>
             <span className="text-slate-500 font-medium">
-              {lead.reviewsCount ? `${lead.reviewsCount} avaliações Google` : 'Muitas avaliações'}
+              {lead.reviewsCount !== undefined ? `${lead.reviewsCount} avaliações Google` : 'Avaliações não informadas'}
             </span>
           </div>
 
@@ -92,7 +93,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
         <div className="space-y-1.5 text-xs text-slate-600 font-medium">
           <div className="flex items-start space-x-2">
             <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-            <span className="line-clamp-1">{lead.address} ({lead.city} - {lead.state || 'SP'})</span>
+            <span className="line-clamp-1">{lead.address}, {lead.city} ({lead.state || 'UF não informada'})</span>
           </div>
           {lead.phone && (
             <div className="flex items-center space-x-2 text-slate-700 font-mono">
@@ -134,7 +135,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
         <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
           <span className="text-slate-500 font-medium">Potencial de Projeto:</span>
           <span className="font-extrabold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded border border-indigo-100">
-            {lead.estimatedValue}
+            {lead.estimatedValue || 'Valor não informado'}
           </span>
         </div>
       </div>

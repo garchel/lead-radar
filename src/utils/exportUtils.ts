@@ -94,7 +94,7 @@ export function printLeadDossier(lead: BusinessLead, analysis?: LeadAnalysisResu
           <div class="subtitle">Análise de Presença Digital e Oportunidade de Vendas</div>
         </div>
         <div style="text-align: right;">
-          <span class="badge">Score de Oportunidade: ${lead.opportunityScore}%</span>
+          <span class="badge">Score de Oportunidade: ${lead.opportunityScore ?? 'Não informado'}${lead.opportunityScore !== undefined ? '%' : ''}</span>
           <div style="font-size: 11px; color: #94a3b8; margin-top: 6px;">Gerado em ${dateStr}</div>
         </div>
       </div>
@@ -105,16 +105,16 @@ export function printLeadDossier(lead: BusinessLead, analysis?: LeadAnalysisResu
       <div style="margin-top: 25px;" class="grid">
         <div class="card">
           <div class="card-title">Métricas no Google Maps</div>
-          <div style="font-size: 18px; font-weight: bold; color: #0f172a;">⭐ ${lead.rating || 4.8} / 5.0</div>
-          <div style="font-size: 13px; color: #64748b;">Baseado em ${lead.reviewsCount || 0} avaliações reais de clientes</div>
+          <div style="font-size: 18px; font-weight: bold; color: #0f172a;">⭐ ${lead.rating ?? 'Não informada'} / 5.0</div>
+          <div style="font-size: 13px; color: #64748b;">${lead.reviewsCount ?? 'Não informada'} avaliações informadas do Google</div>
           <div style="margin-top: 10px; font-size: 12px; font-weight: bold; color: ${lead.websiteStatus === 'none' ? '#dc2626' : '#d97706'};">
-            Status Atual: ${lead.websiteStatus === 'none' ? '❌ Sem nenhuma página/site no Google' : '⚠️ Apenas rede social (sem controle de conversão)'}
+            Status Atual: ${lead.websiteStatus === 'none' ? '❌ Sem nenhuma página/site no Google' : lead.websiteStatus === 'social_only' ? '⚠️ Apenas rede social (sem controle de conversão)' : lead.websiteStatus === 'has_website' ? '✅ Site identificado' : 'Não informado'}
           </div>
         </div>
 
         <div class="card">
           <div class="card-title">Potencial de Faturamento</div>
-          <div class="metric-val">${analysis?.revenuePotential || lead.estimatedValue || 'R$ 2.500 - R$ 4.000'}</div>
+          <div class="metric-val">${analysis?.revenuePotential || lead.estimatedValue || 'Não informado'}</div>
           <div style="font-size: 12px; color: #64748b;">Estimativa de ticket por projeto de Landing Page + Otimização</div>
         </div>
       </div>

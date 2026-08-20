@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BookOpen, Calculator, CheckCircle2, MessageSquare, TrendingUp, Award, Zap, ArrowRight, Lightbulb } from 'lucide-react';
-import { STRATEGY_STEPS } from '../data/mockLeads';
+import { STRATEGY_STEPS } from '../data/catalog';
 
 export const StrategyGuide: React.FC = () => {
   // ROI Calculator State

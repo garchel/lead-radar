@@ -1,3 +1,12 @@
+export type InteractionOutcome =
+  | 'pending'
+  | 'no_response'
+  | 'negative'
+  | 'positive'
+  | 'meeting_scheduled'
+  | 'negotiating'
+  | 'do_not_contact';
+
 export interface BusinessLead {
   id: string;
   name: string;
@@ -11,16 +20,23 @@ export interface BusinessLead {
   reviewsCount?: number;
   websiteStatus: 'none' | 'social_only' | 'has_website';
   websiteUrl?: string;
+  googlePlaceId?: string;
   instagramHandle?: string;
-  lat: number;
-  lng: number;
-  opportunityScore: number; // 0 - 100
-  opportunityLevel: 'high' | 'medium' | 'low';
-  estimatedValue: string;
-  keyInsights: string[];
+  lat?: number;
+  lng?: number;
+  opportunityScore?: number; // 0 - 100
+  opportunityLevel?: 'high' | 'medium' | 'low';
+  estimatedValue?: string;
+  keyInsights?: string[];
   savedAt?: string;
   pipelineStatus?: 'prospect' | 'contacted' | 'negotiating' | 'closed' | 'declined';
   notes?: string;
+  lastContactAt?: string;
+  lastResponseAt?: string;
+  lastContactOutcome?: InteractionOutcome;
+  nextContactAt?: string;
+  contactAttempts?: number;
+  doNotContact?: boolean;
 }
 
 export interface LeadAnalysisResult {

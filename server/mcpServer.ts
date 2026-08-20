@@ -2,8 +2,22 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { z } from "zod";
 import { Express, Request, Response } from "express";
-import { GoogleGenAI, Type } from "@google/genai";
+
 import { queueManager } from "./jobs/queueManager";
+import { getLeadById, upsertLead, getLeads, getLandingPages, getLandingPageById, upsertSchedule, getPipelineSummary, getDueFollowUps } from "./store/db";
+import { CronPattern } from "croner";
+import { scheduler } from "./scheduler/scheduler";
+import { buildLeadDossier } from "./dossier/dossier";
+import {
+  createLandingPageRecord,
+  deployLandingPage,
+  approveLandingPage,
+} from "./landingPage/service";
+import { StoredLead, PipelineStatus } from "./store/types";
+import { enrichLead } from "./enrichment";
+import { dispatchLeadContact, recordInteractionOutcome } from "./services/interactionService";
+import { searchBusinesses, analyzeLead } from "./services/prospectingService";
+
 
 // Shared Categories
 const CATEGORIES = [
@@ -21,115 +35,6 @@ const CATEGORIES = [
   "Instalação de Ar Condicionado & Manutenção"
 ];
 
-// Helper to instantiate Gemini if key exists
-function getGenAI(): GoogleGenAI | null {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-  return new GoogleGenAI({
-    apiKey,
-    httpOptions: {
-      headers: { "User-Agent": "leadradar-mcp-server" },
-    },
-  });
-}
-
-// Fallback business generator
-function generateFallbackBusinesses(location: string, state: string, category: string, presenceFilter: string) {
-  const city = location.split(',')[0].trim() || "São Paulo";
-  const uf = state && state !== "ALL" ? state : "SP";
-  const cat = category && category !== "Todas as Categorias" ? category : "Estética & Saúde";
-
-  const templates = [
-    {
-      suffix: "Centro de Excelência",
-      neighborhood: "Centro",
-      rating: 4.9,
-      reviewsCount: 128,
-      websiteStatus: "none",
-      score: 95,
-      phone: "(11) 98765-4321",
-      instagram: "@centro.excelencia",
-      insights: [
-        "Tem nota 4.9 no Google Maps mas nenhum site para agendamentos.",
-        "Concorrentes da região já estão anunciando no Google Ads.",
-        "Potencial de fechamento imediato com modelo focado em WhatsApp."
-      ]
-    },
-    {
-      suffix: "Atendimento Especializado",
-      neighborhood: "Jardins",
-      rating: 4.8,
-      reviewsCount: 84,
-      websiteStatus: "social_only",
-      score: 91,
-      phone: "(11) 97123-8899",
-      instagram: "@atendimento.especializado",
-      insights: [
-        "Depende 100% do Instagram, perdendo pesquisas diretas no Google.",
-        "Clientes reclamam da falta de tabela de preços visível online.",
-        "Alta propensão para adquirir Landing Page de conversão."
-      ]
-    },
-    {
-      suffix: "Soluções e Serviços",
-      neighborhood: "Vila Nova",
-      rating: 4.7,
-      reviewsCount: 62,
-      websiteStatus: "none",
-      score: 88,
-      phone: "(11) 96543-2100",
-      instagram: "@solucoes.servicos",
-      insights: [
-        "Mencionam excelente atendimento mas não possuem catálogo de serviços.",
-        "Grande volume de ligações diárias para dúvidas básicas.",
-        "Ideal para oferta de Landing Page com FAQ e botão WhatsApp."
-      ]
-    },
-    {
-      suffix: "Espaço Integrado",
-      neighborhood: "Bela Vista",
-      rating: 4.9,
-      reviewsCount: 156,
-      websiteStatus: "social_only",
-      score: 93,
-      phone: "(11) 98111-2233",
-      instagram: "@espaco.integrado",
-      insights: [
-        "Mais de 150 avaliações 5 estrelas sem página própria.",
-        "Otimização simples de Google Meu Negócio + Landing Page trará retorno imediato.",
-        "Sugerir botão direto de agendamento online."
-      ]
-    }
-  ];
-
-  let list = templates.map((tmpl, idx) => ({
-    id: `mcp-lead-${idx + 1}`,
-    name: `${cat.split('/')[0].trim()} ${tmpl.suffix} ${city}`,
-    category: cat,
-    address: `Rua Principal, ${100 * (idx + 1)} - ${tmpl.neighborhood}`,
-    neighborhood: tmpl.neighborhood,
-    city: city,
-    state: uf,
-    phone: tmpl.phone,
-    rating: tmpl.rating,
-    reviewsCount: tmpl.reviewsCount,
-    websiteStatus: tmpl.websiteStatus,
-    websiteUrl: null,
-    instagramHandle: tmpl.instagram,
-    opportunityScore: tmpl.score,
-    opportunityLevel: tmpl.score > 90 ? "high" : "medium",
-    estimatedValue: "R$ 1.800 - R$ 3.500",
-    keyInsights: tmpl.insights,
-  }));
-
-  if (presenceFilter === "gold") {
-    list = list.filter((b) => b.websiteStatus === "none");
-  } else if (presenceFilter === "silver") {
-    list = list.filter((b) => b.websiteStatus === "social_only");
-  }
-
-  return list;
-}
 
 // Create MCP Server instance
 export function createLeadRadarMcpServer() {
@@ -144,57 +49,35 @@ export function createLeadRadarMcpServer() {
     "search_leads",
     "Busca e mapeia estabelecimentos comerciais e avalia oportunidade de venda de Landing Page.",
     {
-      location: z.string().default("São Paulo").describe("Nome da cidade alvo (ex: 'Campinas')"),
-      state: z.string().default("SP").describe("Sigla do Estado (ex: 'SP', 'RJ')"),
-      category: z.string().default("Todas as Categorias").describe("Categoria de negócio"),
-      presenceFilter: z.enum(["all", "gold", "silver"]).default("all").describe("Filtro digital: 'gold' (sem site), 'silver' (apenas instagram) ou 'all'"),
+      location: z.string().min(1).describe("Nome obrigatório da cidade alvo (ex: 'Campinas')"),
+      state: z.string().regex(/^[A-Za-z]{2}$/).describe("UF obrigatória (ex: 'SP', 'RJ')"),
+      category: z.string().min(1).describe("Categoria obrigatória de negócio"),
+      presenceFilter: z.enum(["all", "gold", "silver"]).describe("Filtro digital obrigatório: 'gold' (sem site), 'silver' (apenas instagram) ou 'all'"),
     },
     async ({ location, state, category, presenceFilter }) => {
       try {
-        const ai = getGenAI();
-        if (ai) {
-          const promptText = `
-            Pesquise empresas reais em "${location}" (${state}).
-            ${category !== "Todas as Categorias" ? `Categoria: "${category}".` : ""}
-            Foco: Identificar empresas sem site oficial ou apenas com redes sociais.
-            Retorne JSON com array "businesses" (id, name, category, address, city, state, phone, rating, reviewsCount, websiteStatus: "none"|"social_only"|"has_website", opportunityScore, estimatedValue, keyInsights).
-          `;
-          const response = await ai.models.generateContent({
-            model: "gemini-3.6-flash",
-            contents: promptText,
-            config: {
-              tools: [{ googleSearch: {} }],
-              responseMimeType: "application/json",
+        const { businesses } = await searchBusinesses({ location, state, category, filterNoWebsiteOnly: true });
+        let leads = businesses;
+        if (presenceFilter === "gold") leads = leads.filter((b: any) => b.websiteStatus === "none");
+        if (presenceFilter === "silver") leads = leads.filter((b: any) => b.websiteStatus === "social_only");
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ source: "gemini", count: leads.length, location, state, category, leads }, null, 2),
             },
-          });
-          const parsed = JSON.parse(response.text?.trim() || "{}");
-          if (parsed.businesses && Array.isArray(parsed.businesses)) {
-            let leads = parsed.businesses;
-            if (presenceFilter === "gold") leads = leads.filter((b: any) => b.websiteStatus === "none");
-            if (presenceFilter === "silver") leads = leads.filter((b: any) => b.websiteStatus === "social_only");
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify({ count: leads.length, location, state, category, leads }, null, 2),
-                },
-              ],
-            };
-          }
-        }
-      } catch (err) {
-        // Fallback
+          ],
+        };
+      } catch (err: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ success: false, error: err?.message || "Falha ao buscar empresas reais." }, null, 2),
+            },
+          ],
+        };
       }
-
-      const fallback = generateFallbackBusinesses(location, state, category, presenceFilter);
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({ source: "intelligent_mapping", count: fallback.length, location, state, category, leads: fallback }, null, 2),
-          },
-        ],
-      };
     }
   );
 
@@ -204,38 +87,33 @@ export function createLeadRadarMcpServer() {
     "Gera diagnóstico profundo com IA para um lead, entregando argumentos de vendas, falhas identificadas e pitches prontos.",
     {
       businessName: z.string().describe("Nome da empresa"),
-      category: z.string().default("Serviços Locais").describe("Categoria do estabelecimento"),
-      city: z.string().default("São Paulo").describe("Cidade"),
-      phone: z.string().optional().describe("Telefone ou WhatsApp"),
-      rating: z.number().optional().default(4.8).describe("Nota no Google Maps"),
-      reviewsCount: z.number().optional().default(50).describe("Quantidade de avaliações"),
+      category: z.string().min(1).describe("Categoria obrigatória do estabelecimento"),
+      city: z.string().min(1).describe("Cidade obrigatória"),
+      phone: z.string().optional().describe("Telefone ou WhatsApp real, quando disponível"),
+      rating: z.number().optional().describe("Nota real no Google Maps, quando disponível"),
+      reviewsCount: z.number().int().nonnegative().optional().describe("Quantidade real de avaliações, quando disponível"),
     },
     async ({ businessName, category, city, phone, rating, reviewsCount }) => {
-      const result = {
-        businessName,
-        opportunityScore: 94,
-        revenuePotential: "R$ 2.200 - R$ 4.000",
-        urgencyLevel: "alta",
-        missingFeatures: [
-          "Botão Direto de Agendamento pelo WhatsApp",
-          "Catálogo Visual de Serviços e Trabalhos Realizados",
-          "Módulo de Prova Social Automático com Notas do Google",
-          "Seção de Dúvidas Frequentes (FAQ)"
-        ],
-        whyTheyNeedLandingPage: `A empresa ${businessName} possui nota ${rating}★ no Google Maps (${reviewsCount} avaliações), mas perde vendas diárias no celular por falta de uma Landing Page com atendimento direto.`,
-        customPitchWhatsApp: `Olá! Vi a nota ${rating}★ da *${businessName}* no Google Maps (${reviewsCount} avaliações!). 👏\n\nNotei que vocês ainda não possuem um site direto para agendamentos no WhatsApp. Montei uma prévia visual de como ficaria a Landing Page de vocês sem compromisso. Posso te enviar a imagem?`,
-        customPitchEmail: `Assunto: Proposta de Landing Page para ${businessName}\n\nOlá equipe da ${businessName},\n\nVi a reputação excelente de vocês no Google Maps. Construímos Landing Pages de alta conversão para ${category} em ${city}.\n\nQuando podemos conversar 10min nesta semana?`,
-        customPitchColdCall: `Roteiro: 1. "Olá! Falo com o responsável pela ${businessName}?" 2. "Vi suas ótimas avaliações no Google. Criei um protótipo de site no WhatsApp pra vocês. Posso enviar pelo Whats?"`,
-      };
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(result, null, 2),
-          },
-        ],
-      };
+      try {
+        const analysis = await analyzeLead({ businessName, category, city, phone, rating, reviewsCount });
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(analysis, null, 2),
+            },
+          ],
+        };
+      } catch (err: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ success: false, error: err?.message || "Falha ao gerar o diagnóstico por IA." }, null, 2),
+            },
+          ],
+        };
+      }
     }
   );
 
@@ -250,6 +128,9 @@ export function createLeadRadarMcpServer() {
     },
     async ({ phone, businessName, tone }) => {
       const cleanPhone = phone.replace(/\D/g, "");
+      if (cleanPhone.length < 10) {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Telefone inválido: informe DDD e número reais." }, null, 2) }] };
+      }
       const fullPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
 
       let msg = "";
@@ -285,6 +166,35 @@ export function createLeadRadarMcpServer() {
       notes: z.string().optional().describe("Anotação adicional sobre a interação"),
     },
     async ({ leadId, businessName, status, notes }) => {
+      // Map MCP status (PT-BR funnel) to internal store status
+      const STATUS_MAP: Record<string, PipelineStatus> = {
+        novo: "prospect",
+        contatado: "contacted",
+        proposta_enviada: "negotiating",
+        em_negociacao: "negotiating",
+        fechado: "closed",
+        recusado: "declined",
+      };
+      const pipelineStatus: PipelineStatus = STATUS_MAP[status] || "prospect";
+      const now = new Date().toISOString();
+
+      const existing = getLeadById(leadId);
+      if (existing) {
+        upsertLead({ ...existing, pipelineStatus, notes: notes || existing.notes, updatedAt: now });
+      } else {
+        if (!businessName?.trim()) {
+          return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Lead não encontrado; businessName é obrigatório para criar o registro." }, null, 2) }] };
+        }
+        upsertLead({
+          id: leadId,
+          name: businessName.trim(),
+          pipelineStatus,
+          notes,
+          savedAt: now,
+          updatedAt: now,
+        } as StoredLead);
+      }
+
       return {
         content: [
           {
@@ -294,7 +204,7 @@ export function createLeadRadarMcpServer() {
               leadId,
               businessName,
               newStatus: status,
-              updatedAt: new Date().toISOString(),
+              updatedAt: now,
               notes: notes || "Status atualizado via Agente MCP",
             }, null, 2),
           },
@@ -303,16 +213,256 @@ export function createLeadRadarMcpServer() {
     }
   );
 
-  // TOOL 5: queue_batch_prospecting
+  // TOOL 4.5: send_contact
+  server.tool(
+    "send_contact",
+    "Envia uma mensagem de contato a um lead (WhatsApp ou e-mail). Sem provedor configurado, registra a falha sem simular o envio.",
+    {
+      leadId: z.string().describe("ID do lead"),
+      channel: z.enum(["whatsapp", "email"]).optional().describe("Canal preferido (default: WhatsApp se houver telefone)"),
+      message: z.string().optional().describe("Texto da mensagem (default: pitch gerado por IA)"),
+      subject: z.string().optional().describe("Assunto (somente e-mail)"),
+    },
+    async ({ leadId, channel, message, subject }) => {
+      const lead = getLeadById(leadId);
+      if (!lead) {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Lead não encontrado." }, null, 2) }] };
+      }
+      try {
+        const result = await dispatchLeadContact(lead, { channel, message, subject });
+        if (result.blocked || result.status !== "sent") {
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify({ success: false, error: result.detail, ...result }, null, 2),
+            }],
+          };
+        }
+        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 2) }] };
+      } catch (e: any) {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: e?.message || "Falha no envio." }, null, 2) }] };
+      }
+    }
+  );
+
+  // TOOL 4.6: record_interaction_outcome
+  server.tool(
+    "record_interaction_outcome",
+    "Registra a resposta de uma empresa e calcula a próxima janela de contato. Recusa negativa libera novo contato após 30 dias; pedido para não contatar bloqueia permanentemente.",
+    {
+      leadId: z.string().describe("ID do lead"),
+      outcome: z.enum(["no_response", "negative", "positive", "meeting_scheduled", "negotiating", "do_not_contact"]),
+      interactionId: z.string().optional().describe("ID da interação, quando não for a mais recente pendente"),
+      notes: z.string().optional().describe("Observação sobre a resposta"),
+    },
+    async ({ leadId, outcome, interactionId, notes }) => {
+      try {
+        const result = recordInteractionOutcome(leadId, outcome, { interactionId, notes });
+        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 2) }] };
+      } catch (e: any) {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: e?.message || "Falha ao registrar a interação." }, null, 2) }] };
+      }
+    }
+  );
+
+  // TOOL 4.7: list_due_followups
+  server.tool(
+    "list_due_followups",
+    "Lista leads cujo prazo de recontato já chegou e que não solicitaram bloqueio permanente.",
+    {},
+    async () => ({
+      content: [{ type: "text", text: JSON.stringify({ success: true, followUps: getDueFollowUps() }, null, 2) }],
+    })
+  );
+
+  // TOOL 5: create_lead
+  server.tool(
+    "create_lead",
+    "Cria ou atualiza um lead no banco compartilhado do LeadRadar (fonte da verdade para a UI e o Hermes).",
+    {
+      id: z.string().describe("ID único do lead"),
+      name: z.string().describe("Nome da empresa"),
+      category: z.string().optional().describe("Categoria comercial"),
+      city: z.string().optional().describe("Cidade"),
+      state: z.string().optional().describe("UF"),
+      phone: z.string().optional().describe("Telefone / WhatsApp"),
+      email: z.string().email().optional().describe("E-mail da empresa"),
+      cnpj: z.string().optional().describe("CNPJ"),
+      googlePlaceId: z.string().optional().describe("ID estável do Google Places"),
+      websiteUrl: z.string().url().optional().describe("URL do site"),
+      websiteStatus: z.enum(["none", "social_only", "has_website"]).optional().describe("Presença digital"),
+      notes: z.string().optional().describe("Observações"),
+    },
+    async ({ id, name, category, city, state, phone, email, cnpj, googlePlaceId, websiteUrl, websiteStatus, notes }) => {
+      const existing = getLeadById(id);
+      const now = new Date().toISOString();
+      upsertLead({
+        id,
+        name,
+        category,
+        city,
+        state,
+        phone,
+        email,
+        cnpj,
+        googlePlaceId,
+        websiteUrl,
+        websiteStatus,
+        notes,
+        pipelineStatus: existing?.pipelineStatus || "prospect",
+        savedAt: existing?.savedAt || now,
+        updatedAt: now,
+      } as StoredLead);
+      return {
+        content: [{ type: "text", text: JSON.stringify({ success: true, leadId: id, name }, null, 2) }],
+      };
+    }
+  );
+
+  // TOOL 6: list_leads
+  server.tool(
+    "list_leads",
+    "Lista os leads armazenados no banco compartilhado.",
+    {
+      status: z.string().optional().describe("Filtro opcional por status (prospect|contacted|negotiating|closed|declined)"),
+    },
+    async ({ status }) => {
+      const leads = status ? getLeads().filter((l) => l.pipelineStatus === status) : getLeads();
+      return {
+        content: [{ type: "text", text: JSON.stringify({ success: true, count: leads.length, leads }, null, 2) }],
+      };
+    }
+  );
+
+  // TOOL 7: create_landing_page
+  server.tool(
+    "create_landing_page",
+    "Enfileira a criação de uma Landing Page para um lead e retorna o job + ID da página. A página nasce em 'aguardando_aprovacao'.",
+    {
+      leadId: z.string().describe("ID do lead"),
+      concept: z.any().optional().describe("Conceito de LP (heroHeadline, heroSubheadline, callToAction, etc.)"),
+      autoDeploy: z.boolean().optional().default(false).describe("Se true, aprova e publica automaticamente (use com cautela)"),
+    },
+    async ({ leadId, concept, autoDeploy }) => {
+      const lead = getLeadById(leadId);
+      if (!lead) {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Lead não encontrado. Persista o lead antes de criar a Landing Page." }, null, 2) }] };
+      }
+      if (!concept) {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Conceito da Landing Page é obrigatório." }, null, 2) }] };
+      }
+      const job = queueManager.createJob(
+        "landing_page_creation",
+        `Criar Landing Page ${lead?.name ? `para ${lead.name}` : ""}`.trim(),
+        { leadId, concept, autoDeploy }
+      );
+      return {
+        content: [{ type: "text", text: JSON.stringify({ success: true, jobId: job.id, status: "aguardando_aprovacao", note: "Acompanhe o job e aprove antes de publicar." }, null, 2) }],
+      };
+    }
+  );
+
+  // TOOL 8: list_landing_pages
+  server.tool(
+    "list_landing_pages",
+    "Lista as Landing Pages geradas e seus estágios/status.",
+    {},
+    async () => {
+      const pages = getLandingPages().map((lp) => ({
+        id: lp.id,
+        businessName: lp.businessName,
+        status: lp.status,
+        stage: lp.stage,
+        url: lp.url || null,
+      }));
+      return {
+        content: [{ type: "text", text: JSON.stringify({ success: true, count: pages.length, landingPages: pages }, null, 2) }],
+      };
+    }
+  );
+
+  // TOOL 9: get_landing_page
+  server.tool(
+    "get_landing_page",
+    "Obtém os detalhes de uma Landing Page (incluindo o HTML gerado).",
+    { id: z.string().describe("ID ou slug da Landing Page") },
+    async ({ id }) => {
+      const lp = getLandingPageById(id);
+      if (!lp) return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Não encontrada" }, null, 2) }] };
+      return { content: [{ type: "text", text: JSON.stringify({ success: true, landingPage: lp }, null, 2) }] };
+    }
+  );
+
+  // TOOL 10: approve_landing_page
+  server.tool(
+    "approve_landing_page",
+    "Guarda-limite humano: aprova uma Landing Page antes da publicação. A página só pode ser publicada após aprovada.",
+    { id: z.string().describe("ID da Landing Page") },
+    async ({ id }) => {
+      const approved = approveLandingPage(id);
+      if (!approved) return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Não encontrada" }, null, 2) }] };
+      return { content: [{ type: "text", text: JSON.stringify({ success: true, status: approved.status, stage: approved.stage }, null, 2) }] };
+    }
+  );
+
+  // TOOL 11: deploy_landing_page
+  server.tool(
+    "deploy_landing_page",
+    "Publica uma Landing Page aprovada e retorna a URL pública.",
+    { id: z.string().describe("ID da Landing Page aprovada") },
+    async ({ id }) => {
+      try {
+        const deployed = await deployLandingPage(id);
+        if (!deployed) return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Não encontrada" }, null, 2) }] };
+        return { content: [{ type: "text", text: JSON.stringify({ success: true, url: deployed.url, status: deployed.status }, null, 2) }] };
+      } catch (e: any) {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: e?.message || "Falha no deploy" }, null, 2) }] };
+      }
+    }
+  );
+
+  // TOOL 12: enrich_lead
+  server.tool(
+    "enrich_lead",
+    "Enriquece um lead existente com dados de Google Places, BrasilAPI (CNPJ) e Hunter.io (e-mail).",
+    { leadId: z.string().describe("ID do lead a ser enriquecido") },
+    async ({ leadId }) => {
+      const lead = getLeadById(leadId);
+      if (!lead) return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Lead não encontrado" }, null, 2) }] };
+
+      try {
+        const result = await enrichLead(lead);
+        return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: result.enriched,
+              enriched: result.enriched,
+              fields: result.fields,
+              ...(result.enriched
+                ? { message: `Lead enriquecido com: ${result.fields.join(', ')}` }
+                : { error: "Nenhum campo novo foi encontrado; o lead não foi enriquecido." }),
+            }, null, 2),
+          },
+        ],
+        };
+      } catch (e: any) {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: e?.message || "Falha no enriquecimento." }, null, 2) }] };
+      }
+    }
+  );
+
+  // TOOL 13: queue_batch_prospecting
   server.tool(
     "queue_batch_prospecting",
     "Enfileira uma tarefa assíncrona de prospecção em lote para várias cidades ou categorias sem bloquear o agente.",
     {
-      title: z.string().default("Prospecção em Lote Assíncrona").describe("Título identificador do Job"),
-      locations: z.array(z.string()).default(["Campinas", "Sorocaba"]).describe("Lista de cidades a escanear"),
-      state: z.string().default("SP").describe("Estado"),
-      categories: z.array(z.string()).default(["Estética & Saúde"]).describe("Lista de categorias"),
-      filterNoWebsiteOnly: z.boolean().default(true).describe("Filtrar apenas sem site / redes sociais"),
+      title: z.string().min(1).describe("Título obrigatório do Job"),
+      locations: z.array(z.string().min(1)).min(1).describe("Lista obrigatória de cidades a escanear"),
+      state: z.string().regex(/^[A-Za-z]{2}$/).describe("UF obrigatória"),
+      categories: z.array(z.string().min(1)).min(1).describe("Lista obrigatória de categorias"),
+      filterNoWebsiteOnly: z.boolean().describe("Filtrar apenas sem site / redes sociais"),
     },
     async ({ title, locations, state, categories, filterNoWebsiteOnly }) => {
       const job = queueManager.createJob("batch_prospecting", title, {
@@ -333,6 +483,100 @@ export function createLeadRadarMcpServer() {
               status: job.status,
               createdAt: job.createdAt,
             }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // TOOL 14: schedule_prospecting
+  server.tool(
+    "schedule_prospecting",
+    "Agenda prospecção periódica (cron). Cria um agendamento persistido no banco compartilhado que dispara Jobs de autopilot ou batch recorrentemente, respeitando o limite de LPs/dia.",
+    {
+      name: z.string().describe("Nome identificador do agendamento"),
+      cron: z.string().describe("Expressão cron (5 ou 6 partes, ex: '0 9 * * 1-5')"),
+      jobType: z.enum(["mcp_autopilot", "batch_prospecting", "follow_up_reminder"]).describe("Tipo de job a disparar (follow_up_reminder apenas lista recontatos autorizados; não envia)"),
+      location: z.string().optional().describe("Cidade alvo (autopilot)"),
+      state: z.string().optional().describe("Sigla da UF"),
+      category: z.string().optional().describe("Categoria de negócio (autopilot)"),
+      locations: z.array(z.string()).optional().describe("Cidades (batch_prospecting)"),
+      categories: z.array(z.string()).optional().describe("Categorias (batch_prospecting)"),
+      maxLeads: z.number().optional().describe("Limite de leads por execução"),
+    },
+    async ({ name, cron, jobType, location, state, category, locations, categories, maxLeads }) => {
+      try {
+        new CronPattern(cron);
+      } catch {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: `Expressão cron inválida: ${cron}` }, null, 2) }] };
+      }
+
+      let payload;
+      if (jobType === "follow_up_reminder") {
+        payload = {};
+      } else {
+        if (!state || !/^[A-Za-z]{2}$/.test(state)) {
+          return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "UF é obrigatória e deve ter 2 letras." }, null, 2) }] };
+        }
+        if (jobType === "batch_prospecting") {
+          if (!locations?.length || !categories?.length) {
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Batch exige locations e categories não vazios." }, null, 2) }] };
+          }
+          payload = { locations, state: state.toUpperCase(), categories, filterNoWebsiteOnly: true };
+        } else {
+          if (!location?.trim() || !category?.trim() || !Number.isInteger(maxLeads) || maxLeads <= 0) {
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Autopilot exige location, category e maxLeads inteiro maior que zero." }, null, 2) }] };
+          }
+          payload = {
+            location: location.trim(),
+            state: state.toUpperCase(),
+            category: category.trim(),
+            autoEnrich: true,
+            sendPitches: false,
+            maxLeads,
+          };
+        }
+      }
+
+      const schedule = upsertSchedule({
+        id: `sch_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        name,
+        cron,
+        jobType,
+        payload,
+        enabled: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      scheduler.reloadOne(schedule.id);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ success: true, message: `Agendamento "${name}" criado (${cron}).`, schedule }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // TOOL 15: export_dossier
+  server.tool(
+    "export_dossier",
+    "Gera o Dossiê Executivo (HTML, pronto para impressão/PDF) de um lead a partir do diagnóstico de IA persistido.",
+    { leadId: z.string().describe("ID do lead") },
+    async ({ leadId }) => {
+      const lead = getLeadById(leadId);
+      if (!lead) {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Lead não encontrado" }, null, 2) }] };
+      }
+      const html = buildLeadDossier(lead);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ success: true, leadId, mimeType: "text/html", html }, null, 2),
           },
         ],
       };
@@ -396,22 +640,7 @@ export function createLeadRadarMcpServer() {
         contents: [
           {
             uri: uri.href,
-            text: JSON.stringify({
-              pipelineSummary: {
-                totalLeads: 24,
-                goldOpportunityNoWebsite: 14,
-                silverOpportunityInstagramOnly: 8,
-                totalEstimatedPipelineValue: "R$ 54.000",
-                conversionRateEstimated: "28%",
-                stages: [
-                  { name: "Novo Prospect", count: 10 },
-                  { name: "Contatado", count: 7 },
-                  { name: "Proposta Enviada", count: 4 },
-                  { name: "Em Negociação", count: 2 },
-                  { name: "Fechado (Cliente)", count: 1 },
-                ],
-              },
-            }, null, 2),
+            text: JSON.stringify({ pipelineSummary: getPipelineSummary() }, null, 2),
             mimeType: "application/json",
           },
         ],
@@ -450,8 +679,8 @@ export function createLeadRadarMcpServer() {
   server.prompt(
     "autopilot_prospecting",
     {
-      location: z.string().default("São Paulo").describe("Cidade para prospeção"),
-      category: z.string().default("Estética & Saúde").describe("Categoria de negócio"),
+      location: z.string().min(1).describe("Cidade obrigatória para prospeção"),
+      category: z.string().min(1).describe("Categoria obrigatória de negócio"),
     },
     ({ location, category }) => ({
       messages: [
@@ -473,8 +702,21 @@ export function createLeadRadarMcpServer() {
 const activeTransports = new Map<string, SSEServerTransport>();
 
 export function registerMcpRoutes(app: Express) {
+  // Optional token auth guard (production). Requires MCP_API_TOKEN to be set.
+  function isAuthorized(req: Request): boolean {
+    const token = process.env.MCP_API_TOKEN;
+    if (!token) return true; // auth disabled
+    const header = req.headers.authorization || "";
+    if (header === `Bearer ${token}`) return true;
+    if (req.query.token === token) return true;
+    return false;
+  }
+
   // Metadata & Integration guide endpoint
   app.get("/api/mcp/info", (req: Request, res: Response) => {
+    if (!isAuthorized(req)) {
+      return res.status(401).json({ error: "Não autorizado. Forneça um token MCP válido." });
+    }
     const host = req.headers.host || "localhost:3000";
     const protocol = req.headers["x-forwarded-proto"] || "http";
     const baseUrl = `${protocol}://${host}`;
@@ -493,9 +735,23 @@ export function registerMcpRoutes(app: Express) {
         { name: "search_leads", description: "Mapeia empresas locais e avalia falta de Landing Page (Filtro Ouro/Prata)." },
         { name: "analyze_lead", description: "Diagnóstico completo de vendas por IA para o prospect." },
         { name: "generate_whatsapp_pitch", description: "Gera mensagem pronta de WhatsApp com link de contato direto." },
-        { name: "update_crm_status", description: "Atualiza estagio no Funil de Vendas do Mini-CRM." },
+        { name: "update_crm_status", description: "Atualiza estagio no Funil de Vendas do Mini-CRM (persiste no banco)." },
+        { name: "create_lead", description: "Cria/atualiza um lead no banco compartilhado." },
+        { name: "list_leads", description: "Lista os leads armazenados no banco." },
+        { name: "create_landing_page", description: "Enfileira a criação de uma Landing Page (aguarda aprovação)." },
+        { name: "list_landing_pages", description: "Lista as Landing Pages e seus estágios/status." },
+        { name: "get_landing_page", description: "Obtém detalhes/HTML de uma Landing Page." },
+        { name: "approve_landing_page", description: "Guarda-limite humano: aprova uma Landing Page antes de publicar." },
+        { name: "deploy_landing_page", description: "Publica uma Landing Page aprovada e retorna a URL." },
+        { name: "enrich_lead", description: "Enriquece um lead com dados reais (Google Places, CNPJ, e-mail)." },
+        { name: "send_contact", description: "Envia mensagem de contato ao lead e aplica a política anti-duplicidade." },
+        { name: "record_interaction_outcome", description: "Registra a resposta da empresa e calcula a próxima janela de contato." },
+        { name: "list_due_followups", description: "Lista os recontatos cujo prazo já chegou." },
+        { name: "schedule_prospecting", description: "Agenda prospecção periódica via cron (autopilot, batch ou follow_up_reminder)." },
+        { name: "export_dossier", description: "Gera o Dossiê Executivo HTML de um lead a partir da análise persistida." },
+
       ],
-      resources: ["leads://categories", "leads://pipeline"],
+      resources: ["leads://categories", "leads://pipeline", "leads://queue_status"],
       prompts: ["autopilot_prospecting"],
       connectionGuide: {
         hermesAgent: {
@@ -530,6 +786,9 @@ export function registerMcpRoutes(app: Express) {
 
   // GET SSE endpoint
   app.get("/api/mcp/sse", async (req: Request, res: Response) => {
+    if (!isAuthorized(req)) {
+      return res.status(401).json({ error: "Não autorizado. Forneça um token MCP válido." });
+    }
     try {
       const server = createLeadRadarMcpServer();
       const transport = new SSEServerTransport("/api/mcp/messages", res);
@@ -551,6 +810,9 @@ export function registerMcpRoutes(app: Express) {
 
   // POST Message endpoint
   app.post("/api/mcp/messages", async (req: Request, res: Response) => {
+    if (!isAuthorized(req)) {
+      return res.status(401).json({ error: "Não autorizado. Forneça um token MCP válido." });
+    }
     const sessionId = req.query.sessionId as string;
     if (!sessionId) {
       return res.status(400).json({ error: "sessionId query parameter required" });

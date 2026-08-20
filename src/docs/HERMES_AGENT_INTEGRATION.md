@@ -11,7 +11,14 @@ O **Hermes Agent** utiliza o protocolo **Model Context Protocol (MCP)** via tran
 1. **`search_leads`**: Descobre empresas locais e filtra alvos **Ouro** (sem site) ou **Prata** (apenas Instagram).
 2. **`analyze_lead`**: Gera o diagnóstico de vendas e argumentos com IA.
 3. **`generate_whatsapp_pitch`**: Cria a abordagem persuasiva e o link direto `wa.me/` com mensagem pré-formatada.
-4. **`update_crm_status`**: Atualiza a fase do lead no Pipeline do Mini-CRM (`novo`, `contatado`, `proposta_enviada`, `fechado`).
+4. **`update_crm_status`**: Atualiza a fase do lead no Pipeline do Mini-CRM (`novo`, `contatado`, `proposta_enviada`, `fechado`) — **persistido no banco compartilhado**.
+5. **Dados reais e automação**: `create_lead`, `list_leads`, `enrich_lead` (Google Places/CNPJ/e-mail), `send_contact` (WhatsApp/e-mail).
+6. **Landing Pages**: `create_landing_page`, `list_landing_pages`, `get_landing_page`, `approve_landing_page` (guarda-limite humano), `deploy_landing_page` (Netlify/local).
+7. **`schedule_prospecting`**: agenda prospecção **periódica** via cron — dispara Jobs de autopilot/batch recorrentes com limite de LPs/dia; `follow_up_reminder` (diário) enfileira os **recontatos autorizados**, sem envio automático.
+8. **`export_dossier`**: gera o Dossiê Executivo HTML do lead.
+9. **`record_interaction_outcome` / `list_due_followups`**: registram a resposta da empresa e listam os recontatos cujo prazo já venceu.
+
+*(No total, **15 ferramentas** (as 4 de prospecção + 11 de automação/monitoramento).)*
 
 ---
 
@@ -55,7 +62,7 @@ hermes agent --mcp-config ./hermes_mcp_config.json \
 
 ```
 [Hermes Agent] ➔ Conectando ao MCP Server em /api/mcp/sse...
-[MCP Server] ➔ Conexão estabelecida! 4 ferramentas e 2 recursos disponíveis.
+[MCP Server] ➔ Conexão estabelecida! 15 ferramentas e 3 recursos disponíveis.
 
 [Hermes Agent] ➔ Executando search_leads(location="Sorocaba", state="SP", presenceFilter="gold")
 [MCP Server] ➔ 4 leads Ouro mapeados com notas > 4.7 no Google Maps.
