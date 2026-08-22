@@ -4,7 +4,7 @@ import { z } from "zod";
 import { Express, Request, Response } from "express";
 
 import { queueManager } from "./jobs/queueManager";
-import { getLeadById, upsertLead, getLeads, getLandingPages, getLandingPageById, upsertSchedule, getPipelineSummary, getDueFollowUps, ensureCitiesLoaded, pickNextCities } from "./store/db";
+import { getLeadById, upsertLead, getLeads, getLandingPages, getLandingPageById, upsertSchedule, getPipelineSummary, getDueFollowUps, ensureCitiesLoaded, pickNextCities, getColdLeads } from "./store/db";
 import { CronPattern } from "croner";
 import { scheduler } from "./scheduler/scheduler";
 import { buildLeadDossier } from "./dossier/dossier";
@@ -746,6 +746,40 @@ export function createLeadRadarMcpServer() {
       } catch (err: any) {
         return {
           content: [{ type: "text", text: JSON.stringify({ success: false, error: err?.message || "Falha no status do pipeline." }, null, 2) }],
+        };
+      }
+    }
+  );
+
+  // TOOL: cold_leads — revisão de leads frios
+  server.tool(
+    "cold_leads",
+    "Lista leads contactados/negociando sem resposta há N+ dias, ordenados pelos mais frios. Não envia mensagens.",
+    {
+      minDays: z.number().int().min(1).optional().describe("Dias sem resposta para considerar frio (default 14)"),
+      limit: z.number().int().min(1).max(200).optional().describe("Máximo de leads retornados (default 50)"),
+    },
+    async ({ minDays = 14, limit = 50 }) => {
+      try {
+        const cold = getColdLeads(minDays, limit);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                success: true,
+                count: cold.length,
+                leads: cold.map((l) => ({
+                  leadId: l.id, name: l.name, city: l.city, state: l.state,
+                  phone: l.phone, pipelineStatus: l.pipelineStatus, daysSinceContact: l.daysSinceContact,
+                })),
+              }, null, 2),
+            },
+          ],
+        };
+      } catch (err: any) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ success: false, error: err?.message || "Falha ao listar leads frios." }, null, 2) }],
         };
       }
     }

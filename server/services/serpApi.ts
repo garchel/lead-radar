@@ -593,8 +593,23 @@ export async function searchSerpApiMaps(input: {
   });
   const cached = getCachedSearch(cacheHash);
   if (cached) {
-    lastWasCached = true;
-    return cached.businesses;
+    // Re-busca inteligente: se a última busca REAL desta cidade é antiga
+    // (config RESEARCH_STALE_DAYS, default 60), ignora o cache para permitir
+    // descobrir empresas novas — a cidade já rotacionou de volta na fila.
+    const staleDays = Number(process.env.RESEARCH_STALE_DAYS || 60);
+    const metaTs = cached.meta?.timestamp ? new Date(cached.meta.timestamp).getTime() : Date.now();
+    const ageDays = (Date.now() - metaTs) / 86400000;
+    if (!Number.isFinite(staleDays) || staleDays <= 0 || ageDays < staleDays) {
+      lastWasCached = true;
+      return cached.businesses;
+    }
+    // cache obsoleto → remove e busca fresco (consome cota, é a intenção)
+    try {
+      const { getDb } = await import("../store/schema");
+      getDb().prepare("DELETE FROM serpapi_search_cache WHERE query_hash = ?").run(cacheHash);
+    } catch {
+      /* best-effort */
+    }
   }
   lastWasCached = false;
 

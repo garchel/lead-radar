@@ -858,6 +858,35 @@ export function deleteSchedule(id: string): boolean {
   return result.changes > 0;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Leads frios — contactados sem resposta há N+ dias                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Leads em 'contacted' (ou 'negotiating') cujo último contato foi há mais de
+ * `minDays` dias, sem resposta registrada e não marcados como não-contatar.
+ * Ordenado pelos mais frios primeiro. Usado pelo job cold_leads_review.
+ */
+export function getColdLeads(minDays = 14, limit = 50): Array<StoredLead & { daysSinceContact: number }> {
+  const cutoff = new Date(Date.now() - minDays * 86400000).toISOString();
+  const rows = getDb().prepare(`
+    SELECT * FROM leads
+    WHERE pipeline_status IN ('contacted', 'negotiating')
+      AND do_not_contact = 0
+      AND last_contact_at IS NOT NULL
+      AND last_contact_at <= ?
+      AND (last_response_at IS NULL OR last_response_at < last_contact_at)
+    ORDER BY last_contact_at ASC
+    LIMIT ?
+  `).all(cutoff, Math.max(1, Math.floor(limit))) as any[];
+  const now = Date.now();
+  return rows.map((row) => {
+    const lead = rowToLead(row);
+    const days = Math.floor((now - new Date(row.last_contact_at).getTime()) / 86400000);
+    return { ...lead, daysSinceContact: Number.isFinite(days) ? days : 0 };
+  });
+}
+
 /**
  * Guardrail de autonomia: quantidade de Landing Pages criadas hoje.
  * Usado para impor o limite máximo de LPs/dia do agendamento autônomo.

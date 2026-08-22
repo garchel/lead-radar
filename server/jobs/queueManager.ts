@@ -1,5 +1,5 @@
 
-import { upsertJob, replaceJobs, getAllJobs, upsertLead, updateLeadAnalysis, getLeadById, getLandingPageById, getDueFollowUps, ensureCitiesLoaded, pickNextCities, markCitySearched, getBusinessCategories } from "../store/db";
+import { upsertJob, replaceJobs, getAllJobs, upsertLead, updateLeadAnalysis, getLeadById, getLandingPageById, getDueFollowUps, ensureCitiesLoaded, pickNextCities, markCitySearched, getBusinessCategories, getColdLeads, createInteraction } from "../store/db";
 import { StoredLead } from "../store/types";
 import {
   createLandingPageRecord,
@@ -17,7 +17,8 @@ export type JobType =
   | 'batch_lead_analysis'
   | 'mcp_autopilot'
   | 'landing_page_creation'
-  | 'follow_up_batch';
+  | 'follow_up_batch'
+  | 'cold_leads_review';
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 
 export interface JobLog {
@@ -200,6 +201,8 @@ class QueueManager {
         await this.handleLandingPageCreation(job);
       } else if (job.type === 'follow_up_batch') {
         await this.handleFollowUpBatch(job);
+      } else if (job.type === 'cold_leads_review') {
+        await this.handleColdLeadsReview(job);
       } else {
         throw new Error(`Tipo de job desconhecido: ${job.type}`);
       }
@@ -695,7 +698,44 @@ class QueueManager {
     job.progress = 95;
   }
 
+  // Task Handler 6: revisão de leads frios — contactados sem resposta há N+ dias
+  private async handleColdLeadsReview(job: Job) {
+    const { minDays = 14, limit = 50 } = job.payload || {};
+    this.addLog(job, `Revisando leads frios (sem resposta há ${minDays}+ dias)...`, 'info');
+    const coldLeads = getColdLeads(Number(minDays) || 14, Number(limit) || 50);
 
+    if (coldLeads.length > 0) {
+      // agenda recontato para cada lead frio (sem enviar mensagem — só cria a interação pendente)
+      let scheduled = 0;
+      for (const lead of coldLeads) {
+        try {
+          createInteraction({
+            leadId: lead.id,
+            type: 'follow_up',
+            channel: 'whatsapp',
+            deliveryStatus: 'pending',
+            outcome: 'no_response',
+            occurredAt: new Date().toISOString(),
+            notes: `[Lead frio] Sem resposta há ${lead.daysSinceContact} dias. Reagendar abordagem com novo ângulo.`,
+            nextContactAt: new Date().toISOString(),
+          });
+          scheduled++;
+        } catch {
+          /* lead sem interação criável — segue */
+        }
+      }
+      this.addLog(job, `${scheduled} recontato(s) agendado(s) na fila de follow-ups (aprovação humana necessária).`, 'success');
+    }
+
+    job.result = {
+      totalCold: coldLeads.length,
+      leads: coldLeads.map((l) => ({
+        leadId: l.id, name: l.name, city: l.city, state: l.state,
+        phone: l.phone, daysSinceContact: l.daysSinceContact, pipelineStatus: l.pipelineStatus,
+      })),
+    };
+    job.progress = 95;
+  }
 }
 
 // Global Singleton Queue Instance

@@ -58,6 +58,27 @@ export interface AnalyzeInput {
   marketTier?: string;
 }
 
+/**
+ * Saturação de mercado: nº de concorrentes da última busca na cidade do lead.
+ * Usa o raw da SerpAPI (local_results) — 0 se não houver contexto.
+ */
+function getCompetitorCount(city?: string): number | undefined {
+  if (!city) return undefined;
+  try {
+    const { raw } = getLastSerpApiRaw();
+    const places: any[] = Array.isArray(raw?.local_results) ? raw.local_results : [];
+    if (places.length === 0) return undefined;
+    // conta quantos resultados mencionam a mesma cidade no endereço
+    const target = city.trim().toLowerCase();
+    const sameCity = places.filter((p) =>
+      String(p.address || p.formatted_address || "").toLowerCase().includes(target)
+    );
+    return sameCity.length > 0 ? sameCity.length : places.length;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function analyzeLead(input: AnalyzeInput): Promise<any> {
   const ai = getGenAI();
   if (!ai) {
@@ -92,6 +113,17 @@ export async function analyzeLead(input: AnalyzeInput): Promise<any> {
       ? `- Ticket de investimento sugerido para esta negociação: R$ ${suggestedTicket.toLocaleString("pt-BR")} (cidade de mercado tier ${marketTier} — use este valor como âncora nos pitches; pode apresentar como faixa ±15%)\n`
       : "";
 
+  // Saturação: ajusta o ângulo do pitch conforme a concorrência local
+  const competitors = getCompetitorCount(city);
+  const saturationHint =
+    typeof competitors === "number" && competitors > 0
+      ? competitors >= 10
+        ? `- Mercado SATURADO: ~${competitors} concorrentes na mesma cidade. Ângulo do pitch: diferenciação ("seja o ÚNICO ${category || "negócio"} de ${city} com site profissional que aparece no Google")\n`
+        : competitors >= 4
+          ? `- Concorrência moderada: ~${competitors} concorrentes na cidade. Ângulo: destacar-se nos resultados locais antes deles\n`
+          : `- Mercado com poucos concorrentes (~${competitors}). Ângulo: oportunidade de ser o primeiro a dominar as buscas locais\n`
+      : "";
+
   if (typeof businessName !== "string" || !businessName.trim()) {
     throw new Error("Nome da empresa é obrigatório para gerar a análise.");
   }
@@ -112,7 +144,7 @@ Analise a seguinte empresa e gere um plano de venda de Landing Page:
 - Telefone: ${phone?.trim() || "não informado"}
 - Nota Google: ${rating ?? "não informada"}★ (${reviewsCount ?? "não informadas"} avaliações)
 - Presença digital: ${websiteStatus === "none" ? "sem site" : websiteStatus === "social_only" ? "somente redes sociais" : websiteStatus === "has_website" ? "com site" : "não informada"}
-${ticketHint}${userNotes?.trim() ? `- Observações do vendedor: ${userNotes.trim()}` : ""}
+${ticketHint}${saturationHint}${userNotes?.trim() ? `- Observações do vendedor: ${userNotes.trim()}` : ""}
 
 Retorne estritamente JSON com as chaves:
 - businessName: string

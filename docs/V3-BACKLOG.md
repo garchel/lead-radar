@@ -34,11 +34,12 @@ Expor tools MCP: `get_next_cities`, `search_city`, `pipeline_status`.
   `search_city` (leads rankeados por score com ticket e flag CRM),
   `pipeline_status`.
 
-### 1.3 Follow-up automático por lead frio ☐
-Reconectar leads `contacted` sem resposta há N dias; opcionalmente re-enfileirar
-cidades onde houve respostas recentes.
-- **Esforço:** médio
-- **Depende:** definição de N e canal (WhatsApp/e-mail) — confirmar com usuário.
+### 1.3 Follow-up automático por lead frio ✅
+Reconectar leads `contacted` sem resposta há N+ dias.
+- **Feito em:** `getColdLeads()` em db.ts + job type `cold_leads_review` no
+  queueManager (agenda interação de recontato pendente — nada é enviado sem
+  aprovação humana) + tool MCP `cold_leads`.
+- **Config:** payload do job aceita `minDays` (default 14) e `limit`.
 
 ---
 
@@ -51,17 +52,17 @@ dados reais em vez dos seeds heurísticos.
 - **Esforço:** alto
 - **Pré-requisito:** volume de vendas no CRM.
 
-### 2.2 Re-busca inteligente ☐
-Cidade volta à fila quando `ultima_busca > X dias` (configurável) mesmo com cache;
-hoje o cache fixo de 7 dias cobre repetição manual, mas não refresh periódico.
-- **Esforço:** baixo/médio
-- **Aceite:** `pickNextCities` prioriza cidades vencidas antes das nunca buscadas? (definir regra)
+### 2.2 Re-busca inteligente ✅
+Cache de busca ignorado quando a última busca real tem mais de X dias.
+- **Feito em:** `serpApi.ts` — env `RESEARCH_STALE_DAYS` (default 60; 0 desativa).
+  Cache obsoleto é removido e a busca roda fresco (consome cota, intencional).
 
-### 2.3 Detecção de saturação ☐
-Contagem de concorrentes retornados por busca → enriquecer `analyzeLead`:
-mercado cheio ("seja o único com site") vs. mercado vazio ("seja o primeiro").
-- **Esforço:** médio
-- **Nota:** contagem já disponível em `serpapi_raw.local_results.length`.
+### 2.3 Detecção de saturação ✅
+Contagem de concorrentes da cidade injetada no prompt do analyzeLead:
+- ≥10 concorrentes: "mercado SATURADO — seja o ÚNICO com site"
+- 4–9: diferenciação nos resultados locais
+- <4: "seja o primeiro a dominar as buscas locais"
+**Feito em:** `getCompetitorCount()` em prospectingService.ts.
 
 ### 2.4 MCP tools para Hermes ☐
 Expor tools MCP: `get_next_cities`, `search_city(location/category)`,
@@ -81,9 +82,10 @@ Documentar parâmetros novos do batch: `useCityRotation`, `citiesPerRun`,
 `docs/V2-FEATURES.md` não cobre rotação de cidades, tiers, categorias,
 ticket sugerido nem scoring combinado.
 
-### 4.3 Teste E2E da rotação agendada ☐
-Simular 3 disparos seguidos de `buildScheduleJobInput` + worker e verificar
-que as cidades rotacionam sem repetição.
+### 4.3 Teste E2E da rotação agendada ✅
+Simula 3 disparos seguidos: payload do agendador → pickNextCities → zero
+repetição até esgotar o pool → fila circular reinicia.
+**Feito em:** `tests/rotationE2E.test.ts`.
 
 ### 4.4 Performance do match cidade×lead ✅
 Índice em memória por UF carregado uma vez por processo.
