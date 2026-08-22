@@ -10,6 +10,7 @@ import { registerProjectRoutes } from "./server/routes/projectRoutes";
 import { registerTypeformRoutes } from "./server/routes/typeformRoutes";
 import { registerEventRoutes } from "./server/routes/eventRoutes";
 import { registerScheduleRoutes } from "./server/routes/scheduleRoutes";
+import { registerCityRoutes } from "./server/routes/cityRoutes";
 import { scheduler, ensureDefaultFollowUpSchedule } from "./server/scheduler/scheduler";
 import { startTypeformPolling } from "./server/typeform/polling";
 import { getSchedulerConfig, getSerpApiConfig, getProspectingProvider } from "./server/config";
@@ -31,6 +32,7 @@ registerProjectRoutes(app);
 registerTypeformRoutes(app);
 registerEventRoutes(app);
 registerScheduleRoutes(app);
+registerCityRoutes(app);
 
 app.get("/api/health", (_req, res) => {
   let hasSerpApiKey = Boolean((process.env.SERPAPI_API_KEY || "").trim());

@@ -26,12 +26,34 @@ export function buildScheduleJobInput(
   }
 
   if (schedule.jobType === "batch_prospecting") {
-    const { locations = ["Campinas"], state = "SP", categories = ["Todas as Categorias"], filterNoWebsiteOnly = true } =
-      schedule.payload || {};
+    const {
+      locations = ["Campinas"],
+      state = "SP",
+      categories = ["Todas as Categorias"],
+      filterNoWebsiteOnly = true,
+      // Rotação round-robin da base IBGE: pega as próximas cidades há mais
+      // tempo sem buscar, em vez de uma lista fixa de locations.
+      useCityRotation = false,
+      citiesPerRun = 3,
+      uf,
+      minPopulation = 30000,
+      maxPopulation = 200000,
+    } = schedule.payload || {};
     return {
       type: "batch_prospecting",
       title: `[Agendado] ${schedule.name}`,
-      payload: { locations, state, categories, filterNoWebsiteOnly, autoEnrich: true },
+      payload: {
+        useCityRotation,
+        citiesPerRun,
+        uf,
+        minPopulation,
+        maxPopulation,
+        locations: useCityRotation ? [] : locations,
+        state,
+        categories,
+        filterNoWebsiteOnly,
+        autoEnrich: true,
+      },
     };
   }
 

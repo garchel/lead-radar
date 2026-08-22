@@ -1,5 +1,5 @@
 
-import { upsertJob, replaceJobs, getAllJobs, upsertLead, updateLeadAnalysis, getLeadById, getLandingPageById, getDueFollowUps } from "../store/db";
+import { upsertJob, replaceJobs, getAllJobs, upsertLead, updateLeadAnalysis, getLeadById, getLandingPageById, getDueFollowUps, ensureCitiesLoaded, pickNextCities, markCitySearched } from "../store/db";
 import { StoredLead } from "../store/types";
 import {
   createLandingPageRecord,
@@ -235,11 +235,49 @@ class QueueManager {
 
   // Task Handler 1: Batch Prospecting across multiple locations/categories (persists leads)
   private async handleBatchProspecting(job: Job) {
-    const { locations, state, categories, filterNoWebsiteOnly, autoEnrich = false } = job.payload;
-    if (!Array.isArray(locations) || locations.length === 0 || !locations.every((value: unknown) => typeof value === 'string' && value.trim())) {
-      throw new Error('Job de prospecção inválido: informe ao menos uma cidade válida.');
+    const {
+      locations,
+      state,
+      categories,
+      filterNoWebsiteOnly,
+      autoEnrich = false,
+      // Rotação round-robin da base IBGE (opcional)
+      useCityRotation = false,
+      citiesPerRun = 3,
+      uf,
+      minPopulation,
+      maxPopulation,
+    } = job.payload;
+
+    // Resolve a lista de cidades: rotação round-robin (base IBGE) ou lista fixa
+    let effectiveLocations: Array<{ name: string; uf: string; ibgeCode?: string }> = [];
+    let normalizedState = typeof state === 'string' ? state.trim().toUpperCase() : '';
+
+    if (useCityRotation) {
+      ensureCitiesLoaded();
+      const cities = pickNextCities(Math.max(1, Math.floor(Number(citiesPerRun) || 3)), {
+        uf: typeof uf === 'string' && /^[A-Za-z]{2}$/.test(uf.trim()) ? uf.trim() : undefined,
+        minPopulation: minPopulation != null ? Number(minPopulation) : undefined,
+        maxPopulation: maxPopulation != null ? Number(maxPopulation) : undefined,
+      });
+      if (cities.length === 0) {
+        throw new Error('Rotação de cidades: nenhuma cidade habilitada encontrada com os filtros informados (UF/faixa populacional).');
+      }
+      effectiveLocations = cities.map((c) => ({ name: c.name, uf: c.uf, ibgeCode: c.ibgeCode }));
+      normalizedState = cities[0].uf;
+      this.addLog(
+        job,
+        `Rotação de cidades (round-robin): ${cities.map((c) => `${c.name}/${c.uf}`).join(', ')}.`,
+        'info'
+      );
+    } else {
+      if (!Array.isArray(locations) || locations.length === 0 || !locations.every((value: unknown) => typeof value === 'string' && value.trim())) {
+        throw new Error('Job de prospecção inválido: informe ao menos uma cidade válida.');
+      }
+      effectiveLocations = locations.map((loc: string) => ({ name: loc.trim(), uf: normalizedState }));
     }
-    if (typeof state !== 'string' || !/^[A-Za-z]{2}$/.test(state.trim())) {
+
+    if (!/^[A-Za-z]{2}$/.test(normalizedState)) {
       throw new Error('Job de prospecção inválido: informe uma UF válida com 2 letras.');
     }
     if (!Array.isArray(categories) || categories.length === 0 || !categories.every((value: unknown) => typeof value === 'string' && value.trim())) {
@@ -249,22 +287,21 @@ class QueueManager {
       throw new Error('Job de prospecção inválido: filterNoWebsiteOnly deve ser booleano.');
     }
 
-    const normalizedState = state.trim().toUpperCase();
     const allDiscoveredLeads: StoredLead[] = [];
-    const totalSteps = locations.length * categories.length;
+    const totalSteps = effectiveLocations.length * categories.length;
     let completedSteps = 0;
 
-    this.addLog(job, `Mapeamento em Lote iniciado: ${locations.length} cidades x ${categories.length} categorias.`, 'info');
+    this.addLog(job, `Mapeamento em Lote iniciado: ${effectiveLocations.length} cidades x ${categories.length} categorias.`, 'info');
 
-    for (const loc of locations) {
+    for (const loc of effectiveLocations) {
       if (this.isJobCancelled(job.id)) return;
 
       for (const cat of categories) {
         if (this.isJobCancelled(job.id)) return;
 
-        this.addLog(job, `Escaneando cidade: "${loc}" (${state}) | Categoria: "${cat}"...`, 'info');
+        this.addLog(job, `Escaneando cidade: "${loc.name}" (${loc.uf}) | Categoria: "${cat}"...`, 'info');
 
-        const { source, businesses } = await searchBusinesses({ location: loc.trim(), state: normalizedState, category: cat, filterNoWebsiteOnly });
+        const { source, businesses } = await searchBusinesses({ location: loc.name, state: loc.uf, category: cat, filterNoWebsiteOnly });
         this.addLog(job, `Fonte de dados: ${source === "gemini" ? "Gemini (pesquisa real)" : source}.`, 'info');
 
         const saved: StoredLead[] = [];
@@ -307,7 +344,8 @@ class QueueManager {
 
         completedSteps++;
         job.progress = Math.min(95, Math.round((completedSteps / totalSteps) * 90) + 5);
-        this.addLog(job, `✔ ${saved.length} leads de ${loc} (${cat}) salvos no banco. Total acumulado: ${allDiscoveredLeads.length}`, 'success');
+        if (loc.ibgeCode) markCitySearched(loc.ibgeCode);
+        this.addLog(job, `✔ ${saved.length} leads de ${loc.name} (${cat}) salvos no banco. Total acumulado: ${allDiscoveredLeads.length}`, 'success');
 
         await new Promise((resolve) => setTimeout(resolve, 600));
       }
@@ -322,7 +360,7 @@ class QueueManager {
 
     job.result = {
       totalFound: allDiscoveredLeads.length,
-      locationsProcessed: locations,
+      locationsProcessed: effectiveLocations.map((l) => l.name),
       categoriesProcessed: categories,
       leads: allDiscoveredLeads,
     };

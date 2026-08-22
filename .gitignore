@@ -7,3 +7,7 @@ coverage/
 .env*
 !.env.example
 data/
+# Base IBGE de municípios (asset do app — fila de rotação de prospecção)
+!server/data/
+server/data/*
+!server/data/cities_ibge.csv

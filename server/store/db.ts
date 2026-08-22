@@ -1,6 +1,6 @@
 import { getDb, importFromJson } from './schema';
 import { eventHub } from '../events/eventHub';
-import { StoredLead, LandingPage, Schedule, LeadInteraction, InteractionOutcome, Project, PipelineStatus } from './types';
+import { StoredLead, LandingPage, Schedule, LeadInteraction, InteractionOutcome, Project, PipelineStatus, City } from './types';
 import { getLeadIdentityCandidates, normalizeText, normalizePhone } from '../services/leadIdentity';
 import type { Job } from '../jobs/queueManager';
 import path from 'path';
@@ -869,4 +869,158 @@ export function countLandingPagesCreatedToday(): number {
     .prepare('SELECT COUNT(*) AS c FROM landing_pages WHERE created_at >= ?')
     .get(startOfDay.toISOString()) as any;
   return row?.c || 0;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Cidades (base IBGE) — fila de rotação round-robin                  */
+/* ------------------------------------------------------------------ */
+
+function rowToCity(row: any): City {
+  return {
+    ibgeCode: row.ibge_code,
+    name: row.name,
+    uf: row.uf,
+    latitude: row.latitude ?? undefined,
+    longitude: row.longitude ?? undefined,
+    population: row.population,
+    status: row.status,
+    lastSearchedAt: row.last_searched_at || null,
+    searchCount: row.search_count,
+    enabled: Boolean(row.enabled),
+  };
+}
+
+export function getCities(filter?: { uf?: string; minPopulation?: number; maxPopulation?: number; enabledOnly?: boolean; limit?: number }): City[] {
+  const clauses: string[] = [];
+  const params: any = {};
+  if (filter?.enabledOnly) clauses.push('enabled = 1');
+  if (filter?.uf) {
+    clauses.push('uf = @uf');
+    params.uf = filter.uf.toUpperCase();
+  }
+  if (filter?.minPopulation != null) {
+    clauses.push('population >= @minPop');
+    params.minPop = filter.minPopulation;
+  }
+  if (filter?.maxPopulation != null) {
+    clauses.push('population <= @maxPop');
+    params.maxPop = filter.maxPopulation;
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const limit = filter?.limit ? `LIMIT ${Math.floor(filter.limit)}` : '';
+  const rows = getDb()
+    .prepare(`SELECT * FROM cities ${where} ORDER BY uf, name ${limit}`)
+    .all(params) as any[];
+  return rows.map(rowToCity);
+}
+
+export function getCityByCode(ibgeCode: string): City | undefined {
+  const row = getDb().prepare('SELECT * FROM cities WHERE ibge_code = ?').get(ibgeCode) as any;
+  return row ? rowToCity(row) : undefined;
+}
+
+/**
+ * Round-robin: pega as N cidades habilitadas há mais tempo sem buscar.
+ * Cidades nunca buscadas (last_searched_at NULL) entram primeiro.
+ */
+export function pickNextCities(n: number, filter?: { uf?: string; minPopulation?: number; maxPopulation?: number }): City[] {
+  const clauses = ['enabled = 1'];
+  const params: any = {};
+  if (filter?.uf) {
+    clauses.push('uf = @uf');
+    params.uf = filter.uf.toUpperCase();
+  }
+  if (filter?.minPopulation != null) {
+    clauses.push('population >= @minPop');
+    params.minPop = filter.minPopulation;
+  }
+  if (filter?.maxPopulation != null) {
+    clauses.push('population <= @maxPop');
+    params.maxPop = filter.maxPopulation;
+  }
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM cities WHERE ${clauses.join(' AND ')}
+       ORDER BY last_searched_at IS NOT NULL, last_searched_at ASC, population DESC
+       LIMIT @n`
+    )
+    .all({ ...params, n: Math.max(1, Math.floor(n)) }) as any[];
+  return rows.map(rowToCity);
+}
+
+/** Marca que uma cidade acabou de entrar numa busca de prospecção. */
+export function markCitySearched(ibgeCode: string): void {
+  getDb()
+    .prepare(
+      `UPDATE cities
+       SET last_searched_at = @now, search_count = search_count + 1, status = 'done'
+       WHERE ibge_code = @code`
+    )
+    .run({ now: new Date().toISOString(), code: ibgeCode });
+}
+
+export function updateCity(ibgeCode: string, patch: { enabled?: boolean; status?: City['status'] }): City | undefined {
+  const updates: string[] = [];
+  const params: any = { code: ibgeCode };
+  if (patch.enabled !== undefined) {
+    updates.push('enabled = @enabled');
+    params.enabled = patch.enabled ? 1 : 0;
+  }
+  if (patch.status !== undefined) {
+    updates.push('status = @status');
+    params.status = patch.status;
+  }
+  if (updates.length > 0) {
+    getDb().prepare(`UPDATE cities SET ${updates.join(', ')} WHERE ibge_code = @code`).run(params);
+  }
+  return getCityByCode(ibgeCode);
+}
+
+/**
+ * Importa a base IBGE (server/data/cities_ibge.csv) para a tabela cities.
+ * Idempotente (INSERT OR IGNORE) — não reseta status/rotação já existentes.
+ * Retorna o total de cidades na tabela após o import.
+ */
+export function importIbgeCities(csvPath?: string): number {
+  const resolved = csvPath || path.join(process.cwd(), 'server', 'data', 'cities_ibge.csv');
+  if (!fs.existsSync(resolved)) {
+    throw new Error(`CSV do IBGE não encontrado em ${resolved}.`);
+  }
+  const db = getDb();
+  const content = fs.readFileSync(resolved, 'utf-8');
+  const lines = content.split(/\r?\n/).filter((l) => l.trim());
+  const insert = db.prepare(
+    `INSERT OR IGNORE INTO cities (ibge_code, name, uf, latitude, longitude, population)
+     VALUES (@code, @name, @uf, @lat, @lng, @pop)`
+  );
+  const tx = db.transaction((rows: string[]) => {
+    for (const line of rows) {
+      const [code, name, uf, lat, lng, pop] = line.split(',');
+      if (!code || !name || !uf) continue;
+      insert.run({
+        code,
+        name,
+        uf,
+        lat: lat ? Number(lat) : null,
+        lng: lng ? Number(lng) : null,
+        pop: Number(pop) || 0,
+      });
+    }
+  });
+  tx(lines.slice(1)); // pula header
+  const row = db.prepare('SELECT COUNT(*) AS c FROM cities').get() as any;
+  return row?.c || 0;
+}
+
+/** Garante que a base IBGE está carregada (import único na primeira execução). */
+export function ensureCitiesLoaded(): number {
+  const db = getDb();
+  const row = db.prepare('SELECT COUNT(*) AS c FROM cities').get() as any;
+  if ((row?.c || 0) > 0) return row.c;
+  try {
+    return importIbgeCities();
+  } catch (err: any) {
+    console.warn('Não foi possível carregar a base IBGE de cidades:', err?.message || err);
+    return 0;
+  }
 }

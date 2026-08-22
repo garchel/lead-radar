@@ -196,3 +196,26 @@ export interface Project {
   leadCity?: string;
   leadCategory?: string;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Cidades (base IBGE) — fila de rotação de prospecção                */
+/* ------------------------------------------------------------------ */
+
+export type CityStatus = "pending" | "in_progress" | "done" | "skipped";
+
+export interface City {
+  /** Código IBGE do município (7 dígitos). */
+  ibgeCode: string;
+  name: string;
+  uf: string;
+  latitude?: number;
+  longitude?: number;
+  /** População residente (Censo 2022). */
+  population: number;
+  status: CityStatus;
+  /** ISO — última vez que esta cidade entrou numa busca de prospecção. */
+  lastSearchedAt: string | null;
+  /** Quantas buscas já usaram esta cidade. */
+  searchCount: number;
+  enabled: boolean;
+}

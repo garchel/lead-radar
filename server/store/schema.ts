@@ -214,6 +214,21 @@ function migrateSchema(db: Database.Database) {
       expires_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_serpapi_cache_expires ON serpapi_search_cache(expires_at);
+
+    CREATE TABLE IF NOT EXISTS cities (
+      ibge_code TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      uf TEXT NOT NULL,
+      latitude REAL,
+      longitude REAL,
+      population INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'pending',
+      last_searched_at TEXT,
+      search_count INTEGER NOT NULL DEFAULT 0,
+      enabled INTEGER NOT NULL DEFAULT 1
+    );
+    CREATE INDEX IF NOT EXISTS idx_cities_rotation ON cities(enabled, last_searched_at);
+    CREATE INDEX IF NOT EXISTS idx_cities_uf ON cities(uf);
   `);
 
   // Additive migration for renewal_day (chaves criadas antes deste campo)
