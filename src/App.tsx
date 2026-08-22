@@ -75,6 +75,7 @@ export default function App() {
   const [leads, setLeads] = useState<BusinessLead[]>([]);
   const [savedLeads, setSavedLeads] = useState<BusinessLead[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [jobToast, setJobToast] = useState<{ message: string; ok: boolean } | null>(null);
   const [serpApiRaw, setSerpApiRaw] = useState<any>(null);
   const [serpApiMeta, setSerpApiMeta] = useState<any>(null);
   const [lastSearchCached, setLastSearchCached] = useState<boolean>(false);
@@ -175,6 +176,24 @@ export default function App() {
         if (d?.event === 'leads' || d?.event === 'projects') {
           void loadFromApi();
           void loadProjectCount();
+        }
+        // Notificação de job concluído (toast auto-dismiss 6s)
+        if (d?.event === 'job_completed') {
+          const p = d.payload || {};
+          const bits: string[] = [];
+          if (p.leadsFound !== undefined) bits.push(`${p.leadsFound} lead(s)`);
+          if (p.locations) bits.push(`em ${p.locations}`);
+          if (p.totalDue !== undefined) bits.push(`${p.totalDue} recontato(s) vencido(s)`);
+          if (p.totalCold !== undefined) bits.push(`${p.totalCold} lead(s) frio(s)`);
+          if (p.analyzed !== undefined) bits.push(`${p.analyzed} análise(s)`);
+          const detail = bits.length ? `: ${bits.join(', ')}` : '';
+          setJobToast({
+            ok: Boolean(p.ok),
+            message: p.ok
+              ? `✅ ${p.title || p.type} concluído${detail}`
+              : `❌ ${p.title || p.type} falhou${p.error ? ` — ${String(p.error).slice(0, 120)}` : ''}`,
+          });
+          window.setTimeout(() => setJobToast(null), 6000);
         }
       } catch (err: any) {
         setErrorMessage(`Falha ao interpretar uma atualização do servidor: ${err?.message || 'evento inválido'}`);
@@ -385,6 +404,20 @@ export default function App() {
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
             <div className="flex-1">{errorMessage}</div>
             <button type="button" onClick={() => setErrorMessage(null)} className="font-bold text-rose-700 hover:text-rose-900">Fechar</button>
+          </div>
+        </div>
+      )}
+
+      {/* Toast de job concluído (auto-dismiss) */}
+      {jobToast && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-md" role="status">
+          <div className={`flex items-start gap-3 rounded-xl border p-4 text-sm shadow-lg ${
+            jobToast.ok
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+              : 'border-rose-200 bg-rose-50 text-rose-800'
+          }`}>
+            <div className="flex-1 font-medium">{jobToast.message}</div>
+            <button type="button" onClick={() => setJobToast(null)} className={`shrink-0 font-bold ${jobToast.ok ? 'text-emerald-700 hover:text-emerald-900' : 'text-rose-700 hover:text-rose-900'}`}>×</button>
           </div>
         </div>
       )}

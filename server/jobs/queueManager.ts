@@ -10,6 +10,7 @@ import { searchBusinesses, analyzeLead } from "../services/prospectingService";
 import { buildStableLeadId } from "../services/leadIdentity";
 import { enrichLeadBatch } from "../enrichment";
 import { dispatchLeadContact } from "../services/interactionService";
+import { eventHub } from "../events/eventHub";
 
 
 export type JobType =
@@ -398,6 +399,23 @@ class QueueManager {
 
   // Notify a configured webhook when a job finishes (fire-and-forget)
   private async notifyWebhook(job: Job) {
+    // 1. Broadcast SSE para a UI (toast de job concluído)
+    try {
+      const summary = this.jobNotificationSummary(job);
+      eventHub.emit('job_completed', {
+        jobId: job.id,
+        type: job.type,
+        title: job.title,
+        status: job.status,
+        ok: job.status === 'completed',
+        error: job.error || null,
+        ...summary,
+      });
+    } catch {
+      /* best-effort */
+    }
+
+    // 2. Webhook externo opcional
     const url = process.env.JOB_WEBHOOK_URL;
     if (!url) return;
     try {
@@ -417,6 +435,29 @@ class QueueManager {
       });
     } catch {
       /* fire-and-forget */
+    }
+  }
+
+  /** Resumo legível do resultado, por tipo de job — para notificações. */
+  private jobNotificationSummary(job: Job): Record<string, any> {
+    const r: any = job.result || {};
+    switch (job.type) {
+      case 'batch_prospecting':
+      case 'mcp_autopilot':
+        return {
+          leadsFound: r.totalFound ?? (Array.isArray(r.leads) ? r.leads.length : undefined),
+          locations: Array.isArray(r.locationsProcessed) ? r.locationsProcessed.join(', ') : undefined,
+        };
+      case 'batch_lead_analysis':
+        return { analyzed: r.analyzed ?? undefined };
+      case 'landing_page_creation':
+        return { lpUrl: r.url || r.deployUrl || undefined, leadName: r.businessName || undefined };
+      case 'follow_up_batch':
+        return { totalDue: r.totalDue ?? undefined };
+      case 'cold_leads_review':
+        return { totalCold: r.totalCold ?? undefined };
+      default:
+        return {};
     }
   }
 

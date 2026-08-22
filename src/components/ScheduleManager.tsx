@@ -41,6 +41,13 @@ export const ScheduleManager: React.FC = () => {
   const [location, setLocation] = useState('');
   const [state, setState] = useState('');
   const [category, setCategory] = useState('');
+  // Rotação de cidades (batch_prospecting)
+  const [useCityRotation, setUseCityRotation] = useState(false);
+  const [citiesPerRun, setCitiesPerRun] = useState(3);
+  const [rotUf, setRotUf] = useState('');
+  const [minPopulation, setMinPopulation] = useState(30000);
+  const [maxPopulation, setMaxPopulation] = useState(200000);
+  const [minPropensity, setMinPropensity] = useState(0);
 
   const fetchSchedules = useCallback(async () => {
     try {
@@ -103,15 +110,27 @@ export const ScheduleManager: React.FC = () => {
       setError('Informe nome e expressão cron.');
       return;
     }
-    if (jobType !== 'follow_up_reminder' && (!location.trim() || !state.trim() || !category)) {
-      setError('Informe nome, expressão cron, cidade, UF e categoria.');
+    if (jobType !== 'follow_up_reminder' && !useCityRotation && (!location.trim() || !state.trim() || !category)) {
+      setError('Informe cidade, UF e categoria (ou ative a rotação de cidades).');
       return;
     }
     setSaving(true);
     try {
       const payload =
         jobType === 'batch_prospecting'
-          ? { locations: [location.trim()], state: state.trim().toUpperCase(), categories: [category], filterNoWebsiteOnly: true }
+          ? useCityRotation
+            ? {
+                useCityRotation: true,
+                citiesPerRun,
+                uf: rotUf.trim().toUpperCase() || undefined,
+                minPopulation,
+                maxPopulation,
+                minPropensity,
+                locations: [],
+                categories: [category || 'Todas as Categorias'],
+                filterNoWebsiteOnly: true,
+              }
+            : { locations: [location.trim()], state: state.trim().toUpperCase(), categories: [category], filterNoWebsiteOnly: true, minPropensity, useCityRotation: false }
           : jobType === 'follow_up_reminder'
             ? {}
             : { location: location.trim(), state: state.trim().toUpperCase(), category, autoEnrich: true, sendPitches: false, maxLeads: 5 };
@@ -131,6 +150,7 @@ export const ScheduleManager: React.FC = () => {
         setLocation('');
         setState('');
         setCategory('');
+        setUseCityRotation(false);
         setShowForm(false);
         fetchSchedules();
       }
@@ -183,19 +203,23 @@ export const ScheduleManager: React.FC = () => {
             </select>
             {jobType !== 'follow_up_reminder' && (
               <>
-                <input
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder={jobType === 'batch_prospecting' ? 'Cidade' : 'Cidade'}
-                  className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
-                <input
-                  value={state}
-                  onChange={(e) => setState(e.target.value)}
-                  placeholder="UF"
-                  maxLength={2}
-                  className="w-20 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none uppercase"
-                />
+                {!useCityRotation && (
+                  <>
+                    <input
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="Cidade"
+                      className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                    <input
+                      value={state}
+                      onChange={(e) => setState(e.target.value)}
+                      placeholder="UF"
+                      maxLength={2}
+                      className="w-20 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none uppercase"
+                    />
+                  </>
+                )}
                 <select value={category} onChange={(e) => setCategory(e.target.value)} className="px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white">
                   <option value="">Selecione uma categoria</option>
                   {CATEGORIES.filter((c) => c !== 'Todas as Categorias').map((c) => (
@@ -208,6 +232,43 @@ export const ScheduleManager: React.FC = () => {
               <span className="text-[11px] text-slate-500">Varre os recontatos com prazo vencido; o envio exige aprovação humana na tela de CRM.</span>
             )}
           </div>
+
+          {/* Rotação de cidades (batch_prospecting) */}
+          {jobType === 'batch_prospecting' && (
+            <div className="border border-indigo-200 bg-indigo-50/50 rounded-xl p-3 space-y-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={useCityRotation} onChange={(e) => setUseCityRotation(e.target.checked)} className="rounded" />
+                <span className="text-xs font-bold text-indigo-900">Rotacionar cidades automaticamente (round-robin IBGE)</span>
+              </label>
+              {useCityRotation ? (
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-2 items-end">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Cidades/disparo</label>
+                    <input type="number" min={1} max={20} value={citiesPerRun} onChange={(e) => setCitiesPerRun(Math.max(1, Math.min(20, Number(e.target.value))))} className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">UF (opcional)</label>
+                    <input value={rotUf} onChange={(e) => setRotUf(e.target.value.toUpperCase().slice(0, 2))} placeholder="GO" className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg uppercase" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Pop. mín</label>
+                    <input type="number" min={0} step={5000} value={minPopulation} onChange={(e) => setMinPopulation(Number(e.target.value))} className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Pop. máx</label>
+                    <input type="number" min={0} step={10000} value={maxPopulation} onChange={(e) => setMaxPopulation(Number(e.target.value))} className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Propensão mín: {minPropensity}</label>
+                    <input type="range" min={0} max={100} step={5} value={minPropensity} onChange={(e) => setMinPropensity(Number(e.target.value))} className="w-full" />
+                  </div>
+                  <p className="text-[10px] text-slate-500 col-span-full">Cada disparo pega as cidades há mais tempo sem buscar. Faixa sugerida: 30 mil–200 mil hab.</p>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-500">Sem rotação: busca sempre a mesma cidade fixa. Ative para varrer municípios da base IBGE automaticamente.</p>
+              )}
+            </div>
+          )}
           <div className="flex items-center space-x-2">
             <button onClick={create} disabled={saving} className="flex items-center space-x-1 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50">
               {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}

@@ -74,9 +74,9 @@ Contagem de concorrentes da cidade injetada no prompt do analyzeLead:
 ### 4.1 `.env.example` desatualizado ✅
 Parâmetros da rotação e `RESEARCH_STALE_DAYS` documentados (commit "Backlog V3 parte 1/2").
 
-### 4.2 Docs V2 desatualizados ☐
-`docs/V2-FEATURES.md` não cobre rotação de cidades, tiers, categorias,
-ticket sugerido nem scoring combinado.
+### 4.2 Docs V2 desatualizados ✅
+`V2-FEATURES.md` recebeu nota de atualização apontando para `V3-BACKLOG.md`
+(commit "Backlog V3 parte 3").
 
 ### 4.3 Teste E2E da rotação agendada ✅
 Simula 3 disparos seguidos: payload do agendador → pickNextCities → zero
@@ -86,6 +86,31 @@ repetição até esgotar o pool → fila circular reinicia.
 ### 4.4 Performance do match cidade×lead ✅
 Índice em memória por UF carregado uma vez por processo.
 **Feito em:** `prospectingService.ts` (`allCitiesByUfCache`).
+
+---
+
+---
+
+## 💡 Novas ideias (agosto/2026 — pós-V3)
+
+### N.1 Formulário de agendamento com rotação na UI ✅
+O `ScheduleManager` agora expõe os campos do batch com rotação: checkbox de
+rotação, cidades/disparo, UF, faixa populacional e slider de propensão mínima.
+**Feito em:** commit "Backlog V3 parte 3".
+
+### N.2 Notificação de jobs concluídos ✅
+Backend emite evento SSE `job_completed` com resumo por tipo (leads encontrados,
+cidades, recontatos...); a UI mostra toast auto-dismiss de 6s (verde = ok,
+vermelho = falha). Webhook externo opcional (`JOB_WEBHOOK_URL`) continua funcionando.
+**Feito em:** commit "Backlog V3 parte 3" (`jobNotificationSummary` + toast no App).
+
+### N.3 Dashboard de conversão por cidade/categoria ☐
+Tela mostrando taxa de resposta/fechamento por cidade × categoria × ticket —
+primeiro passo manual do feedback loop (antes da automação do 2.1).
+
+### N.4 Enriquecer recontato de lead frio com novo ângulo via IA ☐
+Quando o `cold_leads_review` agenda o recontato, gerar pitch alternativo
+(novo argumento, não o mesmo do primeiro contato) em vez de nota genérica.
 
 ---
 

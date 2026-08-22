@@ -1,5 +1,13 @@
 # LeadRadar V2 — Features planejadas
 
+> **Atualização (ago/2026):** as features de inteligência de prospecção descritas
+> no backlog V3 já estão implementadas — cache SerpAPI 7 dias, rotação round-robin
+> de cidades (base IBGE 5.571 municípios com população e PIB per capita do Censo),
+> tier de mercado A/B/C/D com multiplicador de ticket, categorias configuráveis com
+> propensão, ticket sugerido por cidade, scoring combinado, detecção de saturação,
+> re-busca inteligente (`RESEARCH_STALE_DAYS`), leads frios com recontato agendado,
+> MCP tools para Hermes e notificação de jobs via SSE. Detalhes em `docs/V3-BACKLOG.md`.
+
 ## Objetivo
 Evoluir o LeadRadar de uma ferramenta de prospecção manual para uma **plataforma autônoma de captação, negociação e entrega**, com conversação real, integração com Telegram e automação de follow-up.
 
