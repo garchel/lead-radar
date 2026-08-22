@@ -38,6 +38,8 @@ export function buildScheduleJobInput(
       uf,
       minPopulation = 30000,
       maxPopulation = 200000,
+      // Filtro de propensão mínima das categorias (0 = sem filtro)
+      minPropensity = 0,
     } = schedule.payload || {};
     return {
       type: "batch_prospecting",
@@ -48,6 +50,7 @@ export function buildScheduleJobInput(
         uf,
         minPopulation,
         maxPopulation,
+        minPropensity,
         locations: useCityRotation ? [] : locations,
         state,
         categories,

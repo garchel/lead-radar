@@ -16,6 +16,7 @@ import { ProjectsDashboard } from './components/ProjectsDashboard';
 import { LeaveDevelopmentModal } from './components/LeaveDevelopmentModal';
 import { ProjectTypeSelectModal } from './components/ProjectTypeSelectModal';
 import { SerpApiResultsPage } from './components/SerpApiResultsPage';
+import { CitiesQueueDashboard } from './components/CitiesQueueDashboard';
 
 import { BusinessLead, InteractionOutcome, ProjectType, SearchFilters } from './types';
 import { exportLeadsToCSV } from './utils/exportUtils';
@@ -50,7 +51,7 @@ interface DuplicateCandidate {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies' | 'cities'>('search');
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [hasGeminiKey, setHasGeminiKey] = useState<boolean>(false);
@@ -483,6 +484,8 @@ export default function App() {
         {activeTab === 'monitoring' && <MonitoringDashboard />}
 
         {activeTab === 'projects' && <ProjectsDashboard />}
+
+        {activeTab === 'cities' && <CitiesQueueDashboard />}
 
         {activeTab === 'companies' && (
           <SerpApiResultsPage

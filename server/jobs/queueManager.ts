@@ -1,5 +1,5 @@
 
-import { upsertJob, replaceJobs, getAllJobs, upsertLead, updateLeadAnalysis, getLeadById, getLandingPageById, getDueFollowUps, ensureCitiesLoaded, pickNextCities, markCitySearched } from "../store/db";
+import { upsertJob, replaceJobs, getAllJobs, upsertLead, updateLeadAnalysis, getLeadById, getLandingPageById, getDueFollowUps, ensureCitiesLoaded, pickNextCities, markCitySearched, getBusinessCategories } from "../store/db";
 import { StoredLead } from "../store/types";
 import {
   createLandingPageRecord,
@@ -247,6 +247,8 @@ class QueueManager {
       uf,
       minPopulation,
       maxPopulation,
+      // Priorização por propensão da categoria (opcional)
+      minPropensity = 0,
     } = job.payload;
 
     // Resolve a lista de cidades: rotação round-robin (base IBGE) ou lista fixa
@@ -287,16 +289,41 @@ class QueueManager {
       throw new Error('Job de prospecção inválido: filterNoWebsiteOnly deve ser booleano.');
     }
 
+    // Filtro por propensão da categoria (0 desativa): mantém só categorias
+    // com propensão >= minPropensity na base configurável.
+    let effectiveCategories: string[] = categories;
+    const minProp = Math.max(0, Math.min(100, Number(minPropensity) || 0));
+    if (minProp > 0) {
+      try {
+        const catMap = new Map<string, number>(getBusinessCategories({ activeOnly: true }).map((c) => [c.name.toLowerCase(), c.propensity as number]));
+        effectiveCategories = categories.filter((cat: string) => {
+          const p = catMap.get(cat.trim().toLowerCase());
+          // categoria não cadastrada passa direto (não bloqueia uso)
+          return p === undefined || (p as number) >= minProp;
+        });
+        const removed = categories.length - effectiveCategories.length;
+        if (removed > 0) {
+          this.addLog(job, `Filtro de propensão (≥ ${minProp}): ${removed} categoria(s) de baixa propensão removida(s).`, 'info');
+        }
+        if (effectiveCategories.length === 0) {
+          throw new Error(`Filtro de propensão (≥ ${minProp}) removeu todas as categorias informadas.`);
+        }
+      } catch (err: any) {
+        if (/propensão/.test(err?.message || '')) throw err;
+        // falha ao carregar categorias → segue sem filtro
+      }
+    }
+
     const allDiscoveredLeads: StoredLead[] = [];
-    const totalSteps = effectiveLocations.length * categories.length;
+    const totalSteps = effectiveLocations.length * effectiveCategories.length;
     let completedSteps = 0;
 
-    this.addLog(job, `Mapeamento em Lote iniciado: ${effectiveLocations.length} cidades x ${categories.length} categorias.`, 'info');
+    this.addLog(job, `Mapeamento em Lote iniciado: ${effectiveLocations.length} cidades x ${effectiveCategories.length} categorias.`, 'info');
 
     for (const loc of effectiveLocations) {
       if (this.isJobCancelled(job.id)) return;
 
-      for (const cat of categories) {
+      for (const cat of effectiveCategories) {
         if (this.isJobCancelled(job.id)) return;
 
         this.addLog(job, `Escaneando cidade: "${loc.name}" (${loc.uf}) | Categoria: "${cat}"...`, 'info');

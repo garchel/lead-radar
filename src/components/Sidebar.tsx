@@ -1,9 +1,9 @@
 import React from 'react';
-import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Layers, Radar, Activity, Rocket, Building2, Database } from 'lucide-react';
+import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Layers, Radar, Activity, Rocket, Building2, Database, MapPin } from 'lucide-react';
 
 interface SidebarProps {
-  activeTab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies';
-  setActiveTab: (tab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies') => void;
+  activeTab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies' | 'cities';
+  setActiveTab: (tab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies' | 'cities') => void;
   savedCount: number;
   projectCount: number;
   onOpenAddModal: () => void;
@@ -107,6 +107,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <BookOpen className="w-4 h-4 shrink-0" />
             <span>Estratégia & Pitch</span>
+          </button>
+
+          <button
+            id="nav-cities-btn"
+            onClick={() => setActiveTab('cities')}
+            className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'cities'
+                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <MapPin className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Fila de Cidades</span>
           </button>
 
           <button

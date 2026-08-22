@@ -27,6 +27,10 @@ export interface BusinessLead {
   opportunityScore?: number; // 0 - 100
   opportunityLevel?: 'high' | 'medium' | 'low';
   estimatedValue?: string;
+  /** Ticket sugerido (R$) = ticket base da categoria × tier da cidade (IBGE). */
+  suggestedTicket?: number;
+  /** Tier de mercado da cidade do lead (A/B/C/D). */
+  marketTier?: 'A' | 'B' | 'C' | 'D';
   keyInsights?: string[];
   savedAt?: string;
   pipelineStatus?: 'prospect' | 'contacted' | 'negotiating' | 'em_desenvolvimento' | 'closed' | 'declined';

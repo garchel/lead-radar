@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Star, MapPin, Phone, Globe, Download, Eye, Code, Table as TableIcon, LayoutGrid, SearchX, TrendingUp, Award } from 'lucide-react';
+import { Building2, Star, MapPin, Phone, Globe, Download, Eye, Code, Table as TableIcon, LayoutGrid, SearchX, TrendingUp, Award, Banknote } from 'lucide-react';
 import { BusinessLead } from '../types';
 import { SerpApiRawViewer } from './SerpApiRawViewer';
 import { exportLeadsToCSV } from '../utils/exportUtils';
@@ -136,6 +136,7 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
                     <th className="px-3 py-2.5 text-center">Avaliação</th>
                     <th className="px-3 py-2.5 text-center">Site</th>
                     <th className="px-3 py-2.5 text-center">Score</th>
+                    <th className="px-3 py-2.5 text-center">Ticket sugerido</th>
                     <th className="px-3 py-2.5 text-center">Ações</th>
                   </tr>
                 </thead>
@@ -178,6 +179,19 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
                         </span>
                       </td>
                       <td className="px-3 py-2.5 text-center">
+                        {lead.suggestedTicket ? (
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${
+                            lead.marketTier === 'A' ? 'bg-violet-50 text-violet-700 border-violet-200'
+                            : lead.marketTier === 'B' ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                            : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`} title={`Ticket sugerido — cidade tier ${lead.marketTier || '?'}`}>
+                            <Banknote className="w-3 h-3" /> R$ {lead.suggestedTicket.toLocaleString('pt-BR')}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
                         <div className="flex items-center justify-center gap-1">
                           <button onClick={() => onAnalyze(lead)} className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg" title="Analisar com IA">
                             <Eye className="w-3.5 h-3.5" />
@@ -216,6 +230,17 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
                 </div>
                 <p className="text-xs text-slate-500 mt-1 flex items-center gap-1"><MapPin className="w-3 h-3" /> {lead.address} • {lead.city}</p>
                 <p className="text-xs text-slate-600 mt-2 flex items-center gap-1"><Phone className="w-3 h-3" /> {lead.phone || 'Sem telefone'} • <Star className="w-3 h-3 fill-amber-400 text-amber-400" /> {lead.rating} ({lead.reviewsCount})</p>
+                {lead.suggestedTicket ? (
+                  <div className="mt-2">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${
+                      lead.marketTier === 'A' ? 'bg-violet-50 text-violet-700 border-violet-200'
+                      : lead.marketTier === 'B' ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                    }`} title={`Ticket sugerido — cidade tier ${lead.marketTier || '?'}`}>
+                      <Banknote className="w-3 h-3" /> Ticket sugerido: R$ {lead.suggestedTicket.toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                ) : null}
                 <div className="flex items-center gap-2 mt-3">
                   <button onClick={() => onAnalyze(lead)} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-1.5 rounded-lg">Analisar</button>
                   {alreadySavedCard ? (
