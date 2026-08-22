@@ -1,9 +1,9 @@
 import React from 'react';
-import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Layers, Radar, Activity, Rocket, Building2, Database, MapPin } from 'lucide-react';
+import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Layers, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase } from 'lucide-react';
 
 interface SidebarProps {
-  activeTab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies' | 'cities';
-  setActiveTab: (tab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies' | 'cities') => void;
+  activeTab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies' | 'cities' | 'categories';
+  setActiveTab: (tab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies' | 'cities' | 'categories') => void;
   savedCount: number;
   projectCount: number;
   onOpenAddModal: () => void;
@@ -120,6 +120,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <MapPin className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Fila de Cidades</span>
+          </button>
+
+          <button
+            id="nav-categories-btn"
+            onClick={() => setActiveTab('categories')}
+            className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'categories'
+                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <Briefcase className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Categorias</span>
           </button>
 
           <button

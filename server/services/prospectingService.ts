@@ -50,6 +50,12 @@ export interface AnalyzeInput {
   phone?: string;
   rating?: number;
   reviewsCount?: number;
+  /** UF do lead — usada para resolver o tier da cidade na base IBGE. */
+  state?: string;
+  /** Ticket sugerido pré-calculado (R$); se ausente, calcula de categoria × tier. */
+  suggestedTicket?: number;
+  /** Tier de mercado da cidade (A/B/C/D). */
+  marketTier?: string;
 }
 
 export async function analyzeLead(input: AnalyzeInput): Promise<any> {
@@ -61,6 +67,31 @@ export async function analyzeLead(input: AnalyzeInput): Promise<any> {
   }
 
   const { businessName, category, city, address, websiteStatus, userNotes, phone, rating, reviewsCount } = input;
+
+  // Resolve tier da cidade + ticket sugerido (dados reais IBGE × categorias)
+  let marketTier: string | undefined = input.marketTier;
+  let suggestedTicket: number | undefined = input.suggestedTicket;
+  try {
+    if (city && input.state && (!marketTier || !suggestedTicket)) {
+      const resolved = getCityByIbgeByName(city, input.state);
+      if (resolved) {
+        marketTier = marketTier || resolved.marketTier;
+        if (!suggestedTicket && category) {
+          const cat = getBusinessCategories({ activeOnly: true }).find(
+            (c) => c.name.toLowerCase() === category.trim().toLowerCase()
+          );
+          if (cat) suggestedTicket = estimateTicket(cat.baseTicket, resolved.marketTier as MarketTier);
+        }
+      }
+    }
+  } catch {
+    /* sem base IBGE → segue sem ticket */
+  }
+  const ticketHint =
+    suggestedTicket
+      ? `- Ticket de investimento sugerido para esta negociação: R$ ${suggestedTicket.toLocaleString("pt-BR")} (cidade de mercado tier ${marketTier} — use este valor como âncora nos pitches; pode apresentar como faixa ±15%)\n`
+      : "";
+
   if (typeof businessName !== "string" || !businessName.trim()) {
     throw new Error("Nome da empresa é obrigatório para gerar a análise.");
   }
@@ -81,7 +112,7 @@ Analise a seguinte empresa e gere um plano de venda de Landing Page:
 - Telefone: ${phone?.trim() || "não informado"}
 - Nota Google: ${rating ?? "não informada"}★ (${reviewsCount ?? "não informadas"} avaliações)
 - Presença digital: ${websiteStatus === "none" ? "sem site" : websiteStatus === "social_only" ? "somente redes sociais" : websiteStatus === "has_website" ? "com site" : "não informada"}
-${userNotes?.trim() ? `- Observações do vendedor: ${userNotes.trim()}` : ""}
+${ticketHint}${userNotes?.trim() ? `- Observações do vendedor: ${userNotes.trim()}` : ""}
 
 Retorne estritamente JSON com as chaves:
 - businessName: string
@@ -344,6 +375,7 @@ function attachSuggestedTickets(businesses: any[]): any[] {
 }
 
 const cityByNameCache = new Map<string, ReturnType<typeof getCityByCode>>();
+let allCitiesByUfCache: Map<string, any[]> | null = null;
 
 function getCityByIbgeByName(name: string, uf: string) {
   const key = `${(name || "").trim().toLowerCase()}|${(uf || "").trim().toUpperCase()}`;
@@ -351,9 +383,17 @@ function getCityByIbgeByName(name: string, uf: string) {
   if (cityByNameCache.has(key)) return cityByNameCache.get(key);
   let found: ReturnType<typeof getCityByCode>;
   try {
-    // getCities filtra exatamente por UF; o match de nome é case-insensitive
-    const candidates = getCities({ uf, limit: 6000 }).filter(
-      (c: any) => c.name.toLowerCase() === name.trim().toLowerCase()
+    // índice em memória por UF (carregado uma vez; ~5.571 linhas no total)
+    if (!allCitiesByUfCache) {
+      allCitiesByUfCache = new Map();
+      for (const c of getCities({ limit: 6000 })) {
+        const list = allCitiesByUfCache.get(c.uf) || [];
+        list.push(c);
+        allCitiesByUfCache.set(c.uf, list);
+      }
+    }
+    const candidates = (allCitiesByUfCache.get(uf.trim().toUpperCase()) || []).filter(
+      (c) => c.name.toLowerCase() === name.trim().toLowerCase()
     );
     found = candidates[0];
   } catch {

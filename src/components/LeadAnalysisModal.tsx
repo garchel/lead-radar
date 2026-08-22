@@ -37,10 +37,14 @@ export const LeadAnalysisModal: React.FC<LeadAnalysisModalProps> = ({
             businessName: lead.name,
             category: lead.category,
             address: lead.address,
+            city: lead.city,
+            state: lead.state,
             phone: lead.phone,
             rating: lead.rating,
             reviewsCount: lead.reviewsCount,
             websiteStatus: lead.websiteStatus,
+            suggestedTicket: lead.suggestedTicket,
+            marketTier: lead.marketTier,
             userNotes: lead.notes
           })
         });

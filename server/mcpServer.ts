@@ -4,7 +4,7 @@ import { z } from "zod";
 import { Express, Request, Response } from "express";
 
 import { queueManager } from "./jobs/queueManager";
-import { getLeadById, upsertLead, getLeads, getLandingPages, getLandingPageById, upsertSchedule, getPipelineSummary, getDueFollowUps } from "./store/db";
+import { getLeadById, upsertLead, getLeads, getLandingPages, getLandingPageById, upsertSchedule, getPipelineSummary, getDueFollowUps, ensureCitiesLoaded, pickNextCities } from "./store/db";
 import { CronPattern } from "croner";
 import { scheduler } from "./scheduler/scheduler";
 import { buildLeadDossier } from "./dossier/dossier";
@@ -640,6 +640,114 @@ export function createLeadRadarMcpServer() {
           },
         ],
       };
+    }
+  );
+
+  // TOOL: get_next_cities — fila round-robin da base IBGE
+  server.tool(
+    "get_next_cities",
+    "Retorna as próximas cidades da fila de rotação (round-robin da base IBGE, 5.571 municípios) há mais tempo sem busca, com tier de mercado por PIB per capita.",
+    {
+      n: z.number().int().min(1).max(50).optional().describe("Quantas cidades retornar (default 5)"),
+      uf: z.string().regex(/^[A-Za-z]{2}$/).optional().describe("Filtrar por UF (ex: 'GO')"),
+      minPopulation: z.number().int().optional().describe("População mínima (ex: 30000)"),
+      maxPopulation: z.number().int().optional().describe("População máxima (ex: 200000)"),
+      minTier: z.enum(["A", "B", "C", "D"]).optional().describe("Tier mínimo de mercado (PIB per capita): A ≥80k, B ≥45k, C ≥25k, D <25k"),
+    },
+    async ({ n = 5, uf, minPopulation, maxPopulation, minTier }) => {
+      try {
+        ensureCitiesLoaded();
+        const tiersOrder = ["D", "C", "B", "A"];
+        const maxTierIdx = minTier ? tiersOrder.indexOf(minTier) : 3;
+        let cities = pickNextCities(Math.min(50, n * 3), { uf, minPopulation, maxPopulation });
+        if (minTier) cities = cities.filter((c) => tiersOrder.indexOf(c.marketTier) >= maxTierIdx);
+        const next = cities.slice(0, n);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ success: true, count: next.length, next }, null, 2),
+            },
+          ],
+        };
+      } catch (err: any) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ success: false, error: err?.message || "Falha na fila de cidades." }, null, 2) }],
+        };
+      }
+    }
+  );
+
+  // TOOL: search_city — busca leads em uma cidade com ticket sugerido e scoring combinado
+  server.tool(
+    "search_city",
+    "Busca empresas reais numa cidade via SerpAPI (Google Maps), retorna leads com score combinado (propensão da categoria + tier da cidade + contato), ticket sugerido em R$ e flag de já cadastrado. Não salva no CRM.",
+    {
+      location: z.string().min(1).describe("Nome da cidade (ex: 'Anápolis')"),
+      state: z.string().regex(/^[A-Za-z]{2}$/).describe("UF (ex: 'GO')"),
+      category: z.string().min(1).describe("Categoria de negócio (ex: 'Clínica Odontológica')"),
+      onlyNew: z.boolean().optional().describe("Se true, oculta empresas já cadastradas no CRM (default true)"),
+    },
+    async ({ location, state, category, onlyNew = true }) => {
+      try {
+        const result = await searchBusinesses({
+          location,
+          state: state.toUpperCase(),
+          category,
+          filterNoWebsiteOnly: false,
+          provider: "serpapi",
+        });
+        let businesses = result.businesses;
+        if (onlyNew) businesses = businesses.filter((b: any) => !b.isAlreadySaved);
+        const summary = businesses.map((b: any) => ({
+          name: b.name,
+          phone: b.phone,
+          websiteStatus: b.websiteStatus,
+          rating: b.rating,
+          opportunityScore: b.opportunityScore,
+          suggestedTicket: b.suggestedTicket ? `R$ ${b.suggestedTicket}` : undefined,
+          marketTier: b.marketTier,
+          alreadyInCrm: Boolean(b.isAlreadySaved),
+        }));
+        summary.sort((a: any, b: any) => (b.opportunityScore ?? 0) - (a.opportunityScore ?? 0));
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ success: true, cached: result.cached ?? false, count: summary.length, location, state, category, leads: summary }, null, 2),
+            },
+          ],
+        };
+      } catch (err: any) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ success: false, error: err?.message || "Falha na busca." }, null, 2) }],
+        };
+      }
+    }
+  );
+
+  // TOOL: pipeline_status — resumo do CRM
+  server.tool(
+    "pipeline_status",
+    "Resumo do CRM: leads por etapa do pipeline, valor potencial total e follow-ups pendentes.",
+    {},
+    async () => {
+      try {
+        const pipeline = getPipelineSummary() as any;
+        const dueFollowUps = getDueFollowUps();
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ success: true, pipeline, dueFollowUpsCount: dueFollowUps.length, dueFollowUps: dueFollowUps.slice(0, 10) }, null, 2),
+            },
+          ],
+        };
+      } catch (err: any) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ success: false, error: err?.message || "Falha no status do pipeline." }, null, 2) }],
+        };
+      }
     }
   );
 

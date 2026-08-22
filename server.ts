@@ -206,12 +206,15 @@ app.post("/api/analyze-lead", async (req, res) => {
     businessName,
     category,
     city,
+    state,
     address,
     websiteStatus,
     userNotes,
     phone,
     rating,
     reviewsCount,
+    suggestedTicket,
+    marketTier,
   } = req.body || {};
 
   if (
@@ -248,12 +251,15 @@ app.post("/api/analyze-lead", async (req, res) => {
       businessName: businessName.trim(),
       category: category.trim(),
       city: city.trim(),
+      state: typeof state === "string" ? state.trim().toUpperCase() : undefined,
       address,
       websiteStatus,
       userNotes,
       phone,
       rating,
       reviewsCount,
+      suggestedTicket: typeof suggestedTicket === "number" && suggestedTicket > 0 ? suggestedTicket : undefined,
+      marketTier: typeof marketTier === "string" ? marketTier : undefined,
     });
     return res.json({ success: true, analysis });
   } catch (error: any) {
