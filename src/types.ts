@@ -29,7 +29,7 @@ export interface BusinessLead {
   estimatedValue?: string;
   keyInsights?: string[];
   savedAt?: string;
-  pipelineStatus?: 'prospect' | 'contacted' | 'negotiating' | 'closed' | 'declined';
+  pipelineStatus?: 'prospect' | 'contacted' | 'negotiating' | 'em_desenvolvimento' | 'closed' | 'declined';
   notes?: string;
   lastContactAt?: string;
   lastResponseAt?: string;
@@ -37,6 +37,8 @@ export interface BusinessLead {
   nextContactAt?: string;
   contactAttempts?: number;
   doNotContact?: boolean;
+  isAlreadySaved?: boolean;
+  existingLeadId?: string;
 }
 
 export interface LeadAnalysisResult {
@@ -60,6 +62,22 @@ export interface LeadAnalysisResult {
   };
 }
 
+export type ProspectingProvider = 'serpapi' | 'gemini';
+
+export interface SerpApiUsage {
+  configured: boolean;
+  searchesPerMonth: number;
+  throughputPerHour: number;
+  usedThisMonth: number;
+  remainingThisMonth: number;
+  usedThisHour: number;
+  remainingThisHour: number;
+  monthKey: string;
+  hourWindowStart: string | null;
+  nextMonthlyReset: string;
+  nextHourlyReset: string | null;
+}
+
 export interface SearchFilters {
   state?: string;
   location: string;
@@ -69,12 +87,68 @@ export interface SearchFilters {
   minRating: number;
   minReviews: number;
   sortBy: 'score' | 'rating' | 'reviews' | 'name';
+  provider?: ProspectingProvider;
 }
 
 export interface PipelineStats {
   totalProspects: number;
   contacted: number;
   negotiating: number;
+  em_desenvolvimento: number;
   closed: number;
   estimatedPipelineValue: number;
+}
+
+export type ProjectStage =
+  | 'briefing'
+  | 'copywriting'
+  | 'design'
+  | 'desenvolvimento'
+  | 'revisao'
+  | 'deploy';
+
+export type ProjectStatus = 'em_andamento' | 'pausado' | 'cancelado' | 'concluido';
+
+export type ProjectPriority = 'baixa' | 'media' | 'alta';
+
+export type ProjectType = 'landing_page' | 'site_institucional';
+
+export interface ProjectBriefingField {
+  fieldTitle: string;
+  answer: string;
+}
+
+export interface ProjectTask {
+  id: string;
+  stage: ProjectStage;
+  title: string;
+  done: boolean;
+}
+
+export interface Project {
+  id: string;
+  leadId: string;
+  name: string;
+  stage: ProjectStage;
+  status: ProjectStatus;
+  priority: ProjectPriority;
+  type?: ProjectType;
+  typeformToken?: string;
+  brief?: string;
+  briefing?: ProjectBriefingField[];
+  tasks?: ProjectTask[];
+  copy?: string;
+  designNotes?: string;
+  devNotes?: string;
+  reviewNotes?: string;
+  deployUrl?: string;
+  dueDate?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  archived?: boolean;
+  archivedAt?: string;
+  leadName?: string;
+  leadCity?: string;
+  leadCategory?: string;
 }

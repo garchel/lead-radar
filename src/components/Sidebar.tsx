@@ -1,10 +1,11 @@
 import React from 'react';
-import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Layers, Radar, Activity } from 'lucide-react';
+import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Layers, Radar, Activity, Rocket, Building2, Database } from 'lucide-react';
 
 interface SidebarProps {
-  activeTab: 'search' | 'crm' | 'guide' | 'monitoring';
-  setActiveTab: (tab: 'search' | 'crm' | 'guide' | 'monitoring') => void;
+  activeTab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies';
+  setActiveTab: (tab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies') => void;
   savedCount: number;
+  projectCount: number;
   onOpenAddModal: () => void;
   onOpenMcpModal: () => void;
   onOpenQueueModal: () => void;
@@ -16,6 +17,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   setActiveTab,
   savedCount,
+  projectCount,
   onOpenAddModal,
   onOpenMcpModal,
   onOpenQueueModal,
@@ -64,6 +66,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           <button
+            id="nav-companies-btn"
+            onClick={() => setActiveTab('companies')}
+            className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'companies'
+                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <Building2 className="w-4 h-4 shrink-0" />
+            <span>Empresas Encontradas</span>
+          </button>
+
+          <button
             id="nav-crm-btn"
             onClick={() => setActiveTab('crm')}
             className={`relative w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
@@ -92,6 +107,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <BookOpen className="w-4 h-4 shrink-0" />
             <span>Estratégia & Pitch</span>
+          </button>
+
+          <button
+            id="nav-projects-btn"
+            onClick={() => setActiveTab('projects')}
+            className={`relative w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'projects'
+                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <Rocket className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Projetos</span>
+            {projectCount > 0 && (
+              <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-violet-600 text-white shrink-0">
+                {projectCount}
+              </span>
+            )}
           </button>
         </nav>
       </div>

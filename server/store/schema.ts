@@ -145,6 +145,32 @@ function migrateSchema(db: Database.Database) {
       updated_at   TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS projects (
+      id             TEXT PRIMARY KEY,
+      lead_id        TEXT NOT NULL,
+      name           TEXT NOT NULL,
+      type           TEXT NOT NULL DEFAULT 'landing_page',
+      typeform_token TEXT,
+      tasks_json     TEXT,
+      stage          TEXT NOT NULL DEFAULT 'briefing',
+      status         TEXT NOT NULL DEFAULT 'em_andamento',
+      priority       TEXT NOT NULL DEFAULT 'media',
+      brief          TEXT,
+      briefing_json  TEXT,
+      copy           TEXT,
+      design_notes   TEXT,
+      dev_notes      TEXT,
+      review_notes   TEXT,
+      deploy_url     TEXT,
+      due_date       TEXT,
+      completed_at   TEXT,
+      archived       INTEGER DEFAULT 0,
+      archived_at    TEXT,
+      created_at     TEXT,
+      updated_at     TEXT,
+      FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_leads_pipeline ON leads(pipeline_status);
     CREATE INDEX IF NOT EXISTS idx_leads_city ON leads(city);
     CREATE INDEX IF NOT EXISTS idx_landing_pages_lead ON landing_pages(lead_id);
@@ -155,7 +181,57 @@ function migrateSchema(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_interactions_lead ON interactions(lead_id);
     CREATE INDEX IF NOT EXISTS idx_interactions_next_contact ON interactions(next_contact_at);
     CREATE INDEX IF NOT EXISTS idx_schedules_enabled ON schedules(enabled);
+    CREATE INDEX IF NOT EXISTS idx_projects_lead ON projects(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_projects_stage ON projects(stage);
+
+    CREATE TABLE IF NOT EXISTS serpapi_keys (
+      id TEXT PRIMARY KEY,
+      api_key TEXT NOT NULL,
+      label TEXT,
+      is_active INTEGER NOT NULL DEFAULT 0,
+      month_key TEXT NOT NULL,
+      used_this_month INTEGER NOT NULL DEFAULT 0,
+      hour_window_start TEXT,
+      used_this_hour INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      renewal_day INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_serpapi_keys_active ON serpapi_keys(is_active);
+
+    CREATE TABLE IF NOT EXISTS serpapi_search_cache (
+      query_hash TEXT PRIMARY KEY,
+      location TEXT NOT NULL,
+      state TEXT NOT NULL,
+      category TEXT NOT NULL,
+      filter_no_website_only INTEGER NOT NULL,
+      query TEXT,
+      provider TEXT NOT NULL,
+      businesses_json TEXT NOT NULL,
+      serpapi_raw TEXT,
+      serpapi_meta TEXT,
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_serpapi_cache_expires ON serpapi_search_cache(expires_at);
   `);
+
+  // Additive migration for renewal_day (chaves criadas antes deste campo)
+  try {
+    const keyCols = db.prepare("PRAGMA table_info(serpapi_keys)").all() as any[];
+    const hasRenewalDay = keyCols.some((c: any) => c.name === "renewal_day");
+    if (!hasRenewalDay) {
+      db.exec("ALTER TABLE serpapi_keys ADD COLUMN renewal_day INTEGER");
+    }
+    // backfill: define renewal_day como dia da criação para chaves existentes
+    const rows = db.prepare("SELECT id, created_at, renewal_day FROM serpapi_keys").all() as any[];
+    for (const r of rows) {
+      if (r.renewal_day == null && r.created_at) {
+        const d = new Date(r.created_at).getUTCDate();
+        db.prepare("UPDATE serpapi_keys SET renewal_day = @d WHERE id = @id").run({ d, id: r.id });
+      }
+    }
+  } catch {}
 
   // Additive migrations for databases created before the CRM interaction model.
   const leadCols = db.prepare("PRAGMA table_info(leads)").all() as any[];
@@ -176,6 +252,23 @@ function migrateSchema(db: Database.Database) {
   for (const [name, definition] of Object.entries(columnsToAdd)) {
     if (!existingColumns.has(name)) {
       db.exec(`ALTER TABLE leads ADD COLUMN ${name} ${definition}`);
+    }
+  }
+
+  // Additive migrations for databases created before the archived project model.
+  const projectCols = db.prepare("PRAGMA table_info(projects)").all() as any[];
+  const existingProjectColumns = new Set(projectCols.map((column: any) => column.name));
+  const projectColumnsToAdd: Record<string, string> = {
+    archived: "INTEGER DEFAULT 0",
+    archived_at: "TEXT",
+    type: "TEXT NOT NULL DEFAULT 'landing_page'",
+    briefing_json: "TEXT",
+    typeform_token: "TEXT",
+    tasks_json: "TEXT",
+  };
+  for (const [name, definition] of Object.entries(projectColumnsToAdd)) {
+    if (!existingProjectColumns.has(name)) {
+      db.exec(`ALTER TABLE projects ADD COLUMN ${name} ${definition}`);
     }
   }
 }

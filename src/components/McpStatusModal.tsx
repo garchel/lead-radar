@@ -304,7 +304,7 @@ export const McpStatusModal: React.FC<McpStatusModalProps> = ({ isOpen, onClose 
                     <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">MCP Tool</span>
                   </div>
                   <p className="text-xs text-slate-600 mt-1">
-                    Move automaticamente o lead entre os estágios do Pipeline (Novo, Contatado, Proposta, Negociação, Fechado).
+                    Move automaticamente o lead entre os estágios do Pipeline (Novo, Contatado, Proposta, Negociação, Em Desenvolvimento, Finalizado).
                   </p>
                 </div>
               </div>

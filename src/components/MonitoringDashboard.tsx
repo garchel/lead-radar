@@ -141,7 +141,7 @@ export const MonitoringDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {error && (
         <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
           {error}

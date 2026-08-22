@@ -1,6 +1,9 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { StoredLead } from "../store/types";
-import { getGeminiModel } from "../config";
+import { getGeminiModel, getSerpApiConfig } from "../config";
+import { searchSerpApiMaps, SerpApiQuotaError, listSerpApiKeys, getLastSerpApiRaw, wasLastSearchCached } from "./serpApi";
+import { getLeads } from "../store/db";
+import { normalizePhone, normalizeText } from "./leadIdentity";
 
 /* ------------------------------------------------------------------ */
 /*  Shared, real business search + AI analysis used by the queue,      */
@@ -8,17 +11,23 @@ import { getGeminiModel } from "../config";
 /*  across server.ts / queueManager.ts.                                */
 /* ------------------------------------------------------------------ */
 
+export type ProspectingProvider = "serpapi" | "gemini";
+
 export interface SearchInput {
   location: string;
   state?: string;
   category?: string;
   query?: string;
   filterNoWebsiteOnly?: boolean;
+  provider?: ProspectingProvider;
 }
 
 export interface SearchResult {
-  source: "gemini";
+  source: ProspectingProvider;
   businesses: any[];
+  serpApiRaw?: any;
+  serpApiMeta?: any;
+  cached?: boolean;
 }
 
 function getGenAI(): GoogleGenAI | null {
@@ -154,17 +163,12 @@ export function validateBusinessResults(value: unknown): any[] {
   });
 }
 
-export async function searchBusinesses(input: SearchInput): Promise<SearchResult> {
+async function searchViaGemini(input: SearchInput): Promise<SearchResult> {
   const { location, state, category, query = "", filterNoWebsiteOnly } = input;
-  if (typeof location !== "string" || !location.trim()) throw new Error("Cidade é obrigatória para buscar empresas reais.");
-  if (typeof state !== "string" || !/^[A-Za-z]{2}$/.test(state.trim())) throw new Error("UF inválida para buscar empresas reais.");
-  if (typeof category !== "string" || !category.trim()) throw new Error("Categoria é obrigatória para buscar empresas reais.");
-  if (typeof filterNoWebsiteOnly !== "boolean") throw new Error("filterNoWebsiteOnly deve ser booleano.");
-
   const ai = getGenAI();
   if (!ai) {
     throw new Error(
-      "GEMINI_API_KEY não configurada. Configure a chave no .env para buscar empresas reais."
+      "GEMINI_API_KEY não configurada. Configure a chave no .env para buscar empresas reais com Gemini."
     );
   }
 
@@ -176,6 +180,8 @@ ${category && category !== "Todas as Categorias" ? `Categoria específica de neg
 ${query ? `Palavra-chave/termo adicional: "${query}".` : ""}
 
 Sua missão é identificar até 8 empresas reais nessa localização. Para cada empresa, verifique a presença digital e identifique se ela NÃO POSSUI LANDING PAGE ou SITE OFICIAL PRÓPRIO (ou possui apenas rede social como Instagram/Facebook).
+
+IMPORTANTE: retorne APENAS empresas reais encontradas via busca. NUNCA invente empresas. Se não encontrar empresas reais, retorne array vazio.
 
 Forneça a resposta estritamente em formato JSON válido contendo um array "businesses".
 Cada item do array deve ter as seguintes propriedades:
@@ -246,7 +252,7 @@ Cada item do array deve ter as seguintes propriedades:
     });
 
     const responseText = response.text?.trim();
-    if (!responseText) throw new Error("A busca real não retornou conteúdo.");
+    if (!responseText) throw new Error("A busca real via Gemini não retornou conteúdo. Tente novamente ou troque para SerpAPI.");
     const parsed = JSON.parse(responseText);
     let businesses = validateBusinessResults(parsed.businesses);
     if (filterNoWebsiteOnly) {
@@ -254,12 +260,101 @@ Cada item do array deve ter as seguintes propriedades:
         (b: any) => b.websiteStatus === "none" || b.websiteStatus === "social_only"
       );
     }
+    if (businesses.length === 0) {
+      throw new Error("Gemini não retornou empresas reais para os filtros informados. Tente ampliar a região/categoria ou use SerpAPI para resultados reais do Google Maps.");
+    }
     return { source: "gemini", businesses };
   } catch (err: any) {
-    console.warn("Busca real falhou (cota/rede/API):", err?.message || err);
-    // NÃO há fallback: propaga o erro para a camada superior retorná-lo ao usuário.
+    if (err instanceof SerpApiQuotaError) throw err;
+    console.warn("Busca Gemini falhou (cota/rede/API):", err?.message || err);
+    const isQuota = /429|quota|RESOURCE_EXHAUSTED|exceeded/i.test(err?.message || "");
+    if (isQuota) {
+      throw new Error(
+        `Gemini cota excedida (${err?.message}). Mesmo na 1ª requisição isso ocorre se a chave for inválida (deve começar com AIzaSy), se o modelo ${getGeminiModel()} não tem cota free, ou se o googleSearch grounding está com limite 0. Gere nova chave em https://aistudio.google.com/app/apikey, defina GEMINI_MODEL=gemini-2.0-flash ou troque para SerpAPI.`
+      );
+    }
     throw new Error(
-      `Falha ao buscar empresas reais (${err?.message || "erro desconhecido"}). Sem dados de demonstração — verifique a chave GEMINI_API_KEY, cota e conexão.`
+      `Falha ao buscar empresas reais via Gemini (${err?.message || "erro desconhecido"}). Sem dados inventados — verifique a chave GEMINI_API_KEY, cota e conexão, ou troque para SerpAPI.`
     );
   }
+}
+
+function markAlreadySaved(businesses: any[]): any[] {
+  try {
+    const leads = getLeads();
+    const byPlaceId = new Map<string, string>();
+    const byPhone = new Map<string, string>();
+    const byNameCity = new Map<string, string>();
+    for (const l of leads) {
+      if (l.googlePlaceId) byPlaceId.set(l.googlePlaceId, l.id);
+      if (l.phone) {
+        const n = normalizePhone(l.phone);
+        if (n) byPhone.set(n, l.id);
+      }
+      const key = `${normalizeText(l.name)}|${normalizeText(l.city)}`;
+      if (key !== "|") byNameCity.set(key, l.id);
+    }
+    return businesses.map((b: any) => {
+      let existingId: string | undefined;
+      if (b.googlePlaceId && byPlaceId.has(b.googlePlaceId)) existingId = byPlaceId.get(b.googlePlaceId);
+      else if (b.phone) {
+        const n = normalizePhone(b.phone);
+        if (n && byPhone.has(n)) existingId = byPhone.get(n);
+      }
+      if (!existingId) {
+        const k = `${normalizeText(b.name)}|${normalizeText(b.city)}`;
+        if (byNameCity.has(k)) existingId = byNameCity.get(k);
+      }
+      return existingId ? { ...b, isAlreadySaved: true, existingLeadId: existingId } : { ...b, isAlreadySaved: false };
+    });
+  } catch {
+    return businesses;
+  }
+}
+
+async function searchViaSerpApi(input: SearchInput): Promise<SearchResult> {
+  const businesses = await searchSerpApiMaps({
+    location: input.location,
+    state: input.state!,
+    category: input.category!,
+    query: input.query,
+    filterNoWebsiteOnly: input.filterNoWebsiteOnly,
+  });
+  let validated = validateBusinessResults(businesses);
+  if (input.filterNoWebsiteOnly) {
+    validated = validated.filter((b: any) => b.websiteStatus === "none" || b.websiteStatus === "social_only");
+  }
+  const marked = markAlreadySaved(validated);
+  const { raw, meta } = getLastSerpApiRaw();
+  const cached = wasLastSearchCached();
+  if (marked.length === 0) {
+    return { source: "serpapi", businesses: [], serpApiRaw: raw, serpApiMeta: meta, cached };
+  }
+  return { source: "serpapi", businesses: marked, serpApiRaw: raw, serpApiMeta: meta, cached };
+}
+
+export async function searchBusinesses(input: SearchInput): Promise<SearchResult> {
+  const { location, state, category, query = "", filterNoWebsiteOnly, provider } = input;
+  if (typeof location !== "string" || !location.trim()) throw new Error("Cidade é obrigatória para buscar empresas reais.");
+  if (typeof state !== "string" || !/^[A-Za-z]{2}$/.test(state.trim())) throw new Error("UF inválida para buscar empresas reais.");
+  if (typeof category !== "string" || !category.trim()) throw new Error("Categoria é obrigatória para buscar empresas reais.");
+  if (typeof filterNoWebsiteOnly !== "boolean") throw new Error("filterNoWebsiteOnly deve ser booleano.");
+  if (provider && !["serpapi", "gemini"].includes(provider)) throw new Error("provider deve ser 'serpapi' ou 'gemini'.");
+
+  let effectiveConfigured: boolean;
+  try {
+    effectiveConfigured = listSerpApiKeys().length > 0 || getSerpApiConfig().configured;
+  } catch {
+    effectiveConfigured = getSerpApiConfig().configured;
+  }
+  const chosen: ProspectingProvider = provider || (effectiveConfigured ? "serpapi" : "gemini");
+
+  if (chosen === "serpapi") {
+    if (!effectiveConfigured) {
+      throw new Error("Nenhuma chave SerpAPI cadastrada. Adicione uma chave em Gerenciar chaves ou defina SERPAPI_API_KEY no .env, ou selecione Gemini.");
+    }
+    return await searchViaSerpApi(input);
+  }
+
+  return await searchViaGemini(input);
 }

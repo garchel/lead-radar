@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import { Search, MapPin, Filter, Sparkles, LayoutGrid, Map, RefreshCw, Globe, Download, Crown, Award } from 'lucide-react';
-import { SearchFilters } from '../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, MapPin, Filter, Sparkles, LayoutGrid, Map, RefreshCw, Globe, Download, Crown, Award, Database, Zap, AlertTriangle, Clock, Calendar, Key } from 'lucide-react';
+import { SearchFilters, SerpApiUsage } from '../types';
 import { CATEGORY_OPTIONS } from '../data/catalog';
 import { BRAZIL_STATES, CITIES_BY_STATE, getCitiesForState } from '../data/brazilLocations';
+import { SerpApiKeyManager } from './SerpApiKeyManager';
 
 interface SearchHeaderProps {
   filters: SearchFilters;
@@ -28,6 +29,45 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
   onExportCSV,
 }) => {
   const [isCityFocused, setIsCityFocused] = useState(false);
+  const [usage, setUsage] = useState<SerpApiUsage | null>(null);
+  const [providers, setProviders] = useState<{ id: string; configured: boolean }[]>([]);
+  const [usageError, setUsageError] = useState<string | null>(null);
+  const [isKeyManagerOpen, setIsKeyManagerOpen] = useState(false);
+
+  const fetchUsage = async () => {
+    try {
+      const r = await fetch('/api/prospecting/usage');
+      const d = await r.json();
+      if (d?.success && d.usage) setUsage(d.usage as SerpApiUsage);
+      const p = await fetch('/api/prospecting/providers');
+      const pd = await p.json();
+      if (pd?.success && Array.isArray(pd.providers)) setProviders(pd.providers);
+      setUsageError(null);
+    } catch (e: any) {
+      setUsageError(e?.message || 'Falha ao carregar uso');
+    }
+  };
+
+  useEffect(() => {
+    void fetchUsage();
+  }, []);
+
+  useEffect(() => {
+    if (!isSearching) void fetchUsage();
+  }, [isSearching]);
+
+  const serpConfigured = providers.find((p) => p.id === 'serpapi')?.configured ?? usage?.configured ?? false;
+  const geminiConfigured = providers.find((p) => p.id === 'gemini')?.configured ?? false;
+  const currentProvider = filters.provider || (serpConfigured ? 'serpapi' : 'gemini');
+
+  useEffect(() => {
+    if (providers.length === 0) return;
+    if (currentProvider === 'serpapi' && !serpConfigured && geminiConfigured) {
+      setFilters((prev) => ({ ...prev, provider: 'gemini' }));
+    } else if (currentProvider === 'gemini' && !geminiConfigured && serpConfigured) {
+      setFilters((prev) => ({ ...prev, provider: 'serpapi' }));
+    }
+  }, [providers, serpConfigured, geminiConfigured]);
 
   const selectedState = filters.state || 'SP';
 
@@ -67,7 +107,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
 
   return (
     <div className="bg-slate-100 border-b border-slate-200/80 py-6 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-5">
+      <div className="space-y-5">
         {/* Title Banner */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -103,6 +143,110 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Exportar CSV</span>
               </button>
+            )}
+          </div>
+        </div>
+
+        {/* Provider + Uso SerpAPI */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="space-y-1.5">
+              <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Provedor de prospecção</span>
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setFilters((prev) => ({ ...prev, provider: 'serpapi' }))}
+                  disabled={!serpConfigured}
+                  className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                    currentProvider === 'serpapi'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : serpConfigured
+                        ? 'text-slate-600 hover:text-slate-900'
+                        : 'text-slate-400 cursor-not-allowed'
+                  }`}
+                  title={serpConfigured ? 'Google Maps real via SerpAPI (sem invenção)' : 'Configure SERPAPI_API_KEY no .env'}
+                >
+                  <Database className="w-3.5 h-3.5" />
+                  SerpAPI
+                  {!serpConfigured && <span className="text-[10px]">(sem chave)</span>}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilters((prev) => ({ ...prev, provider: 'gemini' }))}
+                  disabled={!geminiConfigured}
+                  className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                    currentProvider === 'gemini'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : geminiConfigured
+                        ? 'text-slate-600 hover:text-slate-900'
+                        : 'text-slate-400 cursor-not-allowed'
+                  }`}
+                  title={geminiConfigured ? 'Gemini com Google Search grounding' : 'Configure GEMINI_API_KEY'}
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  Gemini
+                  {!geminiConfigured && <span className="text-[10px]">(sem chave)</span>}
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                {currentProvider === 'serpapi'
+                  ? 'Apenas empresas reais do Google Maps. Sem dados inventados.'
+                  : 'IA com busca — pode falhar por cota 429. Sem dados inventados.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsKeyManagerOpen(true)}
+                className="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border border-indigo-200 bg-white font-semibold px-2.5 py-1 rounded-lg text-xs transition-colors"
+              >
+                <Key className="w-3.5 h-3.5" /> Gerenciar chaves SerpAPI
+              </button>
+            </div>
+
+            {usage && (
+              <div className="flex-1 lg:max-w-md space-y-2">
+                {!usage.configured ? (
+                  <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                    <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-bold">SerpAPI não configurada</p>
+                      <p>Defina <code className="bg-white px-1 rounded border">SERPAPI_API_KEY</code> no .env para usar o provedor real. Enquanto isso, use Gemini.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-600 flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Mês {usage.monthKey}</span>
+                      <span className={`font-bold ${usage.remainingThisMonth < 20 ? 'text-amber-600' : 'text-slate-700'}`}>
+                        {usage.usedThisMonth}/{usage.searchesPerMonth} usados — {usage.remainingThisMonth} restantes
+                      </span>
+                    </div>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                      <div
+                        className={`h-full rounded-full transition-all ${usage.remainingThisMonth < 20 ? 'bg-amber-500' : usage.remainingThisMonth === 0 ? 'bg-red-500' : 'bg-indigo-600'}`}
+                        style={{ width: `${Math.min(100, (usage.usedThisMonth / usage.searchesPerMonth) * 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-600 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Hora</span>
+                      <span className={`font-bold ${usage.remainingThisHour < 5 ? 'text-amber-600' : 'text-slate-700'}`}>
+                        {usage.usedThisHour}/{usage.throughputPerHour} — {usage.remainingThisHour} restantes
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                      <div
+                        className={`h-full rounded-full transition-all ${usage.remainingThisHour < 5 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${Math.min(100, (usage.usedThisHour / usage.throughputPerHour) * 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-[11px] text-slate-500">
+                      <span className="inline-flex items-center gap-1"><Calendar className="w-3 h-3" /> Renova mês: {new Date(usage.nextMonthlyReset).toLocaleDateString('pt-BR')}</span>
+                      {usage.nextHourlyReset && <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" /> Renova hora: {new Date(usage.nextHourlyReset).toLocaleTimeString('pt-BR')}</span>}
+                    </div>
+                    <p className="text-[11px] text-slate-400">Apenas sucesso conta. Cache (1h) e erros não consomem. Free: 250/mês, 50/hora por chave — renova no dia da criação (ou data que você definir).</p>
+                  </>
+                )}
+                {usageError && <p className="text-[11px] text-red-600">{usageError}</p>}
+              </div>
             )}
           </div>
         </div>
@@ -337,6 +481,9 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
           </div>
         </form>
       </div>
+      {isKeyManagerOpen && (
+        <SerpApiKeyManager onClose={() => setIsKeyManagerOpen(false)} onChanged={() => void fetchUsage()} />
+      )}
     </div>
   );
 };

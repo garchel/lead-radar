@@ -1,6 +1,6 @@
 import { getDb, importFromJson } from './schema';
 import { eventHub } from '../events/eventHub';
-import { StoredLead, LandingPage, Schedule, LeadInteraction, InteractionOutcome } from './types';
+import { StoredLead, LandingPage, Schedule, LeadInteraction, InteractionOutcome, Project, PipelineStatus } from './types';
 import { getLeadIdentityCandidates, normalizeText, normalizePhone } from '../services/leadIdentity';
 import type { Job } from '../jobs/queueManager';
 import path from 'path';
@@ -321,6 +321,7 @@ export function getPipelineSummary() {
         SUM(CASE WHEN pipeline_status = 'prospect' THEN 1 ELSE 0 END) AS prospect,
         SUM(CASE WHEN pipeline_status = 'contacted' THEN 1 ELSE 0 END) AS contacted,
         SUM(CASE WHEN pipeline_status = 'negotiating' THEN 1 ELSE 0 END) AS negotiating,
+        SUM(CASE WHEN pipeline_status = 'em_desenvolvimento' THEN 1 ELSE 0 END) AS em_desenvolvimento,
         SUM(CASE WHEN pipeline_status = 'closed' THEN 1 ELSE 0 END) AS closed,
         SUM(CASE WHEN pipeline_status = 'declined' THEN 1 ELSE 0 END) AS declined
       FROM leads`)
@@ -332,10 +333,152 @@ export function getPipelineSummary() {
       prospect: row.prospect || 0,
       contacted: row.contacted || 0,
       negotiating: row.negotiating || 0,
+      em_desenvolvimento: row.em_desenvolvimento || 0,
       closed: row.closed || 0,
       declined: row.declined || 0,
     },
   };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Projetos (acompanhamento do desenvolvimento)                       */
+/* ------------------------------------------------------------------ */
+function parseBriefingJson(value: string | null): Project['briefing'] {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) return undefined;
+    return parsed as Project['briefing'];
+  } catch {
+    return undefined;
+  }
+}
+
+function parseTasksJson(value: string | null): Project['tasks'] {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) return undefined;
+    return parsed as Project['tasks'];
+  } catch {
+    return undefined;
+  }
+}
+
+function rowToProject(row: any): Project {
+  return {
+    id: row.id,
+    leadId: row.lead_id,
+    name: row.name,
+    type: row.type || "landing_page",
+    typeformToken: row.typeform_token || undefined,
+    stage: row.stage,
+    status: row.status,
+    priority: row.priority,
+    brief: row.brief || undefined,
+    briefing: parseBriefingJson(row.briefing_json),
+    tasks: parseTasksJson(row.tasks_json),
+    copy: row.copy || undefined,
+    designNotes: row.design_notes || undefined,
+    devNotes: row.dev_notes || undefined,
+    reviewNotes: row.review_notes || undefined,
+    deployUrl: row.deploy_url || undefined,
+    dueDate: row.due_date || undefined,
+    completedAt: row.completed_at || undefined,
+    archived: Boolean(row.archived),
+    archivedAt: row.archived_at || undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    leadName: row.lead_name || undefined,
+    leadCity: row.lead_city || undefined,
+    leadCategory: row.lead_category || undefined,
+  };
+}
+
+const PROJECT_COLUMNS =
+  'p.id, p.lead_id, p.name, p.type, p.typeform_token, p.stage, p.status, p.priority, p.brief, p.briefing_json, p.tasks_json, p.copy, p.design_notes, p.dev_notes, ' +
+  'p.review_notes, p.deploy_url, p.due_date, p.completed_at, p.archived, p.archived_at, p.created_at, p.updated_at, ' +
+  'l.name AS lead_name, l.city AS lead_city, l.category AS lead_category';
+
+const PROJECT_SELECT = `SELECT ${PROJECT_COLUMNS} FROM projects p LEFT JOIN leads l ON l.id = p.lead_id`;
+
+export function getProjects(): Project[] {
+  const rows = getDb().prepare(`${PROJECT_SELECT} ORDER BY p.created_at DESC`).all() as any[];
+  return rows.map(rowToProject);
+}
+
+export function getProjectById(id: string): Project | undefined {
+  const row = getDb().prepare(`${PROJECT_SELECT} WHERE p.id = ?`).get(id) as any;
+  return row ? rowToProject(row) : undefined;
+}
+
+export function getProjectsByLead(leadId: string): Project[] {
+  const rows = getDb().prepare(`${PROJECT_SELECT} WHERE p.lead_id = ? ORDER BY p.created_at DESC`).all(leadId) as any[];
+  return rows.map(rowToProject);
+}
+
+export function getProjectByTypeformToken(token: string): Project | undefined {
+  const row = getDb().prepare(`${PROJECT_SELECT} WHERE p.typeform_token = ? LIMIT 1`).get(token) as any;
+  return row ? rowToProject(row) : undefined;
+}
+
+export function upsertProject(project: Project) {
+  const data = {
+    id: project.id,
+    lead_id: project.leadId,
+    name: project.name,
+    type: project.type || "landing_page",
+    typeform_token: project.typeformToken ?? null,
+    stage: project.stage,
+    status: project.status,
+    priority: project.priority,
+    brief: project.brief ?? null,
+    briefing_json: project.briefing && project.briefing.length > 0 ? JSON.stringify(project.briefing) : null,
+    tasks_json: project.tasks && project.tasks.length > 0 ? JSON.stringify(project.tasks) : null,
+    copy: project.copy ?? null,
+    design_notes: project.designNotes ?? null,
+    dev_notes: project.devNotes ?? null,
+    review_notes: project.reviewNotes ?? null,
+    deploy_url: project.deployUrl ?? null,
+    due_date: project.dueDate ?? null,
+    completed_at: project.completedAt ?? null,
+    archived: project.archived ? 1 : 0,
+    archived_at: project.archivedAt ?? null,
+    created_at: project.createdAt,
+    updated_at: project.updatedAt,
+  };
+
+  const existing = getDb().prepare('SELECT id FROM projects WHERE id = ?').get(project.id) as any;
+  if (existing) {
+    const sets = Object.keys(data).map((k) => `${k} = @${k}`).join(', ');
+    getDb().prepare(`UPDATE projects SET ${sets} WHERE id = @id`).run(data);
+  } else {
+    getDb()
+      .prepare(
+        `INSERT INTO projects (id, lead_id, name, type, typeform_token, stage, status, priority, brief, briefing_json, tasks_json, copy, design_notes, dev_notes, review_notes, deploy_url, due_date, completed_at, archived, archived_at, created_at, updated_at)
+         VALUES (@id, @lead_id, @name, @type, @typeform_token, @stage, @status, @priority, @brief, @briefing_json, @tasks_json, @copy, @design_notes, @dev_notes, @review_notes, @deploy_url, @due_date, @completed_at, @archived, @archived_at, @created_at, @updated_at)`
+      )
+      .run(data);
+  }
+
+  eventHub.emit('projects', { id: project.id });
+  return getProjectById(project.id)!;
+}
+
+export function deleteProject(id: string) {
+  getDb().prepare('DELETE FROM projects WHERE id = ?').run(id);
+  eventHub.emit('projects', { id });
+}
+
+export function updateLeadPipelineStatus(id: string, status: PipelineStatus): StoredLead | undefined {
+  const existing = getLeadById(id);
+  if (!existing) return undefined;
+  const now = new Date().toISOString();
+  getDb()
+    .prepare("UPDATE leads SET pipeline_status = ?, updated_at = ? WHERE id = ?")
+    .run(status, now, id);
+  eventHub.emit("leads", { id });
+  return getLeadById(id)!;
 }
 /* ------------------------------------------------------------------ */
 /*  Jobs                                                                */

@@ -6,11 +6,15 @@ import { registerMcpRoutes } from "./server/mcpServer";
 import { registerQueueRoutes } from "./server/jobs/queueRoutes";
 import { registerLeadRoutes } from "./server/routes/leadRoutes";
 import { registerLandingPageRoutes } from "./server/routes/landingPageRoutes";
+import { registerProjectRoutes } from "./server/routes/projectRoutes";
+import { registerTypeformRoutes } from "./server/routes/typeformRoutes";
 import { registerEventRoutes } from "./server/routes/eventRoutes";
 import { registerScheduleRoutes } from "./server/routes/scheduleRoutes";
 import { scheduler, ensureDefaultFollowUpSchedule } from "./server/scheduler/scheduler";
-import { getSchedulerConfig } from "./server/config";
+import { startTypeformPolling } from "./server/typeform/polling";
+import { getSchedulerConfig, getSerpApiConfig, getProspectingProvider } from "./server/config";
 import { analyzeLead, searchBusinesses } from "./server/services/prospectingService";
+import { getSerpApiUsage, listSerpApiKeys, addSerpApiKey, deleteSerpApiKey, activateSerpApiKey, updateSerpApiKey, getLastSerpApiRaw } from "./server/services/serpApi";
 
 dotenv.config();
 
@@ -23,19 +27,140 @@ registerMcpRoutes(app);
 registerQueueRoutes(app);
 registerLeadRoutes(app);
 registerLandingPageRoutes(app);
+registerProjectRoutes(app);
+registerTypeformRoutes(app);
 registerEventRoutes(app);
 registerScheduleRoutes(app);
 
 app.get("/api/health", (_req, res) => {
+  let hasSerpApiKey = Boolean((process.env.SERPAPI_API_KEY || "").trim());
+  try {
+    if (!hasSerpApiKey) hasSerpApiKey = listSerpApiKeys().length > 0;
+  } catch {}
+  // provider efetivo considera chaves cadastradas
+  let provider = getProspectingProvider();
+  try {
+    if (listSerpApiKeys().length > 0) provider = "serpapi";
+  } catch {}
   res.json({
     status: "ok",
     hasGeminiKey: Boolean(process.env.GEMINI_API_KEY),
     hasGoogleMapsKey: Boolean(process.env.GOOGLE_MAPS_PLATFORM_KEY),
+    hasSerpApiKey,
+    prospectingProvider: provider,
   });
 });
 
+app.get("/api/prospecting/usage", (_req, res) => {
+  try {
+    const usage = getSerpApiUsage();
+    let provider = getProspectingProvider();
+    try {
+      if (listSerpApiKeys().length > 0) provider = "serpapi";
+    } catch {}
+    res.json({ success: true, usage, provider });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || "Falha ao obter uso SerpAPI." });
+  }
+});
+
+app.get("/api/prospecting/providers", (_req, res) => {
+  const keys = (() => {
+    try {
+      return listSerpApiKeys();
+    } catch {
+      return [];
+    }
+  })();
+  const serp = getSerpApiConfig();
+  const effectiveConfigured = keys.length > 0 || serp.configured;
+  res.json({
+    success: true,
+    providers: [
+      {
+        id: "serpapi",
+        label: "SerpAPI (Google Maps real)",
+        configured: effectiveConfigured,
+        description: effectiveConfigured
+          ? `SerpAPI real — ${serp.searchesPerMonth}/mês, ${serp.throughputPerHour}/h por chave. ${keys.length ? `${keys.length} chave(s) cadastrada(s).` : "via .env"} Apenas empresas reais.`
+          : "SerpAPI não configurada — cadastre uma chave em Gerenciar chaves ou defina SERPAPI_API_KEY no .env",
+      },
+      {
+        id: "gemini",
+        label: "Gemini (IA + busca)",
+        configured: Boolean(process.env.GEMINI_API_KEY),
+        description: Boolean(process.env.GEMINI_API_KEY)
+          ? "Gemini com Google Search grounding — pode falhar por cota 429"
+          : "Gemini não configurado — defina GEMINI_API_KEY",
+      },
+    ],
+    defaultProvider: getProspectingProvider(),
+  });
+});
+
+// SerpAPI keys — gerenciar múltiplas chaves (free 250/mês cada)
+app.get("/api/serpapi/keys", (_req, res) => {
+  try {
+    const keys = listSerpApiKeys();
+    res.json({ success: true, keys });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || "Falha ao listar chaves." });
+  }
+});
+
+app.post("/api/serpapi/keys", (req, res) => {
+  const { apiKey, label, renewalDay, renewalDate } = req.body || {};
+  if (typeof apiKey !== "string" || !apiKey.trim()) {
+    return res.status(400).json({ success: false, error: "apiKey é obrigatória." });
+  }
+  try {
+    const key = addSerpApiKey(apiKey, label, renewalDay, renewalDate);
+    res.status(201).json({ success: true, key });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: err?.message || "Falha ao adicionar chave." });
+  }
+});
+
+app.patch("/api/serpapi/keys/:id", (req, res) => {
+  const { label, renewalDay, renewalDate } = req.body || {};
+  try {
+    const key = updateSerpApiKey(req.params.id, { label, renewalDay, renewalDate });
+    res.json({ success: true, key });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: err?.message || "Falha ao atualizar chave." });
+  }
+});
+
+app.post("/api/serpapi/keys/:id/activate", (req, res) => {
+  try {
+    const key = activateSerpApiKey(req.params.id);
+    res.json({ success: true, key });
+  } catch (err: any) {
+    res.status(404).json({ success: false, error: err?.message || "Falha ao ativar chave." });
+  }
+});
+
+app.delete("/api/serpapi/keys/:id", (req, res) => {
+  try {
+    deleteSerpApiKey(req.params.id);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(404).json({ success: false, error: err?.message || "Falha ao remover chave." });
+  }
+});
+
+app.get("/api/serpapi/last-search", (_req, res) => {
+  try {
+    const { raw, meta } = getLastSerpApiRaw();
+    if (!raw) return res.json({ success: true, hasData: false, raw: null, meta: null });
+    res.json({ success: true, hasData: true, raw, meta });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || "Falha ao obter último retorno." });
+  }
+});
+
 app.post("/api/search-businesses", async (req, res) => {
-  const { location, state, category, query, filterNoWebsiteOnly } = req.body || {};
+  const { location, state, category, query, filterNoWebsiteOnly, provider } = req.body || {};
   if (
     typeof location !== "string" || !location.trim() ||
     typeof state !== "string" || !/^[A-Za-z]{2}$/.test(state.trim()) ||
@@ -50,6 +175,9 @@ app.post("/api/search-businesses", async (req, res) => {
   if (query !== undefined && typeof query !== "string") {
     return res.status(400).json({ success: false, error: "query deve ser uma string quando informado." });
   }
+  if (provider !== undefined && !["serpapi", "gemini"].includes(provider)) {
+    return res.status(400).json({ success: false, error: "provider deve ser 'serpapi' ou 'gemini'." });
+  }
 
   try {
     const result = await searchBusinesses({
@@ -58,12 +186,15 @@ app.post("/api/search-businesses", async (req, res) => {
       category: category.trim(),
       query,
       filterNoWebsiteOnly,
+      provider,
     });
     return res.json({ success: true, ...result });
   } catch (error: any) {
-    return res.status(502).json({
+    const isQuota = /quota|cota|429|RESOURCE_EXHAUSTED/i.test(error?.message || "");
+    return res.status(isQuota ? 429 : 502).json({
       success: false,
       error: error?.message || "Falha ao buscar empresas reais.",
+      code: isQuota ? "quota_exceeded" : undefined,
     });
   }
 });
@@ -159,6 +290,8 @@ async function startServer() {
   } else {
     console.log("Agendador desativado (LEADRADAR_SCHEDULER=off).");
   }
+
+  startTypeformPolling();
 }
 
 startServer();

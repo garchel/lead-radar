@@ -1,6 +1,22 @@
 import React, { useState } from 'react';
-import { BusinessLead, InteractionOutcome, PipelineStats } from '../types';
-import { FolderKanban, DollarSign, CheckCircle2, MessageCircle, Sparkles, Trash2, Edit3, Download, ExternalLink, ArrowRight } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { BusinessLead, InteractionOutcome } from '../types';
+import { FolderKanban, Download, Edit3, Sparkles, Trash2 } from 'lucide-react';
 
 interface CrmPipelineProps {
   savedLeads: BusinessLead[];
@@ -15,9 +31,190 @@ const PIPELINE_COLUMNS: { id: BusinessLead['pipelineStatus']; title: string; col
   { id: 'prospect', title: 'Novos Prospects', color: 'border-slate-200 bg-slate-100 text-slate-700' },
   { id: 'contacted', title: 'Contato Feito', color: 'border-blue-200 bg-blue-50 text-blue-700' },
   { id: 'negotiating', title: 'Em Negociação', color: 'border-amber-200 bg-amber-50 text-amber-800' },
-  { id: 'closed', title: 'Fechado / Ganho 🎉', color: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
+  { id: 'em_desenvolvimento', title: 'Em Desenvolvimento', color: 'border-violet-200 bg-violet-50 text-violet-700' },
+  { id: 'closed', title: 'Finalizado', color: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
   { id: 'declined', title: 'Perdido', color: 'border-red-200 bg-red-50 text-red-700' },
 ];
+
+interface SortableLeadCardProps {
+  lead: BusinessLead;
+  onUpdateNotes: (id: string, notes: string) => void;
+  onRecordOutcome: (id: string, outcome: Exclude<InteractionOutcome, 'pending'>) => void;
+  onRemoveLead: (id: string) => void;
+  onAnalyze: (lead: BusinessLead) => void;
+}
+
+interface PipelineColumnProps {
+  id: BusinessLead['pipelineStatus'];
+  title: string;
+  color: string;
+  count: number;
+  children: React.ReactNode;
+}
+
+const PipelineColumn: React.FC<PipelineColumnProps> = ({ id, title, color, count, children }) => {
+  const { setNodeRef, isOver } = useDroppable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`bg-slate-50 border rounded-2xl p-3 flex flex-col space-y-3 min-h-125 transition-colors ${
+        isOver ? 'border-indigo-400 ring-2 ring-indigo-100' : 'border-slate-200'
+      }`}
+    >
+      <div className={`p-2.5 rounded-xl border font-bold text-xs flex items-center justify-between ${color}`}>
+        <span>{title}</span>
+        <span className="px-2 py-0.5 rounded-full bg-white text-slate-800 text-[10px] font-bold border border-slate-200">
+          {count}
+        </span>
+      </div>
+      {children}
+    </div>
+  );
+};
+
+const SortableLeadCard: React.FC<SortableLeadCardProps> = ({
+  lead,
+  onUpdateNotes,
+  onRecordOutcome,
+  onRemoveLead,
+  onAnalyze,
+}) => {
+  const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
+  const [tempNotes, setTempNotes] = useState<string>('');
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: lead.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="bg-white border border-slate-200 hover:border-indigo-300 p-4 rounded-xl space-y-3 shadow-sm text-xs transition-all cursor-grab active:cursor-grabbing"
+    >
+      <div>
+        <div className="font-bold text-slate-900 line-clamp-1">{lead.name}</div>
+        <div className="text-slate-500 text-[11px] font-medium">{lead.category} • {lead.city}</div>
+      </div>
+
+      <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 font-semibold text-indigo-700 flex items-center justify-between">
+        <span className="text-slate-500 text-[10px]">Projeto:</span>
+        <span className="font-bold">{lead.estimatedValue || 'Valor não informado'}</span>
+      </div>
+
+      {lead.lastContactAt && (
+        <div className="space-y-2 rounded-lg border border-indigo-100 bg-indigo-50 p-2">
+          <label className="text-[10px] text-indigo-700 font-bold uppercase block">Resultado do contato</label>
+          {lead.lastContactOutcome === 'pending' && !lead.doNotContact && (
+            <select
+              defaultValue=""
+              onChange={(event) => {
+                const outcome = event.target.value as Exclude<InteractionOutcome, 'pending'>;
+                if (outcome) onRecordOutcome(lead.id, outcome);
+              }}
+              className="w-full bg-white border border-indigo-200 rounded-lg text-slate-800 text-xs p-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Registrar resposta...</option>
+              <option value="no_response">Ainda não respondeu</option>
+              <option value="negative">Resposta negativa</option>
+              <option value="positive">Demonstrou interesse</option>
+              <option value="meeting_scheduled">Reunião agendada</option>
+              <option value="negotiating">Em negociação</option>
+              <option value="do_not_contact">Não contatar novamente</option>
+            </select>
+          )}
+          {lead.nextContactAt && !lead.doNotContact && (
+            <p className="text-[10px] text-indigo-700">
+              Próximo contato: {new Date(lead.nextContactAt).toLocaleDateString('pt-BR')}
+            </p>
+          )}
+          {lead.doNotContact && <p className="text-[10px] text-red-700">Recontato bloqueado pela empresa.</p>}
+        </div>
+      )}
+
+      <div className="pt-2 border-t border-slate-100 space-y-1">
+        <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium">
+          <span>Anotações:</span>
+          <button
+            onClick={() => {
+              setEditingNotesId(lead.id);
+              setTempNotes(lead.notes || '');
+            }}
+            className="text-indigo-600 hover:underline flex items-center space-x-1 font-semibold"
+          >
+            <Edit3 className="w-3 h-3" />
+            <span>Editar</span>
+          </button>
+        </div>
+
+        {editingNotesId === lead.id ? (
+          <div className="space-y-2">
+            <textarea
+              rows={2}
+              value={tempNotes}
+              onChange={(e) => setTempNotes(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-300 rounded p-1.5 text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+              placeholder="Ex: Liguei dia 10, pediu orçamento via WhatsApp..."
+            />
+            <div className="flex justify-end space-x-1">
+              <button
+                onClick={() => {
+                  onUpdateNotes(lead.id, tempNotes);
+                  setEditingNotesId(null);
+                }}
+                className="bg-indigo-600 text-white font-semibold px-2 py-1 rounded text-[10px]"
+              >
+                Salvar
+              </button>
+              <button
+                onClick={() => setEditingNotesId(null)}
+                className="bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px]"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-slate-600 bg-slate-50 p-2 rounded border border-slate-200/60 italic text-[11px] line-clamp-2">
+            {lead.notes || 'Nenhuma nota adicionada.'}
+          </p>
+        )}
+      </div>
+
+      <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+        <button
+          onClick={() => onAnalyze(lead)}
+          className="text-indigo-600 font-bold flex items-center space-x-1 hover:underline text-[11px]"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Roteiro Pitch</span>
+        </button>
+
+        <button
+          onClick={() => onRemoveLead(lead.id)}
+          className="text-slate-400 hover:text-red-500 transition-colors p-1"
+          title="Remover do Pipeline"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export const CrmPipeline: React.FC<CrmPipelineProps> = ({
   savedLeads,
@@ -25,22 +222,26 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
   onUpdateNotes,
   onRecordOutcome,
   onRemoveLead,
-  onAnalyze
+  onAnalyze,
 }) => {
-  const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
-  const [tempNotes, setTempNotes] = useState<string>('');
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor)
+  );
 
-  // Calculate stats
   const totalLeads = savedLeads.length;
   const closedCount = savedLeads.filter(l => l.pipelineStatus === 'closed').length;
   const negotiatingCount = savedLeads.filter(l => l.pipelineStatus === 'negotiating').length;
 
-  // Revenue estimation
   const totalPipelineValue = savedLeads.reduce((acc, lead) => {
     if (!lead.estimatedValue) return acc;
-    const numbers = lead.estimatedValue.match(/\d[\d.]*/g) || [];
+    const numbers = lead.estimatedValue.match(/\\d[\\d.]*/g) || [];
     const values = numbers
-      .map((value) => Number(value.replace(/\./g, '')))
+      .map((value) => Number(value.replace(/\\./g, '')))
       .filter((value) => Number.isFinite(value));
     if (values.length === 0) return acc;
     const average = values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -56,10 +257,10 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
       `"${l.phone || ''}"`,
       `"${l.pipelineStatus || 'prospect'}"`,
       `"${l.estimatedValue}"`,
-      `"${l.notes || ''}"`
+      `"${l.notes || ''}"`,
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -69,8 +270,33 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
     document.body.removeChild(link);
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const leadId = active.id as string;
+
+    // O alvo do drop pode ser uma coluna ou um card — nesse caso,
+    // resolvemos para a coluna (pipelineStatus) à qual o card pertence.
+    let destinationColumnId = over.id as string;
+    const overLead = savedLeads.find(l => l.id === destinationColumnId);
+    if (overLead) destinationColumnId = overLead.pipelineStatus || 'prospect';
+
+    const isColumn = PIPELINE_COLUMNS.some(col => col.id === destinationColumnId);
+    if (!isColumn) return;
+
+    const lead = savedLeads.find(l => l.id === leadId);
+    if (!lead) return;
+
+    // If the lead is already in that column, do nothing
+    if (lead.pipelineStatus === destinationColumnId) return;
+
+    // Update status
+    onUpdateStatus(leadId, destinationColumnId as BusinessLead['pipelineStatus']);
+  };
+
   return (
-    <div className="space-y-6 py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <div className="space-y-6 py-6 px-4 sm:px-6 lg:px-8">
       {/* Top Banner Stats */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
         <div>
@@ -115,156 +341,47 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          {PIPELINE_COLUMNS.map(col => {
-            const columnLeads = savedLeads.filter(l => l.pipelineStatus === col.id);
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            {PIPELINE_COLUMNS.map(col => {
+              const columnLeads = savedLeads.filter(l => l.pipelineStatus === col.id);
+              const columnLeadIds = columnLeads.map(l => l.id);
 
-            return (
-              <div key={col.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex flex-col space-y-3 min-h-125">
-                {/* Column Header */}
-                <div className={`p-2.5 rounded-xl border font-bold text-xs flex items-center justify-between ${col.color}`}>
-                  <span>{col.title}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-white text-slate-800 text-[10px] font-bold border border-slate-200">
-                    {columnLeads.length}
-                  </span>
-                </div>
-
-                {/* Column Cards */}
-                <div className="space-y-3 flex-1 overflow-y-auto">
-                  {columnLeads.map(lead => (
-                    <div key={lead.id} className="bg-white border border-slate-200 hover:border-indigo-300 p-4 rounded-xl space-y-3 shadow-sm text-xs transition-all">
-                      <div>
-                        <div className="font-bold text-slate-900 line-clamp-1">{lead.name}</div>
-                        <div className="text-slate-500 text-[11px] font-medium">{lead.category} • {lead.city}</div>
-                      </div>
-
-                      <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 font-semibold text-indigo-700 flex items-center justify-between">
-                        <span className="text-slate-500 text-[10px]">Projeto:</span>
-                        <span className="font-bold">{lead.estimatedValue || 'Valor não informado'}</span>
-                      </div>
-
-                      {/* Status Selector */}
-                      <div>
-                        <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Mover Status:</label>
-                        <select
-                          value={lead.pipelineStatus || ''}
-                          onChange={(e) => onUpdateStatus(lead.id, e.target.value as any)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-xs p-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
-                        >
-                          <option value="">Status não informado</option>
-                          <option value="prospect">1. Prospect Novo</option>
-                          <option value="contacted">2. Contato Feito</option>
-                          <option value="negotiating">3. Em Negociação</option>
-                          <option value="closed">4. Fechado / Ganho 🎉</option>
-                          <option value="declined">5. Perdido</option>
-                        </select>
-                      </div>
-
-                      {lead.lastContactAt && (
-                        <div className="space-y-2 rounded-lg border border-indigo-100 bg-indigo-50 p-2">
-                          <label className="text-[10px] text-indigo-700 font-bold uppercase block">Resultado do contato</label>
-                          {lead.lastContactOutcome === 'pending' && !lead.doNotContact && (
-                            <select
-                              defaultValue=""
-                              onChange={(event) => {
-                                const outcome = event.target.value as Exclude<InteractionOutcome, 'pending'>;
-                                if (outcome) onRecordOutcome(lead.id, outcome);
-                              }}
-                              className="w-full bg-white border border-indigo-200 rounded-lg text-slate-800 text-xs p-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            >
-                              <option value="">Registrar resposta...</option>
-                              <option value="no_response">Ainda não respondeu</option>
-                              <option value="negative">Resposta negativa</option>
-                              <option value="positive">Demonstrou interesse</option>
-                              <option value="meeting_scheduled">Reunião agendada</option>
-                              <option value="negotiating">Em negociação</option>
-                              <option value="do_not_contact">Não contatar novamente</option>
-                            </select>
-                          )}
-                          {lead.nextContactAt && !lead.doNotContact && (
-                            <p className="text-[10px] text-indigo-700">
-                              Próximo contato: {new Date(lead.nextContactAt).toLocaleDateString('pt-BR')}
-                            </p>
-                          )}
-                          {lead.doNotContact && <p className="text-[10px] text-red-700">Recontato bloqueado pela empresa.</p>}
-                        </div>
-                      )}
-
-                      {/* Notes Section */}
-                      <div className="pt-2 border-t border-slate-100 space-y-1">
-                        <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium">
-                          <span>Anotações:</span>
-                          <button
-                            onClick={() => {
-                              setEditingNotesId(lead.id);
-                              setTempNotes(lead.notes || '');
-                            }}
-                            className="text-indigo-600 hover:underline flex items-center space-x-1 font-semibold"
-                          >
-                            <Edit3 className="w-3 h-3" />
-                            <span>Editar</span>
-                          </button>
-                        </div>
-
-                        {editingNotesId === lead.id ? (
-                          <div className="space-y-2">
-                            <textarea
-                              rows={2}
-                              value={tempNotes}
-                              onChange={(e) => setTempNotes(e.target.value)}
-                              className="w-full bg-slate-50 border border-slate-300 rounded p-1.5 text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
-                              placeholder="Ex: Liguei dia 10, pediu orçamento via WhatsApp..."
-                            />
-                            <div className="flex justify-end space-x-1">
-                              <button
-                                onClick={() => {
-                                  onUpdateNotes(lead.id, tempNotes);
-                                  setEditingNotesId(null);
-                                }}
-                                className="bg-indigo-600 text-white font-semibold px-2 py-1 rounded text-[10px]"
-                              >
-                                Salvar
-                              </button>
-                              <button
-                                onClick={() => setEditingNotesId(null)}
-                                className="bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px]"
-                              >
-                                Cancelar
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-slate-600 bg-slate-50 p-2 rounded border border-slate-200/60 italic text-[11px] line-clamp-2">
-                            {lead.notes || 'Nenhuma nota adicionada.'}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Card Action footer */}
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                        <button
-                          onClick={() => onAnalyze(lead)}
-                          className="text-indigo-600 font-bold flex items-center space-x-1 hover:underline text-[11px]"
-                        >
-                          <Sparkles className="w-3.5 h-3.5" />
-                          <span>Roteiro Pitch</span>
-                        </button>
-
-                        <button
-                          onClick={() => onRemoveLead(lead.id)}
-                          className="text-slate-400 hover:text-red-500 transition-colors p-1"
-                          title="Remover do Pipeline"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+              return (
+                <PipelineColumn
+                  key={col.id}
+                  id={col.id}
+                  title={col.title}
+                  color={col.color}
+                  count={columnLeads.length}
+                >
+                  {/* Column Cards */}
+                  <SortableContext
+                    items={columnLeadIds}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-3 flex-1">
+                      {columnLeads.map(lead => (
+                        <SortableLeadCard
+                          key={lead.id}
+                          lead={lead}
+                          onUpdateNotes={onUpdateNotes}
+                          onRecordOutcome={onRecordOutcome}
+                          onRemoveLead={onRemoveLead}
+                          onAnalyze={onAnalyze}
+                        />
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  </SortableContext>
+                </PipelineColumn>
+              );
+            })}
+          </div>
+        </DndContext>
       )}
     </div>
   );

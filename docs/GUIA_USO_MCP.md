@@ -129,7 +129,7 @@ Atualiza o estágio do lead dentro do Pipeline do Mini-CRM do sistema.
 * **Quando usar:** Sempre que abordar um lead ou mudar o status da negociação.
 * **Parâmetros:**
   - `leadId` (string): ID do lead.
-  - `status` (enum: `"novo" | "contatado" | "proposta_enviada" | "em_negociacao" | "fechado" | "recusado"`).
+  - `status` (enum: `"novo" | "contatado" | "proposta_enviada" | "em_negociacao" | "em_desenvolvimento" | "finalizado" | "recusado"`).
   - `notes` (string, opcional): Resumo da interação.
 
 > ⚠️ O status é persistido no **banco compartilhado (SQLite)**, não em memória. A UI e o agente enxergam o mesmo estado.
@@ -183,6 +183,12 @@ Lista os leads cujo prazo de recontato já chegou, sem enviar mensagens automati
 ### 17. `export_dossier`
 Gera o **Dossiê Executivo HTML** de um lead (pronto para impressão/PDF) a partir do diagnóstico de IA já persistido — sem novas chamadas de IA.
 * **Parâmetros:** `leadId`.
+
+### 18. `sync_typeform_briefing`
+Importa as respostas do **formulário de briefing do Typeform** (Responses API) e grava o briefing no projeto correspondente. Idempotente: cada resposta é importada uma única vez.
+* **Parâmetros:** `formId` (opcional — usa `TYPEFORM_FORM_ID` do `.env` por padrão).
+* **Configuração:** `TYPEFORM_ACCESS_TOKEN` e `TYPEFORM_FORM_ID` no `.env`.
+* **Vínculo:** respostas com `hidden` `project_id`/`lead_id` são vinculadas diretamente; sem hidden, casa pelo nome da empresa contra os projetos ativos. Respostas sem correspondência são reportadas como `unmatched` no resumo.
 
 ---
 

@@ -13,6 +13,7 @@ import {
 } from "../store/db";
 import { StoredLead } from "../store/types";
 import { dispatchLeadContact, recordInteractionOutcome } from "../services/interactionService";
+import { syncLeadProject } from "../projects/service";
 
 export function registerLeadRoutes(app: Express) {
   // List leads
@@ -70,6 +71,12 @@ export function registerLeadRoutes(app: Express) {
     const existing = getLeadById(req.params.id);
     if (!existing) return res.status(404).json({ success: false, error: "Lead não encontrado." });
     const updated = upsertLead({ ...existing, ...req.body } as StoredLead);
+    // Mover o lead entre os estágios mantém o Kanban de Projetos sincronizado.
+    const statusChanged =
+      typeof req.body?.pipelineStatus === "string" && req.body.pipelineStatus !== existing.pipelineStatus;
+    if (statusChanged) {
+      syncLeadProject(updated, { projectType: req.body?.projectType });
+    }
     res.json({ success: true, lead: updated });
   });
 

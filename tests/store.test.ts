@@ -68,10 +68,12 @@ describe("store / SQLite (fonte da verdade compartilhada)", () => {
     upsertLead({ ...lead, id: "ps-prospect", name: "Empresa Prospect", city: "Jundiaí", phone: "(11) 4444-5555", pipelineStatus: "prospect" });
     upsertLead({ ...lead, id: "ps-closed", name: "Empresa Fechada", city: "Bauru", phone: "(14) 5555-6666", pipelineStatus: "closed" });
     upsertLead({ ...lead, id: "ps-contacted", name: "Empresa Contatada", city: "Limeira", phone: "(19) 6666-7777", pipelineStatus: "contacted" });
+    upsertLead({ ...lead, id: "ps-dev", name: "Empresa Dev", city: "Campinas", phone: "(19) 7777-8888", pipelineStatus: "em_desenvolvimento" });
     const s = getPipelineSummary();
     expect(s.byStatus.prospect).toBeGreaterThanOrEqual(1);
     expect(s.byStatus.closed).toBeGreaterThanOrEqual(1);
-    expect(s.totalLeads).toBeGreaterThanOrEqual(3);
+    expect(s.byStatus.em_desenvolvimento).toBeGreaterThanOrEqual(1);
+    expect(s.totalLeads).toBeGreaterThanOrEqual(4);
   });
 
   it("gerencia Landing Pages", () => {

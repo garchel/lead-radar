@@ -12,10 +12,23 @@ import { QueueDrawerModal } from './components/QueueDrawerModal';
 import { MonitoringDashboard } from './components/MonitoringDashboard';
 import { DuplicateMergeModal } from './components/DuplicateMergeModal';
 import { FollowUpQueue } from './components/FollowUpQueue';
+import { ProjectsDashboard } from './components/ProjectsDashboard';
+import { LeaveDevelopmentModal } from './components/LeaveDevelopmentModal';
+import { ProjectTypeSelectModal } from './components/ProjectTypeSelectModal';
+import { SerpApiResultsPage } from './components/SerpApiResultsPage';
 
-import { BusinessLead, InteractionOutcome, SearchFilters } from './types';
+import { BusinessLead, InteractionOutcome, ProjectType, SearchFilters } from './types';
 import { exportLeadsToCSV } from './utils/exportUtils';
 import { SearchX, Sparkles, Filter, Info, ShieldCheck, AlertCircle } from 'lucide-react';
+
+const PIPELINE_STATUS_LABELS: Record<string, string> = {
+  prospect: 'Novos Prospects',
+  contacted: 'Contato Feito',
+  negotiating: 'Em Negociação',
+  em_desenvolvimento: 'Em Desenvolvimento',
+  closed: 'Finalizado',
+  declined: 'Perdido',
+};
 
 async function requestJson(input: RequestInfo | URL, init?: RequestInit): Promise<any> {
   const response = await fetch(input, init);
@@ -37,11 +50,12 @@ interface DuplicateCandidate {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'guide' | 'monitoring'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies'>('search');
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [hasGeminiKey, setHasGeminiKey] = useState<boolean>(false);
   const [hasMapsKey, setHasMapsKey] = useState<boolean>(false);
+  const [projectCount, setProjectCount] = useState<number>(0);
 
   // Search Filters State
   const [filters, setFilters] = useState<SearchFilters>({
@@ -52,12 +66,16 @@ export default function App() {
     minRating: 4.0,
     minReviews: 10,
     sortBy: 'score',
+    provider: 'serpapi',
   });
 
   // Leads de busca e CRM começam vazios. O banco compartilhado é a única fonte de verdade.
   const [leads, setLeads] = useState<BusinessLead[]>([]);
   const [savedLeads, setSavedLeads] = useState<BusinessLead[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [serpApiRaw, setSerpApiRaw] = useState<any>(null);
+  const [serpApiMeta, setSerpApiMeta] = useState<any>(null);
+  const [lastSearchCached, setLastSearchCached] = useState<boolean>(false);
 
   // Modal States
   const [analyzingLead, setAnalyzingLead] = useState<BusinessLead | null>(null);
@@ -65,6 +83,8 @@ export default function App() {
   const [isMcpModalOpen, setIsMcpModalOpen] = useState<boolean>(false);
   const [isQueueModalOpen, setIsQueueModalOpen] = useState<boolean>(false);
   const [duplicateCandidate, setDuplicateCandidate] = useState<DuplicateCandidate | null>(null);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{ leadId: string; leadName: string; targetStatus: string } | null>(null);
+  const [pendingProjectType, setPendingProjectType] = useState<{ leadId: string; leadName: string } | null>(null);
 
   // Persists a lead via POST /api/leads. Se o servidor detectar uma duplicata
   // por nome+cidade (match fraco), abre o diálogo de confirmação de mesclagem.
@@ -132,13 +152,28 @@ export default function App() {
       }
     };
 
+    const loadProjectCount = async () => {
+      try {
+        const data = await requestJson('/api/projects');
+        if (Array.isArray(data.projects)) {
+          setProjectCount(data.projects.filter((p: any) => !p.archived).length);
+        }
+      } catch {
+        setProjectCount(0);
+      }
+    };
+
     void loadFromApi();
+    void loadProjectCount();
 
     const es = new EventSource('/api/events');
     es.onmessage = (evt) => {
       try {
         const d = JSON.parse(evt.data);
-        if (d?.event === 'leads') void loadFromApi();
+        if (d?.event === 'leads' || d?.event === 'projects') {
+          void loadFromApi();
+          void loadProjectCount();
+        }
       } catch (err: any) {
         setErrorMessage(`Falha ao interpretar uma atualização do servidor: ${err?.message || 'evento inválido'}`);
       }
@@ -155,6 +190,9 @@ export default function App() {
       .then((data) => {
         setHasGeminiKey(Boolean(data.hasGeminiKey));
         setHasMapsKey(Boolean(data.hasGoogleMapsKey));
+        if (data.prospectingProvider === 'serpapi' || data.prospectingProvider === 'gemini') {
+          setFilters((prev) => ({ ...prev, provider: data.prospectingProvider }));
+        }
       })
       .catch((err: any) => {
         setHasGeminiKey(false);
@@ -178,6 +216,7 @@ export default function App() {
           state: filters.state,
           category: filters.category,
           filterNoWebsiteOnly: filters.filterNoWebsiteOnly,
+          provider: filters.provider,
         }),
       });
 
@@ -185,6 +224,19 @@ export default function App() {
         throw new Error('A API retornou uma lista de empresas inválida.');
       }
       setLeads(data.businesses as BusinessLead[]);
+      if (data.serpApiRaw) setSerpApiRaw(data.serpApiRaw);
+      if (data.serpApiMeta) setSerpApiMeta(data.serpApiMeta);
+      setLastSearchCached(Boolean(data.cached));
+      // se for SerpAPI, também busca o meta mais completo do backend
+      if (data.source === 'serpapi' && !data.serpApiMeta) {
+        try {
+          const last = await requestJson('/api/serpapi/last-search');
+          if (last.hasData) {
+            setSerpApiRaw(last.raw);
+            setSerpApiMeta(last.meta);
+          }
+        } catch {}
+      }
     } catch (err: any) {
       setErrorMessage(`Falha ao buscar empresas: ${err?.message || 'erro desconhecido'}`);
     } finally {
@@ -217,18 +269,34 @@ export default function App() {
   };
 
   // Update CRM Pipeline Status
-  const handleUpdateStatus = async (id: string, status: BusinessLead['pipelineStatus']) => {
+  const performStatusUpdate = async (id: string, status: BusinessLead['pipelineStatus'], projectType?: ProjectType) => {
     setErrorMessage(null);
     try {
       const data = await requestJson(`/api/leads/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pipelineStatus: status || 'prospect' }),
+        body: JSON.stringify({ pipelineStatus: status || 'prospect', ...(projectType ? { projectType } : {}) }),
       });
       setSavedLeads((prev) => prev.map((lead) => lead.id === id ? { ...lead, ...(data.lead as BusinessLead) } : lead));
     } catch (err: any) {
       setErrorMessage(`Falha ao atualizar o status do lead: ${err?.message || 'erro desconhecido'}`);
     }
+  };
+
+  const handleUpdateStatus = async (id: string, status: BusinessLead['pipelineStatus']) => {
+    // Entrar em "Em Desenvolvimento" cria um projeto — pedir o tipo primeiro.
+    const lead = savedLeads.find(l => l.id === id);
+    if (status === 'em_desenvolvimento' && lead?.pipelineStatus !== 'em_desenvolvimento') {
+      setPendingProjectType({ leadId: id, leadName: lead.name });
+      return;
+    }
+    // Sair de "Em Desenvolvimento" remove o card do Kanban de Projetos — pedir confirmação.
+    const leavingDevelopment = lead?.pipelineStatus === 'em_desenvolvimento' && status !== 'em_desenvolvimento';
+    if (leavingDevelopment) {
+      setPendingStatusChange({ leadId: id, leadName: lead.name, targetStatus: status || 'prospect' });
+      return;
+    }
+    await performStatusUpdate(id, status);
   };
 
   // Update CRM Notes
@@ -300,6 +368,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         savedCount={savedLeads.length}
+        projectCount={projectCount}
         onOpenAddModal={() => setIsAddModalOpen(true)}
         onOpenMcpModal={() => setIsMcpModalOpen(true)}
         onOpenQueueModal={() => setIsQueueModalOpen(true)}
@@ -309,7 +378,7 @@ export default function App() {
 
       <div className="flex-1 flex flex-col min-w-0">
       {errorMessage && (
-        <div role="alert" className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pt-4">
+        <div role="alert" className="mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4">
           <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
             <div className="flex-1">{errorMessage}</div>
@@ -335,8 +404,31 @@ export default function App() {
               onExportCSV={() => exportLeadsToCSV(leads)}
             />
 
+            {/* Banner para nova página de visualização */}
+            {leads.length > 0 && (
+              <div className="px-4 sm:px-6 lg:px-8">
+                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm text-indigo-800">
+                    <span className="font-bold">{leads.length} empresas encontradas com {filters.provider === 'serpapi' ? 'SerpAPI (real)' : 'Gemini'}</span>
+                    {lastSearchCached && <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-xs font-bold">Cache • 0 gasto</span>}
+                    <span className="text-indigo-600 hidden sm:inline">— visualize em tabela ou veja o JSON bruto.</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setActiveTab('companies')} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5">
+                      <span>Ver em Tabela / Raw</span>
+                    </button>
+                    {serpApiRaw && (
+                      <span className="text-xs text-indigo-600 font-mono bg-white px-2 py-1 rounded-lg border border-indigo-200">
+                        Raw: {serpApiRaw.local_results?.length ?? 0} resultados {lastSearchCached ? '(cache 7d)' : ''}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Results Display */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+            <div className="px-4 sm:px-6 lg:px-8 pb-12">
               {viewMode === 'grid' ? (
                 leads.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -389,6 +481,20 @@ export default function App() {
         {activeTab === 'guide' && <StrategyGuide />}
 
         {activeTab === 'monitoring' && <MonitoringDashboard />}
+
+        {activeTab === 'projects' && <ProjectsDashboard />}
+
+        {activeTab === 'companies' && (
+          <SerpApiResultsPage
+            leads={leads}
+            serpApiRaw={serpApiRaw}
+            serpApiMeta={serpApiMeta}
+            cached={lastSearchCached}
+            onToggleSave={handleToggleSave}
+            onAnalyze={(l) => setAnalyzingLead(l)}
+            savedLeadIds={savedLeadIds}
+          />
+        )}
       </main>
 
       {/* AI Lead Analyzer Modal */}
@@ -430,6 +536,33 @@ export default function App() {
           onMerge={() => duplicateCandidate.resolve('merge')}
           onSeparate={() => duplicateCandidate.resolve('separate')}
           onClose={() => duplicateCandidate.resolve('cancel')}
+        />
+      )}
+
+      {/* Remover lead de Em Desenvolvimento remove o card do Kanban de Projetos */}
+      {pendingStatusChange && (
+        <LeaveDevelopmentModal
+          leadName={pendingStatusChange.leadName}
+          targetStatus={PIPELINE_STATUS_LABELS[pendingStatusChange.targetStatus] || pendingStatusChange.targetStatus}
+          onConfirm={() => {
+            const pending = pendingStatusChange;
+            setPendingStatusChange(null);
+            void performStatusUpdate(pending.leadId, pending.targetStatus as BusinessLead['pipelineStatus']);
+          }}
+          onCancel={() => setPendingStatusChange(null)}
+        />
+      )}
+
+      {/* Mover para Em Desenvolvimento cria um projeto — escolher o tipo */}
+      {pendingProjectType && (
+        <ProjectTypeSelectModal
+          leadName={pendingProjectType.leadName}
+          onConfirm={(type) => {
+            const pending = pendingProjectType;
+            setPendingProjectType(null);
+            void performStatusUpdate(pending.leadId, 'em_desenvolvimento', type);
+          }}
+          onCancel={() => setPendingProjectType(null)}
         />
       )}
 

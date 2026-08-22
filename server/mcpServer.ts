@@ -17,6 +17,8 @@ import { StoredLead, PipelineStatus } from "./store/types";
 import { enrichLead } from "./enrichment";
 import { dispatchLeadContact, recordInteractionOutcome } from "./services/interactionService";
 import { searchBusinesses, analyzeLead } from "./services/prospectingService";
+import { syncLeadProject } from "./projects/service";
+import { syncTypeformBriefing } from "./typeform/service";
 
 
 // Shared Categories
@@ -158,11 +160,11 @@ export function createLeadRadarMcpServer() {
   // TOOL 4: update_crm_status
   server.tool(
     "update_crm_status",
-    "Atualiza o estágio do lead no Pipeline do Mini-CRM (Novo, Contatado, Proposta Enviada, Em Negociação, Fechado, Recusado).",
+    "Atualiza o estágio do lead no Pipeline do Mini-CRM (Novo, Contatado, Proposta Enviada, Em Negociação, Em Desenvolvimento, Finalizado, Recusado).",
     {
       leadId: z.string().describe("ID do lead"),
       businessName: z.string().describe("Nome do lead"),
-      status: z.enum(["novo", "contatado", "proposta_enviada", "em_negociacao", "fechado", "recusado"]).describe("Novo estágio no funil"),
+      status: z.enum(["novo", "contatado", "proposta_enviada", "em_negociacao", "em_desenvolvimento", "finalizado", "recusado"]).describe("Novo estágio no funil"),
       notes: z.string().optional().describe("Anotação adicional sobre a interação"),
     },
     async ({ leadId, businessName, status, notes }) => {
@@ -172,20 +174,22 @@ export function createLeadRadarMcpServer() {
         contatado: "contacted",
         proposta_enviada: "negotiating",
         em_negociacao: "negotiating",
-        fechado: "closed",
+        em_desenvolvimento: "em_desenvolvimento",
+        finalizado: "closed",
         recusado: "declined",
       };
       const pipelineStatus: PipelineStatus = STATUS_MAP[status] || "prospect";
       const now = new Date().toISOString();
 
       const existing = getLeadById(leadId);
+      let saved: StoredLead;
       if (existing) {
-        upsertLead({ ...existing, pipelineStatus, notes: notes || existing.notes, updatedAt: now });
+        saved = upsertLead({ ...existing, pipelineStatus, notes: notes || existing.notes, updatedAt: now });
       } else {
         if (!businessName?.trim()) {
           return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Lead não encontrado; businessName é obrigatório para criar o registro." }, null, 2) }] };
         }
-        upsertLead({
+        saved = upsertLead({
           id: leadId,
           name: businessName.trim(),
           pipelineStatus,
@@ -194,6 +198,9 @@ export function createLeadRadarMcpServer() {
           updatedAt: now,
         } as StoredLead);
       }
+
+      // Mantém o Kanban de Projetos sincronizado com o pipeline do lead.
+      syncLeadProject(saved);
 
       return {
         content: [
@@ -453,7 +460,29 @@ export function createLeadRadarMcpServer() {
     }
   );
 
-  // TOOL 13: queue_batch_prospecting
+  // TOOL 13: sync_typeform_briefing
+  server.tool(
+    "sync_typeform_briefing",
+    "Importa as respostas do formulário de briefing do Typeform (Responses API) e grava o briefing no projeto correspondente. Idempotente: cada resposta é importada uma única vez.",
+    { formId: z.string().optional().describe("ID do formulário Typeform (opcional; usa TYPEFORM_FORM_ID por padrão)") },
+    async ({ formId }) => {
+      try {
+        const summary = await syncTypeformBriefing({ formId });
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(summary, null, 2),
+            },
+          ],
+        };
+      } catch (e: any) {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: e?.message || "Falha ao sincronizar o Typeform" }, null, 2) }] };
+      }
+    }
+  );
+
+  // TOOL 14: queue_batch_prospecting
   server.tool(
     "queue_batch_prospecting",
     "Enfileira uma tarefa assíncrona de prospecção em lote para várias cidades ou categorias sem bloquear o agente.",
@@ -749,6 +778,7 @@ export function registerMcpRoutes(app: Express) {
         { name: "list_due_followups", description: "Lista os recontatos cujo prazo já chegou." },
         { name: "schedule_prospecting", description: "Agenda prospecção periódica via cron (autopilot, batch ou follow_up_reminder)." },
         { name: "export_dossier", description: "Gera o Dossiê Executivo HTML de um lead a partir da análise persistida." },
+        { name: "sync_typeform_briefing", description: "Importa respostas do formulário de briefing do Typeform nos projetos." },
 
       ],
       resources: ["leads://categories", "leads://pipeline", "leads://queue_status"],

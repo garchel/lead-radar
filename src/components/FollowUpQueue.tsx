@@ -94,7 +94,7 @@ export const FollowUpQueue: React.FC = () => {
   };
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pt-6">
+    <div className="px-4 sm:px-6 lg:px-8 pt-6">
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2">
           <h2 className="font-bold text-slate-900 flex items-center space-x-2">

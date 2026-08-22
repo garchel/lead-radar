@@ -2,6 +2,7 @@ export type PipelineStatus =
   | "prospect"
   | "contacted"
   | "negotiating"
+  | "em_desenvolvimento"
   | "closed"
   | "declined";
 
@@ -127,4 +128,71 @@ export interface Schedule {
   nextRunAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Projetos (acompanhamento do desenvolvimento)                       */
+/* ------------------------------------------------------------------ */
+
+export type ProjectStage =
+  | "briefing"
+  | "copywriting"
+  | "design"
+  | "desenvolvimento"
+  | "revisao"
+  | "deploy";
+
+export type ProjectStatus = "em_andamento" | "pausado" | "cancelado" | "concluido";
+
+export type ProjectPriority = "baixa" | "media" | "alta";
+
+/** Tipo de projeto: landing page (foco em conversão) ou site institucional. */
+export type ProjectType = "landing_page" | "site_institucional";
+
+/** Campo de briefing estruturado vindo do formulário Typeform. */
+export interface ProjectBriefingField {
+  fieldTitle: string;
+  answer: string;
+}
+
+/** Tarefa de checklist de uma etapa de desenvolvimento do projeto. */
+export interface ProjectTask {
+  id: string;
+  stage: ProjectStage;
+  title: string;
+  done: boolean;
+}
+
+export interface Project {
+  id: string;
+  leadId: string;
+  name: string;
+  stage: ProjectStage;
+  status: ProjectStatus;
+  priority: ProjectPriority;
+  /** Tipo do projeto — default "landing_page". */
+  type: ProjectType;
+  /** Token único para atribuir respostas do Typeform a este projeto (hidden field `project_token`). */
+  typeformToken?: string;
+  brief?: string;
+  /** Briefing estruturado (pergunta → resposta) vindo do Typeform. */
+  briefing?: ProjectBriefingField[];
+  /** Checklist de tarefas por etapa de desenvolvimento. */
+  tasks?: ProjectTask[];
+  copy?: string;
+  designNotes?: string;
+  devNotes?: string;
+  reviewNotes?: string;
+  deployUrl?: string;
+  dueDate?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  /** Projeto removido do kanban (lead saiu de Em Desenvolvimento). Restaurado sem perda ao voltar. */
+  archived?: boolean;
+  archivedAt?: string;
+  /** Denormalizado (JOIN com leads) — somente leitura. */
+  leadName?: string;
+  leadCity?: string;
+  leadCategory?: string;
 }
