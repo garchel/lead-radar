@@ -1,6 +1,6 @@
 import { getDb, importFromJson } from './schema';
 import { eventHub } from '../events/eventHub';
-import { StoredLead, LandingPage, Schedule, LeadInteraction, InteractionOutcome, Project, PipelineStatus, City } from './types';
+import { StoredLead, LandingPage, Schedule, LeadInteraction, InteractionOutcome, Project, PipelineStatus, City, BusinessCategory } from './types';
 import { getLeadIdentityCandidates, normalizeText, normalizePhone } from '../services/leadIdentity';
 import type { Job } from '../jobs/queueManager';
 import path from 'path';
@@ -883,6 +883,8 @@ function rowToCity(row: any): City {
     latitude: row.latitude ?? undefined,
     longitude: row.longitude ?? undefined,
     population: row.population,
+    pibPerCapita: row.pib_per_capita ?? 0,
+    marketTier: (row.market_tier || 'C') as City['marketTier'],
     status: row.status,
     lastSearchedAt: row.last_searched_at || null,
     searchCount: row.search_count,
@@ -990,12 +992,12 @@ export function importIbgeCities(csvPath?: string): number {
   const content = fs.readFileSync(resolved, 'utf-8');
   const lines = content.split(/\r?\n/).filter((l) => l.trim());
   const insert = db.prepare(
-    `INSERT OR IGNORE INTO cities (ibge_code, name, uf, latitude, longitude, population)
-     VALUES (@code, @name, @uf, @lat, @lng, @pop)`
+    `INSERT OR IGNORE INTO cities (ibge_code, name, uf, latitude, longitude, population, pib_per_capita)
+     VALUES (@code, @name, @uf, @lat, @lng, @pop, @pib)`
   );
   const tx = db.transaction((rows: string[]) => {
     for (const line of rows) {
-      const [code, name, uf, lat, lng, pop] = line.split(',');
+      const [code, name, uf, lat, lng, pop, pib] = line.split(',');
       if (!code || !name || !uf) continue;
       insert.run({
         code,
@@ -1004,6 +1006,7 @@ export function importIbgeCities(csvPath?: string): number {
         lat: lat ? Number(lat) : null,
         lng: lng ? Number(lng) : null,
         pop: Number(pop) || 0,
+        pib: Number(pib) || 0,
       });
     }
   });
@@ -1018,9 +1021,158 @@ export function ensureCitiesLoaded(): number {
   const row = db.prepare('SELECT COUNT(*) AS c FROM cities').get() as any;
   if ((row?.c || 0) > 0) return row.c;
   try {
-    return importIbgeCities();
+    const total = importIbgeCities();
+    if (total > 0) recomputeMarketTiers();
+    return total;
   } catch (err: any) {
     console.warn('Não foi possível carregar a base IBGE de cidades:', err?.message || err);
     return 0;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Tier de mercado — capacidade de pagamento por município            */
+/* ------------------------------------------------------------------ */
+
+export type MarketTier = "A" | "B" | "C" | "D";
+
+/**
+ * Multiplicador de ticket por tier, derivado do PIB per capita do município.
+ * A ≥ R$80k, B ≥ R$45k, C ≥ R$25k, D < R$25k.
+ */
+export const TIER_MULTIPLIERS: Record<MarketTier, number> = { A: 1.6, B: 1.3, C: 1.0, D: 0.8 };
+
+export function tierFromPibPerCapita(pibPerCapita: number): MarketTier {
+  if (pibPerCapita >= 80000) return "A";
+  if (pibPerCapita >= 45000) return "B";
+  if (pibPerCapita >= 25000) return "C";
+  return "D";
+}
+
+export function ticketMultiplierForTier(tier: MarketTier): number {
+  return TIER_MULTIPLIERS[tier] ?? 1.0;
+}
+
+/**
+ * Recalcula o tier de todos os municípios a partir do PIB per capita.
+ * Chamado após o import do CSV. Retorna contagem por tier.
+ */
+export function recomputeMarketTiers(): Record<MarketTier, number> {
+  const db = getDb();
+  db.exec(`
+    UPDATE cities SET market_tier = CASE
+      WHEN pib_per_capita >= 80000 THEN 'A'
+      WHEN pib_per_capita >= 45000 THEN 'B'
+      WHEN pib_per_capita >= 25000 THEN 'C'
+      ELSE 'D'
+    END
+  `);
+  const rows = db.prepare("SELECT market_tier AS t, COUNT(*) AS c FROM cities GROUP BY market_tier").all() as any[];
+  const result: Record<MarketTier, number> = { A: 0, B: 0, C: 0, D: 0 };
+  for (const r of rows) result[r.t as MarketTier] = r.c;
+  return result;
+}
+
+/** Ticket sugerido para uma categoria numa cidade: base × multiplicador do tier. */
+export function estimateTicket(baseTicket: number, tier: MarketTier): number {
+  return Math.round((baseTicket * ticketMultiplierForTier(tier)) / 50) * 50; // arredonda a R$ 50
+}
+
+/* ------------------------------------------------------------------ */
+/*  Categorias de negócio configuráveis                                */
+/* ------------------------------------------------------------------ */
+
+const CATEGORY_SEED: Array<{ name: string; propensity: number; baseTicket: number }> = [
+  // Alta propensão: serviços locais que vivem de agendamento e busca no Google
+  { name: "Clínica Odontológica", propensity: 95, baseTicket: 2800 },
+  { name: "Estética & Saúde", propensity: 92, baseTicket: 2600 },
+  { name: "Advocacia", propensity: 88, baseTicket: 3200 },
+  { name: "Fisioterapia", propensity: 85, baseTicket: 2200 },
+  { name: "Psicologia", propensity: 84, baseTicket: 1800 },
+  { name: "Arquitetura & Engenharia", propensity: 82, baseTicket: 3500 },
+  { name: "Nutrição", propensity: 80, baseTicket: 1800 },
+  { name: "Pet Shop & Veterinária", propensity: 78, baseTicket: 2000 },
+  { name: "Academia & Pilates", propensity: 76, baseTicket: 2200 },
+  { name: "Ótica", propensity: 74, baseTicket: 2400 },
+  // Média propensão
+  { name: "Imobiliária", propensity: 65, baseTicket: 3000 },
+  { name: "Salão de Beleza / Barbearia", propensity: 62, baseTicket: 1500 },
+  { name: "Auto Center / Mecânica", propensity: 58, baseTicket: 1600 },
+  { name: "Buffet & Eventos", propensity: 56, baseTicket: 2500 },
+  { name: "Escola & Cursos", propensity: 55, baseTicket: 2600 },
+  { name: "Restaurante", propensity: 50, baseTicket: 1400 },
+  // Baixa propensão
+  { name: "Mercado & Açougue", propensity: 30, baseTicket: 1200 },
+  { name: "Combustíveis / Posto", propensity: 20, baseTicket: 2000 },
+  { name: "Todas as Categorias", propensity: 50, baseTicket: 2000 },
+];
+
+/** Garante que as categorias padrão existem (seed idempotente). Retorna total ativo. */
+export function ensureCategoriesSeeded(): number {
+  const db = getDb();
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS business_categories (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      propensity INTEGER NOT NULL DEFAULT 50,
+      baseTicket INTEGER NOT NULL DEFAULT 2000,
+      is_active INTEGER NOT NULL DEFAULT 1
+    );
+  `);
+  const insert = db.prepare(
+    "INSERT OR IGNORE INTO business_categories (id, name, propensity, baseTicket, is_active) VALUES (@id, @name, @propensity, @baseTicket, 1)"
+  );
+  const tx = db.transaction(() => {
+    CATEGORY_SEED.forEach((c, i) => {
+      insert.run({ id: `cat_${i + 1}`, name: c.name, propensity: c.propensity, baseTicket: c.baseTicket });
+    });
+  });
+  tx();
+  const row = db.prepare("SELECT COUNT(*) AS c FROM business_categories WHERE is_active = 1").get() as any;
+  return row?.c || 0;
+}
+
+function rowToCategory(row: any): BusinessCategory {
+  return {
+    id: row.id,
+    name: row.name,
+    propensity: row.propensity,
+    baseTicket: row.baseTicket ?? row.base_ticket,
+    isActive: Boolean(row.is_active),
+  };
+}
+
+export function getBusinessCategories(opts?: { activeOnly?: boolean }): BusinessCategory[] {
+  ensureCategoriesSeeded();
+  const rows = getDb()
+    .prepare(`SELECT * FROM business_categories ${opts?.activeOnly ? "WHERE is_active = 1" : ""} ORDER BY propensity DESC, name`)
+    .all() as any[];
+  return rows.map(rowToCategory);
+}
+
+export function upsertBusinessCategory(cat: { id?: string; name: string; propensity: number; baseTicket: number; isActive?: boolean }): BusinessCategory {
+  ensureCategoriesSeeded();
+  const db = getDb();
+  const id = cat.id || `cat_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  db.prepare(
+    `INSERT INTO business_categories (id, name, propensity, baseTicket, is_active)
+     VALUES (@id, @name, @propensity, @baseTicket, @isActive)
+     ON CONFLICT(name) DO UPDATE SET propensity = @propensity, baseTicket = @baseTicket, is_active = @isActive`
+  ).run({
+    id,
+    name: cat.name.trim(),
+    propensity: Math.max(0, Math.min(100, Math.round(cat.propensity))),
+    baseTicket: Math.max(0, Math.round(cat.baseTicket)),
+    isActive: cat.isActive === false ? 0 : 1,
+  });
+  const row = db.prepare("SELECT * FROM business_categories WHERE name = @name").get({ name: cat.name.trim() }) as any;
+  return rowToCategory(row);
+}
+
+/** Ticket estimado para uma categoria de negócio numa cidade específica. */
+export function estimateTicketForCategory(categoryName: string, ibgeCode: string): { category: BusinessCategory | undefined; city: City | undefined; suggestedTicket: number } {
+  const cat = getBusinessCategories().find((c) => c.name.toLowerCase() === categoryName.trim().toLowerCase());
+  const city = getCityByCode(ibgeCode);
+  if (!cat || !city) return { category: cat, city, suggestedTicket: 0 };
+  return { category: cat, city, suggestedTicket: estimateTicket(cat.baseTicket, city.marketTier) };
 }

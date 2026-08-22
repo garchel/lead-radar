@@ -5,6 +5,10 @@ import {
   updateCity,
   importIbgeCities,
   ensureCitiesLoaded,
+  recomputeMarketTiers,
+  getBusinessCategories,
+  upsertBusinessCategory,
+  estimateTicketForCategory,
 } from "../store/db";
 
 /**
@@ -61,9 +65,26 @@ export function registerCityRoutes(app: Express) {
   app.post("/api/cities/import", (_req: Request, res: Response) => {
     try {
       const total = importIbgeCities();
-      return res.json({ success: true, total });
+      const tiers = recomputeMarketTiers();
+      return res.json({ success: true, total, tiers });
     } catch (error: any) {
       return res.status(500).json({ success: false, error: error?.message || "Falha ao importar base IBGE." });
+    }
+  });
+
+  // Ticket sugerido: categoria × tier de mercado da cidade
+  app.get("/api/cities/:code/ticket", (req: Request, res: Response) => {
+    try {
+      const { category } = req.query as Record<string, string>;
+      if (!category || !category.trim()) {
+        return res.status(400).json({ success: false, error: "Informe ?category=Nome da categoria." });
+      }
+      const result = estimateTicketForCategory(category, req.params.code);
+      if (!result.city) return res.status(404).json({ success: false, error: "Cidade não encontrada." });
+      if (!result.category) return res.status(404).json({ success: false, error: "Categoria não encontrada." });
+      return res.json({ success: true, ...result });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao estimar ticket." });
     }
   });
 
@@ -104,6 +125,63 @@ export function registerCityRoutes(app: Express) {
       });
     } catch (error: any) {
       return res.status(500).json({ success: false, error: error?.message || "Falha nas estatísticas de cidades." });
+    }
+  });
+
+  // ------------------------------------------------------------------
+  //  Categorias de negócio (propensão + ticket base)
+  // ------------------------------------------------------------------
+
+  app.get("/api/categories", (req: Request, res: Response) => {
+    try {
+      const { activeOnly } = req.query as Record<string, string>;
+      const categories = getBusinessCategories({ activeOnly: activeOnly === "true" });
+      return res.json({ success: true, total: categories.length, categories });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao listar categorias." });
+    }
+  });
+
+  app.put("/api/categories/:id", (req: Request, res: Response) => {
+    try {
+      const existing = getBusinessCategories().find((c) => c.id === req.params.id);
+      if (!existing) return res.status(404).json({ success: false, error: "Categoria não encontrada." });
+      const { name, propensity, baseTicket, isActive } = req.body || {};
+      if (propensity !== undefined && (typeof propensity !== "number" || propensity < 0 || propensity > 100)) {
+        return res.status(400).json({ success: false, error: "propensity deve ser número entre 0 e 100." });
+      }
+      if (baseTicket !== undefined && (typeof baseTicket !== "number" || baseTicket < 0)) {
+        return res.status(400).json({ success: false, error: "baseTicket deve ser número >= 0." });
+      }
+      const updated = upsertBusinessCategory({
+        id: req.params.id,
+        name: typeof name === "string" && name.trim() ? name : existing.name,
+        propensity: propensity ?? existing.propensity,
+        baseTicket: baseTicket ?? existing.baseTicket,
+        isActive,
+      });
+      return res.json({ success: true, category: updated });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao atualizar categoria." });
+    }
+  });
+
+  app.post("/api/categories", (req: Request, res: Response) => {
+    try {
+      const { name, propensity = 50, baseTicket = 2000, isActive } = req.body || {};
+      if (typeof name !== "string" || !name.trim()) {
+        return res.status(400).json({ success: false, error: "name é obrigatório." });
+      }
+      if (typeof propensity !== "number" || propensity < 0 || propensity > 100) {
+        return res.status(400).json({ success: false, error: "propensity deve ser número entre 0 e 100." });
+      }
+      if (typeof baseTicket !== "number" || baseTicket < 0) {
+        return res.status(400).json({ success: false, error: "baseTicket deve ser número >= 0." });
+      }
+      const created = upsertBusinessCategory({ name, propensity, baseTicket, isActive });
+      return res.json({ success: true, category: created });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao criar categoria." });
     }
   });
 }

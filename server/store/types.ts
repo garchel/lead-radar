@@ -212,10 +212,28 @@ export interface City {
   longitude?: number;
   /** População residente (Censo 2022). */
   population: number;
+  /** PIB per capita a preços correntes (IBGE, R$/ano). */
+  pibPerCapita: number;
+  /** Tier de mercado calculado a partir do PIB per capita (A/B/C/D). */
+  marketTier: "A" | "B" | "C" | "D";
   status: CityStatus;
   /** ISO — última vez que esta cidade entrou numa busca de prospecção. */
   lastSearchedAt: string | null;
   /** Quantas buscas já usaram esta cidade. */
   searchCount: number;
   enabled: boolean;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Categorias de negócio — propensão a landing page + ticket base     */
+/* ------------------------------------------------------------------ */
+
+export interface BusinessCategory {
+  id: string;
+  name: string;
+  /** 0-100: probabilidade de precisar/valorizar landing page. */
+  propensity: number;
+  /** Ticket base sugerido (R$), antes do multiplicador do tier da cidade. */
+  baseTicket: number;
+  isActive: boolean;
 }

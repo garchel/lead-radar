@@ -222,6 +222,8 @@ function migrateSchema(db: Database.Database) {
       latitude REAL,
       longitude REAL,
       population INTEGER NOT NULL DEFAULT 0,
+      pib_per_capita INTEGER NOT NULL DEFAULT 0,
+      market_tier TEXT NOT NULL DEFAULT 'C',
       status TEXT NOT NULL DEFAULT 'pending',
       last_searched_at TEXT,
       search_count INTEGER NOT NULL DEFAULT 0,
@@ -229,6 +231,16 @@ function migrateSchema(db: Database.Database) {
     );
     CREATE INDEX IF NOT EXISTS idx_cities_rotation ON cities(enabled, last_searched_at);
     CREATE INDEX IF NOT EXISTS idx_cities_uf ON cities(uf);
+
+    CREATE TABLE IF NOT EXISTS business_categories (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      /** 0-100: probabilidade de precisar/valorizar landing page. */
+      propensity INTEGER NOT NULL DEFAULT 50,
+      /** Ticket base sugerido (R$) para o projeto, antes do multiplicador do tier da cidade. */
+      baseTicket INTEGER NOT NULL DEFAULT 2000,
+      is_active INTEGER NOT NULL DEFAULT 1
+    );
   `);
 
   // Additive migration for renewal_day (chaves criadas antes deste campo)
@@ -247,6 +259,12 @@ function migrateSchema(db: Database.Database) {
       }
     }
   } catch {}
+
+  // Additive migration: cidades ganham PIB per capita e tier de mercado
+  const cityCols = db.prepare("PRAGMA table_info(cities)").all() as any[];
+  const existingCityCols = new Set(cityCols.map((c: any) => c.name));
+  if (!existingCityCols.has("pib_per_capita")) db.exec("ALTER TABLE cities ADD COLUMN pib_per_capita INTEGER NOT NULL DEFAULT 0");
+  if (!existingCityCols.has("market_tier")) db.exec("ALTER TABLE cities ADD COLUMN market_tier TEXT NOT NULL DEFAULT 'C'");
 
   // Additive migrations for databases created before the CRM interaction model.
   const leadCols = db.prepare("PRAGMA table_info(leads)").all() as any[];
