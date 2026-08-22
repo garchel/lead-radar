@@ -64,19 +64,15 @@ Contagem de concorrentes da cidade injetada no prompt do analyzeLead:
 - <4: "seja o primeiro a dominar as buscas locais"
 **Feito em:** `getCompetitorCount()` em prospectingService.ts.
 
-### 2.4 MCP tools para Hermes ☐
-Expor tools MCP: `get_next_cities`, `search_city(location/category)`,
-`pipeline_status` — permite operar a prospecção conversando com o Hermes.
-- **Esforço:** médio
-- **Arquivo:** `server/mcpServer.ts`.
+### 2.4 MCP tools para Hermes ✅
+(ver item no Eixo 1 — implementado junto com `cold_leads`)
 
 ---
 
 ## 🟢 Higiene técnica
 
-### 4.1 `.env.example` desatualizado ☐
-Documentar parâmetros novos do batch: `useCityRotation`, `citiesPerRun`,
-`uf`, `minPopulation`, `maxPopulation`, `minPropensity`.
+### 4.1 `.env.example` desatualizado ✅
+Parâmetros da rotação e `RESEARCH_STALE_DAYS` documentados (commit "Backlog V3 parte 1/2").
 
 ### 4.2 Docs V2 desatualizados ☐
 `docs/V2-FEATURES.md` não cobre rotação de cidades, tiers, categorias,
