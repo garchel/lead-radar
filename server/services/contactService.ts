@@ -7,8 +7,18 @@ import { recordCommunication } from "../store/db";
 /*  Toda tentativa, inclusive uma falha de configuração, é registrada   */
 /*  em `communications` para auditoria.                                 */
 /*                                                                     */
-/*  WhatsApp: requer WHATSAPP_API_URL e faz POST                       */
-/*    { token: WHATSAPP_API_TOKEN, to, message }.                      */
+/*  WhatsApp — dois backends, escolhidos por env:                      */
+/*                                                                     */
+/*  1) EVOLUTION_API_URL + EVOLUTION_API_KEY + EVOLUTION_INSTANCE       */
+/*     POST {EVOLUTION_API_URL}/message/sendText/{INSTANCE}            */
+/*     Header: apikey: {KEY}                                           */
+/*     Body: { number: "5511999998888", text: message }                */
+/*    (Evolution API v2 — WhatsApp Web não-oficial, self-hosted)        */
+/*                                                                     */
+/*  2) WHATSAPP_API_URL (+ WHATSAPP_API_TOKEN opcional)                 */
+/*     POST {url} body { token, to, message }                           */
+/*    (webhook genérico — n8n, Z-API, ou Meta Cloud API no futuro)      */
+/*                                                                     */
 /*  E-mail: requer SMTP_HOST e envia via nodemailer.                   */
 /* ------------------------------------------------------------------ */
 
@@ -29,29 +39,60 @@ function toE164(phone: string): string {
   return digits.length === 10 || digits.length === 11 ? `55${digits}` : digits;
 }
 
+/** Envio via Evolution API (self-hosted). Retorna detail com resultado. */
+async function sendViaEvolution(to: string, message: string): Promise<string> {
+  const baseUrl = (process.env.EVOLUTION_API_URL || "").replace(/\/$/, "");
+  const apiKey = process.env.EVOLUTION_API_KEY;
+  const instance = process.env.EVOLUTION_INSTANCE || "leadradar";
+
+  const res = await fetch(`${baseUrl}/message/sendText/${instance}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: apiKey || "" },
+    body: JSON.stringify({ number: to, text: message }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Evolution API HTTP ${res.status}${body ? `: ${body.slice(0, 120)}` : ""}`);
+  }
+  return `Enviado via Evolution API (${instance})`;
+}
+
 export async function sendWhatsApp(
   lead: StoredLead,
   message: string
 ): Promise<ContactResult> {
   const to = toE164(lead.phone || "");
-  const url = process.env.WHATSAPP_API_URL;
-  const token = process.env.WHATSAPP_API_TOKEN;
+  const evoUrl = process.env.EVOLUTION_API_URL;
+  const legacyUrl = process.env.WHATSAPP_API_URL;
 
   if (!to) {
     const id = recordCommunication({ leadId: lead.id, channel: "whatsapp", status: "failed", message });
     return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: "Lead sem telefone válido." };
   }
 
-  if (url) {
+  // Prioridade 1: Evolution API
+  if (evoUrl) {
     try {
-      const res = await fetch(url, {
+      const detail = await sendViaEvolution(to, message);
+      const id = recordCommunication({ leadId: lead.id, channel: "whatsapp", status: "sent", toAddress: to, message });
+      return { channel: "whatsapp", status: "sent", communicationId: id, to, detail };
+    } catch (e: any) {
+      const id = recordCommunication({ leadId: lead.id, channel: "whatsapp", status: "failed", toAddress: to, message });
+      return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: e?.message || "Falha no envio via Evolution API" };
+    }
+  }
+
+  // Prioridade 2: webhook genérico legado
+  if (legacyUrl) {
+    try {
+      const res = await fetch(legacyUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, to, message }),
+        body: JSON.stringify({ token: process.env.WHATSAPP_API_TOKEN, to, message }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const id = recordCommunication({ leadId: lead.id, channel: "whatsapp", status: "sent", toAddress: to, message });
-      return { channel: "whatsapp", status: "sent", communicationId: id, to, detail: `Enviado via ${url}` };
+      return { channel: "whatsapp", status: "sent", communicationId: id, to, detail: `Enviado via ${legacyUrl}` };
     } catch (e: any) {
       const id = recordCommunication({ leadId: lead.id, channel: "whatsapp", status: "failed", toAddress: to, message });
       return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: e?.message || "Falha no envio" };
@@ -64,7 +105,7 @@ export async function sendWhatsApp(
     status: "failed",
     communicationId: id,
     to,
-    detail: "WHATSAPP_API_URL não configurada; nenhum contato foi enviado.",
+    detail: "Nenhum backend WhatsApp configurado (EVOLUTION_API_URL ou WHATSAPP_API_URL).",
   };
 }
 

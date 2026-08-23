@@ -1,0 +1,59 @@
+# Evolution API v2 + Postgres — WhatsApp self-hosted para o LeadRadar
+# Uso: docker compose -f docker-compose.evolution.yml up -d
+#
+# Depois de subir:
+#   1. Crie a instância e escaneie o QR (docs/EVOLUTION-API.md, passo 2)
+#   2. Configure o webhook apontando para o LeadRadar (passo 3)
+#   3. Preencha EVOLUTION_API_URL/KEY/INSTANCE no .env do LeadRadar
+
+services:
+  evolution-postgres:
+    image: postgres:16-alpine
+    container_name: leadradar-evolution-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: evolution
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: evolution_local_dev # troque se expor além de localhost
+    volumes:
+      evolution_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  evolution-api:
+    image: evoapicloud/evolution-api:latest
+    container_name: leadradar-evolution-api
+    restart: unless-stopped
+    depends_on:
+      evolution-postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      # Auth geral da API — use o mesmo valor em EVOLUTION_API_KEY no .env do LeadRadar
+      AUTHENTICATION_API_KEY: leadradar-evolution-key
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
+
+      # Persistência
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:evolution_local_dev@evolution-postgres:5432/evolution
+
+      # Instância criada via API/Manager; QR Code habilitado
+      CONFIG_SESSION_PHONE_CLIENT: leadradar
+      CONFIG_SESSION_PHONE_NAME: Chrome
+
+      # Webhook padrão configurável por instância via API (docs, passo 3)
+      WEBHOOK_GLOBAL_ENABLED: "false"
+
+      # Reduz logs verbosos
+      LOG_LEVEL: WARN
+    volumes:
+      evolution_instances:/evolution/instances
+
+volumes:
+  evolution_pgdata:
+  evolution_instances:

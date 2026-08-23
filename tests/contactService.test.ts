@@ -48,7 +48,7 @@ describe("sendWhatsApp", () => {
     const r = await sendWhatsApp(leadWithPhone, "Olá! Teste.");
     expect(r.channel).toBe("whatsapp");
     expect(r.status).toBe("failed");
-    expect(r.detail).toContain("nenhum contato foi enviado");
+    expect(r.detail).toContain("Nenhum backend WhatsApp configurado");
     expect(r.to).toBe("5511987654321");
     expect(fetch).not.toHaveBeenCalled();
   });

@@ -858,6 +858,28 @@ export function deleteSchedule(id: string): boolean {
   return result.changes > 0;
 }
 
+/**
+ * Marca que o lead respondeu (last_response_at = agora) — usado pelo
+ * webhook de WhatsApp para "esquentar" leads frios.
+ */
+export function updateLeadResponse(leadId: string): void {
+  getDb()
+    .prepare("UPDATE leads SET last_response_at = @now, updated_at = @now WHERE id = @id")
+    .run({ now: new Date().toISOString(), id: leadId });
+}
+
+/** Atualiza o estágio do pipeline buscando o lead por telefone normalizado. */
+export function updateLeadStatusByPhone(normalizedPhone: string, status: PipelineStatus): boolean {
+  const lead = getLeads().find(
+    (l) => l.phone && normalizePhone(l.phone) === normalizedPhone
+  );
+  if (!lead) return false;
+  const result = getDb()
+    .prepare("UPDATE leads SET pipeline_status = @status, updated_at = @now WHERE id = @id")
+    .run({ status, now: new Date().toISOString(), id: lead.id });
+  return result.changes > 0;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Leads frios — contactados sem resposta há N+ dias                  */
 /* ------------------------------------------------------------------ */

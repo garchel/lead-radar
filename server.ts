@@ -11,6 +11,7 @@ import { registerTypeformRoutes } from "./server/routes/typeformRoutes";
 import { registerEventRoutes } from "./server/routes/eventRoutes";
 import { registerScheduleRoutes } from "./server/routes/scheduleRoutes";
 import { registerCityRoutes } from "./server/routes/cityRoutes";
+import { registerWhatsAppWebhook } from "./server/routes/whatsappWebhookRoutes";
 import { scheduler, ensureDefaultFollowUpSchedule } from "./server/scheduler/scheduler";
 import { startTypeformPolling } from "./server/typeform/polling";
 import { getSchedulerConfig, getSerpApiConfig, getProspectingProvider } from "./server/config";
@@ -20,6 +21,9 @@ import { getSerpApiUsage, listSerpApiKeys, addSerpApiKey, deleteSerpApiKey, acti
 dotenv.config();
 
 const app = express();
+
+// Exportado para testes (supertest) sem iniciar o listen
+export { app };
 const PORT = 3000;
 
 app.use(express.json());
@@ -33,6 +37,7 @@ registerTypeformRoutes(app);
 registerEventRoutes(app);
 registerScheduleRoutes(app);
 registerCityRoutes(app);
+registerWhatsAppWebhook(app);
 
 app.get("/api/health", (_req, res) => {
   let hasSerpApiKey = Boolean((process.env.SERPAPI_API_KEY || "").trim());
@@ -302,4 +307,7 @@ async function startServer() {
   startTypeformPolling();
 }
 
-startServer();
+// Auto-start exceto quando importado por testes (vitest define NODE_ENV=test)
+if (process.env.NODE_ENV !== "test") {
+  startServer();
+}
