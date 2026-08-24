@@ -858,6 +858,24 @@ export function deleteSchedule(id: string): boolean {
   return result.changes > 0;
 }
 
+/* ------------------------------------------------------------------ */
+/*  app_settings — configurações de runtime persistidas                */
+/* ------------------------------------------------------------------ */
+
+/** Lê um valor de configuração persistido (null se ausente). */
+export function getSetting(key: string): string | null {
+  const row = getDb().prepare("SELECT value FROM app_settings WHERE key = ?").get(key) as any;
+  return row?.value ?? null;
+}
+
+/** Grava (upsert) um valor de configuração persistido. */
+export function setSetting(key: string, value: string): void {
+  getDb()
+    .prepare(`INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)
+              ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)
+    .run(key, value, new Date().toISOString());
+}
+
 /**
  * Marca que o lead respondeu (last_response_at = agora) — usado pelo
  * webhook de WhatsApp para "esquentar" leads frios.

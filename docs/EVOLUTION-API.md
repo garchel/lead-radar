@@ -83,18 +83,22 @@ Um evento SSE `whatsapp_inbound` é emitido para a UI.
 
 ---
 
-## 🔮 Versão futura: Meta WhatsApp Cloud API (oficial)
+## 🔮 Versão futura: Meta WhatsApp Cloud API (oficial) — ✅ JÁ IMPLEMENTADA
 
-Quando quiser migrar para o canal oficial da Meta (sem risco de banimento,
-1.000 conversas/mês grátis), o caminho é:
+A Meta Cloud API agora também está implementada e pode ser selecionada na UI
+(aba CRM → card "Conexão WhatsApp") ou via `WHATSAPP_PROVIDER=meta` no `.env`.
 
-1. Criar app Business em https://developers.facebook.com e adicionar o produto WhatsApp
-2. Guardar `PHONE_NUMBER_ID` + token permanente + aprovar 1–2 templates de primeira abordagem
-3. Implementar adaptador alternativo em `contactService.ts`: POST para
-   `https://graph.facebook.com/v18.0/{PHONE_NUMBER_ID}/messages` com
-   `{ messaging_product: "whatsapp", to, type: "template", template: {...} }`
-4. Apontar o webhook da Meta para `/api/whatsapp/webhook` (adicionar verificação
-   `hub.challenge` no GET — o handler POST já é compatível com o payload
-   `entry[].changes[].value.messages[]`, basta um segundo extractor)
+**O que já está feito:**
+- Envio: `META_WHATSAPP_TOKEN` + `META_PHONE_NUMBER_ID` → POST para
+  `graph.facebook.com/{version}/{PHONE_ID}/messages` (texto livre)
+- Webhook: o mesmo `/api/whatsapp/webhook` responde à verificação
+  `hub.challenge` (defina `META_WEBHOOK_VERIFY_TOKEN`) e parseia payloads
+  `entry[].changes[].value.messages[]`
+- Seletor: `GET/POST /api/whatsapp/status|provider` + card na UI com a escolha
+  persistida no banco (precedência sobre o .env)
 
-O restante do fluxo (intenção → pipeline → follow-up) permanece idêntico.
+**Limitação atual:** envio por texto livre funciona dentro da janela de 24h do lead.
+Para a primeira abordagem fora da janela, a Meta exige template aprovado —
+implementar envio por template (`type: "template"`) é a próxima evolução.
+
+**Passo a passo Meta:** ver `.env.example` (bloco "Meta Cloud API").

@@ -260,6 +260,15 @@ function migrateSchema(db: Database.Database) {
     }
   } catch {}
 
+  // Configurações de runtime (ex.: seletor de backend WhatsApp)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT,
+      updated_at TEXT NOT NULL
+    );
+  `);
+
   // Additive migration: cidades ganham PIB per capita e tier de mercado
   const cityCols = db.prepare("PRAGMA table_info(cities)").all() as any[];
   const existingCityCols = new Set(cityCols.map((c: any) => c.name));

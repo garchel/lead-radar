@@ -1,6 +1,7 @@
 import { Express, Request, Response } from "express";
-import { getLeads, recordCommunication, createInteraction, updateLeadResponse, updateLeadStatusByPhone } from "../store/db";
+import { getLeads, recordCommunication, createInteraction, updateLeadResponse, updateLeadStatusByPhone, getSetting, setSetting } from "../store/db";
 import { normalizePhone } from "../services/leadIdentity";
+import { resolveWhatsappProvider, type WhatsappProviderChoice } from "../services/contactService";
 import { eventHub } from "../events/eventHub";
 
 /**
@@ -81,9 +82,86 @@ function extractInbound(req: Request): { from: string; text: string; instance: s
   return { from, text: text.trim(), instance: body.instance || "" };
 }
 
+/** Extrai mensagem de texto de um payload Meta Cloud API. */
+function extractInboundMeta(req: Request): { from: string; text: string; instance: string } | null {
+  const body = req.body || {};
+  const entries = Array.isArray(body.entry) ? body.entry : [];
+  for (const entry of entries) {
+    const changes = Array.isArray(entry?.changes) ? entry.changes : [];
+    for (const change of changes) {
+      const value = change?.value || {};
+      const messages = Array.isArray(value.messages) ? value.messages : [];
+      for (const msg of messages) {
+        if (msg?.type !== "text" || !msg.text?.body?.trim()) continue;
+        const from = String(msg.from || "").replace(/\D/g, "");
+        if (!from) continue;
+        return { from, text: msg.text.body.trim(), instance: "meta-cloud-api" };
+      }
+    }
+  }
+  return null;
+}
+
 export function registerWhatsAppWebhook(app: Express) {
+  // -----------------------------------------------------------------
+  // Status + seletor de backend WhatsApp (UI de Configurações)
+  // -----------------------------------------------------------------
+
+  app.get("/api/whatsapp/status", (_req: Request, res: Response) => {
+    try {
+      const { provider, reason } = resolveWhatsappProvider();
+      const hasEvolution = Boolean((process.env.EVOLUTION_API_URL || "").trim());
+      const hasMeta = Boolean(
+        (process.env.META_WHATSAPP_TOKEN || "").trim() && (process.env.META_PHONE_NUMBER_ID || "").trim()
+      );
+      const hasLegacy = Boolean((process.env.WHATSAPP_API_URL || "").trim());
+      return res.json({
+        success: true,
+        savedChoice: getSetting("whatsapp_provider") || "auto",
+        activeProvider: provider,
+        reason,
+        available: { evolution: hasEvolution, meta: hasMeta, legacy: hasLegacy },
+      });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao consultar status WhatsApp." });
+    }
+  });
+
+  app.post("/api/whatsapp/provider", (req: Request, res: Response) => {
+    const valid: WhatsappProviderChoice[] = ["auto", "evolution", "meta", "legacy"];
+    const choice = String(req.body?.provider || "").trim().toLowerCase() as WhatsappProviderChoice;
+    if (!valid.includes(choice)) {
+      return res.status(400).json({ success: false, error: `Backend inválido. Use: ${valid.join(", ")}.` });
+    }
+    try {
+      if (choice === "auto") {
+        setSetting("whatsapp_provider", ""); // vazio = volta para resolução automática
+      } else {
+        setSetting("whatsapp_provider", choice);
+      }
+      const { provider, reason } = resolveWhatsappProvider();
+      eventHub.emit("whatsapp_provider_changed", { choice, provider, reason });
+      return res.json({ success: true, provider, reason });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao salvar backend." });
+    }
+  });
+
+  // -----------------------------------------------------------------
+  // Webhook de recebimento
+  // -----------------------------------------------------------------
+
   // Health/verificação simples (algumas ferramentas fazem GET ao configurar)
-  app.get("/api/whatsapp/webhook", (_req: Request, res: Response) => {
+  app.get("/api/whatsapp/webhook", (req: Request, res: Response) => {
+    // Verificação de assinatura da Meta Cloud API: echo do hub.challenge
+    const mode = req.query["hub.mode"];
+    const token = req.query["hub.verify_token"];
+    const challenge = req.query["hub.challenge"];
+    const expected = process.env.META_WEBHOOK_VERIFY_TOKEN;
+
+    if (mode === "subscribe" && expected && token === expected && typeof challenge === "string") {
+      return res.type("text/plain").send(challenge);
+    }
     res.json({ success: true, service: "leadradar-whatsapp-webhook", ready: true });
   });
 
@@ -105,7 +183,7 @@ export function registerWhatsAppWebhook(app: Express) {
       /* ack sempre */
     }
 
-    const inbound = extractInbound(req);
+    const inbound = extractInbound(req) || extractInboundMeta(req);
     if (!inbound) return;
 
     const normalized = normalizePhone(inbound.from);

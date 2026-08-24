@@ -8,6 +8,7 @@ import { CrmPipeline } from './components/CrmPipeline';
 import { StrategyGuide } from './components/StrategyGuide';
 import { AddLeadModal } from './components/AddLeadModal';
 import { McpStatusModal } from './components/McpStatusModal';
+import { WhatsappSettingsCard } from './components/WhatsappSettingsCard';
 import { QueueDrawerModal } from './components/QueueDrawerModal';
 import { MonitoringDashboard } from './components/MonitoringDashboard';
 import { DuplicateMergeModal } from './components/DuplicateMergeModal';
@@ -501,6 +502,7 @@ export default function App() {
 
         {activeTab === 'crm' && (
           <>
+            <WhatsappSettingsCard />
             <FollowUpQueue />
             <CrmPipeline
               savedLeads={savedLeads}

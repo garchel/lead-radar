@@ -1,26 +1,78 @@
 import nodemailer from "nodemailer";
 import { StoredLead } from "../store/types";
-import { recordCommunication } from "../store/db";
+import { recordCommunication, getSetting } from "../store/db";
 
 /* ------------------------------------------------------------------ */
 /*  Contact dispatch — só confirma sucesso após um envio real.         */
 /*  Toda tentativa, inclusive uma falha de configuração, é registrada   */
 /*  em `communications` para auditoria.                                 */
 /*                                                                     */
-/*  WhatsApp — dois backends, escolhidos por env:                      */
+/*  WhatsApp — três backends, escolhidos por WHATSAPP_PROVIDER:         */
+/*    "auto" (default) | "evolution" | "meta" | "legacy"                */
 /*                                                                     */
-/*  1) EVOLUTION_API_URL + EVOLUTION_API_KEY + EVOLUTION_INSTANCE       */
-/*     POST {EVOLUTION_API_URL}/message/sendText/{INSTANCE}            */
-/*     Header: apikey: {KEY}                                           */
-/*     Body: { number: "5511999998888", text: message }                */
-/*    (Evolution API v2 — WhatsApp Web não-oficial, self-hosted)        */
+/*  1) evolution — EVOLUTION_API_URL + EVOLUTION_API_KEY + INSTANCE     */
+/*     POST {URL}/message/sendText/{INSTANCE}  header apikey            */
+/*     Body: { number: "5511...", text }   (self-hosted, gratuito)      */
 /*                                                                     */
-/*  2) WHATSAPP_API_URL (+ WHATSAPP_API_TOKEN opcional)                 */
-/*     POST {url} body { token, to, message }                           */
-/*    (webhook genérico — n8n, Z-API, ou Meta Cloud API no futuro)      */
+/*  2) meta — META_WHATSAPP_TOKEN + META_PHONE_NUMBER_ID                */
+/*     POST https://graph.facebook.com/v18.0/{PHONE_ID}/messages        */
+/*     Body: { messaging_product:"whatsapp", to, type:"text",           */
+/*             text:{ body } }                                          */
+/*    (Cloud API oficial — fora da janela 24h exige template; aqui       */
+/*     enviamos texto livre: use somente em conversas abertas ou teste)  */
+/*                                                                     */
+/*  3) legacy — WHATSAPP_API_URL webhook genérico { token, to, message } */
+/*                                                                     */
+/*  "auto" resolve na ordem evolution → meta → legacy.                  */
 /*                                                                     */
 /*  E-mail: requer SMTP_HOST e envia via nodemailer.                   */
 /* ------------------------------------------------------------------ */
+
+export type WhatsappProvider = "evolution" | "meta" | "legacy";
+export type WhatsappProviderChoice = "auto" | WhatsappProvider;
+
+/** Resolve o backend efetivo: setting persistido (UI) > env WHATSAPP_PROVIDER > auto. */
+export function resolveWhatsappProvider(): { provider: WhatsappProvider | null; reason: string } {
+  // A escolha feita na UI (persistida no SQLite) tem precedência sobre o .env
+  let choice: string;
+  try {
+    const saved = getSetting("whatsapp_provider");
+    if (saved) {
+      choice = saved;
+    } else {
+      choice = (process.env.WHATSAPP_PROVIDER || "auto").trim().toLowerCase();
+    }
+  } catch {
+    choice = (process.env.WHATSAPP_PROVIDER || "auto").trim().toLowerCase();
+  }
+  const source = getSetting("whatsapp_provider") ? "selecionado na UI" : "definido via .env";
+
+  const hasEvolution = Boolean((process.env.EVOLUTION_API_URL || "").trim());
+  const hasMeta = Boolean((process.env.META_WHATSAPP_TOKEN || "").trim() && (process.env.META_PHONE_NUMBER_ID || "").trim());
+  const hasLegacy = Boolean((process.env.WHATSAPP_API_URL || "").trim());
+
+  if (choice === "evolution") {
+    return hasEvolution
+      ? { provider: "evolution", reason: "selecionado manualmente" }
+      : { provider: null, reason: "WHATSAPP_PROVIDER=evolution mas EVOLUTION_API_URL não configurada." };
+  }
+  if (choice === "meta") {
+    return hasMeta
+      ? { provider: "meta", reason: "selecionado manualmente" }
+      : { provider: null, reason: "WHATSAPP_PROVIDER=meta mas META_WHATSAPP_TOKEN/META_PHONE_NUMBER_ID não configurados." };
+  }
+  if (choice === "legacy") {
+    return hasLegacy
+      ? { provider: "legacy", reason: "selecionado manualmente" }
+      : { provider: null, reason: "WHATSAPP_PROVIDER=legacy mas WHATSAPP_API_URL não configurada." };
+  }
+
+  // auto: ordem evolution → meta → legacy
+  if (hasEvolution) return { provider: "evolution", reason: "auto (Evolution configurada)" };
+  if (hasMeta) return { provider: "meta", reason: "auto (Meta configurada)" };
+  if (hasLegacy) return { provider: "legacy", reason: "auto (webhook genérico configurado)" };
+  return { provider: null, reason: "Nenhum backend WhatsApp configurado." };
+}
 
 export type ContactChannel = "whatsapp" | "email";
 export type ContactStatus = "sent" | "failed";
@@ -57,56 +109,78 @@ async function sendViaEvolution(to: string, message: string): Promise<string> {
   return `Enviado via Evolution API (${instance})`;
 }
 
+/** Envio via Meta WhatsApp Cloud API (oficial). Texto livre — janela 24h. */
+async function sendViaMeta(to: string, message: string): Promise<string> {
+  const token = process.env.META_WHATSAPP_TOKEN;
+  const phoneId = process.env.META_PHONE_NUMBER_ID;
+  const version = process.env.META_GRAPH_VERSION || "v18.0";
+
+  const res = await fetch(`https://graph.facebook.com/${version}/${phoneId}/messages`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "text",
+      text: { preview_url: false, body: message },
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Meta Cloud API HTTP ${res.status}${body ? `: ${body.slice(0, 160)}` : ""}`);
+  }
+  return `Enviado via Meta Cloud API (${phoneId})`;
+}
+
 export async function sendWhatsApp(
   lead: StoredLead,
   message: string
 ): Promise<ContactResult> {
   const to = toE164(lead.phone || "");
-  const evoUrl = process.env.EVOLUTION_API_URL;
-  const legacyUrl = process.env.WHATSAPP_API_URL;
 
   if (!to) {
     const id = recordCommunication({ leadId: lead.id, channel: "whatsapp", status: "failed", message });
     return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: "Lead sem telefone válido." };
   }
 
-  // Prioridade 1: Evolution API
-  if (evoUrl) {
-    try {
-      const detail = await sendViaEvolution(to, message);
-      const id = recordCommunication({ leadId: lead.id, channel: "whatsapp", status: "sent", toAddress: to, message });
-      return { channel: "whatsapp", status: "sent", communicationId: id, to, detail };
-    } catch (e: any) {
-      const id = recordCommunication({ leadId: lead.id, channel: "whatsapp", status: "failed", toAddress: to, message });
-      return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: e?.message || "Falha no envio via Evolution API" };
-    }
+  const { provider, reason } = resolveWhatsappProvider();
+  if (!provider) {
+    const id = recordCommunication({ leadId: lead.id, channel: "whatsapp", status: "failed", toAddress: to, message });
+    return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: reason };
   }
 
-  // Prioridade 2: webhook genérico legado
-  if (legacyUrl) {
-    try {
-      const res = await fetch(legacyUrl, {
+  try {
+    let detail: string;
+    if (provider === "evolution") {
+      detail = await sendViaEvolution(to, message);
+    } else if (provider === "meta") {
+      detail = await sendViaMeta(to, message);
+    } else {
+      const legacyUrl = process.env.WHATSAPP_API_URL;
+      const res = await fetch(legacyUrl as string, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: process.env.WHATSAPP_API_TOKEN, to, message }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const id = recordCommunication({ leadId: lead.id, channel: "whatsapp", status: "sent", toAddress: to, message });
-      return { channel: "whatsapp", status: "sent", communicationId: id, to, detail: `Enviado via ${legacyUrl}` };
-    } catch (e: any) {
-      const id = recordCommunication({ leadId: lead.id, channel: "whatsapp", status: "failed", toAddress: to, message });
-      return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: e?.message || "Falha no envio" };
+      detail = `Enviado via webhook legado (${legacyUrl})`;
     }
+    const id = recordCommunication({ leadId: lead.id, channel: "whatsapp", status: "sent", toAddress: to, message });
+    return { channel: "whatsapp", status: "sent", communicationId: id, to, detail };
+  } catch (e: any) {
+    const id = recordCommunication({ leadId: lead.id, channel: "whatsapp", status: "failed", toAddress: to, message });
+    return {
+      channel: "whatsapp",
+      status: "failed",
+      communicationId: id,
+      to,
+      detail: `${e?.message || "Falha no envio"} (backend: ${provider} — ${reason})`,
+    };
   }
-
-  const id = recordCommunication({ leadId: lead.id, channel: "whatsapp", status: "failed", toAddress: to, message });
-  return {
-    channel: "whatsapp",
-    status: "failed",
-    communicationId: id,
-    to,
-    detail: "Nenhum backend WhatsApp configurado (EVOLUTION_API_URL ou WHATSAPP_API_URL).",
-  };
 }
 
 export async function sendEmail(
