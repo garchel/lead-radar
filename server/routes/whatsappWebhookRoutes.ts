@@ -1,4 +1,5 @@
 import { Express, Request, Response } from "express";
+import crypto from "node:crypto";
 import { getLeads, recordCommunication, createInteraction, updateLeadResponse, updateLeadStatusByPhone, setDoNotContactByPhone, getSetting, setSetting } from "../store/db";
 import { normalizePhone } from "../services/leadIdentity";
 import { resolveWhatsappProvider, type WhatsappProviderChoice } from "../services/contactService";
@@ -102,6 +103,30 @@ function extractInboundMeta(req: Request): { from: string; text: string; instanc
   return null;
 }
 
+/**
+ * Valida a assinatura X-Hub-Signature-256 da Meta Cloud API.
+ * Se META_APP_SECRET não estiver configurado, não bloqueia (modo dev/local).
+ * O body precisa ser o JSON cru — por isso validamos com o header assinado
+ * contra o payload serializado (a Meta assina o corpo exato do POST).
+ */
+function verifyMetaSignature(req: Request): boolean {
+  const appSecret = process.env.META_APP_SECRET;
+  if (!appSecret) return true; // sem secret configurado: pular validação
+
+  const signature = req.headers["x-hub-signature-256"];
+  if (typeof signature !== "string" || !signature.startsWith("sha256=")) return false;
+
+  const expected = crypto
+    .createHmac("sha256", appSecret)
+    .update(JSON.stringify(req.body || {}))
+    .digest("hex");
+  try {
+    return crypto.timingSafeEqual(Buffer.from(signature.slice(7), "hex"), Buffer.from(expected, "hex"));
+  } catch {
+    return false;
+  }
+}
+
 export function registerWhatsAppWebhook(app: Express) {
   // -----------------------------------------------------------------
   // Status + seletor de backend WhatsApp (UI de Configurações)
@@ -166,6 +191,11 @@ export function registerWhatsAppWebhook(app: Express) {
   });
 
   app.post("/api/whatsapp/webhook", async (req: Request, res: Response) => {
+    // Assinatura da Meta (se META_APP_SECRET configurado)
+    if (!verifyMetaSignature(req)) {
+      return res.status(401).json({ success: false, error: "Assinatura X-Hub-Signature-256 inválida." });
+    }
+
     // Auth leve opcional: WHATSAPP_WEBHOOK_TOKEN via query ?token= ou header
     const expected = process.env.WHATSAPP_WEBHOOK_TOKEN;
     if (expected) {

@@ -649,7 +649,7 @@ export async function searchSerpApiMaps(input: {
 
   let res: Response;
   try {
-    res = await fetch(url);
+    res = await fetch(url, { signal: AbortSignal.timeout(Number(process.env.SERPAPI_TIMEOUT_MS || 20000)) });
   } catch (err: any) {
     throw new Error(`Falha de rede ao consultar SerpAPI: ${err?.message || err}`);
   }

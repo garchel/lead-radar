@@ -165,5 +165,41 @@ describe("POST /api/whatsapp/webhook (Evolution API)", () => {
     expect(json.available.evolution).toBe(false);
     expect(json.savedChoice).toBeTruthy();
   });
+
+  it("rejeita POST com assinatura Meta inválida quando META_APP_SECRET está definido", async () => {
+    process.env.META_APP_SECRET = "segredo-do-app";
+    seedLead("+55 11 99999-0005");
+    // sem header x-hub-signature-256
+    const res1 = await fetch(`${baseUrl}/api/whatsapp/webhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload("tenho interesse", "5511999990005")),
+    });
+    delete process.env.META_APP_SECRET;
+    expect(res1.status).toBe(401);
+
+    // lead não deve ter sido movido
+    const lead = getLeads().find((l) => (l.phone || "").replace(/\D/g, "").endsWith("999990005"));
+    expect(lead!.pipelineStatus).toBe("contacted");
+  });
+
+  it("aceita POST com assinatura Meta válida", async () => {
+    const crypto = await import("node:crypto");
+    seedLead("+55 11 99999-0006");
+    process.env.META_APP_SECRET = "segredo-do-app";
+    const body = JSON.stringify(payload("tenho interesse em saber o valor", "5511999990006"));
+    const sig = crypto.createHmac("sha256", "segredo-do-app").update(body).digest("hex");
+
+    const res = await fetch(`${baseUrl}/api/whatsapp/webhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-hub-signature-256": `sha256=${sig}` },
+      body,
+    });
+    await new Promise((r) => setTimeout(r, 150));
+    delete process.env.META_APP_SECRET;
+    expect(res.status).toBe(200);
+    const lead = getLeads().find((l) => (l.phone || "").replace(/\D/g, "").endsWith("999990006"));
+    expect(lead!.pipelineStatus).toBe("negotiating");
+  });
 });
 

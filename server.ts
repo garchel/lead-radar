@@ -29,6 +29,23 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// Rate limiting global (ativado apenas se API_RATE_LIMIT estiver definido, ex.: "120")
+import { rateLimit } from "./server/middleware/rateLimit";
+app.use(rateLimit(Number(process.env.API_RATE_LIMIT || 0)));
+
+// Auth opcional para rotas de MUTAÇÃO (POST/PUT/PATCH/DELETE) fora do webhook.
+// Ativa apenas com API_WRITE_TOKEN definido; clientes devem enviar header
+// "x-api-token: <valor>" ou "?token=<valor>". GETs e o webhook ficam livres.
+app.use((req, res, next) => {
+  const token = process.env.API_WRITE_TOKEN;
+  if (!token) return next(); // desativado
+  if (req.method === "GET" || req.method === "OPTIONS") return next();
+  if (req.path.startsWith("/api/whatsapp/webhook")) return next(); // webhook tem auth própria
+  const provided = req.headers["x-api-token"] || req.query.token;
+  if (provided === token) return next();
+  return res.status(401).json({ success: false, error: "Token de API ausente ou inválido (x-api-token)." });
+});
+
 registerMcpRoutes(app);
 registerQueueRoutes(app);
 registerLeadRoutes(app);

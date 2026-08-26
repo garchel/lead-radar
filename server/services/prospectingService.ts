@@ -165,6 +165,7 @@ Retorne estritamente JSON com as chaves:
     contents: promptText,
     config: {
       responseMimeType: "application/json",
+      abortSignal: AbortSignal.timeout(Number(process.env.GEMINI_TIMEOUT_MS || 60000)),
     },
   });
 
@@ -276,6 +277,7 @@ Cada item do array deve ter as seguintes propriedades:
       config: {
         tools: [{ googleSearch: {} }],
         responseMimeType: "application/json",
+        abortSignal: AbortSignal.timeout(Number(process.env.GEMINI_TIMEOUT_MS || 60000)),
         responseSchema: {
           type: Type.OBJECT,
           properties: {
