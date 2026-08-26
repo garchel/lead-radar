@@ -1,5 +1,5 @@
 import { Express, Request, Response } from "express";
-import { getLeads, recordCommunication, createInteraction, updateLeadResponse, updateLeadStatusByPhone, getSetting, setSetting } from "../store/db";
+import { getLeads, recordCommunication, createInteraction, updateLeadResponse, updateLeadStatusByPhone, setDoNotContactByPhone, getSetting, setSetting } from "../store/db";
 import { normalizePhone } from "../services/leadIdentity";
 import { resolveWhatsappProvider, type WhatsappProviderChoice } from "../services/contactService";
 import { eventHub } from "../events/eventHub";
@@ -196,6 +196,16 @@ export function registerWhatsAppWebhook(app: Express) {
 
     const { intent, status } = classifyIntent(inbound.text);
 
+    // Opt-out LGPD: pedido de exclusão bloqueia recontatos automaticamente
+    let optedOut: boolean = false;
+    if (intent === "recusa") {
+      try {
+        optedOut = Boolean(setDoNotContactByPhone(normalized, true));
+      } catch {
+        /* best-effort */
+      }
+    }
+
     // registra a mensagem recebida
     recordCommunication({
       leadId: lead.id,
@@ -244,6 +254,7 @@ export function registerWhatsAppWebhook(app: Express) {
       name: lead.name,
       intent,
       movedTo: status || null,
+      optedOut,
       text: inbound.text.slice(0, 200),
     });
   });

@@ -898,6 +898,21 @@ export function updateLeadStatusByPhone(normalizedPhone: string, status: Pipelin
   return result.changes > 0;
 }
 
+/**
+ * Bloqueia recontatos do lead (LGPD/opt-out) buscando por telefone normalizado.
+ * Retorna o lead atualizado ou null se não encontrado.
+ */
+export function setDoNotContactByPhone(normalizedPhone: string, blocked = true): StoredLead | null {
+  const lead = getLeads().find(
+    (l) => l.phone && normalizePhone(l.phone) === normalizedPhone
+  );
+  if (!lead) return null;
+  getDb()
+    .prepare("UPDATE leads SET do_not_contact = @blocked, updated_at = @now WHERE id = @id")
+    .run({ blocked: blocked ? 1 : 0, now: new Date().toISOString(), id: lead.id });
+  return { ...lead, doNotContact: blocked };
+}
+
 /* ------------------------------------------------------------------ */
 /*  Leads frios — contactados sem resposta há N+ dias                  */
 /* ------------------------------------------------------------------ */

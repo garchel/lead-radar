@@ -12,6 +12,7 @@ import { registerEventRoutes } from "./server/routes/eventRoutes";
 import { registerScheduleRoutes } from "./server/routes/scheduleRoutes";
 import { registerCityRoutes } from "./server/routes/cityRoutes";
 import { registerWhatsAppWebhook } from "./server/routes/whatsappWebhookRoutes";
+import { scheduleBackups } from "./server/backup/backupService";
 import { scheduler, ensureDefaultFollowUpSchedule } from "./server/scheduler/scheduler";
 import { startTypeformPolling } from "./server/typeform/polling";
 import { getSchedulerConfig, getSerpApiConfig, getProspectingProvider } from "./server/config";
@@ -305,6 +306,9 @@ async function startServer() {
   }
 
   startTypeformPolling();
+
+  // Snapshot diário do SQLite (data/backups, retenção 14)
+  scheduleBackups();
 }
 
 // Auto-start exceto quando importado por testes (vitest define NODE_ENV=test)

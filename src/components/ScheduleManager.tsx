@@ -15,7 +15,7 @@ interface Schedule {
 
 type ScheduleJobType = Schedule['jobType'];
 
-const CATEGORIES = [
+const FALLBACK_CATEGORIES = [
   'Todas as Categorias',
   'Dentista / Clínica Odontológica',
   'Oficina Mecânica & Estética Automotiva',
@@ -48,6 +48,20 @@ export const ScheduleManager: React.FC = () => {
   const [minPopulation, setMinPopulation] = useState(30000);
   const [maxPopulation, setMaxPopulation] = useState(200000);
   const [minPropensity, setMinPropensity] = useState(0);
+  // Categorias carregadas da API (com fallback estático)
+  const [categories, setCategories] = useState<string[]>(FALLBACK_CATEGORIES);
+
+  useEffect(() => {
+    fetch('/api/categories')
+      .then((r) => r.json())
+      .then((json) => {
+        if (json?.success && Array.isArray(json.categories) && json.categories.length > 0) {
+          const names = json.categories.map((c: any) => c.name).filter(Boolean);
+          setCategories(['Todas as Categorias', ...names]);
+        }
+      })
+      .catch(() => {/* mantém fallback */});
+  }, []);
 
   const fetchSchedules = useCallback(async () => {
     try {
@@ -222,7 +236,7 @@ export const ScheduleManager: React.FC = () => {
                 )}
                 <select value={category} onChange={(e) => setCategory(e.target.value)} className="px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white">
                   <option value="">Selecione uma categoria</option>
-                  {CATEGORIES.filter((c) => c !== 'Todas as Categorias').map((c) => (
+                  {categories.filter((c) => c !== 'Todas as Categorias').map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>

@@ -91,6 +91,9 @@ function toE164(phone: string): string {
   return digits.length === 10 || digits.length === 11 ? `55${digits}` : digits;
 }
 
+// Timeout para chamadas às APIs de WhatsApp — evita job travado em endpoint lento
+const WHATSAPP_FETCH_TIMEOUT_MS = Number(process.env.WHATSAPP_FETCH_TIMEOUT_MS || 15000);
+
 /** Envio via Evolution API (self-hosted). Retorna detail com resultado. */
 async function sendViaEvolution(to: string, message: string): Promise<string> {
   const baseUrl = (process.env.EVOLUTION_API_URL || "").replace(/\/$/, "");
@@ -101,6 +104,7 @@ async function sendViaEvolution(to: string, message: string): Promise<string> {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: apiKey || "" },
     body: JSON.stringify({ number: to, text: message }),
+    signal: AbortSignal.timeout(WHATSAPP_FETCH_TIMEOUT_MS),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -128,6 +132,7 @@ async function sendViaMeta(to: string, message: string): Promise<string> {
       type: "text",
       text: { preview_url: false, body: message },
     }),
+    signal: AbortSignal.timeout(WHATSAPP_FETCH_TIMEOUT_MS),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -165,6 +170,7 @@ export async function sendWhatsApp(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: process.env.WHATSAPP_API_TOKEN, to, message }),
+        signal: AbortSignal.timeout(WHATSAPP_FETCH_TIMEOUT_MS),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       detail = `Enviado via webhook legado (${legacyUrl})`;

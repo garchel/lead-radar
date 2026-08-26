@@ -196,6 +196,15 @@ export default function App() {
           });
           window.setTimeout(() => setJobToast(null), 6000);
         }
+        // Notificação de resposta de lead via WhatsApp (toast auto-dismiss 8s)
+        if (d?.event === 'whatsapp_inbound') {
+          const w = d.payload || {};
+          const msg = w.optedOut
+            ? `🚫 ${w.name || 'Lead'} pediu para não receber mais mensagens — recontato bloqueado.`
+            : `💬 ${w.name || 'Lead'} respondeu no WhatsApp${w.movedTo ? ` → ${w.movedTo}` : ''}: "${String(w.text || '').slice(0, 80)}"`;
+          setJobToast({ ok: !w.optedOut, message: msg });
+          window.setTimeout(() => setJobToast(null), 8000);
+        }
       } catch (err: any) {
         setErrorMessage(`Falha ao interpretar uma atualização do servidor: ${err?.message || 'evento inválido'}`);
       }
