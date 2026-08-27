@@ -383,6 +383,12 @@ function rowToProject(row: any): Project {
     devNotes: row.dev_notes || undefined,
     reviewNotes: row.review_notes || undefined,
     deployUrl: row.deploy_url || undefined,
+    githubRepoUrl: row.github_repo_url || undefined,
+    repoOwner: row.repo_owner || undefined,
+    repoName: row.repo_name || undefined,
+    previewUrl: row.preview_url || undefined,
+    devStatus: row.dev_status || undefined,
+    devMessage: row.dev_message || undefined,
     dueDate: row.due_date || undefined,
     completedAt: row.completed_at || undefined,
     archived: Boolean(row.archived),
@@ -397,7 +403,7 @@ function rowToProject(row: any): Project {
 
 const PROJECT_COLUMNS =
   'p.id, p.lead_id, p.name, p.type, p.typeform_token, p.stage, p.status, p.priority, p.brief, p.briefing_json, p.tasks_json, p.copy, p.design_notes, p.dev_notes, ' +
-  'p.review_notes, p.deploy_url, p.due_date, p.completed_at, p.archived, p.archived_at, p.created_at, p.updated_at, ' +
+  'p.review_notes, p.deploy_url, p.github_repo_url, p.repo_owner, p.repo_name, p.preview_url, p.dev_status, p.dev_message, p.due_date, p.completed_at, p.archived, p.archived_at, p.created_at, p.updated_at, ' +
   'l.name AS lead_name, l.city AS lead_city, l.category AS lead_category';
 
 const PROJECT_SELECT = `SELECT ${PROJECT_COLUMNS} FROM projects p LEFT JOIN leads l ON l.id = p.lead_id`;
@@ -440,6 +446,12 @@ export function upsertProject(project: Project) {
     dev_notes: project.devNotes ?? null,
     review_notes: project.reviewNotes ?? null,
     deploy_url: project.deployUrl ?? null,
+    github_repo_url: project.githubRepoUrl ?? null,
+    repo_owner: project.repoOwner ?? null,
+    repo_name: project.repoName ?? null,
+    preview_url: project.previewUrl ?? null,
+    dev_status: project.devStatus ?? null,
+    dev_message: project.devMessage ?? null,
     due_date: project.dueDate ?? null,
     completed_at: project.completedAt ?? null,
     archived: project.archived ? 1 : 0,
@@ -455,8 +467,8 @@ export function upsertProject(project: Project) {
   } else {
     getDb()
       .prepare(
-        `INSERT INTO projects (id, lead_id, name, type, typeform_token, stage, status, priority, brief, briefing_json, tasks_json, copy, design_notes, dev_notes, review_notes, deploy_url, due_date, completed_at, archived, archived_at, created_at, updated_at)
-         VALUES (@id, @lead_id, @name, @type, @typeform_token, @stage, @status, @priority, @brief, @briefing_json, @tasks_json, @copy, @design_notes, @dev_notes, @review_notes, @deploy_url, @due_date, @completed_at, @archived, @archived_at, @created_at, @updated_at)`
+        `INSERT INTO projects (id, lead_id, name, type, typeform_token, stage, status, priority, brief, briefing_json, tasks_json, copy, design_notes, dev_notes, review_notes, deploy_url, github_repo_url, repo_owner, repo_name, preview_url, dev_status, dev_message, due_date, completed_at, archived, archived_at, created_at, updated_at)
+         VALUES (@id, @lead_id, @name, @type, @typeform_token, @stage, @status, @priority, @brief, @briefing_json, @tasks_json, @copy, @design_notes, @dev_notes, @review_notes, @deploy_url, @github_repo_url, @repo_owner, @repo_name, @preview_url, @dev_status, @dev_message, @due_date, @completed_at, @archived, @archived_at, @created_at, @updated_at)`
       )
       .run(data);
   }
@@ -886,15 +898,19 @@ export function updateLeadResponse(leadId: string): void {
     .run({ now: new Date().toISOString(), id: leadId });
 }
 
-/** Atualiza o estágio do pipeline buscando o lead por telefone normalizado. */
+/** Atualiza o estágio do pipeline buscando o lead por telefone normalizado (usa índice normalized_phone). */
 export function updateLeadStatusByPhone(normalizedPhone: string, status: PipelineStatus): boolean {
-  const lead = getLeads().find(
-    (l) => l.phone && normalizePhone(l.phone) === normalizedPhone
-  );
-  if (!lead) return false;
+  const row = getDb().prepare("SELECT id FROM leads WHERE normalized_phone = ? LIMIT 1").get(normalizedPhone) as any;
+  if (!row) {
+    // fallback legacy sem normalized_phone preenchido
+    const lead = getLeads().find((l) => l.phone && normalizePhone(l.phone) === normalizedPhone);
+    if (!lead) return false;
+    const r = getDb().prepare("UPDATE leads SET pipeline_status = @status, updated_at = @now WHERE id = @id").run({ status, now: new Date().toISOString(), id: lead.id });
+    return r.changes > 0;
+  }
   const result = getDb()
     .prepare("UPDATE leads SET pipeline_status = @status, updated_at = @now WHERE id = @id")
-    .run({ status, now: new Date().toISOString(), id: lead.id });
+    .run({ status, now: new Date().toISOString(), id: row.id });
   return result.changes > 0;
 }
 
@@ -903,9 +919,16 @@ export function updateLeadStatusByPhone(normalizedPhone: string, status: Pipelin
  * Retorna o lead atualizado ou null se não encontrado.
  */
 export function setDoNotContactByPhone(normalizedPhone: string, blocked = true): StoredLead | null {
-  const lead = getLeads().find(
-    (l) => l.phone && normalizePhone(l.phone) === normalizedPhone
-  );
+  const row = getDb().prepare("SELECT * FROM leads WHERE normalized_phone = ? LIMIT 1").get(normalizedPhone) as any;
+  if (row) {
+    getDb()
+      .prepare("UPDATE leads SET do_not_contact = @blocked, updated_at = @now WHERE id = @id")
+      .run({ blocked: blocked ? 1 : 0, now: new Date().toISOString(), id: row.id });
+    const lead = rowToLead(row);
+    return { ...lead, doNotContact: blocked };
+  }
+  // fallback legacy
+  const lead = getLeads().find((l) => l.phone && normalizePhone(l.phone) === normalizedPhone);
   if (!lead) return null;
   getDb()
     .prepare("UPDATE leads SET do_not_contact = @blocked, updated_at = @now WHERE id = @id")

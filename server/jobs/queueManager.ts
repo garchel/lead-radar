@@ -1,11 +1,6 @@
 
-import { upsertJob, replaceJobs, getAllJobs, upsertLead, updateLeadAnalysis, getLeadById, getLandingPageById, getDueFollowUps, ensureCitiesLoaded, pickNextCities, markCitySearched, getBusinessCategories, getColdLeads, createInteraction } from "../store/db";
+import { upsertJob, replaceJobs, getAllJobs, upsertLead, updateLeadAnalysis, getLeadById, getDueFollowUps, ensureCitiesLoaded, pickNextCities, markCitySearched, getBusinessCategories, getColdLeads, createInteraction, getSetting } from "../store/db";
 import { StoredLead } from "../store/types";
-import {
-  createLandingPageRecord,
-  deployLandingPage,
-  approveLandingPage,
-} from "../landingPage/service";
 import { searchBusinesses, analyzeLead } from "../services/prospectingService";
 import { buildStableLeadId } from "../services/leadIdentity";
 import { enrichLeadBatch } from "../enrichment";
@@ -17,7 +12,6 @@ export type JobType =
   | 'batch_prospecting'
   | 'batch_lead_analysis'
   | 'mcp_autopilot'
-  | 'landing_page_creation'
   | 'follow_up_batch'
   | 'cold_leads_review';
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
@@ -198,8 +192,6 @@ class QueueManager {
         await this.handleBatchLeadAnalysis(job);
       } else if (job.type === 'mcp_autopilot') {
         await this.handleMcpAutopilot(job);
-      } else if (job.type === 'landing_page_creation') {
-        await this.handleLandingPageCreation(job);
       } else if (job.type === 'follow_up_batch') {
         await this.handleFollowUpBatch(job);
       } else if (job.type === 'cold_leads_review') {
@@ -450,8 +442,6 @@ class QueueManager {
         };
       case 'batch_lead_analysis':
         return { analyzed: r.analyzed ?? undefined };
-      case 'landing_page_creation':
-        return { lpUrl: r.url || r.deployUrl || undefined, leadName: r.businessName || undefined };
       case 'follow_up_batch':
         return { totalDue: r.totalDue ?? undefined };
       case 'cold_leads_review':
@@ -570,15 +560,26 @@ class QueueManager {
     this.addLog(job, `✔ ${saved.length} leads persistidos.`, 'success');
     job.progress = 45;
 
-    // Step 3: Enriquecimento automático
-    this.addLog(job, `[Passo 3/6] Enriquecendo leads (Google Places, CNPJ, e-mail)...`, 'info');
-    const { enriched } = await enrichLeadBatch(saved);
-    this.addLog(job, `Enriquecimento: ${enriched}/${saved.length} leads com dados adicionais.`, enriched > 0 ? 'info' : 'warning');
+    // Step 3: Enriquecimento automático (respeita toggle)
+    const shouldEnrich = getSetting("automation_autopilot_auto_enrich") !== "false";
+    if (shouldEnrich) {
+      this.addLog(job, `[Passo 3/6] Enriquecendo leads (Google Places, CNPJ, e-mail)...`, 'info');
+      const { enriched } = await enrichLeadBatch(saved);
+      this.addLog(job, `Enriquecimento: ${enriched}/${saved.length} leads com dados adicionais.`, enriched > 0 ? 'info' : 'warning');
+    } else {
+      this.addLog(job, `[Passo 3/6] Enriquecimento desabilitado em Automação → pulado.`, 'warning');
+    }
     job.progress = 60;
 
-    // Step 4: Análise de IA persistida no lead
-    this.addLog(job, `[Passo 4/6] Gerando diagnóstico de vendas com IA para os melhores alvos...`, 'info');
-    const topLeads = saved.slice(0, Math.min(3, saved.length));
+    // Step 4: Análise de IA persistida no lead (respeita toggle)
+    const topNSetting = getSetting("automation_autopilot_analyze_top_n");
+    const topN = topNSetting !== null ? Math.max(0, Math.min(5, Number(topNSetting) || 0)) : 3;
+    if (topN === 0) {
+      this.addLog(job, `[Passo 4/6] Análise IA desabilitada em Automação → pulado.`, 'warning');
+    } else {
+      this.addLog(job, `[Passo 4/6] Gerando diagnóstico de vendas com IA para os melhores alvos...`, 'info');
+    }
+    const topLeads = topN === 0 ? [] : saved.slice(0, Math.min(topN, saved.length));
     const analyses: any[] = [];
     for (const lead of topLeads) {
       let analysis;
@@ -613,34 +614,30 @@ class QueueManager {
     });
     job.progress = 92;
 
-    // Step 5.5: (opcional) enviar os pitches de contato
+    // Step 5.5: (opcional) enviar os pitches de contato (respeita toggle global)
     let sentContacts: any[] = [];
-    if (sendPitches) {
-      this.addLog(job, `Enviando mensagens de contato aos ${topLeads.length} alvos qualificados...`, 'info');
-      for (const lead of topLeads) {
-        try {
-          const result = await dispatchLeadContact(lead);
-          sentContacts.push({ leadId: lead.id, channel: result.channel, status: result.status, to: result.to, interactionId: result.interactionId });
-          this.addLog(job, `${lead.name}: ${result.status} (${result.channel}).`, result.status === 'failed' ? 'error' : 'success');
-          if (result.status !== 'sent') {
-            throw new Error(`Falha ao contatar ${lead.name}: ${result.detail}`);
+    const globalSend = getSetting("automation_autopilot_send_pitches") === "true";
+    const shouldSend = globalSend || sendPitches === true;
+    if (shouldSend) {
+      if (!globalSend && sendPitches) {
+        this.addLog(job, `Envio de pitches bloqueado por Automação (toggle desligado) → pulado.`, 'warning');
+      } else {
+        this.addLog(job, `Enviando mensagens de contato aos ${topLeads.length} alvos qualificados...`, 'info');
+        for (const lead of topLeads) {
+          try {
+            const result = await dispatchLeadContact(lead);
+            sentContacts.push({ leadId: lead.id, channel: result.channel, status: result.status, to: result.to, interactionId: result.interactionId });
+            this.addLog(job, `${lead.name}: ${result.status} (${result.channel}).`, result.status === 'failed' ? 'error' : 'success');
+            if (result.status !== 'sent') {
+              throw new Error(`Falha ao contatar ${lead.name}: ${result.detail}`);
+            }
+          } catch (e: any) {
+            throw new Error(`Falha ao contatar ${lead.name}: ${e?.message || e}`);
           }
-        } catch (e: any) {
-          throw new Error(`Falha ao contatar ${lead.name}: ${e?.message || e}`);
         }
       }
-    }
-
-    // Step 6: (opcional) criar Landing Pages
-    let landingPages: any[] = [];
-    if (createLandingPages) {
-      this.addLog(job, `[Passo 6/6] Gerando Landing Pages para os alvos qualificados...`, 'info');
-      for (const lead of topLeads) {
-        const concept = analyses.find((a) => a.leadId === lead.id)?.analysis?.landingPageConcept;
-        const lp = createLandingPageRecord(lead, concept, job.id);
-        landingPages.push({ id: lp.id, slug: lp.slug, status: lp.status });
-        this.addLog(job, `Landing Page "${lp.slug}" criada (aguardando aprovação).`, 'success');
-      }
+    } else {
+      this.addLog(job, `Envio de pitches desabilitado em Automação → pulado.`, 'warning');
     }
 
     job.result = {
@@ -651,7 +648,6 @@ class QueueManager {
       leads: saved,
       analyses,
       pitches,
-      landingPages,
       sentContacts,
     };
   }
@@ -663,45 +659,6 @@ class QueueManager {
     const message = analysis?.customPitchWhatsApp;
     if (!full || typeof message !== 'string' || !message.trim()) return null;
     return `https://wa.me/${full}?text=${encodeURIComponent(message)}`;
-  }
-
-  // Task Handler 4: Landing Page Creation (generates HTML + optional local deploy)
-  private async handleLandingPageCreation(job: Job) {
-    const { leadId, concept, autoDeploy = false } = job.payload;
-
-    this.addLog(job, `Iniciando criação de Landing Page para o lead "${leadId}".`, 'info');
-    job.progress = 10;
-
-    const lead = getLeadById(leadId);
-    if (!lead) {
-      throw new Error(`Lead "${leadId}" não encontrado. Crie e persista o lead antes de criar a Landing Page.`);
-    }
-
-    job.progress = 35;
-    this.addLog(job, `Gerando HTML de conversão a partir do conceito...`, 'info');
-
-    const lp = createLandingPageRecord(lead, concept, job.id);
-    job.progress = 60;
-    this.addLog(job, `Landing Page "${lp.slug}" gerada e em aguardo de aprovação.`, 'success');
-
-    if (autoDeploy) {
-      this.addLog(job, `Auto-deploy solicitado — aprovando e publicando...`, 'warning');
-      const approved = approveLandingPage(lp.id);
-      if (!approved) throw new Error(`Landing Page ${lp.id} não pôde ser aprovada antes do deploy.`);
-      const deployed = await deployLandingPage(lp.id);
-      if (!deployed?.url) throw new Error('O deploy foi concluído sem retornar uma URL pública.');
-      this.addLog(job, `Landing Page publicada em ${deployed.url}.`, 'success');
-    }
-
-    const finalLp = getLandingPageById(lp.id);
-    job.progress = 95;
-    job.result = {
-      landingPageId: lp.id,
-      slug: lp.slug,
-      status: finalLp?.status || lp.status,
-      url: finalLp?.url || lp.url || null,
-      previewUrl: `/landing-pages/${lp.slug}`,
-    };
   }
 
   // Task Handler 5: Follow-up batch (recontatos autorizados)

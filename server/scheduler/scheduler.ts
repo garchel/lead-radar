@@ -1,10 +1,5 @@
 import { Cron } from "croner";
-import {
-  getSchedules,
-  getScheduleById,
-  upsertSchedule,
-  countLandingPagesCreatedToday,
-} from "../store/db";
+import { getSchedules, getScheduleById, upsertSchedule } from "../store/db";
 import { Schedule } from "../store/types";
 import { queueManager } from "../jobs/queueManager";
 import { getSchedulerConfig } from "../config";
@@ -120,17 +115,6 @@ class Scheduler {
     const config = getSchedulerConfig();
     if (!config.enabled) return;
 
-    // Guardrail: limitar criação de LPs por dia (apenas autopilot cria LP).
-    if (schedule.jobType === "mcp_autopilot") {
-      const today = countLandingPagesCreatedToday();
-      if (today >= config.maxLandingPagesPerDay) {
-        console.warn(
-          `[Scheduler] "${schedule.name}" pulado: limite de ${config.maxLandingPagesPerDay} LPs/dia atingido (${today}).`
-        );
-        return;
-      }
-    }
-
     const now = new Date().toISOString();
     const current = getScheduleById(schedule.id) || schedule;
     upsertSchedule({ ...current, lastRunAt: now });
@@ -169,7 +153,7 @@ class Scheduler {
     this.load();
     const total = this.crons.size;
     console.log(
-      `[Scheduler] ${total} agendamento(s) ativo(s). Limite de LPs/dia: ${getSchedulerConfig().maxLandingPagesPerDay}.`
+      `[Scheduler] ${total} agendamento(s) ativo(s).`
     );
   }
 

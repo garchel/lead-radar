@@ -146,6 +146,20 @@ export type ProjectStatus = "em_andamento" | "pausado" | "cancelado" | "concluid
 
 export type ProjectPriority = "baixa" | "media" | "alta";
 
+/**
+ * Situação da etapa "desenvolvimento" em relação ao agente de IA de código.
+ * - `aguardando_agente`: projeto na etapa desenvolvimento, agente ainda não começou.
+ * - `em_desenvolvimento`: o agente recebeu o "kit de dados" e está codando no repositório.
+ * - `codigo_entregue`: o agente avisou que o código está pronto (submit_project_code) e
+ *   o preview deve ser validado pelo humano.
+ * - `aprovado`: o ser humano aprovou o código entregue (pode avançar para revisão/deploy).
+ */
+export type ProjectDevStatus =
+  | "aguardando_agente"
+  | "em_desenvolvimento"
+  | "codigo_entregue"
+  | "aprovado";
+
 /** Tipo de projeto: landing page (foco em conversão) ou site institucional. */
 export type ProjectType = "landing_page" | "site_institucional";
 
@@ -184,6 +198,18 @@ export interface Project {
   devNotes?: string;
   reviewNotes?: string;
   deployUrl?: string;
+  /** Repositório GitHub criado pelo/para o agente de IA de código (etapa desenvolvimento). Ex.: https://github.com/org/repo. */
+  githubRepoUrl?: string;
+  /** Nome do dono/org do repositório (extraído de githubRepoUrl). */
+  repoOwner?: string;
+  /** Nome do repositório (extraído de githubRepoUrl). Ex.: "site-clinica-odonto-plus". */
+  repoName?: string;
+  /** URL temporária / GitHub Pages de preview antes do deploy final (etapa desenvolvimento → revisão). */
+  previewUrl?: string;
+  /** Situação atual da etapa desenvolvimento perante o agente de IA. */
+  devStatus?: ProjectDevStatus;
+  /** Última notificação/mensagem do agente de IA sobre o andamento do código. */
+  devMessage?: string;
   dueDate?: string;
   completedAt?: string;
   createdAt: string;

@@ -328,7 +328,9 @@ Cada item do array deve ter as seguintes propriedades:
     if (businesses.length === 0) {
       throw new Error("Gemini não retornou empresas reais para os filtros informados. Tente ampliar a região/categoria ou use SerpAPI para resultados reais do Google Maps.");
     }
-    return { source: "gemini", businesses };
+    const withTickets = attachSuggestedTickets(businesses);
+    const marked = markAlreadySaved(withTickets);
+    return { source: "gemini", businesses: marked };
   } catch (err: any) {
     if (err instanceof SerpApiQuotaError) throw err;
     console.warn("Busca Gemini falhou (cota/rede/API):", err?.message || err);

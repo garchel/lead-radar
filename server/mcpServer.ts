@@ -4,21 +4,22 @@ import { z } from "zod";
 import { Express, Request, Response } from "express";
 
 import { queueManager } from "./jobs/queueManager";
-import { getLeadById, upsertLead, getLeads, getLandingPages, getLandingPageById, upsertSchedule, getPipelineSummary, getDueFollowUps, ensureCitiesLoaded, pickNextCities, getColdLeads } from "./store/db";
+import { getLeadById, upsertLead, getLeads, upsertSchedule, getPipelineSummary, getDueFollowUps, ensureCitiesLoaded, pickNextCities, getColdLeads } from "./store/db";
 import { CronPattern } from "croner";
 import { scheduler } from "./scheduler/scheduler";
 import { buildLeadDossier } from "./dossier/dossier";
-import {
-  createLandingPageRecord,
-  deployLandingPage,
-  approveLandingPage,
-} from "./landingPage/service";
 import { StoredLead, PipelineStatus } from "./store/types";
 import { enrichLead } from "./enrichment";
 import { dispatchLeadContact, recordInteractionOutcome } from "./services/interactionService";
 import { searchBusinesses, analyzeLead } from "./services/prospectingService";
 import { syncLeadProject } from "./projects/service";
 import { syncTypeformBriefing } from "./typeform/service";
+import {
+  buildProjectDevKit,
+  buildProjectDevPrompt,
+  submitProjectCode,
+  approveProjectCode,
+} from "./projects/devKit";
 
 
 // Shared Categories
@@ -341,89 +342,113 @@ export function createLeadRadarMcpServer() {
     }
   );
 
-  // TOOL 7: create_landing_page
+  // TOOL 12: get_project_dev_kit
   server.tool(
-    "create_landing_page",
-    "Enfileira a criação de uma Landing Page para um lead e retorna o job + ID da página. A página nasce em 'aguardando_aprovacao'.",
-    {
-      leadId: z.string().describe("ID do lead"),
-      concept: z.any().optional().describe("Conceito de LP (heroHeadline, heroSubheadline, callToAction, etc.)"),
-      autoDeploy: z.boolean().optional().default(false).describe("Se true, aprova e publica automaticamente (use com cautela)"),
-    },
-    async ({ leadId, concept, autoDeploy }) => {
-      const lead = getLeadById(leadId);
-      if (!lead) {
-        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Lead não encontrado. Persista o lead antes de criar a Landing Page." }, null, 2) }] };
-      }
-      if (!concept) {
-        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Conceito da Landing Page é obrigatório." }, null, 2) }] };
-      }
-      const job = queueManager.createJob(
-        "landing_page_creation",
-        `Criar Landing Page ${lead?.name ? `para ${lead.name}` : ""}`.trim(),
-        { leadId, concept, autoDeploy }
-      );
-      return {
-        content: [{ type: "text", text: JSON.stringify({ success: true, jobId: job.id, status: "aguardando_aprovacao", note: "Acompanhe o job e aprove antes de publicar." }, null, 2) }],
-      };
-    }
-  );
-
-  // TOOL 8: list_landing_pages
-  server.tool(
-    "list_landing_pages",
-    "Lista as Landing Pages geradas e seus estágios/status.",
-    {},
-    async () => {
-      const pages = getLandingPages().map((lp) => ({
-        id: lp.id,
-        businessName: lp.businessName,
-        status: lp.status,
-        stage: lp.stage,
-        url: lp.url || null,
-      }));
-      return {
-        content: [{ type: "text", text: JSON.stringify({ success: true, count: pages.length, landingPages: pages }, null, 2) }],
-      };
-    }
-  );
-
-  // TOOL 9: get_landing_page
-  server.tool(
-    "get_landing_page",
-    "Obtém os detalhes de uma Landing Page (incluindo o HTML gerado).",
-    { id: z.string().describe("ID ou slug da Landing Page") },
-    async ({ id }) => {
-      const lp = getLandingPageById(id);
-      if (!lp) return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Não encontrada" }, null, 2) }] };
-      return { content: [{ type: "text", text: JSON.stringify({ success: true, landingPage: lp }, null, 2) }] };
-    }
-  );
-
-  // TOOL 10: approve_landing_page
-  server.tool(
-    "approve_landing_page",
-    "Guarda-limite humano: aprova uma Landing Page antes da publicação. A página só pode ser publicada após aprovada.",
-    { id: z.string().describe("ID da Landing Page") },
-    async ({ id }) => {
-      const approved = approveLandingPage(id);
-      if (!approved) return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Não encontrada" }, null, 2) }] };
-      return { content: [{ type: "text", text: JSON.stringify({ success: true, status: approved.status, stage: approved.stage }, null, 2) }] };
-    }
-  );
-
-  // TOOL 11: deploy_landing_page
-  server.tool(
-    "deploy_landing_page",
-    "Publica uma Landing Page aprovada e retorna a URL pública.",
-    { id: z.string().describe("ID da Landing Page aprovada") },
-    async ({ id }) => {
+    "get_project_dev_kit",
+    "Entrega o 'kit de dados' do projeto (lead + briefing/Typeform + copy + design + conceito de IA + repositório) e o prompt pronto para implementar a Landing Page do zero no GitHub. Use para obter todas as informações necessárias a codar o site.",
+    { projectId: z.string().describe("ID do projeto") },
+    async ({ projectId }) => {
       try {
-        const deployed = await deployLandingPage(id);
-        if (!deployed) return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Não encontrada" }, null, 2) }] };
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, url: deployed.url, status: deployed.status }, null, 2) }] };
-      } catch (e: any) {
-        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: e?.message || "Falha no deploy" }, null, 2) }] };
+        const kit = buildProjectDevKit(projectId);
+        const prompt = buildProjectDevPrompt(projectId);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  success: true,
+                  projectId,
+                  type: kit.typeLabel,
+                  project: {
+                    name: kit.project.name,
+                    stage: kit.project.stage,
+                    devStatus: kit.project.devStatus || "aguardando_agente",
+                    repo: kit.repo,
+                    previewUrl: kit.project.previewUrl || null,
+                  },
+                  lead: kit.lead
+                    ? {
+                        name: kit.lead.name,
+                        category: kit.lead.category ?? null,
+                        city: kit.lead.city ?? null,
+                        phone: kit.lead.phone ?? null,
+                        rating: kit.lead.rating ?? null,
+                        reviewsCount: kit.lead.reviewsCount ?? null,
+                        instagramHandle: kit.lead.instagramHandle ?? null,
+                        websiteUrl: kit.lead.websiteUrl ?? null,
+                        keyInsights: kit.lead.keyInsights || [],
+                      }
+                    : null,
+                  briefing: kit.briefing,
+                  copy: kit.project.copy || "",
+                  designNotes: kit.project.designNotes || "",
+                  devNotes: kit.project.devNotes || "",
+                  landingPageConcept: kit.landingPageConcept || null,
+                  prompt,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (err: any) {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err?.message || "Projeto não encontrado." }, null, 2) }] };
+      }
+    }
+  );
+
+  // TOOL 13: submit_project_code
+  server.tool(
+    "submit_project_code",
+    "Confirma ao LeadRadar que o agente de IA entregou o código da Landing Page no repositório GitHub, opcionalmente com a URL de preview. Marca o projeto como 'codigo_entregue' aguardando a revisão/aprovação humana.",
+    {
+      projectId: z.string().describe("ID do projeto"),
+      repoUrl: z.string().optional().describe("URL do repositório GitHub (ex.: https://github.com/org/repo)"),
+      previewUrl: z.string().optional().describe("URL temporária / GitHub Pages do preview"),
+      message: z.string().optional().describe("Mensagem resumo de entrega (também usada para notificação)"),
+    },
+    async ({ projectId, repoUrl, previewUrl, message }) => {
+      try {
+        const project = submitProjectCode(projectId, { repoUrl, previewUrl, message });
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  success: true,
+                  projectId,
+                  devStatus: project.devStatus,
+                  repo: project.githubRepoUrl ?? null,
+                  previewUrl: project.previewUrl ?? null,
+                  message: project.devMessage ?? null,
+                  note: "Código registrado. Um humano ainda precisa aprovar antes de avançar para revisão/deploy.",
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (err: any) {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err?.message || "Falha ao registrar entrega do código." }, null, 2) }] };
+      }
+    }
+  );
+
+  // TOOL 14: approve-project (humano) — via MCP, marca aprovado.
+  server.tool(
+    "approve_project_code",
+    "Guarda-limite humano: aprova o código entregue pelo agente. O projeto segue para revisão/deploy somente após esta aprovação.",
+    { projectId: z.string().describe("ID do projeto") },
+    async ({ projectId }) => {
+      try {
+        const project = approveProjectCode(projectId);
+        return { content: [{ type: "text", text: JSON.stringify({ success: true, projectId, devStatus: project.devStatus }, null, 2) }] };
+      } catch (err: any) {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err?.message || "Projeto não encontrado." }, null, 2) }] };
       }
     }
   );
@@ -909,11 +934,6 @@ export function registerMcpRoutes(app: Express) {
         { name: "update_crm_status", description: "Atualiza estagio no Funil de Vendas do Mini-CRM (persiste no banco)." },
         { name: "create_lead", description: "Cria/atualiza um lead no banco compartilhado." },
         { name: "list_leads", description: "Lista os leads armazenados no banco." },
-        { name: "create_landing_page", description: "Enfileira a criação de uma Landing Page (aguarda aprovação)." },
-        { name: "list_landing_pages", description: "Lista as Landing Pages e seus estágios/status." },
-        { name: "get_landing_page", description: "Obtém detalhes/HTML de uma Landing Page." },
-        { name: "approve_landing_page", description: "Guarda-limite humano: aprova uma Landing Page antes de publicar." },
-        { name: "deploy_landing_page", description: "Publica uma Landing Page aprovada e retorna a URL." },
         { name: "enrich_lead", description: "Enriquece um lead com dados reais (Google Places, CNPJ, e-mail)." },
         { name: "send_contact", description: "Envia mensagem de contato ao lead e aplica a política anti-duplicidade." },
         { name: "record_interaction_outcome", description: "Registra a resposta da empresa e calcula a próxima janela de contato." },
@@ -921,6 +941,9 @@ export function registerMcpRoutes(app: Express) {
         { name: "schedule_prospecting", description: "Agenda prospecção periódica via cron (autopilot, batch ou follow_up_reminder)." },
         { name: "export_dossier", description: "Gera o Dossiê Executivo HTML de um lead a partir da análise persistida." },
         { name: "sync_typeform_briefing", description: "Importa respostas do formulário de briefing do Typeform nos projetos." },
+        { name: "get_project_dev_kit", description: "Entrega o kit de dados + prompt do projeto para o agente de IA de código." },
+        { name: "submit_project_code", description: "Agente informa que o código foi entregue (repo + preview) — aguarda aprovação humana." },
+        { name: "approve_project_code", description: "Guarda-limite humano: aprova o código entregue pelo agente." },
 
       ],
       resources: ["leads://categories", "leads://pipeline", "leads://queue_status"],
@@ -995,6 +1018,12 @@ export function registerMcpRoutes(app: Express) {
       return res.status(404).json({ error: "Sessão MCP não encontrada ou expirada" });
     }
 
-    await transport.handlePostMessage(req, res);
+    // O express.json() global (server.ts) já consome o body do request.
+    // handlePostMessage leria o stream de novo e falharia com "stream is not readable".
+    // Passamos o body já parseado (req.body) para que ele não tente reler o stream.
+    const parsedBody = (req as any).body && typeof (req as any).body === "object"
+      ? (req as any).body
+      : undefined;
+    await transport.handlePostMessage(req, res, parsedBody);
   });
 }

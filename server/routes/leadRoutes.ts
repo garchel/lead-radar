@@ -66,16 +66,25 @@ export function registerLeadRoutes(app: Express) {
     });
   });
 
-  // Update lead (status / notes)
+  // Update lead (status / notes) — whitelist para evitar mass-assignment de id/doNotContact/normalized_*
+  const ALLOWED_PATCH_FIELDS = new Set([
+    "name","category","address","neighborhood","city","state","phone","email","cnpj","googlePlaceId",
+    "rating","reviewsCount","websiteStatus","websiteUrl","instagramHandle","lat","lng",
+    "opportunityScore","opportunityLevel","estimatedValue","keyInsights","pipelineStatus","notes","analysis","estimated_value",
+  ]);
   app.patch("/api/leads/:id", (req: Request, res: Response) => {
     const existing = getLeadById(req.params.id);
     if (!existing) return res.status(404).json({ success: false, error: "Lead não encontrado." });
-    const updated = upsertLead({ ...existing, ...req.body } as StoredLead);
+    const sanitized: any = {};
+    for (const [k, v] of Object.entries(req.body || {})) {
+      if (ALLOWED_PATCH_FIELDS.has(k)) sanitized[k] = v;
+    }
+    const updated = upsertLead({ ...existing, ...sanitized } as StoredLead);
     // Mover o lead entre os estágios mantém o Kanban de Projetos sincronizado.
     const statusChanged =
-      typeof req.body?.pipelineStatus === "string" && req.body.pipelineStatus !== existing.pipelineStatus;
+      typeof sanitized.pipelineStatus === "string" && sanitized.pipelineStatus !== existing.pipelineStatus;
     if (statusChanged) {
-      syncLeadProject(updated, { projectType: req.body?.projectType });
+      syncLeadProject(updated, { projectType: (req.body as any)?.projectType });
     }
     res.json({ success: true, lead: updated });
   });

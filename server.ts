@@ -1,36 +1,49 @@
-﻿import express from "express";
+﻿import "dotenv/config";
+import express from "express";
+import helmet from "helmet";
+import cors from "cors";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import dotenv from "dotenv";
 import { registerMcpRoutes } from "./server/mcpServer";
 import { registerQueueRoutes } from "./server/jobs/queueRoutes";
 import { registerLeadRoutes } from "./server/routes/leadRoutes";
-import { registerLandingPageRoutes } from "./server/routes/landingPageRoutes";
 import { registerProjectRoutes } from "./server/routes/projectRoutes";
 import { registerTypeformRoutes } from "./server/routes/typeformRoutes";
 import { registerEventRoutes } from "./server/routes/eventRoutes";
 import { registerScheduleRoutes } from "./server/routes/scheduleRoutes";
 import { registerCityRoutes } from "./server/routes/cityRoutes";
 import { registerWhatsAppWebhook } from "./server/routes/whatsappWebhookRoutes";
+import { registerAutomationRoutes } from "./server/routes/automationRoutes";
 import { scheduleBackups } from "./server/backup/backupService";
 import { scheduler, ensureDefaultFollowUpSchedule } from "./server/scheduler/scheduler";
 import { startTypeformPolling } from "./server/typeform/polling";
 import { getSchedulerConfig, getSerpApiConfig, getProspectingProvider } from "./server/config";
 import { analyzeLead, searchBusinesses } from "./server/services/prospectingService";
 import { getSerpApiUsage, listSerpApiKeys, addSerpApiKey, deleteSerpApiKey, activateSerpApiKey, updateSerpApiKey, getLastSerpApiRaw } from "./server/services/serpApi";
-
-dotenv.config();
+import { rateLimit } from "./server/middleware/rateLimit";
 
 const app = express();
 
 // Exportado para testes (supertest) sem iniciar o listen
 export { app };
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
 
-app.use(express.json());
+app.set("trust proxy", 1);
+const isDev = process.env.NODE_ENV !== "production";
+// Em dev o Helmet padrão bloqueia inline scripts e ws:// do Vite HMR.
+// Desativa CSP/Cross-Origin apenas em dev; em prod mantém proteção completa.
+app.use(helmet({
+  contentSecurityPolicy: isDev ? false : undefined,
+  crossOriginEmbedderPolicy: false,
+}));
+app.use(cors());
+app.use(express.json({
+  limit: "100kb",
+  verify: (req: any, _res, buf) => { req.rawBody = buf.toString("utf8"); },
+}));
+app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 
 // Rate limiting global (ativado apenas se API_RATE_LIMIT estiver definido, ex.: "120")
-import { rateLimit } from "./server/middleware/rateLimit";
 app.use(rateLimit(Number(process.env.API_RATE_LIMIT || 0)));
 
 // Auth opcional para rotas de MUTAÇÃO (POST/PUT/PATCH/DELETE) fora do webhook.
@@ -49,13 +62,13 @@ app.use((req, res, next) => {
 registerMcpRoutes(app);
 registerQueueRoutes(app);
 registerLeadRoutes(app);
-registerLandingPageRoutes(app);
 registerProjectRoutes(app);
 registerTypeformRoutes(app);
 registerEventRoutes(app);
 registerScheduleRoutes(app);
 registerCityRoutes(app);
 registerWhatsAppWebhook(app);
+registerAutomationRoutes(app);
 
 app.get("/api/health", (_req, res) => {
   let hasSerpApiKey = Boolean((process.env.SERPAPI_API_KEY || "").trim());
@@ -185,17 +198,9 @@ app.get("/api/serpapi/last-search", (_req, res) => {
 });
 
 app.post("/api/search-businesses", async (req, res) => {
-  const { location, state, category, query, filterNoWebsiteOnly, provider } = req.body || {};
-  if (
-    typeof location !== "string" || !location.trim() ||
-    typeof state !== "string" || !/^[A-Za-z]{2}$/.test(state.trim()) ||
-    typeof category !== "string" || !category.trim() ||
-    typeof filterNoWebsiteOnly !== "boolean"
-  ) {
-    return res.status(400).json({
-      success: false,
-      error: "Informe location, state, category e filterNoWebsiteOnly válidos.",
-    });
+  const { location, state, category, query, filterNoWebsiteOnly, provider, useCityRotation, citiesPerRun, rotationUf, minPopulation, maxPopulation, minPropensity } = req.body || {};
+  if (typeof category !== "string" || !category.trim() || typeof filterNoWebsiteOnly !== "boolean") {
+    return res.status(400).json({ success: false, error: "Informe category e filterNoWebsiteOnly válidos." });
   }
   if (query !== undefined && typeof query !== "string") {
     return res.status(400).json({ success: false, error: "query deve ser uma string quando informado." });
@@ -203,7 +208,56 @@ app.post("/api/search-businesses", async (req, res) => {
   if (provider !== undefined && !["serpapi", "gemini"].includes(provider)) {
     return res.status(400).json({ success: false, error: "provider deve ser 'serpapi' ou 'gemini'." });
   }
-
+  const isRotation = Boolean(useCityRotation);
+  // filtro de propensão (0 desativa)
+  if (minPropensity !== undefined) {
+    const n = Number(minPropensity);
+    if (!Number.isFinite(n) || n < 0 || n > 100) return res.status(400).json({ success: false, error: "minPropensity deve ser 0-100." });
+    if (n > 0 && category !== "Todas as Categorias") {
+      try {
+        const { getBusinessCategories } = await import("./server/store/db");
+        const cat = getBusinessCategories({ activeOnly: true }).find((c: any) => c.name.toLowerCase() === category.trim().toLowerCase());
+        if (cat && cat.propensity < n) return res.status(400).json({ success: false, error: `Categoria "${category}" tem propensão ${cat.propensity} < ${n}. Escolha outra categoria ou reduza o filtro.` });
+      } catch {}
+    }
+  }
+  if (isRotation) {
+    const n = Math.max(1, Math.min(10, Math.floor(Number(citiesPerRun) || 3)));
+    if (rotationUf !== undefined && rotationUf !== null && rotationUf !== "" && !/^[A-Za-z]{2}$/.test(String(rotationUf).trim())) {
+      return res.status(400).json({ success: false, error: "rotationUf deve ser UF com 2 letras." });
+    }
+    try {
+      const { ensureCitiesLoaded, pickNextCities, markCitySearched } = await import("./server/store/db");
+      ensureCitiesLoaded();
+      const cities = pickNextCities(n, {
+        uf: rotationUf ? String(rotationUf).trim() : undefined,
+        minPopulation: minPopulation != null ? Number(minPopulation) : undefined,
+        maxPopulation: maxPopulation != null ? Number(maxPopulation) : undefined,
+      });
+      if (cities.length === 0) return res.status(400).json({ success: false, error: "Rotação: nenhuma cidade habilitada com os filtros informados." });
+      const all: any[] = [];
+      let lastRaw: any = null;
+      let lastMeta: any = null;
+      let source: any = provider || "serpapi";
+      let cached = false;
+      for (const c of cities) {
+        const result = await searchBusinesses({ location: c.name, state: c.uf, category: category.trim(), query, filterNoWebsiteOnly, provider });
+        source = result.source;
+        if (result.serpApiRaw) lastRaw = result.serpApiRaw;
+        if (result.serpApiMeta) lastMeta = result.serpApiMeta;
+        if (result.cached) cached = true;
+        for (const b of result.businesses) all.push(b);
+        try { markCitySearched(c.ibgeCode); } catch {}
+      }
+      return res.json({ success: true, source, businesses: all, serpApiRaw: lastRaw, serpApiMeta: lastMeta, cached, locationsProcessed: cities.map((c) => `${c.name}/${c.uf}`) });
+    } catch (error: any) {
+      const isQuota = /quota|cota|429|RESOURCE_EXHAUSTED/i.test(error?.message || "");
+      return res.status(isQuota ? 429 : 502).json({ success: false, error: error?.message || "Falha na rotação.", code: isQuota ? "quota_exceeded" : undefined });
+    }
+  }
+  if (typeof location !== "string" || !location.trim() || typeof state !== "string" || !/^[A-Za-z]{2}$/.test(state.trim())) {
+    return res.status(400).json({ success: false, error: "Informe location e state válidos." });
+  }
   try {
     const result = await searchBusinesses({
       location: location.trim(),
@@ -308,24 +362,60 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const httpServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`LeadRadar AI disponível em http://localhost:${PORT}`);
   });
+
+  // Seed base IBGE e categorias no boot (evita latência na 1ª requisição)
+  try {
+    const { ensureCitiesLoaded, ensureCategoriesSeeded } = await import("./server/store/db");
+    const c = ensureCitiesLoaded();
+    const cats = ensureCategoriesSeeded();
+    if (c > 0) console.log(`[boot] Cidades IBGE: ${c} | Categorias: ${cats}`);
+  } catch (e: any) {
+    console.warn("[boot] Falha no seed IBGE/categorias:", e?.message || e);
+  }
 
   // Agenda padrão de recontatos autorizados (visível na UI mesmo com o
   // agendador desligado; dispara diariamente quando o scheduler está ativo).
   ensureDefaultFollowUpSchedule();
 
-  if (getSchedulerConfig().enabled) {
-    scheduler.start();
-  } else {
-    console.log("Agendador desativado (LEADRADAR_SCHEDULER=off).");
+  try {
+    const { getSetting } = await import("./server/store/db");
+    const autoScheduler = getSetting("automation_scheduler_enabled");
+    const schedulerEnabled = autoScheduler !== null ? autoScheduler === "true" : getSchedulerConfig().enabled;
+    if (schedulerEnabled) scheduler.start();
+    else console.log("Agendador desativado (Automação → desligado).");
+
+    const autoBackup = getSetting("automation_backup_enabled");
+    if (autoBackup === "false") console.log("[backup] Desativado em Automação.");
+    else scheduleBackups();
+
+    const autoTypeform = getSetting("automation_typeform_polling_enabled");
+    if (autoTypeform === "false") console.log("[typeform] Polling desativado em Automação.");
+    else startTypeformPolling();
+  } catch {
+    // fallback: comportamento legado
+    if (getSchedulerConfig().enabled) scheduler.start();
+    else console.log("Agendador desativado (LEADRADAR_SCHEDULER=off).");
+    startTypeformPolling();
+    scheduleBackups();
   }
 
-  startTypeformPolling();
-
-  // Snapshot diário do SQLite (data/backups, retenção 14)
-  scheduleBackups();
+  const shutdown = async () => {
+    console.log("[shutdown] Encerrando...");
+    try { (scheduler as any).stop?.(); } catch {}
+    httpServer.close(async () => {
+      try {
+        const { closeDb } = await import("./server/store/schema");
+        closeDb();
+      } catch {}
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(0), 5000);
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 }
 
 // Auto-start exceto quando importado por testes (vitest define NODE_ENV=test)

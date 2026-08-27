@@ -18,8 +18,13 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
   const [viewMode, setViewMode] = useState<'table' | 'cards' | 'raw'>('table');
   const [raw, setRaw] = useState<any>(serpApiRaw || null);
   const [meta, setMeta] = useState<any>(serpApiMeta || null);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'none' | 'has_website'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'none' | 'social_only' | 'has_website'>('all');
   const [onlyNew, setOnlyNew] = useState(false);
+  const [cityFilter, setCityFilter] = useState('');
+  const [stateFilter, setStateFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [sortField, setSortField] = useState<'city' | 'state' | 'category' | 'score' | 'rating' | 'name'>('score');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     if (serpApiRaw) {
@@ -39,10 +44,32 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
     }
   }, [serpApiRaw, serpApiMeta]);
 
-  const filtered = leads.filter((l) => {
+  const uniqueCities = Array.from(new Set(leads.map((l) => l.city).filter(Boolean))).sort();
+  const uniqueStates = Array.from(new Set(leads.map((l) => l.state).filter(Boolean) as string[])).sort();
+  const uniqueCategories = Array.from(new Set(leads.map((l) => l.category).filter(Boolean))).sort();
+
+  const filteredBase = leads.filter((l) => {
     if (onlyNew && (l.isAlreadySaved || savedLeadIds.has(l.id))) return false;
-    if (filterStatus === 'all') return true;
-    return l.websiteStatus === filterStatus;
+    if (filterStatus !== 'all' && l.websiteStatus !== filterStatus) return false;
+    if (cityFilter.trim() && !l.city.toLowerCase().includes(cityFilter.trim().toLowerCase())) return false;
+    if (stateFilter !== 'all' && (l.state || '').toUpperCase() !== stateFilter.toUpperCase()) return false;
+    if (categoryFilter !== 'all' && l.category !== categoryFilter) return false;
+    return true;
+  });
+
+  const handleSort = (field: typeof sortField) => {
+    if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortField(field); setSortDir(field === 'score' || field === 'rating' ? 'desc' : 'asc'); }
+  };
+
+  const filtered = [...filteredBase].sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    if (sortField === 'score') return dir * ((a.opportunityScore ?? 0) - (b.opportunityScore ?? 0));
+    if (sortField === 'rating') return dir * ((a.rating ?? 0) - (b.rating ?? 0));
+    if (sortField === 'city') return dir * a.city.localeCompare(b.city, 'pt-BR');
+    if (sortField === 'state') return dir * (a.state || '').localeCompare(b.state || '', 'pt-BR');
+    if (sortField === 'category') return dir * a.category.localeCompare(b.category, 'pt-BR');
+    return dir * a.name.localeCompare(b.name, 'pt-BR');
   });
 
   const newCount = leads.filter((l) => !l.isAlreadySaved && !savedLeadIds.has(l.id)).length;
@@ -104,19 +131,60 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold cursor-pointer">
               <input type="checkbox" checked={onlyNew} onChange={(e) => setOnlyNew(e.target.checked)} className="rounded" />
               Só novas ({newCount})
             </label>
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Site:</span>
             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} className="bg-white border border-slate-200 rounded-lg text-xs px-2.5 py-1.5">
-              <option value="all">Todos ({filtered.length})</option>
-              <option value="none">Sem site ({stats.semSite})</option>
+              <option value="all">Todos ({leads.length}) • Ouro+Prata+Com site</option>
+              <option value="none">Ouro — Sem site ({stats.semSite})</option>
+              <option value="social_only">Prata — Só Instagram ({leads.filter((l)=>l.websiteStatus==='social_only').length})</option>
               <option value="has_website">Com site ({stats.comSite})</option>
             </select>
           </div>
         </div>
+        {/* Filtros avançados tabela */}
+        {viewMode !== 'raw' && (
+          <div className="mt-4 bg-white border border-slate-200 rounded-xl p-3 flex flex-wrap items-end gap-3 text-xs">
+            <div className="flex-1 min-w-[140px]">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Cidade</label>
+              <input value={cityFilter} onChange={(e)=>setCityFilter(e.target.value)} placeholder="Filtrar cidade" className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" />
+            </div>
+            <div className="min-w-[110px]">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Estado</label>
+              <select value={stateFilter} onChange={(e)=>setStateFilter(e.target.value)} className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                <option value="all">Todos estados</option>
+                {uniqueStates.map((st)=><option key={st} value={st}>{st}</option>)}
+              </select>
+            </div>
+            <div className="min-w-[160px] flex-1">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Categoria</label>
+              <select value={categoryFilter} onChange={(e)=>setCategoryFilter(e.target.value)} className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                <option value="all">Todas categorias</option>
+                {uniqueCategories.map((c)=><option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="min-w-[140px]">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Ordenar por</label>
+              <div className="flex gap-1">
+                <select value={sortField} onChange={(e)=>setSortField(e.target.value as any)} className="flex-1 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                  <option value="score">Score</option>
+                  <option value="city">Cidade</option>
+                  <option value="state">Estado</option>
+                  <option value="category">Categoria</option>
+                  <option value="rating">Avaliação</option>
+                  <option value="name">Nome</option>
+                </select>
+                <button onClick={()=>setSortDir((d)=>d==='asc'?'desc':'asc')} className="px-2 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-bold" title={sortDir==='asc'?'Crescente':'Decrescente'}>{sortDir==='asc'?'↑':'↓'}</button>
+              </div>
+            </div>
+            <div className="text-[11px] text-slate-500">
+              Exibindo <strong>{filtered.length}</strong> de <strong>{leads.length}</strong>
+              {(cityFilter || stateFilter!=='all' || categoryFilter!=='all' || filterStatus!=='all') && <button onClick={()=>{setCityFilter('');setStateFilter('all');setCategoryFilter('all');setFilterStatus('all');}} className="ml-2 text-indigo-600 hover:underline font-bold">Limpar filtros</button>}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="px-4 sm:px-6 lg:px-8 pb-12">
@@ -129,13 +197,13 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
                 <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   <tr>
                     <th className="px-3 py-2.5 text-left">#</th>
-                    <th className="px-3 py-2.5 text-left">Empresa</th>
-                    <th className="px-3 py-2.5 text-left">Categoria</th>
+                    <th className="px-3 py-2.5 text-left cursor-pointer hover:text-indigo-600" onClick={()=>handleSort('name')}>Empresa {sortField==='name' && (sortDir==='asc'?'↑':'↓')}</th>
+                    <th className="px-3 py-2.5 text-left cursor-pointer hover:text-indigo-600" onClick={()=>handleSort('category')}>Categoria {sortField==='category' && (sortDir==='asc'?'↑':'↓')}</th>
                     <th className="px-3 py-2.5 text-left">Endereço</th>
                     <th className="px-3 py-2.5 text-left">Telefone</th>
-                    <th className="px-3 py-2.5 text-center">Avaliação</th>
+                    <th className="px-3 py-2.5 text-center cursor-pointer hover:text-indigo-600" onClick={()=>handleSort('rating')}>Avaliação {sortField==='rating' && (sortDir==='asc'?'↑':'↓')}</th>
                     <th className="px-3 py-2.5 text-center">Site</th>
-                    <th className="px-3 py-2.5 text-center">Score</th>
+                    <th className="px-3 py-2.5 text-center cursor-pointer hover:text-indigo-600" onClick={()=>handleSort('score')}>Score {sortField==='score' && (sortDir==='asc'?'↑':'↓')}</th>
                     <th className="px-3 py-2.5 text-center">Ticket sugerido</th>
                     <th className="px-3 py-2.5 text-center">Ações</th>
                   </tr>
@@ -223,12 +291,15 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
               return (
               <div key={lead.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm leading-tight">{lead.name}</h4>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">{lead.category || 'Categoria não informada'}</div>
+                    <h4 className="font-bold text-slate-900 text-sm leading-tight truncate">{lead.name}</h4>
+                  </div>
                   <span className={`shrink-0 px-2 py-0.5 rounded-full text-[11px] font-bold border ${lead.websiteStatus === 'none' ? 'bg-amber-50 text-amber-700 border-amber-200' : lead.websiteStatus === 'has_website' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600'}`}>
                     {lead.websiteStatus === 'none' ? 'Sem site' : lead.websiteStatus === 'has_website' ? 'Com site' : 'Social'}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-1 flex items-center gap-1"><MapPin className="w-3 h-3" /> {lead.address} • {lead.city}</p>
+                <p className="text-xs text-slate-500 mt-1 flex items-center gap-1"><MapPin className="w-3 h-3" /> {lead.address} • {lead.city} ({lead.state || 'UF'})</p>
                 <p className="text-xs text-slate-600 mt-2 flex items-center gap-1"><Phone className="w-3 h-3" /> {lead.phone || 'Sem telefone'} • <Star className="w-3 h-3 fill-amber-400 text-amber-400" /> {lead.rating} ({lead.reviewsCount})</p>
                 {lead.suggestedTicket ? (
                   <div className="mt-2">

@@ -33,7 +33,7 @@ export function registerQueueRoutes(app: Express) {
       });
     }
 
-    const validTypes: JobType[] = ['batch_prospecting', 'batch_lead_analysis', 'mcp_autopilot', 'landing_page_creation', 'follow_up_batch'];
+    const validTypes: JobType[] = ['batch_prospecting', 'batch_lead_analysis', 'mcp_autopilot', 'follow_up_batch'];
     if (!validTypes.includes(type)) {
       return res.status(400).json({
         success: false,

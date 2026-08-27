@@ -1,6 +1,8 @@
 import { Express, Request, Response } from "express";
 import crypto from "node:crypto";
-import { getLeads, recordCommunication, createInteraction, updateLeadResponse, updateLeadStatusByPhone, setDoNotContactByPhone, getSetting, setSetting } from "../store/db";
+import { getLeads, getLeadById, recordCommunication, createInteraction, updateLeadResponse, updateLeadStatusByPhone, setDoNotContactByPhone, getSetting, setSetting } from "../store/db";
+import { getDb } from "../store/schema";
+import { getAutomationSettings } from "./automationRoutes";
 import { normalizePhone } from "../services/leadIdentity";
 import { resolveWhatsappProvider, type WhatsappProviderChoice } from "../services/contactService";
 import { eventHub } from "../events/eventHub";
@@ -106,8 +108,8 @@ function extractInboundMeta(req: Request): { from: string; text: string; instanc
 /**
  * Valida a assinatura X-Hub-Signature-256 da Meta Cloud API.
  * Se META_APP_SECRET não estiver configurado, não bloqueia (modo dev/local).
- * O body precisa ser o JSON cru — por isso validamos com o header assinado
- * contra o payload serializado (a Meta assina o corpo exato do POST).
+ * Usa o corpo cru (req.rawBody capturado por express.json verify em server.ts)
+ * pois a Meta assina os bytes exatos do POST — JSON.stringify reordena/normaliza.
  */
 function verifyMetaSignature(req: Request): boolean {
   const appSecret = process.env.META_APP_SECRET;
@@ -116,9 +118,10 @@ function verifyMetaSignature(req: Request): boolean {
   const signature = req.headers["x-hub-signature-256"];
   if (typeof signature !== "string" || !signature.startsWith("sha256=")) return false;
 
+  const raw = (req as any).rawBody ?? JSON.stringify(req.body || {});
   const expected = crypto
     .createHmac("sha256", appSecret)
-    .update(JSON.stringify(req.body || {}))
+    .update(raw)
     .digest("hex");
   try {
     return crypto.timingSafeEqual(Buffer.from(signature.slice(7), "hex"), Buffer.from(expected, "hex"));
@@ -219,12 +222,22 @@ export function registerWhatsAppWebhook(app: Express) {
     const normalized = normalizePhone(inbound.from);
     if (!normalized) return;
 
-    // casa lead por telefone normalizado
-    const leads = getLeads();
-    const lead = leads.find((l) => l.phone && normalizePhone(l.phone) === normalized);
+    // casa lead por telefone normalizado (usa índice normalized_phone)
+    const row = getDb().prepare("SELECT * FROM leads WHERE normalized_phone = ? LIMIT 1").get(normalized) as any;
+    let lead: any = row ? getLeadById(row.id) : null;
+    if (!lead) {
+      const leads = getLeads();
+      lead = leads.find((l) => l.phone && normalizePhone(l.phone) === normalized) || null;
+    }
     if (!lead) return;
 
-    const { intent, status } = classifyIntent(inbound.text);
+    let { intent, status } = classifyIntent(inbound.text);
+    // respeita toggles de automação
+    let auto: any = null;
+    try { auto = getAutomationSettings(); } catch {}
+    if (auto && !auto.whatsappAutoIntent) { intent = "outro"; status = undefined; }
+    const pipelineEnabled = auto ? auto.whatsappAutoPipeline : true;
+    const followUpEnabled = auto ? auto.whatsappAutoFollowUp : true;
 
     // Opt-out LGPD: pedido de exclusão bloqueia recontatos automaticamente
     let optedOut: boolean = false;
@@ -253,7 +266,7 @@ export function registerWhatsAppWebhook(app: Express) {
     }
 
     // move pipeline conforme intenção
-    if (status) {
+    if (status && pipelineEnabled) {
       try {
         updateLeadStatusByPhone(normalized, status);
       } catch {
@@ -262,7 +275,7 @@ export function registerWhatsAppWebhook(app: Express) {
     }
 
     // cria interação de follow-up quando há sinal de interesse/preço
-    if (intent === "interesse" || intent === "preco") {
+    if ((intent === "interesse" || intent === "preco") && followUpEnabled) {
       try {
         createInteraction({
           leadId: lead.id,

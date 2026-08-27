@@ -190,6 +190,18 @@ Importa as respostas do **formulário de briefing do Typeform** (Responses API) 
 * **Configuração:** `TYPEFORM_ACCESS_TOKEN` e `TYPEFORM_FORM_ID` no `.env`.
 * **Vínculo:** respostas com `hidden` `project_id`/`lead_id` são vinculadas diretamente; sem hidden, casa pelo nome da empresa contra os projetos ativos. Respostas sem correspondência são reportadas como `unmatched` no resumo.
 
+### 19. `get_project_dev_kit`
+Entrega o **kit de dados** do projeto (lead + briefing/Typeform + copy + design + conceito de IA + repositório) e o **prompt** pronto para o agente de IA **codar a Landing Page do zero no GitHub** (sem template pronto). Prompt manual e tool MCP compartilham o mesmo kit.
+* **Parâmetros:** `projectId`.
+
+### 20. `submit_project_code`
+Agente informa que o **código foi entregue** no repositório GitHub (opcionalmente com a URL de preview). Marca o projeto como `codigo_entregue` — a **aprovação humana** ainda é obrigatória antes de avançar para revisão/deploy.
+* **Parâmetros:** `projectId`, `repoUrl?`, `previewUrl?`, `message?`.
+
+### 21. `approve_project_code`
+**Guarda-limite humano:** aprova o código entregue pelo agente. O projeto segue para revisão/deploy somente após esta aprovação.
+* **Parâmetros:** `projectId`.
+
 ---
 
 ## 🔄 Fluxo de Trabalho Obrigatório do Agente (Workflow)

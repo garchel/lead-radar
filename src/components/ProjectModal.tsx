@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { X, Save, CheckCircle2, Trash2, Rocket, Globe, RefreshCw, ClipboardList, PenLine, Palette, Code2, SearchCheck, Check, Plus, FileText, UserRound, Briefcase, Target, TrendingUp, CalendarDays, MessageSquare, ChevronDown, Layers } from 'lucide-react';
-import { BusinessLead, Project, ProjectBriefingField, ProjectPriority, ProjectStage, ProjectStatus, ProjectTask, ProjectType } from '../types';
+import { Copy, ExternalLink, Bot, GitBranch, X, Save, CheckCircle2, Trash2, Rocket, Globe, RefreshCw, ClipboardList, PenLine, Palette, Code2, SearchCheck, Check, Plus, FileText, UserRound, Briefcase, Target, TrendingUp, CalendarDays, MessageSquare, ChevronDown, Layers } from 'lucide-react';
+import { BusinessLead, Project, ProjectBriefingField, ProjectDevStatus, ProjectPriority, ProjectStage, ProjectStatus, ProjectTask, ProjectType } from '../types';
 
 interface ProjectModalProps {
   mode: 'create' | 'edit';
@@ -25,6 +25,13 @@ const PRIORITIES: { id: ProjectPriority; title: string }[] = [
   { id: 'media', title: 'Média' },
   { id: 'alta', title: 'Alta' },
 ];
+
+const DEV_STATUS_META: Record<string, { label: string; className: string }> = {
+  aguardando_agente: { label: 'Aguardando o agente', className: 'bg-slate-100 text-slate-600' },
+  em_desenvolvimento: { label: 'Em desenvolvimento', className: 'bg-amber-100 text-amber-700' },
+  codigo_entregue: { label: 'Código entregue — revisar', className: 'bg-violet-100 text-violet-700' },
+  aprovado: { label: 'Aprovado', className: 'bg-emerald-100 text-emerald-700' },
+};
 
 const TABS = STAGES;
 
@@ -300,6 +307,15 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   const [devNotes, setDevNotes] = useState('');
   const [reviewNotes, setReviewNotes] = useState('');
   const [deployUrl, setDeployUrl] = useState('');
+  const [githubRepo, setGithubRepo] = useState('');
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [devStatusField, setDevStatusField] = useState<ProjectDevStatus | ''>('');
+  const [devMessageField, setDevMessageField] = useState('');
+  const [prompt, setPrompt] = useState('');
+  const [promptLoading, setPromptLoading] = useState(false);
+  const [promptError, setPromptError] = useState<string | null>(null);
+  const [promptCopied, setPromptCopied] = useState(false);
+  const [devActionMsg, setDevActionMsg] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -324,6 +340,10 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
       setDevNotes(project.devNotes || '');
       setReviewNotes(project.reviewNotes || '');
       setDeployUrl(project.deployUrl || '');
+      setGithubRepo(project.githubRepoUrl || '');
+      setPreviewUrl(project.previewUrl || '');
+      setDevStatusField(project.devStatus || '');
+      setDevMessageField(project.devMessage || '');
       setDueDate(project.dueDate ? project.dueDate.slice(0, 10) : '');
       setTasks(mergeDefaultTasks(project.tasks || []));
       setTaskDrafts({});
@@ -587,6 +607,10 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
         devNotes,
         reviewNotes,
         deployUrl,
+        githubRepoUrl: githubRepo || undefined,
+        previewUrl: previewUrl || undefined,
+        devStatus: devStatusField || undefined,
+        devMessage: devMessageField || undefined,
       };
       if (mode === 'create') {
         if (!leadId) throw new Error('Selecione o lead para o projeto.');
@@ -646,6 +670,10 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
         setDevNotes(p.devNotes || '');
         setReviewNotes(p.reviewNotes || '');
         setDeployUrl(p.deployUrl || '');
+        setGithubRepo(p.githubRepoUrl || '');
+        setPreviewUrl(p.previewUrl || '');
+        setDevStatusField(p.devStatus || '');
+        setDevMessageField(p.devMessage || '');
         setDueDate(p.dueDate ? p.dueDate.slice(0, 10) : '');
         setTasks(mergeDefaultTasks(p.tasks || []));
         onSaved(p);
@@ -674,6 +702,96 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
   const inputClass =
     'w-full bg-white border border-slate-300 rounded-lg text-slate-800 text-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500';
+
+  const loadDevPrompt = async () => {
+    if (!project || mode !== 'edit') return;
+    setPromptError(null);
+    setPromptCopied(false);
+    setPromptLoading(true);
+    try {
+      const data = await requestJson(`/api/projects/${project.id}/dev-kit`);
+      setPrompt(data.prompt || '');
+    } catch (err: any) {
+      setPromptError(err?.message || 'Falha ao gerar o prompt.');
+    } finally {
+      setPromptLoading(false);
+    }
+  };
+
+  const copyPrompt = async () => {
+    await loadDevPrompt();
+    if (!prompt) return;
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setPromptCopied(true);
+      setTimeout(() => setPromptCopied(false), 2000);
+    } catch {
+      setPromptError('Não foi possível copiar. Copie manualmente do campo abaixo.');
+    }
+  };
+
+  const saveDevRepo = async () => {
+    if (!project) return;
+    setDevActionMsg(null);
+    setPromptError(null);
+    try {
+      const data = await requestJson(`/api/projects/${project.id}/dev-repo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoUrl: githubRepo }),
+      });
+      const p = data.project as Project;
+      onSaved(p);
+      setGithubRepo(p.githubRepoUrl || '');
+      setDevStatusField(p.devStatus || '');
+      setDevActionMsg('Repositório registrado.');
+    } catch (err: any) {
+      setPromptError(err?.message || 'Falha ao salvar repositório.');
+    }
+  };
+
+  const submitCoded = async () => {
+    if (!project) return;
+    setDevActionMsg(null);
+    setPromptError(null);
+    try {
+      const data = await requestJson(`/api/projects/${project.id}/submit-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoUrl: githubRepo, previewUrl, message: devMessageField }),
+      });
+      const p = data.project as Project;
+      onSaved(p);
+      setGithubRepo(p.githubRepoUrl || '');
+      setPreviewUrl(p.previewUrl || '');
+      setDevStatusField(p.devStatus || '');
+      setDevMessageField(p.devMessage || '');
+      setDevActionMsg('Código marcado como entregue. Revisão humana pendente.');
+    } catch (err: any) {
+      setPromptError(err?.message || 'Falha ao registrar o código.');
+    }
+  };
+
+  const approveDevCode = async () => {
+    if (!project) return;
+    setDevActionMsg(null);
+    setPromptError(null);
+    try {
+      const data = await requestJson(`/api/projects/${project.id}/dev-approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const p = data.project as Project;
+      onSaved(p);
+      setDevStatusField(p.devStatus || '');
+      setDevActionMsg('Código aprovado. Pode avançar para Revisão/Deploy.');
+    } catch (err: any) {
+      setPromptError(err?.message || 'Falha ao aprovar.');
+    }
+  };
+
+  const devStatusMeta = DEV_STATUS_META[devStatusField] || DEV_STATUS_META.aguardando_agente;
 
   const deadline = mode === 'edit' && project && dueDate
     ? deadlineProgress(dueDate, project.createdAt)
@@ -927,6 +1045,110 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                     </label>
                     <textarea rows={2} value={devNotes} onChange={(e) => setDevNotes(e.target.value)} className={inputClass} placeholder="Stack, integrações, WhatsApp..." />
                   </div>
+                  {/* Agente de IA de código — kit de dados + prompt + entrega */}
+                  <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-700 uppercase tracking-wider">
+                        <Bot className="w-3.5 h-3.5" /> Agente de IA de código
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[10px] ${devStatusMeta.className}`}>
+                        {devStatusMeta.label}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 mb-2">
+                      O app prepara o <strong>kit de dados</strong> (lead + briefing + copy + design) e entrega a um agente (Hermes/Gemini) para codar a página no GitHub — sem template pronto. Cole o prompt no agente ou use as tools MCP.
+                    </p>
+
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      <button
+                        onClick={() => { loadDevPrompt(); }}
+                        disabled={promptLoading}
+                        className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3 py-1.5 rounded-lg text-xs disabled:opacity-50"
+                      >
+                        <Code2 className="w-3.5 h-3.5" /> {promptLoading ? 'Gerando...' : 'Gerar prompt'}
+                      </button>
+                      {prompt && (
+                        <button
+                          onClick={copyPrompt}
+                          className="inline-flex items-center gap-1.5 bg-slate-700 hover:bg-slate-800 text-white font-semibold px-3 py-1.5 rounded-lg text-xs"
+                        >
+                          <Copy className="w-3.5 h-3.5" /> {promptCopied ? 'Copiado!' : 'Copiar prompt'}
+                        </button>
+                      )}
+                    </div>
+
+                    {prompt && (
+                      <textarea
+                        rows={6}
+                        readOnly
+                        value={prompt}
+                        onFocus={(e) => e.currentTarget.select()}
+                        className="w-full bg-white border border-indigo-200 rounded-lg text-[11px] text-slate-700 font-mono p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      />
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                          Repositório GitHub
+                        </label>
+                        <input value={githubRepo} onChange={(e) => setGithubRepo(e.target.value)} className={inputClass} placeholder="https://github.com/org/repo" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                          URL de preview (antes do deploy)
+                        </label>
+                        <input value={previewUrl} onChange={(e) => setPreviewUrl(e.target.value)} className={inputClass} placeholder="https://org.github.io/repo/" />
+                      </div>
+                    </div>
+
+                    <div className="mt-2">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                        Mensagem / notificação do agente
+                      </label>
+                      <textarea rows={2} value={devMessageField} onChange={(e) => setDevMessageField(e.target.value)} className={inputClass} placeholder="Última atualização do agente..." />
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <button
+                        onClick={saveDevRepo}
+                        disabled={!githubRepo.trim()}
+                        className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-1.5 rounded-lg text-xs disabled:opacity-40"
+                      >
+                        <GitBranch className="w-3.5 h-3.5" /> Salvar repositório
+                      </button>
+                      <button
+                        onClick={submitCoded}
+                        disabled={!previewUrl.trim() && !githubRepo.trim()}
+                        className="inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white font-semibold px-3 py-1.5 rounded-lg text-xs disabled:opacity-40"
+                      >
+                        <Rocket className="w-3.5 h-3.5" /> Registar código entregue
+                      </button>
+                      {devStatusField === 'codigo_entregue' && (
+                        <button
+                          onClick={approveDevCode}
+                          className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-lg text-xs"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Aprovar código
+                        </button>
+                      )}
+                    </div>
+
+                    {previewUrl && (
+                      <a
+                        href={previewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold mt-2"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Abrir preview
+                      </a>
+                    )}
+
+                    {devActionMsg && <p className="text-[11px] text-emerald-700 font-semibold mt-2">{devActionMsg}</p>}
+                    {promptError && <p className="text-[11px] text-red-600 font-semibold mt-2">{promptError}</p>}
+                  </div>
+
                   {renderStageChecklist('desenvolvimento')}
                 </>
               )}

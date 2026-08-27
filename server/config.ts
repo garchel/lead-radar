@@ -65,12 +65,10 @@ export function getTypeformSyncConfig(): { enabled: boolean; intervalMinutes: nu
 
 export function getSchedulerConfig(): {
   enabled: boolean;
-  maxLandingPagesPerDay: number;
   maxLeadsPerRun: number;
 } {
   return {
     enabled: process.env.LEADRADAR_SCHEDULER !== "off",
-    maxLandingPagesPerDay: Number(process.env.LEADRADAR_MAX_LPS_PER_DAY) || 5,
     maxLeadsPerRun: Number(process.env.LEADRADAR_MAX_LEADS_PER_RUN) || 5,
   };
 }

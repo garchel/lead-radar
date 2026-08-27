@@ -4,11 +4,9 @@ import {
   getScheduleById,
   upsertSchedule,
   deleteSchedule,
-  countLandingPagesCreatedToday,
   upsertLead,
-  upsertLandingPage,
 } from "../server/store/db";
-import type { Schedule, StoredLead, LandingPage } from "../server/store/types";
+import type { Schedule, StoredLead } from "../server/store/types";
 import { buildScheduleJobInput, scheduler } from "../server/scheduler/scheduler";
 
 function makeSchedule(overrides: Partial<Schedule> = {}): Schedule {
@@ -95,29 +93,5 @@ describe("scheduler / schedules (orquestração periódica)", () => {
     );
     expect(job).not.toBeNull();
     expect(job!.type).toBe("follow_up_batch");
-  });
-
-  it("countLandingPagesCreatedToday conta apenas LPs criadas hoje (guardrail)", () => {
-    const lead: StoredLead = {
-      id: "lead-lp",
-      name: "Empresa LP",
-      category: "Dentista",
-      pipelineStatus: "prospect",
-    };
-    upsertLead(lead);
-
-    const lp: LandingPage = {
-      id: "lp-today",
-      leadId: "lead-lp",
-      businessName: "Empresa LP",
-      slug: "empresa-lp",
-      stage: "rascunho",
-      status: "aguardando_aprovacao",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    upsertLandingPage(lp);
-
-    expect(countLandingPagesCreatedToday()).toBeGreaterThanOrEqual(1);
   });
 });

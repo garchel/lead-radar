@@ -209,6 +209,7 @@ function refreshKeyRow(db: any, row: any): any {
 
 function ensureUsageTable() {
   const db = getDb();
+  // tabela legada singleton (mantida por compatibilidade, não recria se já removida)
   db.exec(`
     CREATE TABLE IF NOT EXISTS serpapi_usage (
       id TEXT PRIMARY KEY,
@@ -225,7 +226,7 @@ function ensureUsageTable() {
       "INSERT INTO serpapi_usage (id, month_key, used_this_month, hour_window_start, used_this_hour, updated_at) VALUES ('singleton', @monthKey, 0, NULL, 0, @now)"
     ).run({ monthKey: monthKeyFor(), now: new Date().toISOString() });
   }
-  // garante tabela de chaves múltiplas
+  // garante tabela de chaves múltiplas — schema idêntico a server/store/schema.ts
   db.exec(`
     CREATE TABLE IF NOT EXISTS serpapi_keys (
       id TEXT PRIMARY KEY,
@@ -237,9 +238,18 @@ function ensureUsageTable() {
       hour_window_start TEXT,
       used_this_hour INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      renewal_day INTEGER
     );
   `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_serpapi_keys_active ON serpapi_keys(is_active);`);
+  // migra coluna renewal_day se tabela foi criada por versão antiga sem ela
+  try {
+    const cols = db.prepare("PRAGMA table_info(serpapi_keys)").all() as any[];
+    if (!cols.some((c: any) => c.name === "renewal_day")) {
+      db.exec("ALTER TABLE serpapi_keys ADD COLUMN renewal_day INTEGER");
+    }
+  } catch {}
 }
 
 function readUsageRow(): any {

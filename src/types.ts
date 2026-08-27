@@ -92,6 +92,13 @@ export interface SearchFilters {
   minReviews: number;
   sortBy: 'score' | 'rating' | 'reviews' | 'name';
   provider?: ProspectingProvider;
+  useCityRotation?: boolean;
+  citiesPerRun?: number;
+  rotationUf?: string;
+  minPopulation?: number;
+  maxPopulation?: number;
+  minPropensity?: number;
+  autoSaveNoWebsite?: boolean;
 }
 
 export interface PipelineStats {
@@ -114,6 +121,12 @@ export type ProjectStage =
 export type ProjectStatus = 'em_andamento' | 'pausado' | 'cancelado' | 'concluido';
 
 export type ProjectPriority = 'baixa' | 'media' | 'alta';
+
+export type ProjectDevStatus =
+  | 'aguardando_agente'
+  | 'em_desenvolvimento'
+  | 'codigo_entregue'
+  | 'aprovado';
 
 export type ProjectType = 'landing_page' | 'site_institucional';
 
@@ -146,6 +159,12 @@ export interface Project {
   devNotes?: string;
   reviewNotes?: string;
   deployUrl?: string;
+  githubRepoUrl?: string;
+  repoOwner?: string;
+  repoName?: string;
+  previewUrl?: string;
+  devStatus?: ProjectDevStatus;
+  devMessage?: string;
   dueDate?: string;
   completedAt?: string;
   createdAt: string;

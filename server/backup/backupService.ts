@@ -11,10 +11,13 @@ import path from "node:path";
  * mesmo com o servidor escrevendo (WAL ativo), sem bloquear operações.
  */
 
-const DB_PATH = path.join(process.cwd(), "data", "leadradar.db");
-const BACKUP_DIR = path.join(process.cwd(), "data", "backups");
-const RETENTION = Number(process.env.BACKUP_RETENTION || 14);
-const INTERVAL_MS = Number(process.env.BACKUP_INTERVAL_HOURS || 24) * 3600 * 1000;
+const DATA_DIR = process.env.LEADRADAR_DATA_DIR || path.join(process.cwd(), "data");
+const DB_PATH = process.env.LEADRADAR_DB_PATH || path.join(DATA_DIR, "leadradar.db");
+const BACKUP_DIR = path.join(DATA_DIR, "backups");
+const RETENTION_RAW = Number(process.env.BACKUP_RETENTION || 14);
+const RETENTION = Number.isFinite(RETENTION_RAW) && RETENTION_RAW > 0 ? Math.floor(RETENTION_RAW) : 14;
+const INTERVAL_RAW = Number(process.env.BACKUP_INTERVAL_HOURS || 24);
+const INTERVAL_MS = (Number.isFinite(INTERVAL_RAW) && INTERVAL_RAW > 0 ? INTERVAL_RAW : 24) * 3600 * 1000;
 
 export function runBackupNow(): { ok: boolean; file?: string; error?: string } {
   try {
@@ -39,9 +42,14 @@ function pruneOldBackups(): void {
   const files = fs
     .readdirSync(BACKUP_DIR)
     .filter((f) => f.startsWith("leadradar-") && f.endsWith(".db"))
-    .sort()
-    .reverse();
-  for (const old of files.slice(RETENTION)) {
+    .map((f) => {
+      const full = path.join(BACKUP_DIR, f);
+      let mtime = 0;
+      try { mtime = fs.statSync(full).mtimeMs; } catch {}
+      return { f, mtime };
+    })
+    .sort((a, b) => b.mtime - a.mtime);
+  for (const { f: old } of files.slice(RETENTION)) {
     try {
       fs.unlinkSync(path.join(BACKUP_DIR, old));
     } catch {

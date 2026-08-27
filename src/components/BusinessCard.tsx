@@ -131,6 +131,21 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
           </div>
         )}
 
+        {/* Ticket sugerido e Tier (quando disponível via fila IBGE) */}
+        {(lead.suggestedTicket || lead.marketTier) && (
+          <div className="flex items-center gap-2 text-xs pt-2 border-t border-slate-100">
+            {lead.marketTier && (
+              <span className={`px-2 py-0.5 rounded-full font-bold border text-[11px] ${lead.marketTier === 'A' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : lead.marketTier === 'B' ? 'bg-sky-50 text-sky-700 border-sky-200' : lead.marketTier === 'C' ? 'bg-slate-50 text-slate-600 border-slate-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                Tier {lead.marketTier}
+              </span>
+            )}
+            {lead.suggestedTicket && (
+              <span className="font-extrabold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded border border-indigo-100">
+                R$ {lead.suggestedTicket.toLocaleString('pt-BR')}
+              </span>
+            )}
+          </div>
+        )}
         {/* Project Fee Estimate */}
         <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
           <span className="text-slate-500 font-medium">Potencial de Projeto:</span>

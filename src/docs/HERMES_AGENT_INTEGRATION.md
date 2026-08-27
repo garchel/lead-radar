@@ -18,8 +18,9 @@ O **Hermes Agent** utiliza o protocolo **Model Context Protocol (MCP)** via tran
 8. **`export_dossier`**: gera o Dossiê Executivo HTML do lead.
 9. **`record_interaction_outcome` / `list_due_followups`**: registram a resposta da empresa e listam os recontatos cujo prazo já venceu.
 10. **`sync_typeform_briefing`**: importa as respostas do formulário de briefing do Typeform (Responses API) e grava no projeto correspondente.
+11. **Construção do site via agente**: `get_project_dev_kit` (recebe o "kit de dados" + prompt para **codar a página do zero no GitHub**), `submit_project_code` (informa entrega do código com preview) e `approve_project_code` (guarda-limite humano).
 
-*(No total, **15 ferramentas** (as 4 de prospecção + 11 de automação/monitoramento).)*
+*(No total, **18 ferramentas** (as 4 de prospecção + 14 de automação/monitoramento).)*
 
 ---
 

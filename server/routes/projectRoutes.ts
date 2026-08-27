@@ -9,6 +9,15 @@ import {
   ensureProjectTypeformToken,
   isProjectStage,
 } from "../projects/service";
+import {
+  buildProjectDevKit,
+  buildProjectDevPrompt,
+  setProjectDevRepo,
+  submitProjectCode,
+  updateProjectDevMessage,
+  approveProjectCode,
+  resetProjectDev,
+} from "../projects/devKit";
 import { ProjectStage } from "../store/types";
 import { getTypeformFormBaseUrl } from "../config";
 import { generateBriefingPdf } from "../briefing/pdf";
@@ -53,6 +62,12 @@ export function registerProjectRoutes(app: Express) {
       "devNotes",
       "reviewNotes",
       "deployUrl",
+      "githubRepoUrl",
+      "repoOwner",
+      "repoName",
+      "previewUrl",
+      "devStatus",
+      "devMessage",
       "dueDate",
     ];
     const clean: Record<string, unknown> = {};
@@ -110,6 +125,71 @@ export function registerProjectRoutes(app: Express) {
     if (!project) return res.status(404).json({ success: false, error: "Projeto não encontrado." });
     removeProject(req.params.id);
     res.json({ success: true });
+  });
+
+  // GET /api/projects/:id/dev-kit — kit de dados + prompt para o agente de IA de código.
+  app.get("/api/projects/:id/dev-kit", (req: Request, res: Response) => {
+    try {
+      const kit = buildProjectDevKit(req.params.id);
+      const prompt = buildProjectDevPrompt(req.params.id);
+      res.json({ success: true, prompt, kit });
+    } catch (err: any) {
+      res.status(404).json({ success: false, error: err?.message || "Projeto não encontrado." });
+    }
+  });
+
+  // POST .../dev-repo — registra o repositório GitHub onde o agente está codando.
+  app.post("/api/projects/:id/dev-repo", (req: Request, res: Response) => {
+    const { repoUrl } = req.body || {};
+    if (!repoUrl) return res.status(400).json({ success: false, error: "repoUrl é obrigatório." });
+    try {
+      const project = setProjectDevRepo(req.params.id, repoUrl);
+      res.json({ success: true, project });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err?.message || "Falha ao registrar repositório." });
+    }
+  });
+
+  // POST .../submit-code — agente notifica que o código está pronto (com preview).
+  app.post("/api/projects/:id/submit-code", (req: Request, res: Response) => {
+    const { repoUrl, previewUrl, message } = req.body || {};
+    try {
+      const project = submitProjectCode(req.params.id, { repoUrl, previewUrl, message });
+      res.json({ success: true, project });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err?.message || "Falha ao registrar entrega do código." });
+    }
+  });
+
+  // POST .../dev-message — grava uma notificação/mensagem do agente.
+  app.post("/api/projects/:id/dev-message", (req: Request, res: Response) => {
+    const { message } = req.body || {};
+    try {
+      const project = updateProjectDevMessage(req.params.id, message || "");
+      res.json({ success: true, project });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err?.message || "Falha ao gravar mensagem." });
+    }
+  });
+
+  // POST .../dev-approve — ser humano aprova o código entregue (guarda-limite).
+  app.post("/api/projects/:id/dev-approve", (req: Request, res: Response) => {
+    try {
+      const project = approveProjectCode(req.params.id);
+      res.json({ success: true, project });
+    } catch (err: any) {
+      res.status(404).json({ success: false, error: err?.message || "Projeto não encontrado." });
+    }
+  });
+
+  // POST .../dev-reset — volta a etapa desenvolvimento para "aguardando_agente".
+  app.post("/api/projects/:id/dev-reset", (req: Request, res: Response) => {
+    try {
+      const project = resetProjectDev(req.params.id);
+      res.json({ success: true, project });
+    } catch (err: any) {
+      res.status(404).json({ success: false, error: err?.message || "Projeto não encontrado." });
+    }
   });
 
   // Gera o PDF do briefing do projeto para validação com o cliente.

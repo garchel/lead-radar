@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, MapPin, Filter, Sparkles, LayoutGrid, Map, RefreshCw, Globe, Download, Crown, Award, Database, Zap, AlertTriangle, Clock, Calendar, Key } from 'lucide-react';
+import { Search, MapPin, Filter, Sparkles, LayoutGrid, Map, RefreshCw, Globe, Download, Crown, Award, Database, Zap, AlertTriangle, Clock, Calendar, Key, ChevronDown, ChevronUp } from 'lucide-react';
 import { SearchFilters, SerpApiUsage } from '../types';
 import { CATEGORY_OPTIONS } from '../data/catalog';
 import { BRAZIL_STATES, CITIES_BY_STATE, getCitiesForState } from '../data/brazilLocations';
@@ -33,6 +33,17 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
   const [providers, setProviders] = useState<{ id: string; configured: boolean }[]>([]);
   const [usageError, setUsageError] = useState<string | null>(null);
   const [isKeyManagerOpen, setIsKeyManagerOpen] = useState(false);
+  const [isRotationOpen, setIsRotationOpen] = useState(false);
+  const [dynamicCategories, setDynamicCategories] = useState<string[]>(CATEGORY_OPTIONS);
+
+  useEffect(() => {
+    fetch('/api/categories').then(r=>r.json()).then(d=>{
+      if (Array.isArray(d?.categories) && d.categories.length) {
+        const names = d.categories.filter((c:any)=>c.isActive!==false).map((c:any)=>c.name);
+        if (names.length) setDynamicCategories(['Todas as Categorias', ...names]);
+      }
+    }).catch(()=>{});
+  }, []);
 
   const fetchUsage = async () => {
     try {
@@ -288,10 +299,11 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                   onChange={(e) => setFilters((prev) => ({ ...prev, location: e.target.value }))}
                   onFocus={() => setIsCityFocused(true)}
                   onBlur={() => setTimeout(() => setIsCityFocused(false), 200)}
-                  placeholder="Digite cidade ou bairro (ex: Pinheiros)"
+                  placeholder={filters.useCityRotation ? "Ignorado — rotação ativa" : "Digite cidade ou bairro (ex: Pinheiros)"}
                   list="city-suggestions-list"
                   autoComplete="off"
-                  className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-400 font-medium"
+                  disabled={Boolean(filters.useCityRotation)}
+                  className={`w-full pl-10 pr-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-400 font-medium ${filters.useCityRotation ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'}`}
                 />
 
                 {/* HTML Datalist Fallback */}
@@ -337,7 +349,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                   onChange={(e) => setFilters((prev) => ({ ...prev, category: e.target.value }))}
                   className="w-full pl-10 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all appearance-none cursor-pointer font-medium"
                 >
-                  {CATEGORY_OPTIONS.map((cat) => (
+                  {dynamicCategories.map((cat) => (
                     <option key={cat} value={cat}>
                       {cat}
                     </option>
@@ -367,6 +379,65 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                 )}
               </button>
             </div>
+          </div>
+
+          {/* Accordion: Rotação automática (fila IBGE) — ocupa pouco espaço quando fechado */}
+          <div className="border border-slate-200 rounded-xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setIsRotationOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-sm font-semibold text-slate-700 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <RefreshCw className={`w-4 h-4 ${filters.useCityRotation ? 'text-indigo-600' : 'text-slate-400'}`} />
+                Rotação automática de cidades (fila IBGE)
+                {filters.useCityRotation && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">ATIVA</span>}
+              </span>
+              {isRotationOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+            {isRotationOpen && (
+              <div className="p-4 bg-white space-y-3 border-t border-slate-200">
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(filters.useCityRotation)}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, useCityRotation: e.target.checked }))}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  Usar fila round-robin (busca nas próximas cidades há mais tempo sem pesquisar)
+                </label>
+                {filters.useCityRotation && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Cidades por busca</label>
+                      <input type="number" min={1} max={10} value={filters.citiesPerRun ?? 3} onChange={(e) => setFilters((prev) => ({ ...prev, citiesPerRun: Math.max(1, Math.min(10, Number(e.target.value)||3)) }))} className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">UF filtro</label>
+                      <select value={filters.rotationUf || ''} onChange={(e) => setFilters((prev) => ({ ...prev, rotationUf: e.target.value }))} className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium">
+                        <option value="">Todas</option>
+                        {BRAZIL_STATES.map((st) => <option key={st.code} value={st.code}>{st.code}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Pop. mín</label>
+                      <input type="number" value={filters.minPopulation ?? 30000} onChange={(e) => setFilters((prev) => ({ ...prev, minPopulation: Number(e.target.value) }))} className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Pop. máx</label>
+                      <input type="number" value={filters.maxPopulation ?? 200000} onChange={(e) => setFilters((prev) => ({ ...prev, maxPopulation: Number(e.target.value) }))} className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Propensão mín: {filters.minPropensity ?? 0}</label>
+                      <input type="range" min={0} max={100} step={5} value={filters.minPropensity ?? 0} onChange={(e) => setFilters((prev) => ({ ...prev, minPropensity: Number(e.target.value) }))} className="w-full" />
+                    </div>
+                  </div>
+                )}
+                <p className="text-[11px] text-slate-400">
+                  {filters.useCityRotation ? 'Quando ativa, a cidade digitada acima é ignorada e a busca usa as próximas cidades da fila IBGE (nunca buscadas primeiro, maior população antes). Cada cidade é marcada como visitada.' : 'Deixe fechado para buscar manualmente na cidade que você digitou. Abra para ativar a rotação automática e ocupar menos espaço quando não usar.'}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Quick City Suggestion Pills */}
@@ -478,6 +549,24 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                 </button>
               </div>
             </div>
+          </div>
+          {/* Switch: salvamento automático sem website */}
+          <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-100">
+            <label className="flex items-center gap-3 text-xs font-semibold text-slate-700 cursor-pointer">
+              <span className="relative inline-flex items-center">
+                <input
+                  type="checkbox"
+                  checked={Boolean(filters.autoSaveNoWebsite)}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, autoSaveNoWebsite: e.target.checked }))}
+                  className="sr-only"
+                />
+                <span className={`w-9 h-5 rounded-full transition-colors flex items-center p-0.5 ${filters.autoSaveNoWebsite ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                  <span className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${filters.autoSaveNoWebsite ? 'translate-x-4' : 'translate-x-0'}`} />
+                </span>
+              </span>
+              Salvar automaticamente empresas <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">Ouro</span> sem website
+            </label>
+            <span className="text-[11px] text-slate-400 hidden sm:inline">Após a busca, Ouro é salvo no CRM sozinho</span>
           </div>
         </form>
       </div>

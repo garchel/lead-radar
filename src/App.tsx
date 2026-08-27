@@ -19,6 +19,7 @@ import { ProjectTypeSelectModal } from './components/ProjectTypeSelectModal';
 import { SerpApiResultsPage } from './components/SerpApiResultsPage';
 import { CitiesQueueDashboard } from './components/CitiesQueueDashboard';
 import { CategoriesDashboard } from './components/CategoriesDashboard';
+import { AutomationSettingsPage } from './components/AutomationSettingsPage';
 
 import { BusinessLead, InteractionOutcome, ProjectType, SearchFilters } from './types';
 import { exportLeadsToCSV } from './utils/exportUtils';
@@ -53,7 +54,7 @@ interface DuplicateCandidate {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies' | 'cities' | 'categories'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies' | 'cities' | 'categories' | 'automation'>('search');
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [hasGeminiKey, setHasGeminiKey] = useState<boolean>(false);
@@ -70,6 +71,13 @@ export default function App() {
     minReviews: 10,
     sortBy: 'score',
     provider: 'serpapi',
+    useCityRotation: false,
+    citiesPerRun: 3,
+    rotationUf: '',
+    minPopulation: 30000,
+    maxPopulation: 200000,
+    minPropensity: 0,
+    autoSaveNoWebsite: false,
   });
 
   // Leads de busca e CRM começam vazios. O banco compartilhado é a única fonte de verdade.
@@ -80,6 +88,7 @@ export default function App() {
   const [serpApiRaw, setSerpApiRaw] = useState<any>(null);
   const [serpApiMeta, setSerpApiMeta] = useState<any>(null);
   const [lastSearchCached, setLastSearchCached] = useState<boolean>(false);
+  const [locationsProcessed, setLocationsProcessed] = useState<string[] | null>(null);
 
   // Modal States
   const [analyzingLead, setAnalyzingLead] = useState<BusinessLead | null>(null);
@@ -238,17 +247,28 @@ export default function App() {
     setErrorMessage(null);
     setLeads([]);
     try {
+      const isRotation = Boolean(filters.useCityRotation);
       const searchLocation = [filters.location, filters.state].filter(Boolean).join(', ');
+      const body: any = {
+        category: filters.category,
+        filterNoWebsiteOnly: filters.filterNoWebsiteOnly,
+        provider: filters.provider,
+        useCityRotation: isRotation,
+      };
+      if (isRotation) {
+        body.citiesPerRun = filters.citiesPerRun;
+        body.rotationUf = filters.rotationUf || undefined;
+        body.minPopulation = filters.minPopulation;
+        body.maxPopulation = filters.maxPopulation;
+        body.minPropensity = filters.minPropensity;
+      } else {
+        body.location = searchLocation;
+        body.state = filters.state;
+      }
       const data = await requestJson('/api/search-businesses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: searchLocation,
-          state: filters.state,
-          category: filters.category,
-          filterNoWebsiteOnly: filters.filterNoWebsiteOnly,
-          provider: filters.provider,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!Array.isArray(data.businesses)) {
@@ -258,6 +278,31 @@ export default function App() {
       if (data.serpApiRaw) setSerpApiRaw(data.serpApiRaw);
       if (data.serpApiMeta) setSerpApiMeta(data.serpApiMeta);
       setLastSearchCached(Boolean(data.cached));
+      setLocationsProcessed(Array.isArray(data.locationsProcessed) ? data.locationsProcessed : null);
+      // auto-save Ouro (sem website) quando switch ligado
+      if (filters.autoSaveNoWebsite && Array.isArray(data.businesses)) {
+        const existingIds = new Set(savedLeads.map((l) => l.id));
+        const toSave = (data.businesses as BusinessLead[]).filter((l) => l.websiteStatus === 'none' && !l.isAlreadySaved && !existingIds.has(l.id));
+        if (toSave.length > 0) {
+          let savedCount = 0;
+          for (const l of toSave) {
+            try {
+              const saved = await saveLeadToApi({ ...l, pipelineStatus: 'prospect', savedAt: new Date().toISOString() } as BusinessLead);
+              if (saved) {
+                savedCount++;
+                setSavedLeads((prev) => {
+                  if (prev.some((x) => x.id === saved.id)) return prev;
+                  return [saved, ...prev];
+                });
+              }
+            } catch {}
+          }
+          if (savedCount > 0) {
+            setJobToast({ ok: true, message: `💾 Auto-salvo ${savedCount} empresa(s) Ouro sem website no CRM` });
+            window.setTimeout(() => setJobToast(null), 6000);
+          }
+        }
+      }
       // se for SerpAPI, também busca o meta mais completo do backend
       if (data.source === 'serpapi' && !data.serpApiMeta) {
         try {
@@ -453,9 +498,14 @@ export default function App() {
             {leads.length > 0 && (
               <div className="px-4 sm:px-6 lg:px-8">
                 <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-sm text-indigo-800">
+                  <div className="flex items-center gap-2 text-sm text-indigo-800 flex-wrap">
                     <span className="font-bold">{leads.length} empresas encontradas com {filters.provider === 'serpapi' ? 'SerpAPI (real)' : 'Gemini'}</span>
                     {lastSearchCached && <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-xs font-bold">Cache • 0 gasto</span>}
+                    {locationsProcessed && locationsProcessed.length > 0 && (
+                      <span className="inline-flex items-center gap-1 bg-white text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full text-xs font-medium">
+                        Rotação: {locationsProcessed.join(', ')}
+                      </span>
+                    )}
                     <span className="text-indigo-600 hidden sm:inline">— visualize em tabela ou veja o JSON bruto.</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -533,6 +583,8 @@ export default function App() {
         {activeTab === 'cities' && <CitiesQueueDashboard />}
 
         {activeTab === 'categories' && <CategoriesDashboard />}
+
+        {activeTab === 'automation' && <AutomationSettingsPage />}
 
         {activeTab === 'companies' && (
           <SerpApiResultsPage

@@ -173,12 +173,17 @@ function migrateSchema(db: Database.Database) {
 
     CREATE INDEX IF NOT EXISTS idx_leads_pipeline ON leads(pipeline_status);
     CREATE INDEX IF NOT EXISTS idx_leads_city ON leads(city);
+    CREATE INDEX IF NOT EXISTS idx_leads_normalized ON leads(normalized_name, normalized_city, state);
+    CREATE INDEX IF NOT EXISTS idx_leads_normalized_phone ON leads(normalized_phone);
+    CREATE INDEX IF NOT EXISTS idx_leads_updated_at ON leads(updated_at);
     CREATE INDEX IF NOT EXISTS idx_landing_pages_lead ON landing_pages(lead_id);
     CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
     CREATE INDEX IF NOT EXISTS idx_jobs_type ON jobs(type);
     CREATE INDEX IF NOT EXISTS idx_communications_lead ON communications(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_communications_sent ON communications(sent_at);
     CREATE INDEX IF NOT EXISTS idx_identities_lead ON lead_identities(lead_id);
     CREATE INDEX IF NOT EXISTS idx_interactions_lead ON interactions(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_interactions_lead_occurred ON interactions(lead_id, occurred_at);
     CREATE INDEX IF NOT EXISTS idx_interactions_next_contact ON interactions(next_contact_at);
     CREATE INDEX IF NOT EXISTS idx_schedules_enabled ON schedules(enabled);
     CREATE INDEX IF NOT EXISTS idx_projects_lead ON projects(lead_id);
@@ -231,13 +236,13 @@ function migrateSchema(db: Database.Database) {
     );
     CREATE INDEX IF NOT EXISTS idx_cities_rotation ON cities(enabled, last_searched_at);
     CREATE INDEX IF NOT EXISTS idx_cities_uf ON cities(uf);
+    CREATE INDEX IF NOT EXISTS idx_cities_population ON cities(population);
 
+    -- business_categories: propensity 0-100 (probabilidade de precisar/valorizar LP), baseTicket em R$
     CREATE TABLE IF NOT EXISTS business_categories (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL UNIQUE,
-      /** 0-100: probabilidade de precisar/valorizar landing page. */
       propensity INTEGER NOT NULL DEFAULT 50,
-      /** Ticket base sugerido (R$) para o projeto, antes do multiplicador do tier da cidade. */
       baseTicket INTEGER NOT NULL DEFAULT 2000,
       is_active INTEGER NOT NULL DEFAULT 1
     );
@@ -307,6 +312,12 @@ function migrateSchema(db: Database.Database) {
     briefing_json: "TEXT",
     typeform_token: "TEXT",
     tasks_json: "TEXT",
+    github_repo_url: "TEXT",
+    repo_owner: "TEXT",
+    repo_name: "TEXT",
+    preview_url: "TEXT",
+    dev_status: "TEXT",
+    dev_message: "TEXT",
   };
   for (const [name, definition] of Object.entries(projectColumnsToAdd)) {
     if (!existingProjectColumns.has(name)) {
