@@ -12,7 +12,9 @@ import { StoredLead, PipelineStatus } from "./store/types";
 import { enrichLead } from "./enrichment";
 import { dispatchLeadContact, recordInteractionOutcome } from "./services/interactionService";
 import { searchBusinesses, analyzeLead } from "./services/prospectingService";
-import { syncLeadProject } from "./projects/service";
+import { syncLeadProject, updateProject } from "./projects/service";
+import { getProjects, getProjectById } from "./store/db";
+import type { Project } from "./store/types";
 import { syncTypeformBriefing } from "./typeform/service";
 import {
   buildProjectDevKit,
@@ -339,6 +341,114 @@ export function createLeadRadarMcpServer() {
       return {
         content: [{ type: "text", text: JSON.stringify({ success: true, count: leads.length, leads }, null, 2) }],
       };
+    }
+  );
+
+  // TOOL 6.1: list_projects
+  server.tool(
+    "list_projects",
+    "Lista os projetos do Kanban de desenvolvimento com id, etapa, status, lead vinculado e progresso do checklist. Use para descobrir o projectId de um lead (ex.: para depois chamar get_project_dev_kit ou update_project).",
+    {
+      status: z.string().optional().describe("Filtro opcional por status do projeto (em_andamento|pausado|cancelado|concluido)"),
+      stage: z.string().optional().describe("Filtro opcional por etapa (briefing|copywriting|design|desenvolvimento|revisao|deploy)"),
+      leadId: z.string().optional().describe("Filtro opcional por lead vinculado"),
+    },
+    async ({ status, stage, leadId }) => {
+      let projects = getProjects();
+      if (status) projects = projects.filter((p) => p.status === status);
+      if (stage) projects = projects.filter((p) => p.stage === stage);
+      if (leadId) projects = projects.filter((p) => p.leadId === leadId);
+      const list = projects.map((p) => ({
+        projectId: p.id,
+        name: p.name,
+        type: p.type,
+        stage: p.stage,
+        status: p.status,
+        priority: p.priority,
+        devStatus: p.devStatus ?? "aguardando_agente",
+        leadId: p.leadId,
+        leadName: p.leadName ?? null,
+        leadCity: p.leadCity ?? null,
+        dueDate: p.dueDate ?? null,
+        tasksDone: (p.tasks ?? []).filter((t) => t.done).length,
+        tasksTotal: (p.tasks ?? []).length,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+      }));
+      return {
+        content: [{ type: "text", text: JSON.stringify({ success: true, count: list.length, projects: list }, null, 2) }],
+      };
+    }
+  );
+
+  // TOOL 6.2: update_project
+  server.tool(
+    "update_project",
+    "Atualiza um projeto do Kanban: move a etapa (briefing→copywriting→design→desenvolvimento→revisao→deploy), grava briefing do cliente (texto livre ou campos estruturados), copy, notas de design/dev/revisão, status, prioridade e URL de deploy. É o caminho do agente para alimentar o projeto com o briefing colado pelo cliente no chat.",
+    {
+      projectId: z.string().describe("ID do projeto"),
+      stage: z.enum(["briefing", "copywriting", "design", "desenvolvimento", "revisao", "deploy"]).optional().describe("Nova etapa do projeto"),
+      status: z.enum(["em_andamento", "pausado", "cancelado", "concluido"]).optional().describe("Novo status do projeto"),
+      priority: z.enum(["baixa", "media", "alta"]).optional().describe("Nova prioridade"),
+      brief: z.string().optional().describe("Briefing em texto livre colado pelo cliente (append; registra origem e data)"),
+      briefing: z.array(z.object({ fieldTitle: z.string(), answer: z.string() })).optional().describe("Campos estruturados do briefing (substitui os atuais)"),
+      copy: z.string().optional().describe("Texto/copy da página (etapa copywriting)"),
+      designNotes: z.string().optional().describe("Notas de design (paleta, tipografia, referências)"),
+      devNotes: z.string().optional().describe("Notas de desenvolvimento"),
+      reviewNotes: z.string().optional().describe("Notas de revisão do cliente"),
+      deployUrl: z.string().optional().describe("URL final publicada"),
+      dueDate: z.string().optional().describe("Prazo (data ISO ou texto)"),
+    },
+    async (input) => {
+      try {
+        const { projectId, brief, ...rest } = input;
+        const patch: Partial<Project> = {};
+        for (const [key, value] of Object.entries(rest)) {
+          if (value !== undefined) (patch as any)[key] = value;
+        }
+        // Briefing em texto livre: append com origem/data (não sobrescreve histórico)
+        if (brief !== undefined) {
+          if (typeof brief !== "string" || !brief.trim()) {
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "brief deve ser um texto não vazio." }, null, 2) }] };
+          }
+          const project = getProjectById(projectId);
+          if (!project) {
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Projeto não encontrado." }, null, 2) }] };
+          }
+          const stamp = new Date().toISOString();
+          const block = `Briefing manual (agente, ${stamp})\n${brief.trim()}`;
+          patch.brief = project.brief ? `${project.brief}\n\n${block}` : block;
+        }
+        if (Object.keys(patch).length === 0) {
+          return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Nada para atualizar: informe ao menos um campo." }, null, 2) }] };
+        }
+        const updated = updateProject(projectId, patch);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  success: true,
+                  projectId,
+                  stage: updated.stage,
+                  status: updated.status,
+                  priority: updated.priority,
+                  briefPreview: updated.brief ? updated.brief.slice(0, 200) : null,
+                  briefingFields: (updated.briefing ?? []).length,
+                  hasCopy: Boolean(updated.copy?.trim()),
+                  hasDesignNotes: Boolean(updated.designNotes?.trim()),
+                  updatedAt: updated.updatedAt,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (err: any) {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err?.message || "Falha ao atualizar projeto." }, null, 2) }] };
+      }
     }
   );
 
