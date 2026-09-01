@@ -14,6 +14,7 @@ import { MonitoringDashboard } from './components/MonitoringDashboard';
 import { DuplicateMergeModal } from './components/DuplicateMergeModal';
 import { FollowUpQueue } from './components/FollowUpQueue';
 import { ProjectsDashboard } from './components/ProjectsDashboard';
+import { AgentsDashboard } from './components/AgentsDashboard';
 import { LeaveDevelopmentModal } from './components/LeaveDevelopmentModal';
 import { ProjectTypeSelectModal } from './components/ProjectTypeSelectModal';
 import { SerpApiResultsPage } from './components/SerpApiResultsPage';
@@ -54,7 +55,7 @@ interface DuplicateCandidate {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies' | 'cities' | 'categories' | 'automation'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation'>('search');
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [hasGeminiKey, setHasGeminiKey] = useState<boolean>(false);
@@ -579,6 +580,8 @@ export default function App() {
         {activeTab === 'monitoring' && <MonitoringDashboard />}
 
         {activeTab === 'projects' && <ProjectsDashboard />}
+
+        {activeTab === 'agents' && <AgentsDashboard />}
 
         {activeTab === 'cities' && <CitiesQueueDashboard />}
 

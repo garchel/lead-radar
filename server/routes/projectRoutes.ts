@@ -21,6 +21,7 @@ import {
 import { ProjectStage } from "../store/types";
 import { getTypeformFormBaseUrl } from "../config";
 import { generateBriefingPdf } from "../briefing/pdf";
+import { buildAgentRunbook } from "../projects/agentGuide";
 
 export function registerProjectRoutes(app: Express) {
   app.get("/api/projects", (req: Request, res: Response) => {
@@ -133,6 +134,17 @@ export function registerProjectRoutes(app: Express) {
       const kit = buildProjectDevKit(req.params.id);
       const prompt = buildProjectDevPrompt(req.params.id);
       res.json({ success: true, prompt, kit });
+    } catch (err: any) {
+      res.status(404).json({ success: false, error: err?.message || "Projeto não encontrado." });
+    }
+  });
+
+  // GET /api/projects/:id/agent-runbook — guia do app + estado + passo a passo
+  // para o bot de execução (evita análise da codebase a cada spawn).
+  app.get("/api/projects/:id/agent-runbook", (req: Request, res: Response) => {
+    try {
+      const runbook = buildAgentRunbook(req.params.id);
+      res.json(runbook);
     } catch (err: any) {
       res.status(404).json({ success: false, error: err?.message || "Projeto não encontrado." });
     }

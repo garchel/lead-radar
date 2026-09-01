@@ -16,6 +16,7 @@ import { syncLeadProject, updateProject } from "./projects/service";
 import { getProjects, getProjectById } from "./store/db";
 import type { Project } from "./store/types";
 import { syncTypeformBriefing } from "./typeform/service";
+import { buildAgentRunbook } from "./projects/agentGuide";
 import {
   buildProjectDevKit,
   buildProjectDevPrompt,
@@ -448,6 +449,28 @@ export function createLeadRadarMcpServer() {
         };
       } catch (err: any) {
         return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err?.message || "Falha ao atualizar projeto." }, null, 2) }] };
+      }
+    }
+  );
+
+  // TOOL 6.3: get_agent_runbook
+  server.tool(
+    "get_agent_runbook",
+    "Guia de execução do LeadRadar para um agente/bot spwanado no projeto: explicação rápida de como o app funciona, estado fresco do projeto, passo a passo da etapa atual com as tools MCP, regras de ouro (guarda-limite humano, LGPD) e o prompt de spawn. Chame ESTA tool primeiro — evita ter que analisar a codebase.",
+    { projectId: z.string().describe("ID do projeto") },
+    async ({ projectId }) => {
+      try {
+        const runbook = buildAgentRunbook(projectId);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(runbook, null, 2),
+            },
+          ],
+        };
+      } catch (err: any) {
+        return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err?.message || "Projeto não encontrado." }, null, 2) }] };
       }
     }
   );

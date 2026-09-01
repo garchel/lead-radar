@@ -1,9 +1,9 @@
 import React from 'react';
-import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Layers, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings } from 'lucide-react';
+import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Layers, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings, Bot } from 'lucide-react';
 
 interface SidebarProps {
-  activeTab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies' | 'cities' | 'categories' | 'automation';
-  setActiveTab: (tab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'companies' | 'cities' | 'categories' | 'automation') => void;
+  activeTab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation';
+  setActiveTab: (tab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation') => void;
   savedCount: number;
   projectCount: number;
   onOpenAddModal: () => void;
@@ -164,6 +164,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {projectCount}
               </span>
             )}
+          </button>
+
+          <button
+            id="nav-agents-btn"
+            onClick={() => setActiveTab('agents')}
+            className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'agents'
+                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <Bot className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Agentes</span>
           </button>
         </nav>
       </div>
