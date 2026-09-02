@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" font-family="Arial, sans-serif">
+  <!-- PLACEHOLDER: parede ANTES do serviço (efeito 01, camada de cima).
+       Substituir por case-antes.jpg real do cliente ou via ASSETS_PROMPT.md.
+       Mesmo enquadramento do depois.svg (16:10). -->
+  <defs>
+    <linearGradient id="wallOld" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b8ada0"/>
+      <stop offset="1" stop-color="#9c9184"/>
+    </linearGradient>
+  </defs>
+  <!-- parede base -->
+  <rect width="1600" height="1000" fill="url(#wallOld)"/>
+  <!-- manchas de umidade -->
+  <ellipse cx="400" cy="260" rx="200" ry="140" fill="#7d7468" opacity="0.5"/>
+  <ellipse cx="1150" cy="700" rx="240" ry="170" fill="#6e675d" opacity="0.45"/>
+  <ellipse cx="850" cy="130" rx="180" ry="90" fill="#8a7f72" opacity="0.5"/>
+  <!-- tinta descascando (patches claros irregulares) -->
+  <path d="M200,400 L380,370 L460,430 L430,540 L330,600 L220,560 L190,480 Z" fill="#cfc3b2" stroke="#8a7f72" stroke-width="3"/>
+  <path d="M950,250 L1120,230 L1180,310 L1130,420 L1000,410 L930,330 Z" fill="#d4c9b8" stroke="#8a7f72" stroke-width="3"/>
+  <path d="M1250,520 L1420,500 L1470,590 L1400,690 L1270,660 L1230,580 Z" fill="#c9bda9" stroke="#8a7f72" stroke-width="3"/>
+  <path d="M540,680 L700,660 L750,740 L700,830 L560,810 L520,740 Z" fill="#d0c5b4" stroke="#8a7f72" stroke-width="3"/>
+  <!-- rachaduras -->
+  <path d="M600,0 L615,80 L590,160 L620,240 L600,320" stroke="#5d564d" stroke-width="3" fill="none"/>
+  <path d="M1350,0 L1335,90 L1360,170 L1340,250" stroke="#5d564d" stroke-width="3" fill="none"/>
+  <path d="M100,760 L180,780 L240,830 L320,850" stroke="#5d564d" stroke-width="3" fill="none"/>
+  <!-- rodapé danificado -->
+  <rect y="900" width="1600" height="100" fill="#6e675d"/>
+  <path d="M300,900 L400,940 L360,1000 L240,1000 Z" fill="#5d564d"/>
+  <path d="M900,900 L1010,930 L980,1000 L840,1000 Z" fill="#5d564d"/>
+  <!-- tomada solta -->
+  <rect x="720" y="520" width="70" height="100" rx="6" fill="#c8c2b8" stroke="#5d564d" stroke-width="3"/>
+  <circle cx="743" cy="550" r="5" fill="#3d3a35"/>
+  <circle cx="767" cy="550" r="5" fill="#3d3a35"/>
+  <path d="M720,620 L700,660 L740,650" stroke="#5d564d" stroke-width="3" fill="none"/>
+  <!-- texto da foto -->
+  <text x="60" y="70" font-size="30" fill="#5d564d" font-weight="bold">ANTES — parede com descascamento e umidade</text>
+</svg>

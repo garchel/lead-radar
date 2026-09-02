@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E&S Manutenções | Sua casa resolvida — hidráulica, elétrica e pintura em Maricá</title>
+  <meta name="description" content="Manutenção residencial em Itaipuaçu e Maricá: hidráulica, elétrica, pintura e pequenos reparos. Orçamento pelo WhatsApp em minutos.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Tiempos+Headline:wght@400&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       Design system: Harvest (design/harvest.md)
+       Cream canvas · paper cards · flame orange · serif só no hero
+       Efeitos: 01 reveal-hover (sites/efeitos/01) + 03 loop-ambient (03)
+       ============================================================ */
+    :root {
+      --flame: #fa5d00;
+      --marigold: #fee3b5;
+      --parchment: #e3d6c5;
+      --ink: #1d1e1c;
+      --paper: #ffffff;
+      --cream: #fff8f1;
+      --mist: #d9d9d9;
+      --stone: #615f5c;
+      --driftwood: #8e8b87;
+      --ironwood: #4a4a47;
+      --bone: #c0bbb6;
+      --radius-btn: 16px;
+      --radius-card: 20px;
+      --radius-img: 16px;
+      --shadow-btn: rgba(0,0,0,.2) 0 1px 4px 0;
+      --shadow-glow: rgba(250,166,0,.25) 6px 4px 24px 0;
+      --shadow-sm: rgba(0,0,0,.06) 0 1px 4px 0;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+      background: var(--cream);
+      color: var(--ink);
+      letter-spacing: .015em;
+      line-height: 1.5;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    section { padding: 72px 0; }
+
+    /* ---- Type (MuotoWeb→Inter, Monarch→Tiempos) ---- */
+    .display-serif {
+      font-family: 'Tiempos Headline', Georgia, 'Times New Roman', serif;
+      font-size: clamp(2.4rem, 5.5vw, 3.6rem);
+      font-weight: 400; line-height: 1.2;
+    }
+    .h2 { font-size: clamp(1.6rem, 3.2vw, 2.125rem); font-weight: 500; line-height: 1.26; }
+    .h3 { font-size: 1.25rem; font-weight: 600; }
+    .body { font-size: 1rem; color: var(--stone); }
+    .body-sm { font-size: .875rem; color: var(--stone); }
+    .eyebrow {
+      font-size: .8125rem; font-weight: 600; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--flame);
+    }
+
+    /* ---- Botões (harvest: radius 16, sombra quente) ---- */
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 12px 24px; border-radius: var(--radius-btn);
+      font-size: 1rem; font-weight: 600; letter-spacing: .015em;
+      text-decoration: none; cursor: pointer; border: none;
+      box-shadow: var(--shadow-btn);
+      transition: transform .2s ease, background .2s ease;
+    }
+    .btn-primary { background: var(--flame); color: #fff; }
+    .btn-primary:hover { background: #e45400; transform: translateY(-1px); }
+    .btn-outline { background: var(--paper); color: var(--ink); border: 1px solid var(--bone); box-shadow: none; }
+    .btn-outline:hover { border-color: var(--flame); color: var(--flame); }
+    .link-flame { color: var(--flame); font-weight: 500; text-decoration: none; }
+    .link-flame:hover { text-decoration: underline; }
+
+    /* ---- Nav ---- */
+    nav {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(255,248,241,.94); backdrop-filter: blur(8px);
+      border-bottom: 1px solid transparent;
+      transition: border-color .3s ease;
+    }
+    nav.scrolled { border-bottom-color: var(--mist); }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 16px; }
+    .logo { font-size: 1.0625rem; font-weight: 700; color: var(--ink); text-decoration: none; }
+    .logo em { font-style: normal; color: var(--flame); }
+    .nav-links { display: flex; gap: 28px; }
+    .nav-links a { font-size: .9375rem; font-weight: 500; color: var(--ironwood); text-decoration: none; }
+    .nav-links a:hover { color: var(--flame); }
+    .nav-cta { padding: 10px 18px; font-size: .875rem; }
+
+    /* ---- Hero (efeito 03: loop ambient) ---- */
+    .hero { position: relative; overflow: hidden; padding: 96px 0 88px; }
+    .hero-bg-video, .hero-poster {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; z-index: 0;
+    }
+    .hero-bg-video { opacity: 0; transition: opacity .8s ease; }
+    .hero-bg-video.is-ready { opacity: 1; }
+    /* wash quente do harvest (marigold glow) por cima do vídeo, abaixo do conteúdo */
+    .hero-wash {
+      position: absolute; inset: 0; z-index: 1;
+      background:
+        linear-gradient(160deg, rgba(255,248,241,.96) 0%, rgba(255,248,241,.82) 45%, rgba(254,227,181,.55) 100%);
+    }
+    .hero-inner { position: relative; z-index: 2; max-width: 820px; margin: 0 auto; text-align: center; padding: 0 24px; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 999px;
+      background: var(--paper); border: 1px solid var(--parchment);
+      font-size: .8125rem; font-weight: 600; color: var(--ironwood);
+      margin-bottom: 24px; box-shadow: var(--shadow-sm);
+    }
+    .hero-badge .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--flame); }
+    .hero h1 { margin-bottom: 20px; }
+    .hero h1 em { font-style: italic; color: var(--flame); }
+    .hero p.lead { font-size: clamp(1rem, 2vw, 1.1875rem); color: var(--stone); max-width: 600px; margin: 0 auto 32px; }
+    .hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .hero-note { margin-top: 18px; font-size: .8125rem; color: var(--driftwood); }
+
+    /* ---- Stats (efeito 05 inline: count-up) ---- */
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 760px; margin: 56px auto 0; }
+    .stat { background: var(--paper); border-radius: var(--radius-card); padding: 24px 20px; text-align: center; box-shadow: var(--shadow-sm); }
+    .stat b { display: block; font-size: 2rem; font-weight: 700; color: var(--flame); line-height: 1.1; }
+    .stat span { font-size: .8125rem; color: var(--stone); }
+    @media (prefers-reduced-motion: reduce) {
+      .stat b { color: var(--flame); }
+    }
+
+    /* ---- Services ---- */
+    .sec-head { text-align: center; max-width: 640px; margin: 0 auto 48px; }
+    .sec-head p.sub { margin-top: 12px; color: var(--stone); font-size: 1rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .card {
+      background: var(--paper); border-radius: var(--radius-card);
+      padding: 32px; box-shadow: var(--shadow-sm);
+      display: flex; flex-direction: column; gap: 14px;
+      transition: transform .25s ease, box-shadow .25s ease;
+    }
+    .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-glow); }
+    .card .icon {
+      width: 48px; height: 48px; color: var(--ink);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card p { font-size: .9375rem; color: var(--stone); }
+
+    /* ---- Antes × Depois (efeito 01) ---- */
+    .case-wrap { max-width: 880px; margin: 0 auto; }
+    .case-reveal {
+      position: relative;
+      aspect-ratio: 16 / 10;
+      border-radius: var(--radius-img);
+      overflow: hidden;
+      cursor: crosshair;
+      user-select: none; -webkit-user-select: none;
+      touch-action: pan-y;
+      box-shadow: var(--shadow-glow);
+      background: var(--parchment);
+    }
+    .case-reveal img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%; object-fit: cover;
+      pointer-events: none; display: block;
+    }
+    .case-reveal .layer-top { clip-path: inset(0 calc(100% - var(--x, 50%)) 0 0); }
+    .case-reveal .reveal-handle {
+      position: absolute; top: 0; bottom: 0;
+      left: var(--x, 50%); width: 3px;
+      background: var(--paper);
+      box-shadow: 0 0 0 1px rgba(0,0,0,.15);
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+    .case-reveal .reveal-label {
+      position: absolute; bottom: 16px;
+      font-size: .6875rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+      padding: 6px 12px; border-radius: 999px;
+      background: rgba(29,30,28,.6); color: #fff;
+      backdrop-filter: blur(4px);
+      pointer-events: none;
+    }
+    .case-reveal .reveal-label.l-left { left: 16px; }
+    .case-reveal .reveal-label.l-right { right: 16px; }
+    .case-reveal input[type="range"] {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      opacity: 0; cursor: ew-resize; margin: 0;
+      -webkit-appearance: none; appearance: none;
+    }
+    .case-fallback { display: none; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .case-fallback figure { border-radius: var(--radius-img); overflow: hidden; position: relative; margin: 0; box-shadow: var(--shadow-sm); }
+    .case-fallback img { width: 100%; height: 100%; object-fit: cover; display: block; aspect-ratio: 16/10; }
+    .case-fallback figcaption {
+      position: absolute; bottom: 12px; left: 12px;
+      font-size: .6875rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+      padding: 5px 10px; border-radius: 999px; background: rgba(29,30,28,.6); color: #fff;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .case-reveal { display: none; }
+      .case-fallback { display: grid; }
+    }
+
+    /* ---- Depoimentos ---- */
+    .testi-card {
+      background: var(--paper); border-radius: var(--radius-card);
+      padding: 32px; box-shadow: var(--shadow-sm);
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .stars { color: var(--flame); letter-spacing: 3px; font-size: .875rem; }
+    .testi-card blockquote { font-size: .9375rem; color: var(--stone); font-style: italic; }
+    .testi-author { display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--mist); padding-top: 16px; }
+    .avatar {
+      width: 40px; height: 40px; border-radius: 999px; background: var(--marigold);
+      color: var(--ironwood); display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; font-weight: 600;
+    }
+    .testi-author strong { display: block; font-size: .875rem; }
+    .testi-author span { font-size: .8125rem; color: var(--driftwood); }
+
+    /* ---- Como funciona ---- */
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .step {
+      background: var(--paper); border-radius: var(--radius-card);
+      padding: 32px; text-align: center; box-shadow: var(--shadow-sm);
+      display: flex; flex-direction: column; gap: 12px; align-items: center;
+    }
+    .step-num {
+      width: 44px; height: 44px; border-radius: 999px;
+      background: var(--flame); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 1.0625rem;
+    }
+    .step p { font-size: .9375rem; color: var(--stone); }
+
+    /* ---- Contato ---- */
+    .contact-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: start; }
+    .contact-list { margin-top: 28px; display: grid; gap: 14px; }
+    .contact-list > div { display: flex; gap: 12px; align-items: center; font-size: .9375rem; color: var(--ironwood); }
+    .contact-list svg { color: var(--flame); flex-shrink: 0; }
+    form {
+      background: var(--paper); border-radius: var(--radius-card);
+      padding: 36px; box-shadow: var(--shadow-glow);
+      display: grid; gap: 18px;
+    }
+    label { font-size: .8125rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--driftwood); display: block; margin-bottom: 6px; }
+    input, select {
+      width: 100%; padding: 14px 20px; border: 1px solid var(--bone);
+      border-radius: var(--radius-btn); background: var(--paper);
+      font-family: 'Inter', sans-serif; font-size: 1rem; color: var(--ink);
+      letter-spacing: .015em;
+      transition: border-color .2s ease;
+    }
+    input:focus, select:focus { outline: 2px solid var(--flame); outline-offset: 4px; }
+    input.invalid, select.invalid { border-color: #d93025; }
+    .field-error { font-size: .8125rem; color: #d93025; display: none; }
+    .field-error.show { display: block; }
+    .btn-submit { width: 100%; justify-content: center; }
+    .form-hint { font-size: .8125rem; color: var(--driftwood); }
+
+    /* ---- CTA final ---- */
+    .final-cta { background: var(--ink); text-align: center; padding: 88px 24px; color: var(--cream); }
+    .final-cta .h2 { color: var(--cream); }
+    .final-cta p { margin: 16px auto 36px; max-width: 540px; color: #b9b6b1; font-size: 1.0625rem; }
+    .final-cta .btn-primary { box-shadow: none; }
+
+    /* ---- Footer ---- */
+    footer { padding: 40px 0; }
+    .footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px; align-items: center; border-top: 1px solid var(--mist); padding-top: 28px; }
+    .footer-links { display: flex; gap: 22px; font-size: .875rem; }
+    .footer-links a { color: var(--stone); text-decoration: none; }
+    .footer-links a:hover { color: var(--flame); }
+    .footer-note { font-size: .8125rem; color: var(--driftwood); }
+
+    /* ---- WA float ---- */
+    .wa-float {
+      position: fixed; right: 20px; bottom: 20px; z-index: 60;
+      height: 56px; display: inline-flex; align-items: center; gap: 10px;
+      padding: 0 22px; border-radius: 999px;
+      background: #25d366; color: #fff;
+      font-size: .875rem; font-weight: 600;
+      text-decoration: none;
+      box-shadow: rgba(0,0,0,.2) 0 4px 16px 0;
+      transition: transform .2s ease;
+    }
+    .wa-float:hover { transform: translateY(-2px); }
+
+    /* ---- Reveal on-scroll ---- */
+    .reveal { opacity: 0; transform: translateY(16px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1; transform: none; transition: none; }
+      html { scroll-behavior: auto; }
+      .hero-bg-video { display: none; }
+    }
+
+    /* ---- Responsivo ---- */
+    @media (max-width: 960px) {
+      .grid-3, .steps { grid-template-columns: 1fr 1fr; }
+      .contact-wrap { grid-template-columns: 1fr; gap: 40px; }
+      .nav-links { display: none; }
+    }
+    @media (max-width: 640px) {
+      .grid-3, .steps, .stats { grid-template-columns: 1fr; }
+      section { padding: 56px 0; }
+      .wa-float span { display: none; }
+      .wa-float { padding: 0; width: 56px; justify-content: center; }
+      .case-fallback { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav id="topnav">
+    <div class="container nav-inner">
+      <a class="logo" href="#top">E&S <em>Manutenções</em></a>
+      <div class="nav-links">
+        <a href="#servicos">Serviços</a>
+        <a href="#antes-depois">Antes × Depois</a>
+        <a href="#depoimentos">Depoimentos</a>
+      </div>
+      <a class="btn btn-primary nav-cta" href="#contato">Chamar no WhatsApp</a>
+    </div>
+  </nav>
+
+  <!-- HERO (efeito 03: loop ambiente) -->
+  <header class="hero" id="top">
+    <img class="hero-poster" src="assets/hero-poster.jpg" alt="" aria-hidden="true">
+    <video class="hero-bg-video" id="hero-video" muted loop playsinline preload="none" aria-hidden="true"></video>
+    <div class="hero-wash" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <span class="hero-badge"><span class="dot"></span> Atendimento em Itaipuaçu e toda Maricá</span>
+      <h1 class="display-serif reveal">Sua casa resolvida, <em>sem dor de cabeça</em></h1>
+      <p class="lead reveal">Hidráulica, elétrica, pintura e pequenos reparos — um só número para tudo. Orçamento pelo WhatsApp em minutos, serviço com garantia.</p>
+      <div class="hero-actions reveal">
+        <a class="btn btn-primary" href="https://wa.me/5521968935825?text=Ol%C3%A1!%20Preciso%20de%20um%20or%C3%A7amento%20de%20manuten%C3%A7%C3%A3o%20em%20minha%20casa." target="_blank" rel="noopener">
+          Pedir orçamento agora
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg>
+        </a>
+        <a class="btn btn-outline" href="#servicos">Ver serviços</a>
+      </div>
+      <p class="hero-note reveal">Resposta rápida em horário comercial · serviço garantido</p>
+
+      <!-- Stats (efeito 05 count-up) -->
+      <div class="stats reveal">
+        <div class="stat"><b class="count" data-count="5">0</b><span>estrelas no Google</span></div>
+        <div class="stat"><b class="count" data-count="100" data-suffix="%">0%</b><span>dos orçamentos respondidos no dia</span></div>
+        <div class="stat"><b class="count" data-count="24" data-suffix="h">0h</b><span>prazo médio de resposta</span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- SERVIÇOS -->
+  <section id="servicos">
+    <div class="container">
+      <div class="sec-head">
+        <p class="eyebrow reveal">Serviços</p>
+        <h2 class="h2 reveal">Um só profissional para o que a casa pedir</h2>
+        <p class="sub reveal">Do vazamento da madrugada ao quarto que precisa de cor nova.</p>
+      </div>
+      <div class="grid-3">
+        <div class="card reveal">
+          <div class="icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.26 5.26c2.93 2.93 2.93 7.68 0 10.61-2.93 2.93-7.68 2.93-10.61 0-2.93-2.93-2.93-7.68 0-10.61L12 2.69z"/></svg></div>
+          <h3 class="h3">Hidráulica</h3>
+          <p>Vazamentos, torneiras, descasque de caixa d'água, instalação de aquecedor e metais. Presença de vazamento detectada sem quebra desnecessária.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+          <h3 class="h3">Elétrica</h3>
+          <p>Tomadas, chuveiros, luminárias, quadros de distribuição e fiação. Diagnóstico seguro, sem gambiarras — sua família merece.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg></div>
+          <h3 class="h3">Pintura</h3>
+          <p>Quartos, salas e fachadas. Preparo correto da superfície, proteção de móveis e piso, acabamento sem marca de rolo.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94-7.94l-4.91 4.91a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l2.1-2.1z"/><path d="M3.05 13.7a1 1 0 0 1 .3-.95l1.65-1.65a1 1 0 0 1 1.4 0l3.35 3.35a1 1 0 0 1 0 1.4L8.1 17.95a1 1 0 0 1-.95.3c-.7-.15-2.1-.65-3.15-1.7-1.05-1.05-1.55-2.45-1.7-3.15z"/></svg></div>
+          <h3 class="h3">Montagem e reparos</h3>
+          <p>Móveis, prateleiras, suportes de TV, portas que não fecham e aquele canto da casa que vive pedindo atenção.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <h3 class="h3">Emergências</h3>
+          <p>Água no pé, curto-circuito, porta travada: chama no WhatsApp e a gente prioriza. Emergência não espera semana.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div>
+          <h3 class="h3">Diagnóstico por foto</h3>
+          <p>Manda uma foto ou vídeo do problema no WhatsApp e recebe uma estimativa antes de qualquer visita.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANTES × DEPOIS (efeito 01) -->
+  <section id="antes-depois">
+    <div class="container">
+      <div class="sec-head">
+        <p class="eyebrow reveal">Antes × Depois</p>
+        <h2 class="h2 reveal">A diferença que um dia de serviço faz</h2>
+        <p class="sub reveal">Passe o mouse (ou arraste no celular) e veja o tipo de transformação que entregamos.</p>
+      </div>
+      <div class="case-wrap">
+        <div class="case-reveal reveal" id="case-reveal">
+          <img class="layer-bottom" src="assets/depois.svg" alt="Parede após reforma e pintura">
+          <img class="layer-top" src="assets/antes.svg" alt="Parede descascada antes do serviço">
+          <div class="reveal-handle" aria-hidden="true"></div>
+          <span class="reveal-label l-left">Antes</span>
+          <span class="reveal-label l-right">Depois</span>
+          <input type="range" min="0" max="100" value="50" aria-label="Comparar antes e depois" id="case-range">
+        </div>
+        <div class="case-fallback">
+          <figure>
+            <img src="assets/antes.svg" alt="Parede descascada antes do serviço">
+            <figcaption>Antes</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/depois.svg" alt="Parede após reforma e pintura">
+            <figcaption>Depois</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEPOIMENTOS -->
+  <section id="depoimentos">
+    <div class="container">
+      <div class="sec-head">
+        <p class="eyebrow reveal">Depoimentos</p>
+        <h2 class="h2 reveal">Quem chamou, indicou</h2>
+      </div>
+      <div class="grid-3">
+        <div class="testi-card reveal">
+          <div class="stars">★★★★★</div>
+          <blockquote>"Espaço reservado para um depoimento real do cliente. Assim que estiver disponível, ele entra aqui com nome e bairro."</blockquote>
+          <div class="testi-author">
+            <div class="avatar">C1</div>
+            <div><strong>Cliente 1</strong><span>Itaipuaçu</span></div>
+          </div>
+        </div>
+        <div class="testi-card reveal">
+          <div class="stars">★★★★★</div>
+          <blockquote>"Espaço reservado para um depoimento real do cliente. Assim que estiver disponível, ele entra aqui com nome e bairro."</blockquote>
+          <div class="testi-author">
+            <div class="avatar">C2</div>
+            <div><strong>Cliente 2</strong><span>Maricá centro</span></div>
+          </div>
+        </div>
+        <div class="testi-card reveal">
+          <div class="stars">★★★★★</div>
+          <blockquote>"Espaço reservado para um depoimento real do cliente. Assim que estiver disponível, ele entra aqui com nome e bairro."</blockquote>
+          <div class="testi-author">
+            <div class="avatar">C3</div>
+            <div><strong>Cliente 3</strong><span>Itaipuaçu</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMO FUNCIONA -->
+  <section id="como-funciona">
+    <div class="container">
+      <div class="sec-head">
+        <p class="eyebrow reveal">Como funciona</p>
+        <h2 class="h2 reveal">Do primeiro contato ao serviço garantido</h2>
+      </div>
+      <div class="steps">
+        <div class="step reveal">
+          <div class="step-num">1</div>
+          <h3 class="h3">Manda a foto</h3>
+          <p>WhatsApp com foto ou vídeo do problema. Sem formulário complicado.</p>
+        </div>
+        <div class="step reveal">
+          <div class="step-num">2</div>
+          <h3 class="h3">Orçamento no dia</h3>
+          <p>Resposta com estimativa e prazo. Sem taxa de visita para serviços aprovados.</p>
+        </div>
+        <div class="step reveal">
+          <div class="step-num">3</div>
+          <h3 class="h3">Serviço e garantia</h3>
+          <p>Execução no dia marcado, ambiente limpo e garantia do serviço feito.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTATO -->
+  <section id="contato">
+    <div class="container">
+      <div class="contact-wrap">
+        <div class="contact-copy reveal">
+          <p class="eyebrow">Contato</p>
+          <h2 class="h2" style="margin-top:12px;">Peça seu orçamento</h2>
+          <p class="body" style="margin-top:14px;">Descreva o que precisa — em minutos você recebe a estimativa pelo WhatsApp.</p>
+          <div class="contact-list">
+            <div>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+              (21) 96893-5825
+            </div>
+            <div>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              Itaipuaçu · Maricá — RJ
+            </div>
+            <div>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Seg–Sáb, 8h às 18h
+            </div>
+          </div>
+        </div>
+        <form id="lead-form" novalidate class="reveal">
+          <div>
+            <label for="nome">Nome</label>
+            <input type="text" id="nome" name="nome" placeholder="Seu nome" required>
+            <span class="field-error" id="err-nome">Informe seu nome.</span>
+          </div>
+          <div>
+            <label for="whats">WhatsApp</label>
+            <input type="tel" id="whats" name="whats" placeholder="(21) 99999-9999" required>
+            <span class="field-error" id="err-whats">Informe um número válido (com DDD).</span>
+          </div>
+          <div>
+            <label for="servico">Serviço</label>
+            <select id="servico" name="servico" required>
+              <option value="">Escolha…</option>
+              <option>Hidráulica</option>
+              <option>Elétrica</option>
+              <option>Pintura</option>
+              <option>Montagem / reparos</option>
+              <option>Emergência</option>
+              <option>Outro</option>
+            </select>
+            <span class="field-error" id="err-servico">Escolha o tipo de serviço.</span>
+          </div>
+          <button class="btn btn-primary btn-submit" type="submit">
+            Pedir orçamento no WhatsApp
+          </button>
+          <p class="form-hint">Ao enviar, o WhatsApp abre com sua mensagem pronta.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA FINAL -->
+  <div class="final-cta">
+    <h2 class="h2 reveal">Aquele reparo não se resolve sozinho</h2>
+    <p class="reveal">Mande uma foto agora e receba o orçamento hoje mesmo.</p>
+    <a class="btn btn-primary reveal" href="https://wa.me/5521968935825?text=Ol%C3%A1!%20Quero%20um%20or%C3%A7amento." target="_blank" rel="noopener">Chamar no WhatsApp</a>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container footer-inner">
+      <div>
+        <div class="logo">E&S <em>Manutenções</em></div>
+        <div class="footer-note" style="margin-top:4px;">Manutenção residencial em Maricá — RJ</div>
+      </div>
+      <div class="footer-links">
+        <a href="#servicos">Serviços</a>
+        <a href="#antes-depois">Antes × Depois</a>
+        <a href="#contato">Contato</a>
+      </div>
+      <div class="footer-note">© 2026 E&S Manutenções Residenciais</div>
+    </div>
+  </footer>
+
+  <!-- WhatsApp flutuante -->
+  <a class="wa-float" href="https://wa.me/5521968935825?text=Ol%C3%A1!%20Preciso%20de%20um%20or%C3%A7amento." target="_blank" rel="noopener" aria-label="Abrir WhatsApp">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.148-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+    <span>WhatsApp</span>
+  </a>
+
+  <script>
+    // Nav hairline on scroll
+    (function () {
+      var nav = document.getElementById('topnav');
+      var onScroll = function () { nav.classList.toggle('scrolled', window.scrollY > 8); };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+
+    // Efeito 03: loop ambiente no hero — spec: sites/efeitos/03-loop-ambient/EFFECT.md
+    (function () {
+      var stage = document.querySelector('.hero');
+      var video = document.getElementById('hero-video');
+      if (!stage || !video) return;
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if (navigator.connection && navigator.connection.saveData) return;
+
+      function activate() {
+        video.src = 'assets/hero-loop.mp4';
+        video.load();
+        video.addEventListener('canplay', function () {
+          video.classList.add('is-ready');
+          video.play().catch(function () { /* poster permanece */ });
+        }, { once: true });
+      }
+
+      if ('IntersectionObserver' in window) {
+        var obs = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) { activate(); obs.disconnect(); }
+          });
+        }, { threshold: 0.25 });
+        obs.observe(stage);
+      } else {
+        activate();
+      }
+    })();
+
+    // Efeito 01: reveal hover — spec: sites/efeitos/01-reveal-hover/EFFECT.md
+    (function () {
+      var el = document.getElementById('case-reveal');
+      var range = document.getElementById('case-range');
+      if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      var isTouch = matchMedia('(hover: none), (pointer: coarse)').matches;
+      var raf = null, targetX = 50, currentX = 50;
+
+      function apply(x) { el.style.setProperty('--x', x + '%'); }
+      function loop() {
+        currentX += (targetX - currentX) * 0.18;
+        if (Math.abs(targetX - currentX) < 0.1) { currentX = targetX; apply(currentX); raf = null; return; }
+        apply(currentX);
+        raf = requestAnimationFrame(loop);
+      }
+
+      if (isTouch) {
+        range.addEventListener('input', function () {
+          targetX = currentX = Number(range.value);
+          apply(targetX);
+        });
+      } else {
+        el.addEventListener('mousemove', function (e) {
+          var r = el.getBoundingClientRect();
+          targetX = Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100));
+          if (!raf) raf = requestAnimationFrame(loop);
+        }, { passive: true });
+        el.addEventListener('mouseleave', function () {
+          targetX = 50;
+          if (!raf) raf = requestAnimationFrame(loop);
+        });
+        range.setAttribute('aria-hidden', 'true');
+        range.tabIndex = -1;
+      }
+    })();
+
+    // Efeito 05 (inline): count-up nos stats
+    (function () {
+      var els = document.querySelectorAll('.count');
+      var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduced || !('IntersectionObserver' in window)) {
+        els.forEach(function (el) {
+          el.textContent = el.dataset.count + (el.dataset.suffix || '');
+        });
+        return;
+      }
+      var obs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          var el = entry.target;
+          obs.unobserve(el);
+          var target = Number(el.dataset.count);
+          var suffix = el.dataset.suffix || '';
+          var t0 = null;
+          function tick(ts) {
+            if (!t0) t0 = ts;
+            var p = Math.min(1, (ts - t0) / 1200);
+            var eased = 1 - Math.pow(1 - p, 3);
+            el.textContent = Math.round(target * eased) + suffix;
+            if (p < 1) requestAnimationFrame(tick);
+          }
+          requestAnimationFrame(tick);
+        });
+      }, { threshold: 0.4 });
+      els.forEach(function (el) { obs.observe(el); });
+    })();
+
+    // Validação do formulário → WhatsApp deep-link
+    (function () {
+      var form = document.getElementById('lead-form');
+      var fields = [
+        { id: 'nome', err: 'err-nome', test: function (v) { return v.trim().length >= 2; } },
+        { id: 'whats', err: 'err-whats', test: function (v) { return v.replace(/\D/g, '').length >= 10; } },
+        { id: 'servico', err: 'err-servico', test: function (v) { return v.trim().length > 0; } },
+      ];
+      fields.forEach(function (f) {
+        var input = document.getElementById(f.id);
+        input.addEventListener('input', function () {
+          input.classList.remove('invalid');
+          document.getElementById(f.err).classList.remove('show');
+        });
+      });
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var valid = true;
+        var data = {};
+        fields.forEach(function (f) {
+          var input = document.getElementById(f.id);
+          var ok = f.test(input.value);
+          data[f.id] = input.value.trim();
+          if (!ok) {
+            valid = false;
+            input.classList.add('invalid');
+            document.getElementById(f.err).classList.add('show');
+          }
+        });
+        if (!valid) return;
+        var msg = 'Olá! Sou ' + data.nome + '.\nWhatsApp: ' + data.whats + '\nServiço: ' + data.servico + '\nGostaria de um orçamento.';
+        window.open('https://wa.me/5521968935825?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+      });
+    })();
+
+    // Reveal on-scroll
+    (function () {
+      var els = document.querySelectorAll('.reveal');
+      if (!('IntersectionObserver' in window)) {
+        els.forEach(function (el) { el.classList.add('visible'); });
+        return;
+      }
+      var obs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            obs.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15 });
+      els.forEach(function (el) { obs.observe(el); });
+    })();
+  </script>
+</body>
+</html>

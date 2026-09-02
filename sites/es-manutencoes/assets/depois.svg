@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" font-family="Arial, sans-serif">
+  <!-- PLACEHOLDER: parede DEPOIS do serviço (efeito 01, camada de baixo).
+       Substituir por case-depois.jpg real do cliente ou via ASSETS_PROMPT.md.
+       Mesmo enquadramento do antes.svg (16:10). Paleta Harvest (cream). -->
+  <!-- parede nova (tom do cream/harvest) -->
+  <rect width="1600" height="1000" fill="#fff8f1"/>
+  <rect width="1600" height="1000" fill="#f2ead9" opacity="0.35"/>
+  <!-- iluminação golden hour suave -->
+  <ellipse cx="1300" cy="200" rx="600" ry="400" fill="#fee3b5" opacity="0.35"/>
+  <!-- rodapé novo limpo -->
+  <rect y="900" width="1600" height="100" fill="#e3d6c5"/>
+  <rect y="900" width="1600" height="12" fill="#fa5d00" opacity="0.85"/>
+  <!-- tomada nova alinhada (mesma posição do antes) -->
+  <rect x="720" y="520" width="70" height="100" rx="6" fill="#ffffff" stroke="#c0bbb6" stroke-width="2"/>
+  <circle cx="743" cy="550" r="5" fill="#1d1e1c"/>
+  <circle cx="767" cy="550" r="5" fill="#1d1e1c"/>
+  <!-- quadro decor -->
+  <rect x="180" y="300" width="260" height="180" rx="4" fill="#ffffff" stroke="#e3d6c5" stroke-width="8"/>
+  <circle cx="310" cy="390" r="60" fill="#fee3b5"/>
+  <circle cx="310" cy="390" r="34" fill="#fa5d00" opacity="0.7"/>
+  <!-- prateleira com planta -->
+  <rect x="1050" y="480" width="380" height="14" rx="7" fill="#e3d6c5"/>
+  <path d="M1240,480 C1238,420 1268,380 1240,340 C1268,386 1258,430 1240,480" fill="#6a8f5a"/>
+  <path d="M1240,480 C1210,440 1185,420 1180,380 C1198,418 1215,448 1240,480" fill="#5d8250"/>
+  <rect x="1218" y="466" width="44" height="16" rx="6" fill="#d9a066"/>
+  <!-- relógio -->
+  <circle cx="850" cy="230" r="46" fill="#ffffff" stroke="#c0bbb6" stroke-width="3"/>
+  <line x1="850" y1="230" x2="850" y2="198" stroke="#1d1e1c" stroke-width="3"/>
+  <line x1="850" y1="230" x2="874" y2="242" stroke="#fa5d00" stroke-width="3"/>
+  <circle cx="850" cy="230" r="4" fill="#1d1e1c"/>
+  <!-- texto da foto -->
+  <text x="60" y="70" font-size="30" fill="#8e8b87" font-weight="bold">DEPOIS — pintura nova, rodapé e acabamento</text>
+</svg>
