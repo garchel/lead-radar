@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paulo Victor | Landing Pages — Sua empresa merece uma landing page que vende</title>
+  <meta name="description" content="Crio páginas modernas e rápidas para quem quer sair do anonimato digital e transformar visitantes em clientes. Fale no WhatsApp.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       Design system: ElevenLabs (design/elevenlabs.md)
+       Eggshell canvas · warm taupe surfaces · ink pills ·
+       whisper-weight display · violet/orange sparks (visuals only)
+       ============================================================ */
+    :root {
+      --eggshell: #fdfcfc;
+      --taupe: #f5f3f1;
+      --stone: #ebe8e4;
+      --ink: #000000;
+      --graphite: #44403b;
+      --smoke: #777169;
+      --ash: #a59f97;
+      --violet: #0447ff;
+      --ember: #ff4704;
+      --btn-border: #e5e5e5;
+      --radius-card: 20px;
+      --radius-card-lg: 24px;
+      --shadow-whisper: rgba(0,0,0,.4) 0 0 1px 0, rgba(0,0,0,.04) 0 1px 1px 0, rgba(0,0,0,.04) 0 2px 4px 0;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+      background: var(--eggshell);
+      color: var(--ink);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      font-size: 16px;
+    }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+    .container { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
+    section { padding: 96px 0; }
+    .band { background: var(--taupe); }
+
+    /* ---- Type ---- */
+    .display {
+      font-size: clamp(2.25rem, 5vw, 3rem);
+      font-weight: 300; line-height: 1.08; letter-spacing: -0.02em;
+    }
+    .h2 {
+      font-size: clamp(1.75rem, 3.5vw, 2.25rem);
+      font-weight: 300; line-height: 1.17; letter-spacing: -0.02em;
+    }
+    .h3 { font-size: 1.25rem; font-weight: 500; line-height: 1.3; letter-spacing: -0.01em; }
+    .body-lg { font-size: 1.25rem; line-height: 1.35; color: var(--graphite); }
+    .body { font-size: 1rem; line-height: 1.5; color: var(--smoke); }
+    .body-sm { font-size: .875rem; line-height: 1.5; letter-spacing: .01em; color: var(--smoke); }
+    .eyebrow {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: .8125rem; font-weight: 500; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--ash);
+    }
+
+    /* ---- Buttons: pill hierarchy (ink filled × eggshell outline) ---- */
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      border-radius: 9999px; font-family: 'Inter', sans-serif;
+      font-size: .875rem; font-weight: 500; letter-spacing: .01em;
+      text-decoration: none; cursor: pointer; border: 1px solid var(--btn-border);
+      padding: 14px 28px; transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .btn-filled { background: var(--ink); color: var(--eggshell); }
+    .btn-filled:hover { transform: translateY(-1px); box-shadow: var(--shadow-whisper); }
+    .btn-outline { background: var(--eggshell); color: var(--ink); }
+    .btn-outline:hover { background: var(--taupe); }
+    .btn-light { background: var(--eggshell); color: var(--ink); border-color: rgba(255,255,255,.25); }
+    .btn-light:hover { transform: translateY(-1px); }
+
+    /* ---- Nav (invisible until scroll) ---- */
+    nav {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(253,252,252,.92); backdrop-filter: blur(10px);
+      border-bottom: 1px solid transparent;
+      transition: border-color .3s ease;
+    }
+    nav.scrolled { border-bottom-color: var(--stone); }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 16px; }
+    .logo { font-weight: 600; font-size: .9375rem; letter-spacing: -.01em; color: var(--ink); text-decoration: none; }
+    .logo em { font-style: normal; color: var(--ash); font-weight: 400; }
+    .nav-links { display: flex; gap: 32px; }
+    .nav-links a { font-size: .875rem; font-weight: 500; color: var(--graphite); text-decoration: none; letter-spacing: .01em; }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-cta { padding: 10px 20px; }
+
+    /* ---- Hero ---- */
+    .hero { padding: 96px 0 0; }
+    .hero-grid {
+      display: grid; grid-template-columns: 1.25fr .75fr;
+      gap: 64px; align-items: end; padding-bottom: 72px;
+    }
+    .hero-copy .display em {
+      font-style: normal;
+      /* acento só dentro do "produto": sublinhado com as sparks do sistema */
+      background: linear-gradient(180deg, transparent 68%, rgba(4,71,255,.18) 68%, rgba(255,71,4,.28) 100%);
+    }
+    .hero-side { display: flex; flex-direction: column; gap: 20px; padding-bottom: 8px; }
+    .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 40px; }
+    .hero-note { margin-top: 20px; }
+
+    /* Visual do produto: janela browser com spheres (assinatura do sistema) */
+    .hero-visual {
+      background: var(--taupe); border-radius: var(--radius-card-lg);
+      padding: 24px; margin-bottom: 24px;
+    }
+    .browser-chrome { display: flex; gap: 6px; padding: 4px 4px 20px; }
+    .browser-chrome span { width: 8px; height: 8px; border-radius: 9999px; background: var(--stone); }
+    .browser-body {
+      background: var(--eggshell); border-radius: 14px; padding: 40px 32px;
+      display: grid; grid-template-columns: 1.1fr .9fr; gap: 32px; align-items: center;
+    }
+    .wireline { height: 10px; border-radius: 9999px; background: var(--stone); }
+    .wireline.w-90 { width: 90%; }
+    .wireline.w-75 { width: 75%; }
+    .wireline.w-60 { width: 60%; height: 8px; }
+    .wire-btn {
+      display: inline-block; margin-top: 18px; width: 118px; height: 30px;
+      border-radius: 9999px; background: var(--ink);
+    }
+    .sphere {
+      width: 168px; height: 168px; border-radius: 9999px; justify-self: end;
+      background:
+        radial-gradient(38% 38% at 32% 30%, rgba(4,71,255,.85), transparent 70%),
+        radial-gradient(42% 42% at 70% 62%, rgba(255,71,4,.75), transparent 72%),
+        radial-gradient(60% 60% at 50% 50%, rgba(255,140,105,.35), transparent 80%),
+        var(--taupe);
+      position: relative;
+    }
+    .sphere::after {
+      content: ''; position: absolute; inset: 0; border-radius: inherit;
+      background: radial-gradient(50% 50% at 50% 45%, rgba(253,252,252,.5), transparent 60%);
+      mix-blend-mode: soft-light;
+    }
+    .hero-visual-caption { margin-top: 16px; }
+
+    /* ---- Cards ---- */
+    .sec-head { display: grid; gap: 12px; max-width: 640px; margin: 0 auto 56px; text-align: center; justify-items: center; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .card {
+      background: var(--taupe); border-radius: var(--radius-card);
+      padding: 32px; display: flex; flex-direction: column; gap: 14px;
+      transition: background .25s ease;
+    }
+    .card:hover { background: #efece9; }
+    .card .icon {
+      width: 40px; height: 40px; border-radius: 12px; background: var(--stone);
+      color: var(--ink); display: flex; align-items: center; justify-content: center;
+    }
+    .card p { font-size: .9375rem; line-height: 1.55; letter-spacing: .01em; color: var(--smoke); }
+
+    /* ---- Sobre ---- */
+    .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+    .about-visual {
+      background: var(--eggshell); border-radius: var(--radius-card);
+      padding: 40px 32px; position: relative; overflow: hidden;
+      display: flex; flex-direction: column; gap: 8px; min-height: 380px; justify-content: center;
+    }
+    .about-visual .code-mono {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: .8125rem; line-height: 2; color: var(--smoke);
+    }
+    .about-visual .code-mono b { color: var(--ink); font-weight: 500; }
+    .about-sphere {
+      position: absolute; right: -48px; bottom: -48px; width: 200px; height: 200px; opacity: .9;
+      background:
+        radial-gradient(40% 40% at 35% 32%, rgba(4,71,255,.55), transparent 70%),
+        radial-gradient(45% 45% at 68% 65%, rgba(255,71,4,.45), transparent 72%),
+        transparent;
+      filter: blur(2px);
+    }
+    .about-points { margin-top: 28px; display: grid; gap: 16px; }
+    .about-points div { display: flex; gap: 12px; align-items: flex-start; font-size: .9375rem; letter-spacing: .01em; color: var(--graphite); }
+    .about-points svg { flex-shrink: 0; margin-top: 2px; color: var(--ink); }
+
+    /* ---- Steps ---- */
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; counter-reset: step; }
+    .step {
+      background: var(--taupe); border-radius: var(--radius-card);
+      padding: 32px; display: flex; flex-direction: column; gap: 14px;
+    }
+    .step-num {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: .8125rem; font-weight: 500; color: var(--ash); letter-spacing: .08em;
+    }
+    .step::before { counter-increment: step; content: '0' counter(step); }
+
+    /* ---- Depoimentos: white card + whisper shadow ---- */
+    .testi-card {
+      background: var(--eggshell); border-radius: var(--radius-card);
+      padding: 32px; box-shadow: var(--shadow-whisper);
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .stars { color: var(--ink); letter-spacing: 3px; font-size: .875rem; }
+    .testi-card blockquote { font-size: .9375rem; line-height: 1.55; letter-spacing: .01em; color: var(--smoke); font-style: italic; }
+    .testi-author { display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--stone); padding-top: 20px; }
+    .avatar {
+      width: 40px; height: 40px; border-radius: 9999px; background: var(--stone);
+      color: var(--graphite); display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; font-weight: 500; letter-spacing: .02em;
+    }
+    .testi-author strong { display: block; font-size: .875rem; font-weight: 500; }
+    .testi-author span { font-size: .8125rem; color: var(--ash); }
+
+    /* ---- Contato ---- */
+    .contact-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+    .contact-list { margin-top: 32px; display: grid; gap: 14px; }
+    .contact-list > div { display: flex; gap: 12px; align-items: center; font-size: .9375rem; letter-spacing: .01em; color: var(--graphite); }
+    .contact-list svg { color: var(--ink); }
+    .contact-list .mono-label { font-size: .75rem; color: var(--ash); }
+    form {
+      background: var(--eggshell); border-radius: var(--radius-card);
+      padding: 40px; box-shadow: var(--shadow-whisper);
+      display: grid; gap: 20px;
+    }
+    label { font-size: .75rem; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--ash); display: block; margin-bottom: 8px; font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    input {
+      width: 100%; padding: 14px 16px; border: 1px solid var(--stone);
+      border-radius: 4px; background: var(--eggshell);
+      font-family: 'Inter', sans-serif; font-size: .9375rem; letter-spacing: .01em; color: var(--ink);
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+    input:focus { outline: none; border-color: var(--graphite); box-shadow: rgba(0,0,0,.075) 0 0 0 .5px inset; }
+    input.invalid { border-color: var(--ember); }
+    .field-error { font-size: .8125rem; color: var(--ember); display: none; }
+    .field-error.show { display: block; }
+    .btn-submit { width: 100%; justify-content: center; border: none; font-family: 'Inter', sans-serif; }
+    .form-hint { font-size: .8125rem; color: var(--ash); letter-spacing: .01em; }
+
+    /* ---- Case: reveal hover (efeito 01 — sites/efeitos/01-reveal-hover) ---- */
+    .case-reveal {
+      position: relative;
+      aspect-ratio: 16 / 10;
+      border-radius: var(--radius-card-lg);
+      overflow: hidden;
+      cursor: crosshair;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: pan-y;
+      background: var(--taupe);
+    }
+    .case-reveal img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      display: block;
+    }
+    .case-reveal .layer-top { clip-path: inset(0 calc(100% - var(--x, 50%)) 0 0); }
+    .case-reveal .reveal-handle {
+      position: absolute; top: 0; bottom: 0;
+      left: var(--x, 50%);
+      width: 2px;
+      background: var(--eggshell);
+      box-shadow: 0 0 0 1px rgba(0,0,0,.18);
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+    .case-reveal .reveal-label {
+      position: absolute; bottom: 16px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: .6875rem; font-weight: 500; letter-spacing: .12em; text-transform: uppercase;
+      padding: 6px 12px; border-radius: 9999px;
+      background: rgba(0,0,0,.55); color: var(--eggshell);
+      backdrop-filter: blur(4px);
+      pointer-events: none;
+    }
+    .case-reveal .reveal-label.l-left { left: 16px; }
+    .case-reveal .reveal-label.l-right { right: 16px; }
+    .case-reveal input[type="range"] {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      opacity: 0; cursor: ew-resize; margin: 0;
+      -webkit-appearance: none; appearance: none;
+    }
+    .case-fallback { display: none; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .case-fallback figure { border-radius: var(--radius-card); overflow: hidden; aspect-ratio: 16/10; position: relative; margin: 0; }
+    .case-fallback img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .case-fallback figcaption {
+      position: absolute; bottom: 12px; left: 12px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .6875rem; letter-spacing: .12em; text-transform: uppercase;
+      padding: 5px 10px; border-radius: 9999px; background: rgba(0,0,0,.55); color: var(--eggshell);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .case-reveal { display: none; }
+      .case-fallback { display: grid; }
+    }
+
+    /* ---- CTA final: banda ink invertida ---- */
+    .final-cta { position: relative; background: var(--ink); color: var(--eggshell); text-align: center; padding: 96px 32px; overflow: hidden; }
+    /* efeito 03 — loop ambiente (sites/efeitos/03-loop-ambient) */
+    .final-cta video,
+    .final-cta .cta-poster {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; z-index: 0;
+    }
+    .final-cta video { opacity: 0; transition: opacity .8s ease; }
+    .final-cta video.is-ready { opacity: 1; }
+    .final-cta .cta-veil { position: absolute; inset: 0; background: rgba(0,0,0,.45); z-index: 1; }
+    .final-cta .h2, .final-cta p, .final-cta .btn-light { position: relative; z-index: 2; }
+    .final-cta .h2 { color: var(--eggshell); font-size: clamp(1.75rem, 4vw, 2.5rem); }
+    .final-cta p { margin: 20px auto 40px; max-width: 560px; color: var(--ash); font-size: 1.0625rem; line-height: 1.55; }
+    .final-cta .btn-light { background: var(--eggshell); color: var(--ink); }
+
+    /* ---- Footer: banda compacta ---- */
+    footer { padding: 40px 0; }
+    .footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 24px; align-items: center; border-top: 1px solid var(--stone); padding-top: 32px; }
+    .footer-brand { font-weight: 600; letter-spacing: -.01em; }
+    .footer-brand em { font-style: normal; color: var(--ash); font-weight: 400; }
+    .footer-links { display: flex; gap: 24px; font-size: .875rem; }
+    .footer-links a { color: var(--smoke); text-decoration: none; }
+    .footer-links a:hover { color: var(--ink); }
+    .footer-contact { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .75rem; color: var(--ash); }
+
+    /* ---- WhatsApp float: pill ink ---- */
+    .wa-float {
+      position: fixed; right: 24px; bottom: 24px; z-index: 60;
+      height: 56px; display: inline-flex; align-items: center; gap: 10px;
+      padding: 0 22px; border-radius: 9999px;
+      background: var(--ink); color: var(--eggshell);
+      font-size: .875rem; font-weight: 500; letter-spacing: .01em; text-decoration: none;
+      box-shadow: var(--shadow-whisper);
+      transition: transform .2s ease;
+    }
+    .wa-float:hover { transform: translateY(-2px); }
+
+    /* ---- Reveal on-scroll ---- */
+    .reveal { opacity: 0; transform: translateY(16px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1; transform: none; transition: none; }
+      html { scroll-behavior: auto; }
+    }
+
+    /* ---- Responsivo ---- */
+    @media (max-width: 960px) {
+      .hero-grid { grid-template-columns: 1fr; gap: 40px; align-items: start; }
+      .grid-3 { grid-template-columns: 1fr 1fr; }
+      .about-grid, .contact-wrap { grid-template-columns: 1fr; gap: 40px; }
+      .browser-body { grid-template-columns: 1fr; }
+      .sphere { justify-self: center; }
+      .nav-links { display: none; }
+    }
+    @media (max-width: 640px) {
+      .grid-3, .steps { grid-template-columns: 1fr; }
+      section { padding: 72px 0; }
+      .container { padding: 0 20px; }
+      .wa-float span { display: none; }
+      .wa-float { padding: 0; width: 56px; justify-content: center; }
+      form { padding: 28px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav id="topnav">
+    <div class="container nav-inner">
+      <a class="logo" href="#top">Paulo Victor <em>| Landing Pages</em></a>
+      <div class="nav-links">
+        <a href="#beneficios">Benefícios</a>
+        <a href="#sobre">Sobre</a>
+        <a href="#como-funciona">Como funciona</a>
+      </div>
+      <a class="btn btn-outline nav-cta" href="#contato">Falar no WhatsApp</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero" id="top">
+    <div class="container">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow reveal">Landing pages sob medida</p>
+          <h1 class="display reveal" style="margin-top:20px;">Sua empresa merece uma <em>landing page que vende</em></h1>
+          <div class="hero-actions reveal">
+            <a class="btn btn-filled" href="https://wa.me/5561995254732?text=Ol%C3%A1%20Paulo!%20Quero%20uma%20landing%20page%20para%20minha%20empresa." target="_blank" rel="noopener">
+              Falar no WhatsApp
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg>
+            </a>
+            <a class="btn btn-outline" href="#beneficios">Ver benefícios</a>
+          </div>
+          <p class="body-sm hero-note reveal">Do briefing ao site no ar — você acompanha cada etapa pelo WhatsApp.</p>
+        </div>
+        <div class="hero-side reveal">
+          <div class="hero-visual">
+            <div class="browser-chrome"><span></span><span></span><span></span></div>
+            <div class="browser-body">
+              <div>
+                <div class="wireline w-90" style="height:14px; margin-bottom:14px;"></div>
+                <div class="wireline w-75" style="margin-bottom:10px;"></div>
+                <div class="wireline w-60" style="margin-bottom:10px;"></div>
+                <div class="wireline w-75" style="margin-bottom:18px;"></div>
+                <span class="wire-btn"></span>
+              </div>
+              <div class="sphere"></div>
+            </div>
+            <p class="eyebrow hero-visual-caption">Sua página, no ar — moderna e rápida</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- BENEFÍCIOS -->
+  <section id="beneficios" class="band">
+    <div class="container">
+      <div class="sec-head">
+        <p class="eyebrow reveal">Benefícios</p>
+        <h2 class="h2 reveal">Por que ter sua landing page comigo?</h2>
+        <p class="body reveal">Cada projeto é tratado como único — do briefing ao ar, com comunicação clara em todas as etapas.</p>
+      </div>
+      <div class="grid-3">
+        <div class="card reveal">
+          <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+          <h3 class="h3">Presença digital imediata</h3>
+          <p>Do briefing ao site no ar em dias, sem burocracia — para quem nunca teve site próprio.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.8L7 14.3"/></svg></div>
+          <h3 class="h3">Página que converte</h3>
+          <p>Estrutura pensada para transformar visita em contato: CTAs claros e WhatsApp a um clique.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <h3 class="h3">Entrega ágil</h3>
+          <p>Prazo curto e comunicação clara do início ao fim — você acompanha cada etapa.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <h3 class="h3">Atendimento próximo</h3>
+          <p>Você fala direto com quem cria — sem intermediários, sem enrolação.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+          <h3 class="h3">Atenção aos detalhes</h3>
+          <p>Cada seção ajustada ao seu negócio e ao seu público — nada de template genérico.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg></div>
+          <h3 class="h3">Funciona em qualquer tela</h3>
+          <p>Layout 100% responsivo, pensado primeiro para o celular — onde está seu cliente.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOBRE -->
+  <section id="sobre">
+    <div class="container">
+      <div class="sec-head" style="text-align:left; justify-items:start; margin-left:0;">
+        <p class="eyebrow reveal">Sobre</p>
+        <h2 class="h2 reveal">Quem cria sua página</h2>
+      </div>
+      <div class="about-grid">
+        <div class="about-visual reveal">
+          <div class="code-mono">
+            <div><b>briefing(</b>seu_negocio<b>)</b></div>
+            <div>&nbsp;&nbsp;→ design sob medida</div>
+            <div>&nbsp;&nbsp;→ texto que converte</div>
+            <div><b>entrega(</b>dias<b>)</b> <span style="color:var(--ash)">// não semanas</span></div>
+            <div><b>suporte(</b>whatsapp<b>)</b> <span style="color:var(--ash)">// direto comigo</span></div>
+          </div>
+          <div class="about-sphere"></div>
+        </div>
+        <div class="about-copy reveal">
+          <h2 class="h2">Do briefing ao site no ar, com você por perto</h2>
+          <p class="body" style="margin-top:20px;">Sou <strong style="color:var(--ink); font-weight:500;">Paulo Victor</strong>, criador de landing pages sob medida. Trabalho com proximidade total: briefing direto com você, comunicação clara e entrega rápida — para que sua presença digital represente bem o que o seu negócio faz.</p>
+          <div class="about-points">
+            <div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Briefing personalizado para entender seu negócio</div>
+            <div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Design e texto criados para o seu público</div>
+            <div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Acompanhamento direto no WhatsApp</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEPOIMENTOS -->
+  <section id="depoimentos" class="band">
+    <div class="container">
+      <div class="sec-head">
+        <p class="eyebrow reveal">Depoimentos</p>
+        <h2 class="h2 reveal">O que dizem os clientes</h2>
+      </div>
+      <div class="grid-3">
+        <div class="testi-card reveal">
+          <div class="stars">★★★★★</div>
+          <blockquote>"Espaço reservado para um depoimento real do cliente. Assim que estiver disponível, ele entra aqui com nome e empresa."</blockquote>
+          <div class="testi-author">
+            <div class="avatar">C1</div>
+            <div><strong>Cliente 1</strong><span>Depoimento a confirmar</span></div>
+          </div>
+        </div>
+        <div class="testi-card reveal">
+          <div class="stars">★★★★★</div>
+          <blockquote>"Espaço reservado para um depoimento real do cliente. Assim que estiver disponível, ele entra aqui com nome e empresa."</blockquote>
+          <div class="testi-author">
+            <div class="avatar">C2</div>
+            <div><strong>Cliente 2</strong><span>Depoimento a confirmar</span></div>
+          </div>
+        </div>
+        <div class="testi-card reveal">
+          <div class="stars">★★★★★</div>
+          <blockquote>"Espaço reservado para um depoimento real do cliente. Assim que estiver disponível, ele entra aqui com nome e empresa."</blockquote>
+          <div class="testi-author">
+            <div class="avatar">C3</div>
+            <div><strong>Cliente 3</strong><span>Depoimento a confirmar</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CASE: antes × depois (efeito 01 — reveal hover) -->
+  <section id="case">
+    <div class="container">
+      <div class="sec-head">
+        <p class="eyebrow reveal">Case</p>
+        <h2 class="h2 reveal">O antes × depois que vende por você</h2>
+        <p class="body reveal">Passe o mouse: de um site que assusta a uma página que convida. É isso que eu entrego.</p>
+      </div>
+      <div class="case-reveal reveal" id="case-reveal">
+        <img class="layer-bottom" src="assets/depois.svg" alt="Landing page moderna entregue">
+        <img class="layer-top" src="assets/antes.svg" alt="Site antigo, de 2010, que afasta clientes">
+        <div class="reveal-handle" aria-hidden="true"></div>
+        <span class="reveal-label l-left">Antes</span>
+        <span class="reveal-label l-right">Depois</span>
+        <input type="range" min="0" max="100" value="50" aria-label="Comparar antes e depois" id="case-range">
+      </div>
+      <div class="case-fallback">
+        <figure>
+          <img src="assets/antes.svg" alt="Site antigo, de 2010, que afasta clientes">
+          <figcaption>Antes</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/depois.svg" alt="Landing page moderna entregue">
+          <figcaption>Depois</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMO FUNCIONA -->
+  <section id="como-funciona">
+    <div class="container">
+      <div class="sec-head">
+        <p class="eyebrow reveal">Como funciona</p>
+        <h2 class="h2 reveal">Simples do início ao fim</h2>
+      </div>
+      <div class="steps">
+        <div class="step reveal">
+          <div class="step-num"></div>
+          <h3 class="h3">Briefing personalizado</h3>
+          <p>Entendo seu negócio e seu público antes de começar qualquer linha de código.</p>
+        </div>
+        <div class="step reveal">
+          <div class="step-num"></div>
+          <h3 class="h3">Criação sob medida</h3>
+          <p>Sem templates genéricos: design e texto feitos para você e seu objetivo.</p>
+        </div>
+        <div class="step reveal">
+          <div class="step-num"></div>
+          <h3 class="h3">Entrega e suporte</h3>
+          <p>Página no ar com acompanhamento direto no WhatsApp, do deploy em diante.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTATO -->
+  <section id="contato" class="band">
+    <div class="container">
+      <div class="contact-wrap">
+        <div class="contact-copy reveal">
+          <p class="eyebrow">Contato</p>
+          <h2 class="h2" style="margin-top:12px;">Vamos criar sua landing page?</h2>
+          <p class="body" style="margin-top:16px;">Preencha o formulário ou chame no WhatsApp — respondo rapidamente e começamos com um briefing rápido do seu projeto.</p>
+          <div class="contact-list">
+            <div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+              <div><span class="mono-label mono">WHATSAPP</span><br>(61) 99525-4732</div>
+            </div>
+            <div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              <div><span class="mono-label mono">E-MAIL</span><br>dev.paulocarvalho@gmail.com</div>
+            </div>
+            <div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <div><span class="mono-label mono">BASE</span><br>Brasília, DF</div>
+            </div>
+          </div>
+        </div>
+        <form id="lead-form" novalidate class="reveal">
+          <div>
+            <label for="nome">Nome</label>
+            <input type="text" id="nome" name="nome" placeholder="Seu nome" required>
+            <span class="field-error" id="err-nome">Informe seu nome.</span>
+          </div>
+          <div>
+            <label for="whats">WhatsApp</label>
+            <input type="tel" id="whats" name="whats" placeholder="(61) 99999-9999" required>
+            <span class="field-error" id="err-whats">Informe um número válido (com DDD).</span>
+          </div>
+          <div>
+            <label for="email">E-mail</label>
+            <input type="email" id="email" name="email" placeholder="voce@empresa.com" required>
+            <span class="field-error" id="err-email">Informe um e-mail válido.</span>
+          </div>
+          <button class="btn btn-filled btn-submit" type="submit">
+            Quero minha landing page
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg>
+          </button>
+          <p class="form-hint">Ao enviar, o WhatsApp abre com sua mensagem pronta.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA FINAL (efeito 03 — loop ambiente) -->
+  <div class="final-cta" id="final-cta">
+    <img class="cta-poster" src="assets/cta-poster.jpg" alt="" aria-hidden="true">
+    <video id="cta-video" muted loop playsinline preload="none" aria-hidden="true"></video>
+    <div class="cta-veil" aria-hidden="true"></div>
+    <h2 class="h2 reveal">Pronto para ter sua página no ar?</h2>
+    <p class="reveal">Me conte sobre o seu negócio hoje — a primeira conversa já é o começo do briefing.</p>
+    <a class="btn btn-light reveal" href="https://wa.me/5561995254732?text=Ol%C3%A1%20Paulo!%20Quero%20minha%20landing%20page." target="_blank" rel="noopener">
+      Conversar no WhatsApp
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg>
+    </a>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container footer-inner">
+      <div>
+        <div class="footer-brand">Paulo Victor <em>| Landing Pages</em></div>
+      </div>
+      <div class="footer-links">
+        <a href="#beneficios">Benefícios</a>
+        <a href="#sobre">Sobre</a>
+        <a href="#contato">Contato</a>
+      </div>
+      <div class="footer-contact">(61) 99525-4732 · dev.paulocarvalho@gmail.com</div>
+      <div class="footer-contact">© 2026 Paulo Victor</div>
+    </div>
+  </footer>
+
+  <!-- WhatsApp flutuante -->
+  <a class="wa-float" href="https://wa.me/5561995254732?text=Ol%C3%A1!%20Quero%20uma%20landing%20page." target="_blank" rel="noopener" aria-label="Abrir WhatsApp">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.148-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+    <span>WhatsApp</span>
+  </a>
+
+  <script>
+    // Nav: hairline só aparece após scroll (nav invisível até interagir)
+    (function () {
+      var nav = document.getElementById('topnav');
+      var onScroll = function () { nav.classList.toggle('scrolled', window.scrollY > 8); };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+
+    // Validação do formulário → deep-link WhatsApp com mensagem pronta
+    (function () {
+      var form = document.getElementById('lead-form');
+      var fields = [
+        { id: 'nome', err: 'err-nome', test: function (v) { return v.trim().length >= 2; } },
+        { id: 'whats', err: 'err-whats', test: function (v) { return v.replace(/\D/g, '').length >= 10; } },
+        { id: 'email', err: 'err-email', test: function (v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); } },
+      ];
+
+      fields.forEach(function (f) {
+        var input = document.getElementById(f.id);
+        input.addEventListener('input', function () {
+          input.classList.remove('invalid');
+          document.getElementById(f.err).classList.remove('show');
+        });
+      });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var valid = true;
+        var data = {};
+        fields.forEach(function (f) {
+          var input = document.getElementById(f.id);
+          var ok = f.test(input.value);
+          data[f.id] = input.value.trim();
+          if (!ok) {
+            valid = false;
+            input.classList.add('invalid');
+            document.getElementById(f.err).classList.add('show');
+          }
+        });
+        if (!valid) return;
+        var msg = 'Olá Paulo! Sou ' + data.nome + '.\nMeu WhatsApp: ' + data.whats + '\nE-mail: ' + data.email + '\nQuero uma landing page para minha empresa.';
+        window.open('https://wa.me/5561995254732?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+      });
+    })();
+
+    // Efeito 01: reveal hover (case antes × depois) — spec: sites/efeitos/01-reveal-hover/EFFECT.md
+    (function () {
+      var el = document.getElementById('case-reveal');
+      var range = document.getElementById('case-range');
+      if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      var isTouch = matchMedia('(hover: none), (pointer: coarse)').matches;
+      var raf = null, targetX = 50, currentX = 50;
+
+      function apply(x) { el.style.setProperty('--x', x + '%'); }
+
+      function loop() {
+        currentX += (targetX - currentX) * 0.18;
+        if (Math.abs(targetX - currentX) < 0.1) { currentX = targetX; apply(currentX); raf = null; return; }
+        apply(currentX);
+        raf = requestAnimationFrame(loop);
+      }
+
+      if (isTouch) {
+        range.addEventListener('input', function () {
+          targetX = currentX = Number(range.value);
+          apply(targetX);
+        });
+      } else {
+        el.addEventListener('mousemove', function (e) {
+          var r = el.getBoundingClientRect();
+          targetX = Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100));
+          if (!raf) raf = requestAnimationFrame(loop);
+        }, { passive: true });
+        el.addEventListener('mouseleave', function () {
+          targetX = 50;
+          if (!raf) raf = requestAnimationFrame(loop);
+        });
+        range.setAttribute('aria-hidden', 'true');
+        range.tabIndex = -1;
+      }
+    })();
+
+    // Efeito 03: loop ambiente no CTA final — spec: sites/efeitos/03-loop-ambient/EFFECT.md
+    (function () {
+      var stage = document.getElementById('final-cta');
+      var video = document.getElementById('cta-video');
+      if (!stage || !video) return;
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if (navigator.connection && navigator.connection.saveData) return;
+
+      function activate() {
+        video.src = 'assets/cta-loop.mp4';
+        video.load();
+        video.addEventListener('canplay', function () {
+          video.classList.add('is-ready');
+          video.play().catch(function () { /* poster permanece */ });
+        }, { once: true });
+      }
+
+      if ('IntersectionObserver' in window) {
+        var obs = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) { activate(); obs.disconnect(); }
+          });
+        }, { threshold: 0.25 });
+        obs.observe(stage);
+      } else {
+        activate();
+      }
+    })();
+
+    // Reveal on-scroll
+    (function () {
+      var els = document.querySelectorAll('.reveal');
+      if (!('IntersectionObserver' in window)) {
+        els.forEach(function (el) { el.classList.add('visible'); });
+        return;
+      }
+      var obs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            obs.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15 });
+      els.forEach(function (el) { obs.observe(el); });
+    })();
+  </script>
+</body>
+</html>

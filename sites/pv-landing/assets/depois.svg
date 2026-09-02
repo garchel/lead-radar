@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+  <!-- PLACEHOLDER: screenshot mock da "landing nova" (efeito 01, camada DEPOIS).
+       Mesma câmera/enquadramento de antes.svg (16:10). Espelha o design ElevenLabs da LP.
+       Substituir por case-depois.jpg gerado via ASSETS_PROMPT.md -->
+  <rect width="1600" height="1000" fill="#fdfcfc"/>
+
+  <!-- nav minimal -->
+  <line x1="100" y1="96" x2="1500" y2="96" stroke="#ebe8e4" stroke-width="1"/>
+  <text x="100" y="64" font-size="20" fill="#000" font-weight="600">Paulo Victor <tspan fill="#a59f97" font-weight="400">| Landing Pages</tspan></text>
+  <g font-size="14" fill="#44403b" font-weight="500">
+    <text x="1180" y="64">Benefícios</text>
+    <text x="1280" y="64">Sobre</text>
+    <rect x="1380" y="40" width="120" height="38" rx="19" fill="#fdfcfc" stroke="#e5e5e5"/>
+    <text x="1408" y="64" font-size="14" fill="#000">Contato</text>
+  </g>
+
+  <!-- hero -->
+  <text x="100" y="230" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="16" fill="#a59f97" letter-spacing="3">LANDING PAGES SOB MEDIDA</text>
+  <text x="100" y="330" font-size="72" font-weight="300" fill="#000" letter-spacing="-1.4">Sua empresa no ar,</text>
+  <text x="100" y="412" font-size="72" font-weight="300" fill="#000" letter-spacing="-1.4">vendendo por você.</text>
+
+  <!-- botões pill -->
+  <rect x="100" y="470" width="200" height="52" rx="26" fill="#000"/>
+  <text x="140" y="502" font-size="14" fill="#fdfcfc" font-weight="500">Falar no WhatsApp</text>
+  <rect x="320" y="470" width="150" height="52" rx="26" fill="#fdfcfc" stroke="#e5e5e5"/>
+  <text x="352" y="502" font-size="14" fill="#000" font-weight="500">Ver benefícios</text>
+
+  <!-- sphere (spark de produto) -->
+  <radialGradient id="sph" cx="0.35" cy="0.35" r="0.75">
+    <stop offset="0" stop-color="#0447ff" stop-opacity="0.85"/>
+    <stop offset="0.5" stop-color="#ff4704" stop-opacity="0.55"/>
+    <stop offset="1" stop-color="#f5f3f1" stop-opacity="0"/>
+  </radialGradient>
+  <circle cx="1280" cy="380" r="170" fill="url(#sph)"/>
+  <circle cx="1280" cy="380" r="170" fill="none" stroke="#ebe8e4" stroke-width="1"/>
+
+  <!-- cards taupe -->
+  <g>
+    <rect x="100" y="640" width="420" height="180" rx="20" fill="#f5f3f1"/>
+    <rect x="128" y="668" width="40" height="40" rx="12" fill="#ebe8e4"/>
+    <text x="128" y="740" font-size="18" fill="#000" font-weight="500">Presença imediata</text>
+    <text x="128" y="768" font-size="13" fill="#777169">Do briefing ao site no ar em dias.</text>
+
+    <rect x="560" y="640" width="420" height="180" rx="20" fill="#f5f3f1"/>
+    <rect x="588" y="668" width="40" height="40" rx="12" fill="#ebe8e4"/>
+    <text x="588" y="740" font-size="18" fill="#000" font-weight="500">Página que converte</text>
+    <text x="588" y="768" font-size="13" fill="#777169">CTA claro, WhatsApp a um clique.</text>
+
+    <rect x="1020" y="640" width="420" height="180" rx="20" fill="#f5f3f1"/>
+    <rect x="1048" y="668" width="40" height="40" rx="12" fill="#ebe8e4"/>
+    <text x="1048" y="740" font-size="18" fill="#000" font-weight="500">Entrega ágil</text>
+    <text x="1048" y="768" font-size="13" fill="#777169">Você acompanha cada etapa.</text>
+  </g>
+
+  <text x="100" y="910" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="12" fill="#a59f97" letter-spacing="2">FEITO COM INTENÇÃO — CADA PIXEL JUSTIFICADO</text>
+</svg>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Efeito 03 · Loop Ambient — vídeo/textura viva no hero</title>
+<!--
+  DEMO STANDALONE — Efeito 03: Ambient Background Loop
+  Zero deps. Hero com vídeo mudo em loop + poster + overlay de conteúdo.
+  Assets: assets/loop.mp4 (10s, sem áudio) + assets/poster.jpg (frame 1).
+  Tokens --ef-* remapeáveis para o DESIGN.md do cliente.
+-->
+<style>
+  :root {
+    --ef-ink: #000;
+    --ef-smoke: #777169;
+    --ef-ash: #a59f97;
+    --ef-overlay: rgba(0,0,0,.38); /* legibilidade sobre o vídeo */
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: ui-sans-serif, system-ui, sans-serif; background: var(--ef-ink); color: var(--ef-ink); }
+
+  .hero {
+    position: relative;
+    min-height: 92vh;
+    display: grid; place-items: center;
+    overflow: hidden;
+    background: #1a1a1a; /* cor do poster aprox. — evita flash branco */
+  }
+  .hero video,
+  .hero .poster {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    z-index: 0;
+  }
+  .hero video { opacity: 0; transition: opacity .8s ease; }
+  .hero video.is-ready { opacity: 1; }
+  .hero .poster { display: block; }
+  .hero .veil {
+    position: absolute; inset: 0;
+    background: var(--ef-overlay);
+    z-index: 1;
+  }
+  .hero-content {
+    position: relative; z-index: 2;
+    text-align: center; color: #fff;
+    padding: 24px; max-width: 720px;
+  }
+  .hero-eyebrow { font-family: ui-monospace, monospace; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.75); margin-bottom: 16px; }
+  .hero h1 { font-size: clamp(2rem, 5vw, 3.25rem); font-weight: 300; line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 16px; }
+  .hero p { font-size: 1.0625rem; color: rgba(255,255,255,.85); line-height: 1.55; margin-bottom: 32px; }
+  .hero-btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: #fff; color: #000;
+    padding: 14px 28px; border-radius: 9999px;
+    font-size: .875rem; font-weight: 500; text-decoration: none;
+    border: 1px solid #e5e5e5;
+    transition: transform .2s ease;
+  }
+  .hero-btn:hover { transform: translateY(-2px); }
+
+  section.after { background: #fdfcfc; padding: 96px 24px; max-width: 720px; margin: 0 auto; }
+  section.after .eyebrow { font-family: ui-monospace, monospace; font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ef-ash); margin-bottom: 8px; }
+  section.after h2 { font-size: 1.5rem; font-weight: 500; margin-bottom: 12px; color: #000; }
+  section.after p { font-size: .9375rem; color: var(--ef-smoke); line-height: 1.55; }
+
+  /* reduced-motion: poster estático, sem vídeo */
+  @media (prefers-reduced-motion: reduce) {
+    .hero video { display: none; }
+  }
+  /* save-data / mobile fraco: poster only (JS decide) */
+  .hero.no-video video { display: none; }
+</style>
+</head>
+<body>
+
+<header class="hero" id="hero">
+  <img class="poster" src="assets/poster.jpg" alt="" aria-hidden="true">
+  <video id="loop-video" muted loop playsinline preload="none" aria-hidden="true"></video>
+  <div class="veil" aria-hidden="true"></div>
+  <div class="hero-content">
+    <p class="hero-eyebrow">sua empresa, no ar</p>
+    <h1>O hero que respira sem pedir licença</h1>
+    <p>Vídeo ambiente em loop: textura viva atrás do conteúdo, CTA sempre legível. O efeito de maior retorno da biblioteca — use em qualquer landing.</p>
+    <a class="hero-btn" href="#after">Ver como funciona</a>
+  </div>
+</header>
+
+<section class="after" id="after">
+  <p class="eyebrow">regras do efeito</p>
+  <h2>Vídeo serve ao conteúdo, nunca compete</h2>
+  <p>Overlay de legibilidade (veil) fixa o contraste do texto; o vídeo é decorativo (aria-hidden); poster carrega primeiro (CLS zero); reduced-motion e save-data caem para o poster estático. Na LP do cliente, o vídeo vem do briefing — ou do ASSETS_PROMPT.md do efeito.</p>
+</section>
+
+<script>
+(function () {
+  var hero = document.getElementById('hero');
+  var video = document.getElementById('loop-video');
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var saveData = navigator.connection && navigator.connection.saveData;
+
+  if (reduced || saveData) {
+    hero.classList.add('no-video'); // poster estático
+    return;
+  }
+
+  // lazy: só carrega quando o hero entra na viewport
+  if ('IntersectionObserver' in window) {
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          video.src = 'assets/loop.mp4';
+          video.load();
+          video.addEventListener('canplay', function () {
+            video.classList.add('is-ready');
+            video.play().catch(function () { hero.classList.add('no-video'); });
+          }, { once: true });
+          obs.disconnect();
+        }
+      });
+    }, { threshold: 0.25 });
+    obs.observe(hero);
+  } else {
+    video.src = 'assets/loop.mp4';
+    video.play().catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>

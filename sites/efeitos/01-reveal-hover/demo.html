@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Efeito 01 · Reveal Hover — antes/depois pelo cursor</title>
+<!--
+  DEMO STANDALONE — Efeito 01: Reveal Hover (cursor mask reveal)
+  Tokens neutros (--ef-*): remapeie para as cores do DESIGN.md do cliente.
+  Assets: substitua assets/antes.jpg e assets/depois.jpg pelas fotos REAIS do cliente
+  (mesmo enquadramento — ver ASSETS_PROMPT.md).
+-->
+<style>
+  :root {
+    --ef-canvas: #fdfcfc;
+    --ef-ink: #000;
+    --ef-smoke: #777169;
+    --ef-ash: #a59f97;
+    --ef-stroke: #ebe8e4;
+    --ef-softness: 28px;   /* largura da zona de transição do reveal */
+    --ef-handle-w: 2px;    /* espessura da linha do cursor */
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: ui-sans-serif, system-ui, sans-serif; background: var(--ef-canvas); color: var(--ef-ink); display: grid; place-items: center; min-height: 100vh; padding: 48px 24px; }
+
+  .demo { width: min(920px, 100%); }
+  .demo-eyebrow { font-family: ui-monospace, monospace; font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ef-ash); margin-bottom: 8px; }
+  .demo h1 { font-size: 1.5rem; font-weight: 500; margin-bottom: 6px; }
+  .demo p { font-size: .9375rem; color: var(--ef-smoke); margin-bottom: 28px; max-width: 56ch; }
+
+  .reveal {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: crosshair;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: pan-y; /* mobile: scroll vertical não é sequestrado pelo slider */
+  }
+  .reveal img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    display: block;
+  }
+  /* camada DEPOIS por baixo inteira; ANTES por cima, recortada até o cursor */
+  .reveal .layer-top {
+    clip-path: inset(0 calc(100% - var(--x, 50%)) 0 0);
+  }
+  /* borda suave na zona de corte */
+  .reveal .layer-top::after {
+    content: ''; position: absolute; inset: 0;
+    box-shadow: calc(var(--x, 50%) - var(--ef-softness)) 0 0 calc(var(--ef-softness)) rgba(0,0,0,.25);
+  }
+  .reveal-handle {
+    position: absolute; top: 0; bottom: 0;
+    left: var(--x, 50%);
+    width: var(--ef-handle-w);
+    background: #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.18);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .reveal-label {
+    position: absolute; bottom: 16px;
+    font-family: ui-monospace, monospace; font-size: .6875rem; font-weight: 500;
+    letter-spacing: .12em; text-transform: uppercase;
+    padding: 6px 12px; border-radius: 9999px;
+    background: rgba(0,0,0,.55); color: #fff;
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+  }
+  .reveal-label.l-left { left: 16px; }
+  .reveal-label.l-right { right: 16px; }
+
+  /* modo touch: slider operável (range invisível por cima) */
+  .reveal input[type="range"] {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    opacity: 0; cursor: ew-resize;
+    margin: 0;
+    -webkit-appearance: none; appearance: none;
+  }
+  .reveal.has-touch .reveal-handle,
+  .reveal.has-touch .layer-top::after { transition: none; }
+
+  /* reduced-motion: imagem composta estática lado a lado (duas fotos empilhadas verticalmente) */
+  .fallback-static { display: none; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .fallback-static figure { border-radius: 20px; overflow: hidden; aspect-ratio: 16/10; position: relative; }
+  .fallback-static img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .fallback-static figcaption {
+    position: absolute; bottom: 12px; left: 12px;
+    font-family: ui-monospace, monospace; font-size: .6875rem; letter-spacing: .12em; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 9999px; background: rgba(0,0,0,.55); color: #fff;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { display: none; }
+    .fallback-static { display: grid; }
+  }
+</style>
+</head>
+<body>
+  <div class="demo">
+    <p class="demo-eyebrow">efeito 01 — reveal hover</p>
+    <h1>Antes × depois, revelado pelo cursor</h1>
+    <p>Passe o mouse: a foto de baixo aparece onde o cursor vai. No touch, arraste o handle. No desktop, o argumento de venda (a transformação) vira a interação.</p>
+
+    <div class="reveal" id="reveal">
+      <img class="layer-bottom" src="assets/depois.jpg" alt="Depois da transformação">
+      <img class="layer-top" src="assets/antes.jpg" alt="Antes da transformação">
+      <div class="reveal-handle" aria-hidden="true"></div>
+      <span class="reveal-label l-left">Antes</span>
+      <span class="reveal-label l-right">Depois</span>
+      <input type="range" min="0" max="100" value="50" aria-label="Comparar antes e depois" id="reveal-range">
+    </div>
+
+    <!-- fallback estático (reduced-motion) -->
+    <div class="fallback-static" aria-hidden="false">
+      <figure>
+        <img src="assets/antes.jpg" alt="Antes da transformação">
+        <figcaption>Antes</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/depois.jpg" alt="Depois da transformação">
+        <figcaption>Depois</figcaption>
+      </figure>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var el = document.getElementById('reveal');
+  var range = document.getElementById('reveal-range');
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  if (reduced.matches || !el) return; // fallback estático já visível
+
+  var isTouch = matchMedia('(hover: none), (pointer: coarse)').matches;
+  var raf = null, targetX = 50, currentX = 50;
+
+  function apply(x) {
+    el.style.setProperty('--x', x + '%');
+  }
+
+  function loop() {
+    // suavização: handle persegue o cursor (desktop)
+    currentX += (targetX - currentX) * 0.18;
+    if (Math.abs(targetX - currentX) < 0.1) { currentX = targetX; apply(currentX); raf = null; return; }
+    apply(currentX);
+    raf = requestAnimationFrame(loop);
+  }
+
+  function setFrom(clientX) {
+    var r = el.getBoundingClientRect();
+    targetX = Math.max(0, Math.min(100, ((clientX - r.left) / r.width) * 100));
+    if (!raf) raf = requestAnimationFrame(loop);
+  }
+
+  if (isTouch) {
+    // TOUCH: slider via input range invisível (acessível por teclado nativamente)
+    el.classList.add('has-touch');
+    range.addEventListener('input', function () {
+      targetX = currentX = Number(range.value);
+      apply(targetX);
+    });
+  } else {
+    // DESKTOP: cursor controla o corte
+    el.addEventListener('mousemove', function (e) { setFrom(e.clientX); }, { passive: true });
+    el.addEventListener('mouseleave', function () {
+      targetX = 50;
+      if (!raf) raf = requestAnimationFrame(loop);
+    });
+    range.setAttribute('aria-hidden', 'true');
+    range.tabIndex = -1;
+  }
+})();
+</script>
+</body>
+</html>

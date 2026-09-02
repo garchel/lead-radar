@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" font-family="Times New Roman, serif">
+  <!-- PLACEHOLDER: screenshot mock de "site antigo 2010" (efeito 01, camada ANTES).
+       Substituir por case-antes.jpg gerado via ASSETS_PROMPT.md -->
+  <rect width="1600" height="1000" fill="#ffffff"/>
+  <!-- header com gradente saturado -->
+  <rect width="1600" height="90" fill="#1a5fb4"/>
+  <rect x="1200" width="400" height="90" fill="#4caf50"/>
+  <text x="40" y="58" font-size="34" fill="#ffffff" font-weight="bold">MARCENARIA SÃO JOSÉ</text>
+  <text x="1215" y="55" font-size="24" fill="#ffff00" font-weight="bold">★ DESDE 1998 ★</text>
+
+  <!-- marquee banner -->
+  <rect y="90" width="1600" height="44" fill="#000080"/>
+  <text x="480" y="120" font-size="26" fill="#00ff00" font-weight="bold">*** BEM-VINDO AO NOSSO SITE!!! VOLTE SEMPRE!!! ***</text>
+
+  <!-- nav empilhada sublinhada -->
+  <g font-size="20" fill="#0000cc" text-decoration="underline">
+    <text x="60" y="180">» Início</text>
+    <text x="180" y="180">» A Empresa</text>
+    <text x="330" y="180">» Produtos</text>
+    <text x="470" y="180">» Fotos</text>
+    <text x="580" y="180">» Fale Conosco</text>
+    <text x="740" y="180">» Localização</text>
+    <text x="900" y="180">» Links Úteis</text>
+  </g>
+
+  <!-- tabela com bordas -->
+  <g>
+    <rect x="60" y="210" width="520" height="560" fill="#f9f9f9" stroke="#808080" stroke-width="2"/>
+    <text x="80" y="250" font-size="28" fill="#cc0000" font-weight="bold">SOBRE NÓS</text>
+    <g font-size="16" fill="#333">
+      <text x="80" y="290">A Marcenaria São José foi fundada em</text>
+      <text x="80" y="315">1998 pelo Sr. José... (texto muito longo</text>
+      <text x="80" y="340">continua por 3 parágrafos densos sem</text>
+      <text x="80" y="365">nenhuma quebra visual, tudo da mesma</text>
+      <text x="80" y="390">cor, mesmo tamanho, sem hierarquia)</text>
+      <text x="80" y="415">e desde então atendemos com qualidade</text>
+      <text x="80" y="440">e preço justo na região. Ligue já!</text>
+    </g>
+    <rect x="80" y="480" width="180" height="34" fill="url(#g1)" stroke="#333"/>
+    <text x="130" y="503" font-size="15" fill="#fff" font-weight="bold">CLIQUE AQUI!!!</text>
+    <rect x="80" y="540" width="480" height="2" fill="#ccc"/>
+    <text x="80" y="580" font-size="14" fill="#666">Você é o visitante número 000147</text>
+    <rect x="80" y="600" width="88" height="31" fill="#111"/>
+    <rect x="172" y="600" width="88" height="31" fill="#eee"/>
+    <rect x="264" y="600" width="88" height="31" fill="#111"/>
+    <rect x="356" y="600" width="88" height="31" fill="#eee"/>
+    <text x="470" y="620" font-size="11" fill="#999">contador</text>
+  </g>
+
+  <!-- foto placeholder torta -->
+  <g>
+    <rect x="620" y="210" width="540" height="360" fill="#dcdcdc" stroke="#666" stroke-width="2"/>
+    <text x="700" y="400" font-size="30" fill="#888">[ FOTO AQUI ]</text>
+    <text x="640" y="610" font-size="18" fill="#333">Legenda da foto com fonte pequena demais e sem contraste suficiente</text>
+  </g>
+
+  <!-- blocos misc -->
+  <g font-size="14" fill="#333">
+    <rect x="1200" y="210" width="340" height="180" fill="#ffffcc" stroke="#cc9900" stroke-width="2"/>
+    <text x="1215" y="245" font-size="20" fill="#cc6600" font-weight="bold">PROMOÇÃO!!!</text>
+    <text x="1215" y="280">Leve 2 e pague 3 (consulte</text>
+    <text x="1215" y="302">condições na loja física</text>
+    <text x="1215" y="324">pois o site não atualiza</text>
+    <text x="1215" y="346">desde 2011)</text>
+  </g>
+  <g>
+    <rect x="1200" y="420" width="340" height="350" fill="#f0f0f0" stroke="#999"/>
+    <text x="1215" y="455" font-size="18" fill="#0000cc" text-decoration="underline" font-weight="bold">Links úteis:</text>
+    <g font-size="14" fill="#0000cc">
+      <text x="1215" y="490">- Cadastro nacional</text>
+      <text x="1215" y="520">- Receita federal</text>
+      <text x="1215" y="550">- Outro site qualquer</text>
+      <text x="1215" y="580">- Link quebrado</text>
+      <text x="1215" y="610">- Página em construção</text>
+    </g>
+    <text x="1215" y="660" font-size="26" fill="#ff00ff" font-weight="bold">EM BREVE!</text>
+  </g>
+
+  <!-- footer denso -->
+  <rect y="800" width="1600" height="200" fill="#e8e8e8"/>
+  <line x1="0" y1="800" x2="1600" y2="800" stroke="#888" stroke-width="2"/>
+  <g font-size="13" fill="#444">
+    <text x="60" y="840">Marcenaria São José - Rua das Oficinas, 123 - Centro - Telefone: (61) 3232-0000 - CNPJ 00.000.000/0001-00</text>
+    <text x="60" y="868">Horário de atendimento: seg a sex 8h-18h sáb 8h-12h (texto corrido sem formatação adicional)</text>
+    <text x="60" y="896">© 2011 - Todos os direitos reservados - Site feito por sobrinho do dono</text>
+    <text x="60" y="950" font-size="11" fill="#999">Melhor visualizado em Internet Explorer 6 e resolução 800x600</text>
+  </g>
+
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#88bb88"/>
+      <stop offset="1" stop-color="#336633"/>
+    </linearGradient>
+  </defs>
+</svg>
