@@ -137,6 +137,7 @@ export function buildProjectDevPrompt(projectId: string): string {
 
   const copy = (project.copy || "").trim() ? project.copy : "  (etapa copywriting ainda sem conteúdo)";
   const design = (project.designNotes || "").trim() ? project.designNotes : "  (etapa design ainda sem anotações)";
+  const wireframe = (project.wireframeUrl || "").trim() ? project.wireframeUrl : "  (etapa wireframe ainda sem URL — o wireframe aprovado pelo cliente define a estrutura)";
   const dev = (project.devNotes || "").trim() ? project.devNotes : "  (sem notas de desenvolvimento)";
 
   const concept = kit.landingPageConcept
@@ -175,6 +176,10 @@ ${copy}
 
 # DESIGN (etapa design)
 ${design}
+
+# WIREFRAME APROVADO PELO CLIENTE (etapa wireframe)
+${wireframe}
+Se houver uma URL acima, siga a estrutura/seções e o posicionamento de textos do wireframe — ele foi revisado e aprovado pelo cliente; não reordene seções nem reescreva copy.
 
 # CONCEITO DA ANÁLISE DE IA (referência — adapte se os campos acima divergirem)
 ${concept}

@@ -114,6 +114,7 @@ export type ProjectStage =
   | 'briefing'
   | 'copywriting'
   | 'design'
+  | 'wireframe'
   | 'desenvolvimento'
   | 'revisao'
   | 'deploy';
@@ -156,6 +157,7 @@ export interface Project {
   tasks?: ProjectTask[];
   copy?: string;
   designNotes?: string;
+  wireframeUrl?: string;
   devNotes?: string;
   reviewNotes?: string;
   deployUrl?: string;

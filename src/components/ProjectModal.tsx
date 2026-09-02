@@ -15,6 +15,7 @@ const STAGES: { id: ProjectStage; title: string }[] = [
   { id: 'briefing', title: 'Briefing' },
   { id: 'copywriting', title: 'Copywriting' },
   { id: 'design', title: 'Design' },
+  { id: 'wireframe', title: 'Wireframe' },
   { id: 'desenvolvimento', title: 'Desenvolvimento' },
   { id: 'revisao', title: 'Revisão' },
   { id: 'deploy', title: 'Deploy' },
@@ -54,7 +55,6 @@ const DEFAULT_TASKS_BY_STAGE: Record<ProjectStage, string[]> = {
     'Revisar clareza, coerência e erros de português',
   ],
   design: [
-    'Criar wireframe do fluxo da página (mobile-first)',
     'Definir hierarquia visual: o que o olho vê primeiro',
     'Definir paleta com contraste acessível (WCAG AA)',
     'Escolher tipografia hierárquica e legível',
@@ -62,6 +62,16 @@ const DEFAULT_TASKS_BY_STAGE: Record<ProjectStage, string[]> = {
     'Desenhar estados de UI: hover, focus, loading, sucesso, erro',
     'Usar imagens e ícones consistentes com a identidade visual',
     'Validar o protótipo em tela real antes de desenvolver',
+  ],
+  wireframe: [
+    'Definir o fundo do wireframe: preto OU branco (o oposto da cor da fonte do guia de design escolhido)',
+    'Estruturar a página em seções na ordem definida no design',
+    'Posicionar os textos reais do copywriting nos lugares adequados',
+    'Representar componentes/assets com blocos de linha pontilhada (placeholders nomeados)',
+    'Marcar onde cada efeito da biblioteca entrará (sem implementar ainda)',
+    'Manter hierarquia visual do guia de design (tamanhos/espessuras)',
+    'Enviar o wireframe para o Vitor repassar ao cliente',
+    'Aguardar aprovação do cliente (copy/estrutura) antes de desenvolver',
   ],
   desenvolvimento: [
     'Configurar estrutura com HTML semântico e acessível',
@@ -98,6 +108,7 @@ const ALL_STAGES: ProjectStage[] = [
   'briefing',
   'copywriting',
   'design',
+  'wireframe',
   'desenvolvimento',
   'revisao',
   'deploy',
@@ -128,6 +139,7 @@ const STAGE_ICONS: Record<ProjectStage, React.ReactNode> = {
   briefing: <ClipboardList className="w-4 h-4" />,
   copywriting: <PenLine className="w-4 h-4" />,
   design: <Palette className="w-4 h-4" />,
+  wireframe: <Layers className="w-4 h-4" />,
   desenvolvimento: <Code2 className="w-4 h-4" />,
   revisao: <SearchCheck className="w-4 h-4" />,
   deploy: <Rocket className="w-4 h-4" />,
@@ -304,6 +316,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   const [briefing, setBriefing] = useState<ProjectBriefingField[]>([]);
   const [copy, setCopy] = useState('');
   const [designNotes, setDesignNotes] = useState('');
+  const [wireframeUrl, setWireframeUrl] = useState('');
   const [devNotes, setDevNotes] = useState('');
   const [reviewNotes, setReviewNotes] = useState('');
   const [deployUrl, setDeployUrl] = useState('');
@@ -315,6 +328,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   const [promptLoading, setPromptLoading] = useState(false);
   const [promptError, setPromptError] = useState<string | null>(null);
   const [promptCopied, setPromptCopied] = useState(false);
+  const [wireframeCopied, setWireframeCopied] = useState(false);
   const [devActionMsg, setDevActionMsg] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState('');
   const [saving, setSaving] = useState(false);
@@ -337,6 +351,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
       setBriefing(project.briefing || []);
       setCopy(project.copy || '');
       setDesignNotes(project.designNotes || '');
+      setWireframeUrl(project.wireframeUrl || '');
       setDevNotes(project.devNotes || '');
       setReviewNotes(project.reviewNotes || '');
       setDeployUrl(project.deployUrl || '');
@@ -604,6 +619,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
         tasks,
         copy,
         designNotes,
+        wireframeUrl: wireframeUrl || undefined,
         devNotes,
         reviewNotes,
         deployUrl,
@@ -667,6 +683,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
         setBriefing(p.briefing || []);
         setCopy(p.copy || '');
         setDesignNotes(p.designNotes || '');
+        setWireframeUrl(p.wireframeUrl || '');
         setDevNotes(p.devNotes || '');
         setReviewNotes(p.reviewNotes || '');
         setDeployUrl(p.deployUrl || '');
@@ -1034,6 +1051,63 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                     <textarea rows={2} value={designNotes} onChange={(e) => setDesignNotes(e.target.value)} className={inputClass} placeholder="Layout, paleta, identidade..." />
                   </div>
                   {renderStageChecklist('design')}
+                </>
+              )}
+
+              {stage === 'wireframe' && (
+                <>
+                  <div className="rounded-xl border border-orange-200 bg-orange-50/60 p-3 space-y-1.5">
+                    <span className="flex items-center gap-1.5 text-[11px] font-bold text-orange-700 uppercase tracking-wider">
+                      <Layers className="w-3.5 h-3.5" /> Wireframe para aprovação do cliente
+                    </span>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Após o copy e o design, o agente monta a estrutura da página: fundo{' '}
+                      <strong>preto ou branco</strong> (o oposto da cor da fonte do guia de design), textos reais
+                      posicionados e componentes/assets em <strong>blocos de linha pontilhada</strong>.
+                      O Vitor envia ao cliente, que revisa copy/estrutura <strong>antes de codar</strong>.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                      URL do wireframe
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={wireframeUrl}
+                        onChange={(e) => setWireframeUrl(e.target.value)}
+                        className={inputClass}
+                        placeholder="https://cliente.github.io/wireframe/ (GitHub Pages, Netlify preview...)"
+                      />
+                      {wireframeUrl.trim() && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(wireframeUrl.trim());
+                              setWireframeCopied(true);
+                              setTimeout(() => setWireframeCopied(false), 2000);
+                            } catch { /* clipboard indisponível */ }
+                          }}
+                          className="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-2 rounded-lg text-[11px] transition-colors shrink-0"
+                          title="Copiar o link do wireframe para enviar ao cliente"
+                        >
+                          {wireframeCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{wireframeCopied ? 'Copiado!' : 'Copiar link'}</span>
+                        </button>
+                      )}
+                    </div>
+                    {wireframeUrl.trim() && (
+                      <a
+                        href={wireframeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] text-orange-700 hover:text-orange-800 font-semibold mt-1.5"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Abrir wireframe
+                      </a>
+                    )}
+                  </div>
+                  {renderStageChecklist('wireframe')}
                 </>
               )}
 

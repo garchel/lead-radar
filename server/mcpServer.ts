@@ -351,7 +351,7 @@ export function createLeadRadarMcpServer() {
     "Lista os projetos do Kanban de desenvolvimento com id, etapa, status, lead vinculado e progresso do checklist. Use para descobrir o projectId de um lead (ex.: para depois chamar get_project_dev_kit ou update_project).",
     {
       status: z.string().optional().describe("Filtro opcional por status do projeto (em_andamento|pausado|cancelado|concluido)"),
-      stage: z.string().optional().describe("Filtro opcional por etapa (briefing|copywriting|design|desenvolvimento|revisao|deploy)"),
+      stage: z.string().optional().describe("Filtro opcional por etapa (briefing|copywriting|design|wireframe|desenvolvimento|revisao|deploy)"),
       leadId: z.string().optional().describe("Filtro opcional por lead vinculado"),
     },
     async ({ status, stage, leadId }) => {
@@ -385,16 +385,17 @@ export function createLeadRadarMcpServer() {
   // TOOL 6.2: update_project
   server.tool(
     "update_project",
-    "Atualiza um projeto do Kanban: move a etapa (briefing→copywriting→design→desenvolvimento→revisao→deploy), grava briefing do cliente (texto livre ou campos estruturados), copy, notas de design/dev/revisão, status, prioridade e URL de deploy. É o caminho do agente para alimentar o projeto com o briefing colado pelo cliente no chat.",
+    "Atualiza um projeto do Kanban: move a etapa (briefing→copywriting→design→wireframe→desenvolvimento→revisao→deploy), grava briefing do cliente (texto livre ou campos estruturados), copy, notas de design, URL do wireframe, notas de dev/revisão, status, prioridade e URL de deploy. É o caminho do agente para alimentar o projeto com o briefing colado pelo cliente no chat.",
     {
       projectId: z.string().describe("ID do projeto"),
-      stage: z.enum(["briefing", "copywriting", "design", "desenvolvimento", "revisao", "deploy"]).optional().describe("Nova etapa do projeto"),
+      stage: z.enum(["briefing", "copywriting", "design", "wireframe", "desenvolvimento", "revisao", "deploy"]).optional().describe("Nova etapa do projeto"),
       status: z.enum(["em_andamento", "pausado", "cancelado", "concluido"]).optional().describe("Novo status do projeto"),
       priority: z.enum(["baixa", "media", "alta"]).optional().describe("Nova prioridade"),
       brief: z.string().optional().describe("Briefing em texto livre colado pelo cliente (append; registra origem e data)"),
       briefing: z.array(z.object({ fieldTitle: z.string(), answer: z.string() })).optional().describe("Campos estruturados do briefing (substitui os atuais)"),
       copy: z.string().optional().describe("Texto/copy da página (etapa copywriting)"),
-      designNotes: z.string().optional().describe("Notas de design (paleta, tipografia, referências)"),
+      designNotes: z.string().optional().describe("Notas de design (paleta, tipografia, referências, guia de design escolhido)"),
+      wireframeUrl: z.string().optional().describe("URL do wireframe (etapa wireframe): estrutura da página com fundo preto/branco (oposto da cor da fonte do guia), copy real posicionada e assets como blocos de linha pontilhada — enviado ao cliente para aprovação antes de codar"),
       devNotes: z.string().optional().describe("Notas de desenvolvimento"),
       reviewNotes: z.string().optional().describe("Notas de revisão do cliente"),
       deployUrl: z.string().optional().describe("URL final publicada"),

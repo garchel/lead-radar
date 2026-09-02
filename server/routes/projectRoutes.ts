@@ -60,6 +60,7 @@ export function registerProjectRoutes(app: Express) {
       "tasks",
       "copy",
       "designNotes",
+      "wireframeUrl",
       "devNotes",
       "reviewNotes",
       "deployUrl",

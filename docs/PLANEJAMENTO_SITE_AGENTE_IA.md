@@ -38,12 +38,20 @@ push/commit). O app não deve "codar sozinho"; ele alimenta o agente e acompanha
   - **briefing** → apenas coleta de informações (Typeform + PDF de validação)
   - **copywriting** → apenas coleta de informações (textos/voz)
   - **design** → apenas coleta de informações (referências/estilo/paleta)
+  - **wireframe** → o agente monta a **estrutura da página** para aprovação do
+    cliente: fundo **preto ou branco** (o oposto da cor da fonte do guia de
+    design escolhido), **textos reais do copy** posicionados nos lugares
+    adequados e **componentes/assets em blocos de linha pontilhada**
+    (placeholders nomeados). O Vitor envia o link ao cliente, que revisa e
+    decide se quer alterar copy/estrutura **antes de qualquer código**.
+    Aprovação do cliente é **gate obrigatório** para avançar.
   - **desenvolvimento** → **é aqui que o HTML/código começa a ser desenvolvido**
     pelo agente de IA
   - **revisao** → validação
   - **deploy** → publicação
-- **Regra:** briefing, copywriting e design **não geram código**. Só a etapa
-  **desenvolvimento** dispara a construção real.
+- **Regra:** briefing, copywriting, design e wireframe **não geram código de
+  produção**. Só a etapa **desenvolvimento** dispara a construção real
+  (o wireframe é HTML estático de aprovação, não o produto).
 
 ---
 

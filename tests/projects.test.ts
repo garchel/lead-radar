@@ -271,7 +271,7 @@ describe("projetos / acompanhamento do desenvolvimento", () => {
     expect(project.tasks).toBeDefined();
     expect(project.tasks!.length).toBeGreaterThan(0);
     // Todas as etapas têm tarefas padrão desenhadas por profissionais sênior.
-    for (const stage of ["briefing", "copywriting", "design", "desenvolvimento", "revisao", "deploy"]) {
+    for (const stage of ["briefing", "copywriting", "design", "wireframe", "desenvolvimento", "revisao", "deploy"]) {
       expect(project.tasks!.filter((t) => t.stage === stage).length).toBeGreaterThan(0);
     }
     expect(project.tasks!.every((t) => !t.done)).toBe(true);
@@ -281,10 +281,27 @@ describe("projetos / acompanhamento do desenvolvimento", () => {
     const stored = upsertLead({ ...lead, id: "tasks-lead-3", name: "Studio Yoga Paz", city: "Santo André", phone: "(11) 9999-0000", pipelineStatus: "negotiating" });
     const project = createProject({ leadId: stored.id, name: "LP Studio Yoga" });
 
-    for (const stage of ["briefing", "copywriting", "design", "desenvolvimento", "revisao", "deploy"]) {
+    for (const stage of ["briefing", "copywriting", "design", "wireframe", "desenvolvimento", "revisao", "deploy"]) {
       const titles = project.tasks!.filter((t) => t.stage === stage).map((t) => t.title);
       expect(titles).toEqual(DEFAULT_TASKS_BY_STAGE[stage as ProjectStage]);
     }
+  });
+
+  it("grava e persiste a URL do wireframe (etapa wireframe)", () => {
+    upsertLead({ ...lead, id: "tasks-lead-wf", name: "Clínica Bem Viver", city: "Niterói", phone: "(21) 9999-1111", pipelineStatus: "negotiating" });
+    const project = createProject({ leadId: "tasks-lead-wf", name: "LP Bem Viver" });
+
+    const updated = updateProject(project.id, {
+      stage: "wireframe",
+      wireframeUrl: "https://bemviver.github.io/wireframe/",
+    });
+    expect(updated.stage).toBe("wireframe");
+    expect(updated.wireframeUrl).toBe("https://bemviver.github.io/wireframe/");
+
+    // persistiu no banco (leitura fresca)
+    const stored = getProjectById(project.id)!;
+    expect(stored.stage).toBe("wireframe");
+    expect(stored.wireframeUrl).toBe("https://bemviver.github.io/wireframe/");
   });
 
   it("persiste tasks no updateProject e valida estrutura", () => {

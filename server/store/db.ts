@@ -380,6 +380,7 @@ function rowToProject(row: any): Project {
     tasks: parseTasksJson(row.tasks_json),
     copy: row.copy || undefined,
     designNotes: row.design_notes || undefined,
+    wireframeUrl: row.wireframe_url || undefined,
     devNotes: row.dev_notes || undefined,
     reviewNotes: row.review_notes || undefined,
     deployUrl: row.deploy_url || undefined,
@@ -402,7 +403,7 @@ function rowToProject(row: any): Project {
 }
 
 const PROJECT_COLUMNS =
-  'p.id, p.lead_id, p.name, p.type, p.typeform_token, p.stage, p.status, p.priority, p.brief, p.briefing_json, p.tasks_json, p.copy, p.design_notes, p.dev_notes, ' +
+  'p.id, p.lead_id, p.name, p.type, p.typeform_token, p.stage, p.status, p.priority, p.brief, p.briefing_json, p.tasks_json, p.copy, p.design_notes, p.wireframe_url, p.dev_notes, ' +
   'p.review_notes, p.deploy_url, p.github_repo_url, p.repo_owner, p.repo_name, p.preview_url, p.dev_status, p.dev_message, p.due_date, p.completed_at, p.archived, p.archived_at, p.created_at, p.updated_at, ' +
   'l.name AS lead_name, l.city AS lead_city, l.category AS lead_category';
 
@@ -443,6 +444,7 @@ export function upsertProject(project: Project) {
     tasks_json: project.tasks && project.tasks.length > 0 ? JSON.stringify(project.tasks) : null,
     copy: project.copy ?? null,
     design_notes: project.designNotes ?? null,
+    wireframe_url: project.wireframeUrl ?? null,
     dev_notes: project.devNotes ?? null,
     review_notes: project.reviewNotes ?? null,
     deploy_url: project.deployUrl ?? null,
@@ -467,8 +469,8 @@ export function upsertProject(project: Project) {
   } else {
     getDb()
       .prepare(
-        `INSERT INTO projects (id, lead_id, name, type, typeform_token, stage, status, priority, brief, briefing_json, tasks_json, copy, design_notes, dev_notes, review_notes, deploy_url, github_repo_url, repo_owner, repo_name, preview_url, dev_status, dev_message, due_date, completed_at, archived, archived_at, created_at, updated_at)
-         VALUES (@id, @lead_id, @name, @type, @typeform_token, @stage, @status, @priority, @brief, @briefing_json, @tasks_json, @copy, @design_notes, @dev_notes, @review_notes, @deploy_url, @github_repo_url, @repo_owner, @repo_name, @preview_url, @dev_status, @dev_message, @due_date, @completed_at, @archived, @archived_at, @created_at, @updated_at)`
+        `INSERT INTO projects (id, lead_id, name, type, typeform_token, stage, status, priority, brief, briefing_json, tasks_json, copy, design_notes, wireframe_url, dev_notes, review_notes, deploy_url, github_repo_url, repo_owner, repo_name, preview_url, dev_status, dev_message, due_date, completed_at, archived, archived_at, created_at, updated_at)
+         VALUES (@id, @lead_id, @name, @type, @typeform_token, @stage, @status, @priority, @brief, @briefing_json, @tasks_json, @copy, @design_notes, @wireframe_url, @dev_notes, @review_notes, @deploy_url, @github_repo_url, @repo_owner, @repo_name, @preview_url, @dev_status, @dev_message, @due_date, @completed_at, @archived, @archived_at, @created_at, @updated_at)`
       )
       .run(data);
   }

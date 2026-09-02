@@ -22,14 +22,15 @@ export const APP_OVERVIEW = {
   fluxoDeTrabalho: [
     "Prospecção: busca por cidade/categoria (SerpAPI) → leads pontuados (score, tier de mercado, ticket sugerido)",
     "CRM: lead anda no pipeline (novo → contatado → negociação → em_desenvolvimento → closed)",
-    "Projeto: ao entrar em 'em_desenvolvimento', um projeto é criado no Kanban com 6 etapas",
-    "Kanban: briefing → copywriting → design → desenvolvimento → revisao → deploy",
+    "Projeto: ao entrar em 'em_desenvolvimento', um projeto é criado no Kanban com 7 etapas",
+    "Kanban: briefing → copywriting → design → wireframe → desenvolvimento → revisao → deploy",
+    "Wireframe: após o copy e o design, o agente monta a estrutura da página (fundo preto OU branco — o oposto da cor da fonte do guia de design) com os textos reais posicionados e componentes/assets em blocos de linha pontilhada, para o cliente revisar copy/estrutura ANTES de codar",
     "Desenvolvimento: um agente de IA (você) recebe o dev kit e constrói o site num repo GitHub",
     "Guarda-limite humano: o código só avança para revisão/deploy após aprovação de um humano na UI",
   ],
   modeloDeDados: [
     "Lead: id, name, phone, city/state, category, pipelineStatus — mora no banco compartilhado",
-    "Project: id, leadId, stage (6 etapas), status, brief/briefing (cliente), copy, designNotes, devNotes, githubRepoUrl, previewUrl, deployUrl",
+    "Project: id, leadId, stage (7 etapas), status, brief/briefing (cliente), copy, designNotes, wireframeUrl, devNotes, githubRepoUrl, previewUrl, deployUrl",
     "devStatus (etapa desenvolvimento): aguardando_agente → em_desenvolvimento → codigo_entregue → aprovado",
   ],
 };
@@ -72,7 +73,7 @@ function buildStageRunbook(stage: Project["stage"], project: Project): StageStep
   );
 }
 
-const STAGE_ORDER = ["briefing", "copywriting", "design", "desenvolvimento", "revisao", "deploy"] as const;
+const STAGE_ORDER = ["briefing", "copywriting", "design", "wireframe", "desenvolvimento", "revisao", "deploy"] as const;
 
 const STAGE_RUNBOOK: StageStep[] = [
   {
@@ -100,7 +101,20 @@ const STAGE_RUNBOOK: StageStep[] = [
     acoes: [
       "Defina: paleta de cores (hex), tipografia (Google Fonts), estilo/referências, seções na ordem, comportamento mobile.",
       "Grave com update_project(designNotes=\"<notas de design>\").",
-      "Avance com update_project(stage=\"desenvolvimento\").",
+      "Avance com update_project(stage=\"wireframe\").",
+    ],
+  },
+  {
+    etapa: "wireframe",
+    objetivo: "Montar a estrutura da página com copy real posicionada e componentes/assets em linha pontilhada, para o cliente revisar ANTES de codar.",
+    acoes: [
+      "Fundo do wireframe: preto OU branco — o OPOSTO da cor da fonte do guia de design escolhido (guia de fonte clara → fundo preto; fonte escura → fundo branco), garantindo contraste.",
+      "Monte a estrutura da página (HTML único, estático, zero JS de produção): as seções na ordem do design, com os TEXTOS REAIS do copywriting posicionados nos lugares adequados.",
+      "Represente componentes/assets (imagens, vídeos, ilustrações, depoimentos) como blocos com borda pontilhada e rótulo nomeado (ex.: [FOTO — fachada da clínica], [VÍDEO LOOP — hero 8s], [CARROSSEL DEPOIMENTOS]) — sem gerar/implementar os assets ainda.",
+      "Marque onde cada efeito da biblioteca entrará com uma tag discreta (ex.: [EFEITO 03 — loop ambient no hero]) — sem implementar.",
+      "Grave a URL do wireframe com update_project(wireframeUrl=\"<url>\") — hospede onde o operador indicar (GitHub Pages do repo do projeto, Netlify preview etc.).",
+      "PARE e aguarde: o operador (Vitor) envia o wireframe ao CLIENTE, que revisa e decide se quer alterar copy/estrutura. NÃO avance sozinho.",
+      "Ajustes pedidos pelo cliente → corrija o wireframe e re-grave a URL; só avance com update_project(stage=\"desenvolvimento\") quando o operador confirmar a aprovação do cliente.",
     ],
   },
   {
@@ -185,6 +199,7 @@ export function buildAgentRunbook(projectId: string) {
       briefPreview,
       temCopy: Boolean(project.copy?.trim()),
       temDesignNotes: Boolean(project.designNotes?.trim()),
+      wireframeUrl: project.wireframeUrl ?? null,
       repo: project.githubRepoUrl ?? null,
       previewUrl: project.previewUrl ?? null,
       deployUrl: project.deployUrl ?? null,

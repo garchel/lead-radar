@@ -204,11 +204,11 @@ Agente informa que o **código foi entregue** no repositório GitHub (opcionalme
 
 ### 22. `list_projects`
 Lista os **projetos do Kanban de desenvolvimento** (id, etapa, status, prioridade, lead vinculado, progresso do checklist). É o ponto de partida para descobrir o `projectId` de um lead — inclusive de projetos criados automaticamente quando o lead entra em "Em Desenvolvimento".
-* **Parâmetros:** filtros opcionais `status` (`em_andamento|pausado|cancelado|concluido`), `stage` (`briefing|copywriting|design|desenvolvimento|revisao|deploy`) e `leadId`.
+* **Parâmetros:** filtros opcionais `status` (`em_andamento|pausado|cancelado|concluido`), `stage` (`briefing|copywriting|design|wireframe|desenvolvimento|revisao|deploy`) e `leadId`.
 
 ### 23. `update_project`
-**Ciclo de vida do projeto via agente:** move a etapa, grava o briefing do cliente, copy, notas de design/dev/revisão, status, prioridade e URL de deploy.
-* **Parâmetros:** `projectId` (obrigatório) + qualquer combinação de: `stage`, `status`, `priority`, `brief` (texto livre colado pelo cliente — anexado com data/origem, sem sobrescrever histórico), `briefing` (campos estruturados `[{fieldTitle, answer}]`, substitui os atuais), `copy`, `designNotes`, `devNotes`, `reviewNotes`, `deployUrl`, `dueDate`.
+**Ciclo de vida do projeto via agente:** move a etapa, grava o briefing do cliente, copy, notas de design, URL do wireframe, notas de dev/revisão, status, prioridade e URL de deploy.
+* **Parâmetros:** `projectId` (obrigatório) + qualquer combinação de: `stage`, `status`, `priority`, `brief` (texto livre colado pelo cliente — anexado com data/origem, sem sobrescrever histórico), `briefing` (campos estruturados `[{fieldTitle, answer}]`, substitui os atuais), `copy`, `designNotes`, `wireframeUrl` (URL do wireframe de aprovação do cliente — estrutura da página com fundo preto/branco, copy real e assets em linha pontilhada), `devNotes`, `reviewNotes`, `deployUrl`, `dueDate`.
 * **Briefing manual:** quando o cliente manda o briefing por chat (WhatsApp/conversa), o agente grava com `brief` — o texto vira o campo `brief` do projeto (visível na UI e no dev kit) e/ou `briefing` estruturado para o PDF de validação.
 * **Integrações:** mover `status` para `concluido` move o lead no CRM para `closed`; e o dev kit (`get_project_dev_kit`) reflete automaticamente tudo o que for gravado aqui.
 

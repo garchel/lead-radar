@@ -318,6 +318,7 @@ function migrateSchema(db: Database.Database) {
     preview_url: "TEXT",
     dev_status: "TEXT",
     dev_message: "TEXT",
+    wireframe_url: "TEXT",
   };
   for (const [name, definition] of Object.entries(projectColumnsToAdd)) {
     if (!existingProjectColumns.has(name)) {

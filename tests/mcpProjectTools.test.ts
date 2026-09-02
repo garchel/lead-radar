@@ -143,6 +143,27 @@ describe("MCP: list_projects / update_project — ciclo do cliente", () => {
     expect(project.briefing![0].fieldTitle).toBe("Nome do negócio");
   });
 
+  it("update_project grava wireframeUrl e move para a etapa wireframe", async () => {
+    const r = parseToolResult(
+      await client.callTool({
+        name: "update_project",
+        arguments: {
+          projectId,
+          stage: "wireframe",
+          designNotes: "Guia: apple.md (fonte escura sobre fundo claro) → wireframe com fundo branco",
+          wireframeUrl: "https://vidasorridente.github.io/wireframe/",
+        },
+      })
+    );
+    expect(r.success).toBe(true);
+    expect(r.stage).toBe("wireframe");
+
+    const project = getProjectById(projectId)!;
+    expect(project.stage).toBe("wireframe");
+    expect(project.wireframeUrl).toBe("https://vidasorridente.github.io/wireframe/");
+    expect(project.designNotes).toContain("apple.md");
+  });
+
   it("update_project rejeita stage inválido via validação do zod/schema", async () => {
     // O SDK resolve com isError:true (não rejeita); o zod barra o stage inválido antes do updateProject
     const result = await client.callTool({

@@ -31,6 +31,7 @@ const STAGES: ProjectStage[] = [
   "briefing",
   "copywriting",
   "design",
+  "wireframe",
   "desenvolvimento",
   "revisao",
   "deploy",

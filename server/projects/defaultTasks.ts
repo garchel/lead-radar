@@ -26,7 +26,6 @@ export const DEFAULT_TASKS_BY_STAGE: Record<ProjectStage, string[]> = {
     "Revisar clareza, coerência e erros de português",
   ],
   design: [
-    "Criar wireframe do fluxo da página (mobile-first)",
     "Definir hierarquia visual: o que o olho vê primeiro",
     "Definir paleta com contraste acessível (WCAG AA)",
     "Escolher tipografia hierárquica e legível",
@@ -34,6 +33,16 @@ export const DEFAULT_TASKS_BY_STAGE: Record<ProjectStage, string[]> = {
     "Desenhar estados de UI: hover, focus, loading, sucesso, erro",
     "Usar imagens e ícones consistentes com a identidade visual",
     "Validar o protótipo em tela real antes de desenvolver",
+  ],
+  wireframe: [
+    "Definir o fundo do wireframe: preto OU branco (o oposto da cor da fonte do guia de design escolhido)",
+    "Estruturar a página em seções na ordem definida no design",
+    "Posicionar os textos reais do copywriting nos lugares adequados",
+    "Representar componentes/assets com blocos de linha pontilhada (placeholders nomeados)",
+    "Marcar onde cada efeito da biblioteca entrará (sem implementar ainda)",
+    "Manter hierarquia visual do guia de design (tamanhos/espessuras)",
+    "Enviar o wireframe para o Vitor repassar ao cliente",
+    "Aguardar aprovação do cliente (copy/estrutura) antes de desenvolver",
   ],
   desenvolvimento: [
     "Configurar estrutura com HTML semântico e acessível",
@@ -70,6 +79,7 @@ export const ALL_PROJECT_STAGES: ProjectStage[] = [
   "briefing",
   "copywriting",
   "design",
+  "wireframe",
   "desenvolvimento",
   "revisao",
   "deploy",

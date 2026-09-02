@@ -7,14 +7,29 @@
 ```
 Lead → categoria do negócio
   1. design/README.md            → escolhe o DESIGN.md (aparência)
-  2. sites/efeitos/README.md      → escolhe 2-3 efeitos (esta biblioteca, movimento)
-  3. efeitos/NN/EFFECT.md        → copia snippet, remapeia tokens p/ paleta do guia
-  4. efeitos/NN/ASSETS_PROMPT.md → preenche o prompt do segmento → gera assets
-  5. fotos/vídeos REAIS do cliente substituem placeholders
-  6. probe headless: reduced-motion, touch, mobile, console limpo
+  2. copy (usuário define/aprova)
+  3. WIREFRAME DE APROVAÇÃO       → estrutura da página p/ o cliente revisar (ver abaixo)
+  4. sites/efeitos/README.md      → escolhe 2-3 efeitos (esta biblioteca, movimento)
+  5. efeitos/NN/EFFECT.md        → copia snippet, remapeia tokens p/ paleta do guia
+  6. efeitos/NN/ASSETS_PROMPT.md → preenche o prompt do segmento → gera assets
+  7. fotos/vídeos REAIS do cliente substituem placeholders
+  8. probe headless: reduced-motion, touch, mobile, console limpo
 ```
 
 Regra: `design/` responde **como a página parece**; `efeitos/` responde **como ela se move**. Nunca gerar um efeito do zero — sempre ler o EFFECT.md correspondente.
+
+### Passo 3 — Wireframe de aprovação (OBRIGATÓRIO antes de codar)
+
+Depois do copy + design e **antes** de qualquer efeito/asset/código de produção:
+
+- **Fundo:** preto OU branco — o **oposto da cor da fonte** do guia de design escolhido (guia de fonte clara → fundo preto; fonte escura → fundo branco). Contraste garantido, zero decisão estética pendurada no wireframe.
+- **Conteúdo:** os **textos reais do copywriting** posicionados nos lugares adequados, seção por seção, na ordem definida no design.
+- **Componentes/assets** (imagens, vídeos, ilustrações, depoimentos): blocos com **borda pontilhada** e rótulo nomeado — ex. `[FOTO — fachada da clínica]`, `[VÍDEO LOOP — hero 8s]`. Sem gerar os assets ainda.
+- **Efeitos escolhidos** (passo 4): marcados com tag discreta no bloco correspondente — ex. `[EFEITO 03 — loop ambient]`. Sem implementar.
+- **Fluxo:** wireframe pronto → Vitor envia o link ao cliente → cliente revisa **copy e estrutura** → ajustes voltam ao wireframe (não ao código) → só após aprovação o pipeline continua no passo 4.
+- No Kanban do LeadRadar isso é a etapa **wireframe** (entre design e desenvolvimento), com a URL gravada no campo `wireframeUrl` do projeto.
+
+Por quê: mudança de copy/estrutura no wireframe custa minutos; depois de codado, custa horas. O cliente aprova o esqueleto antes do produto existir.
 
 ## Catálogo
 
