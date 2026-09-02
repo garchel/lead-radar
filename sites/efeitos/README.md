@@ -34,8 +34,11 @@ Regra: `design/` responde **como a página parece**; `efeitos/` responde **como 
 | 12 | Grain overlay | Film grain | Editorial premium | Baixo | Baixo | Igual | — |
 | 13 | WebGL shader bg | Shader background | Dark tech (Linear, Auros) | Alto | Alto | Poster | three.js |
 | 14 | Sticky scrollytelling | Pinned sequences | Passo-a-passo, cases | Alto | Médio | Simplifica | GSAP |
+| 15 | Inertia scroll + stagger | Lenis smooth scroll + staggered reveals | Qualquer LP premium (upgrade do reveal padrão) | Alto | Baixo | Desliga (scroll nativo) | Lenis (CDN 2KB) |
+| 16 | Chat-to-action | Simulated chat CTA | Serviços com processo claro (clínicas, SaaS, agendamento) | Alto | Médio | Bolhas estáticas + CTA | — |
+| 17 | Spotlight reveal | Cursor radial mask (variação do 01) | Portfólio, imóveis/produtos de luxo, revelar detalhe | Médio | Baixo | Degrada p/ slider 01 | — |
 
-**Status:** 01–03 implementados · 04–14 mapeados (construir sob demanda; padrão de pasta idêntico).
+**Status:** 01–03 implementados · 04–14 mapeados (construir sob demanda; padrão de pasta idêntico) · 15–17 mapeados a partir da análise SceneAI (set/2026 — ver `referencias/sceneai-tecnicas.md`).
 
 ## Como escolher (guia rápido)
 
