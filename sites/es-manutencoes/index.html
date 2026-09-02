@@ -78,6 +78,45 @@
     .link-flame { color: var(--flame); font-weight: 500; text-decoration: none; }
     .link-flame:hover { text-decoration: underline; }
 
+    /* ---- A11y: focus visível em todo interativo (ui-ux-pro-max: focus-states) ---- */
+    :focus-visible {
+      outline: 2px solid var(--flame);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+    input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--flame);
+      outline-offset: 0;
+      border-color: var(--flame);
+    }
+    /* range invisível continua operável por teclado: mostra ring no container */
+    .case-reveal:focus-within { outline: 2px solid var(--flame); outline-offset: 3px; }
+
+    /* ---- Mini-CTA de seção (funnel 3-step — ui-ux-pro-max landing) ---- */
+    .section-cta {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      margin-top: 36px; text-align: center;
+    }
+    .section-cta .btn { padding: 10px 20px; font-size: .875rem; }
+    .section-cta .cta-note { font-size: .8125rem; color: var(--driftwood); }
+
+    /* ---- Social proof: estrelas Google no hero + badge depoimentos ---- */
+    .google-proof {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--paper); border: 1px solid var(--parchment);
+      border-radius: 999px; padding: 8px 16px;
+      box-shadow: var(--shadow-sm);
+      font-size: .8125rem; font-weight: 600; color: var(--ironwood);
+      margin-bottom: 20px;
+    }
+    .google-proof .g-stars { color: #f59e0b; letter-spacing: 2px; font-size: .875rem; }
+    .google-proof .g-logo { width: 16px; height: 16px; flex-shrink: 0; }
+    .reviews-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-bottom: 18px; font-size: .8125rem; font-weight: 600; color: var(--ironwood);
+    }
+    .reviews-badge .g-stars { color: #f59e0b; letter-spacing: 2px; }
+
     /* ---- Nav ---- */
     nav {
       position: sticky; top: 0; z-index: 50;
@@ -333,9 +372,13 @@
     <video class="hero-bg-video" id="hero-video" muted loop playsinline preload="none" aria-hidden="true"></video>
     <div class="hero-wash" aria-hidden="true"></div>
     <div class="hero-inner">
-      <span class="hero-badge"><span class="dot"></span> Atendimento em Itaipuaçu e toda Maricá</span>
+      <span class="google-proof">
+        <svg class="g-logo" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z" fill="#34A853"/><path d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.2 1.64l3.15-3.15A11 11 0 0 0 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/></svg>
+        <span class="g-stars">★★★★★</span>
+        5,0 no Google
+      </span>
       <h1 class="display-serif reveal">Sua casa resolvida, <em>sem dor de cabeça</em></h1>
-      <p class="lead reveal">Hidráulica, elétrica, pintura e pequenos reparos — um só número para tudo. Orçamento pelo WhatsApp em minutos, serviço com garantia.</p>
+      <p class="lead reveal">Hidráulica, elétrica, pintura e pequenos reparos em <strong style="color:var(--ink); font-weight:600;">Itaipuaçu e toda Maricá</strong> — um só número para tudo. Orçamento pelo WhatsApp em minutos, serviço com garantia.</p>
       <div class="hero-actions reveal">
         <a class="btn btn-primary" href="https://wa.me/5521968935825?text=Ol%C3%A1!%20Preciso%20de%20um%20or%C3%A7amento%20de%20manuten%C3%A7%C3%A3o%20em%20minha%20casa." target="_blank" rel="noopener">
           Pedir orçamento agora
@@ -394,6 +437,10 @@
           <p>Manda uma foto ou vídeo do problema no WhatsApp e recebe uma estimativa antes de qualquer visita.</p>
         </div>
       </div>
+      <div class="section-cta reveal">
+        <a class="btn btn-primary" href="https://wa.me/5521968935825?text=Ol%C3%A1!%20Vi%20os%20servi%C3%A7os%20no%20site%20e%20quero%20um%20or%C3%A7amento." target="_blank" rel="noopener">Pedir orçamento pelo WhatsApp</a>
+        <span class="cta-note">Resposta no mesmo dia</span>
+      </div>
     </div>
   </section>
 
@@ -425,6 +472,9 @@
           </figure>
         </div>
       </div>
+      <div class="section-cta reveal">
+        <a class="btn btn-primary" href="https://wa.me/5521968935825?text=Ol%C3%A1!%20Quero%20transformar%20um%20canto%20da%20minha%20casa%20assim." target="_blank" rel="noopener">Quero esse resultado na minha casa</a>
+      </div>
     </div>
   </section>
 
@@ -434,6 +484,7 @@
       <div class="sec-head">
         <p class="eyebrow reveal">Depoimentos</p>
         <h2 class="h2 reveal">Quem chamou, indicou</h2>
+        <span class="reviews-badge reveal"><span class="g-stars">★★★★★</span> Avaliação 5,0 no Google — avaliações reais de clientes de Maricá</span>
       </div>
       <div class="grid-3">
         <div class="testi-card reveal">
@@ -517,13 +568,13 @@
         <form id="lead-form" novalidate class="reveal">
           <div>
             <label for="nome">Nome</label>
-            <input type="text" id="nome" name="nome" placeholder="Seu nome" required>
-            <span class="field-error" id="err-nome">Informe seu nome.</span>
+            <input type="text" id="nome" name="nome" placeholder="Seu nome" autocomplete="name" required>
+            <span class="field-error" id="err-nome" role="alert">Informe seu nome.</span>
           </div>
           <div>
             <label for="whats">WhatsApp</label>
-            <input type="tel" id="whats" name="whats" placeholder="(21) 99999-9999" required>
-            <span class="field-error" id="err-whats">Informe um número válido (com DDD).</span>
+            <input type="tel" id="whats" name="whats" placeholder="(21) 99999-9999" inputmode="tel" autocomplete="tel" required aria-describedby="err-whats">
+            <span class="field-error" id="err-whats" role="alert">Informe um número válido (com DDD).</span>
           </div>
           <div>
             <label for="servico">Serviço</label>
@@ -536,12 +587,12 @@
               <option>Emergência</option>
               <option>Outro</option>
             </select>
-            <span class="field-error" id="err-servico">Escolha o tipo de serviço.</span>
+            <span class="field-error" id="err-servico" role="alert">Escolha o tipo de serviço.</span>
           </div>
           <button class="btn btn-primary btn-submit" type="submit">
             Pedir orçamento no WhatsApp
           </button>
-          <p class="form-hint">Ao enviar, o WhatsApp abre com sua mensagem pronta.</p>
+          <p class="form-hint">Ao enviar, o WhatsApp abre com sua mensagem pronta. Sem spam — só o orçamento que você pediu.</p>
         </form>
       </div>
     </div>
