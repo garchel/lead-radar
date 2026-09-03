@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wireframe — Achei Ferragens (aprovação do cliente)</title>
+  <style>
+    /* Wireframe de aprovação — regra do pipeline: fundo BRANCO porque a fonte
+       do guia caldera.md é escura (Obsidian #070607). Zero estética final aqui. */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #070607; line-height: 1.45; }
+    .wf { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+    .wf-banner { border: 2px solid #070607; padding: 16px 20px; margin-bottom: 28px; }
+    .wf-banner b { display: block; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
+    .wf-banner span { font-size: 13px; }
+    .wf-section { border-top: 2px solid #070607; padding: 24px 0; }
+    .wf-section > .k { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; opacity: .6; margin-bottom: 10px; }
+    .wf-section h1 { font-size: 34px; line-height: 1.1; margin: 8px 0; }
+    .wf-section h2 { font-size: 24px; margin: 8px 0; }
+    .wf-section p { font-size: 15px; max-width: 60ch; margin: 8px 0; }
+    .wf-cta { display: inline-block; border: 2px solid #070607; border-radius: 999px; padding: 10px 22px; margin: 10px 12px 0 0; font-weight: bold; font-size: 14px; }
+    .wf-cta.primary { background: #070607; color: #fff; }
+    .wf-asset { border: 2px dashed #888; border-radius: 8px; padding: 26px 18px; margin: 14px 0; text-align: center; font-size: 14px; font-weight: bold; color: #444; background: repeating-linear-gradient(45deg, #fff, #fff 12px, #f4f4f4 12px, #f4f4f4 24px); }
+    .wf-tag { display: inline-block; font-size: 11px; font-weight: bold; letter-spacing: .08em; border: 1px solid #888; border-radius: 999px; padding: 2px 10px; margin: 6px 6px 0 0; text-transform: uppercase; color: #444; }
+    .wf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .wf-grid { grid-template-columns: 1fr; } }
+    .wf-note { font-size: 13px; background: #f4f4f4; border-left: 4px solid #070607; padding: 10px 14px; margin: 12px 0; }
+    ul.wf-list { margin: 8px 0 8px 20px; font-size: 15px; }
+  </style>
+</head>
+<body>
+  <div class="wf">
+    <div class="wf-banner">
+      <b>Wireframe de aprovação — Achei Ferragens</b>
+      <span>Cliente revisa <b>copy e estrutura</b>. Ajustes voltam para este wireframe, não para o código.
+      Fundo branco = oposto da fonte escura do guia <b>caldera.md</b>. Nenhum asset final aqui.</span>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">1 · Navegação</div>
+      <p><b>Achei Ferragens</b> · Categorias · Por que a Achei · Como funciona · Avaliações · [CTA: Chamar no WhatsApp]</p>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">2 · Hero</div>
+      <p><b>Tag:</b> Jardim Oriente · Valparaíso de Goiás</p>
+      <h1>TUDO PARA SUA OBRA, NUM SÓ LUGAR</h1>
+      <p>Ferramentas, elétrica, hidráulica, pintura e fixação — com preço justo e atendimento de quem conhece a obra. Chame no WhatsApp e receba o orçamento rapidinho.</p>
+      <span class="wf-cta primary">Chamar no WhatsApp</span><span class="wf-cta">Ver categorias</span>
+      <p>★★★★★ 4,5 · 123 avaliações no Google</p>
+      <div class="wf-asset">[VÍDEO LOOP — hero 8s · atmosfera da loja / ferramentas em close]</div>
+      <span class="wf-tag">[EFEITO 03 — loop ambient]</span>
+      <div class="wf-asset">[STATS — 123 avaliações no Google · 4,5 nota média · 6 dias por semana]</div>
+      <span class="wf-tag">[EFEITO 05 — count-up]</span>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">3 · Categorias</div>
+      <h2>O que você acha aqui</h2>
+      <div class="wf-grid">
+        <div class="wf-asset">[FOTO — ferramentas]</div>
+        <div class="wf-asset">[FOTO — elétrica]</div>
+        <div class="wf-asset">[FOTO — hidráulica]</div>
+        <div class="wf-asset">[FOTO — pintura]</div>
+        <div class="wf-asset">[FOTO — fixação e parafusos]</div>
+        <div class="wf-asset">[FOTO — utilidades]</div>
+      </div>
+      <div class="wf-note">Cada card terá: nome, 1 linha do que inclui, exemplo de produto e mini-link “Pedir pelo WhatsApp”.</div>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">4 · Diferenciais</div>
+      <h2>Por que comprar na Achei?</h2>
+      <ul class="wf-list">
+        <li><b>Tudo num lugar</b> — do parafuso à tinta, sem rodar a cidade.</li>
+        <li><b>Preço justo</b> — orçamento claro antes de sair de casa.</li>
+        <li><b>Atendimento de vizinho</b> — quem atende entende de obra.</li>
+        <li><b>Perto de você</b> — no Jardim Oriente, com entrega na região.</li>
+      </ul>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">5 · Como funciona</div>
+      <h2>Do pedido à obra em 3 passos</h2>
+      <p><b>1.</b> Chame no WhatsApp → <b>2.</b> Receba o orçamento → <b>3.</b> Retire na loja ou receba em casa.</p>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">6 · Avaliações</div>
+      <h2>Quem compra, volta</h2>
+      <div class="wf-asset">[DEPOIMENTOS — 3 avaliações do Google (a validar com autorização)]</div>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">7 · Formulário de orçamento</div>
+      <h2>Peça seu orçamento</h2>
+      <p>Campos: nome · seu WhatsApp · categoria (lista) · mensagem → abre o WhatsApp da loja com tudo preenchido.</p>
+      <div class="wf-asset">[FORM — nome / whatsapp / categoria / mensagem / botão Enviar pelo WhatsApp]</div>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">8 · CTA final + rodapé</div>
+      <h2>Precisou, achou.</h2>
+      <span class="wf-cta primary">Chamar no WhatsApp</span>
+      <div class="wf-note">Rodapé: endereço (Qd 61 Rua 01 Lt 13, Jardim Oriente), horário Seg–Sex 8h–18h · Sáb 8h–12h (a confirmar), telefone (61) 3627-9347, link Google Maps, nota LGPD.</div>
+      <div class="wf-asset">[BOTÃO FLUTUANTE — WhatsApp fixo no canto]</div>
+    </div>
+  </div>
+</body>
+</html>

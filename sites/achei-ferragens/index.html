@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23fc5000'/%3E%3Cpath d='M8 24h16v-4H8zM8 16h16v-4H8zM8 8h16V4H8z' fill='%23070607' transform='rotate(90 16 16)'/%3E%3C/svg%3E">
+  <title>Achei Ferragens | Tudo para sua obra em Valparaíso de Goiás</title>
+  <meta name="description" content="Ferragens, ferramentas, elétrica, hidráulica e pintura no Jardim Oriente, Valparaíso de Goiás. Chame no WhatsApp e receba o orçamento rapidinho.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       Design system: Caldera (design/caldera.md)
+       Pumice canvas · limestone cards · ember CTA · sulfur tags
+       Plasma só no halftone do hero. Flat: zero sombras.
+       Efeitos: 03 loop-ambient (hero) + 05 count-up (stats)
+       ============================================================ */
+    :root {
+      --ember: #fc5000;
+      --plasma: #524ae9;
+      --sulfur: #f5f28e;
+      --limestone: #f7f6f2;
+      --pumice: #e2e2df;
+      --obsidian: #070607;
+      --chalk: #ffffff;
+      --stone: #4a4a47;
+      --radius-card: 40px;
+      --radius-pill: 800px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-weight: 500;
+      background: var(--pumice);
+      color: var(--obsidian);
+      line-height: 1.55;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+    section { padding: 80px 0; }
+
+    .display {
+      font-family: 'Anton', 'Arial Narrow', sans-serif;
+      font-weight: 400;
+      letter-spacing: .02em;
+      line-height: .95;
+      text-transform: uppercase;
+    }
+    .h2 { font-family: 'Anton', 'Arial Narrow', sans-serif; font-weight: 400; letter-spacing: .02em; text-transform: uppercase; font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1; }
+    .body-dim { color: var(--stone); }
+    .tag {
+      display: inline-block; background: var(--sulfur); color: var(--obsidian);
+      border-radius: var(--radius-pill); font-size: .8125rem; padding: 4px 12px;
+      letter-spacing: .04em; text-transform: uppercase; margin-bottom: 18px;
+    }
+    .eyebrow { font-size: .8125rem; letter-spacing: .12em; text-transform: uppercase; color: var(--obsidian); margin-bottom: 12px; }
+
+    :focus-visible { outline: 3px solid var(--ember); outline-offset: 3px; border-radius: 6px; }
+
+    /* ---- Botões (caldera: pill 800px, primário ember + texto obsidian) ---- */
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 12px 28px; border-radius: var(--radius-pill);
+      font-size: 1rem; font-weight: 500; text-decoration: none;
+      cursor: pointer; border: none; transition: transform .2s ease, background .2s ease;
+    }
+    .btn-primary { background: var(--ember); color: var(--obsidian); }
+    .btn-primary:hover { background: #e04800; transform: translateY(-1px); }
+    .btn-ghost { background: transparent; color: var(--chalk); border: 1.5px solid var(--chalk); }
+    .btn-ghost:hover { border-color: var(--ember); color: var(--ember); }
+    .btn-outline-dark { background: transparent; color: var(--obsidian); border: 1.5px solid var(--obsidian); }
+    .btn-outline-dark:hover { border-color: var(--ember); color: var(--ember); }
+
+    /* ---- Nav (pill limestone) ---- */
+    nav { position: sticky; top: 16px; z-index: 50; }
+    .nav-pill {
+      background: var(--limestone); border-radius: var(--radius-pill);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 12px 10px 24px; gap: 16px;
+    }
+    .logo { font-family: 'Anton', sans-serif; font-size: 1.25rem; letter-spacing: .02em; text-decoration: none; color: var(--obsidian); text-transform: uppercase; }
+    .logo em { font-style: normal; color: var(--ember); }
+    .nav-links { display: flex; gap: 9px; align-items: center; }
+    .nav-links a { color: var(--obsidian); text-decoration: none; font-size: .9375rem; padding: 8px 12px; border-radius: var(--radius-pill); }
+    .nav-links a:hover { color: var(--ember); }
+    .nav-links .btn { padding: 10px 22px; }
+    @media (max-width: 860px) { .nav-links a { display: none; } }
+
+    /* ---- Hero (efeito 03) ---- */
+    .hero {
+      position: relative; border-radius: var(--radius-card); overflow: hidden;
+      margin-top: 24px; background: var(--obsidian); color: var(--chalk);
+      text-align: center; padding: 110px 24px 90px; isolation: isolate;
+    }
+    .hero-poster, .hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .hero-video { opacity: 0; transition: opacity 1.2s ease; }
+    .hero-video.is-ready { opacity: 1; }
+    .hero-veil { position: absolute; inset: 0; background: rgba(7,6,7,.58); z-index: 1; }
+    .hero-halftone {
+      position: absolute; inset: 0; z-index: 2; opacity: .5;
+      background-image: radial-gradient(rgba(252,80,0,.55) 1.2px, transparent 1.6px);
+      background-size: 9px 9px;
+      mask-image: linear-gradient(115deg, transparent 30%, #000 75%);
+      -webkit-mask-image: linear-gradient(115deg, transparent 30%, #000 75%);
+    }
+    .hero-content { position: relative; z-index: 3; max-width: 880px; margin: 0 auto; }
+    .hero h1 { font-size: clamp(3rem, 9vw, 7rem); margin: 14px 0 20px; }
+    .hero h1 em { font-style: normal; color: var(--ember); }
+    .hero .tag { margin-bottom: 0; }
+    .hero p.lead { font-size: clamp(1rem, 2vw, 1.1875rem); max-width: 620px; margin: 0 auto 32px; color: var(--limestone); }
+    .hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .google-proof {
+      display: inline-flex; align-items: center; gap: 10px; margin-top: 26px;
+      background: rgba(247,246,242,.12); border: 1px solid rgba(247,246,242,.35);
+      border-radius: var(--radius-pill); padding: 8px 18px; font-size: .875rem;
+    }
+    .google-proof .g-stars { color: var(--ember); letter-spacing: 2px; }
+
+    /* ---- Stats (efeito 05: 4 cards ember) ---- */
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 900px; margin: 40px auto 0; position: relative; z-index: 3; }
+    .stat { background: var(--ember); color: var(--chalk); border-radius: var(--radius-card); padding: 32px 20px; }
+    .stat b { display: block; font-family: 'Anton', sans-serif; font-weight: 400; font-size: clamp(2.4rem, 5vw, 3.6rem); line-height: 1.1; }
+    .stat span { font-size: .875rem; }
+    @media (max-width: 640px) { .stats { grid-template-columns: 1fr; } }
+
+    /* ---- Cards de categoria ---- */
+    .sec-head { max-width: 720px; margin-bottom: 40px; }
+    .sec-head p { color: var(--stone); margin-top: 12px; font-size: 1.0625rem; }
+    .grid-cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    @media (max-width: 900px) { .grid-cats { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 600px) { .grid-cats { grid-template-columns: 1fr; } }
+    .cat {
+      background: var(--limestone); border-radius: var(--radius-card); padding: 40px 32px;
+      display: flex; flex-direction: column; gap: 10px; min-height: 260px;
+    }
+    .cat h3 { font-family: 'Anton', sans-serif; font-weight: 400; font-size: 1.75rem; letter-spacing: .02em; text-transform: uppercase; }
+    .cat p { color: var(--stone); font-size: .9375rem; flex: 1; }
+    .cat .ex { font-size: .8125rem; color: var(--stone); }
+    .cat a.mini-cta { color: var(--obsidian); font-weight: 500; text-decoration: none; font-size: .9375rem; }
+    .cat a.mini-cta:hover { color: var(--ember); }
+    .cat-photo {
+      border-radius: 20px; background: linear-gradient(135deg, var(--plasma), var(--ember));
+      min-height: 120px; display: flex; align-items: center; justify-content: center;
+      color: var(--chalk); font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; opacity: .9;
+    }
+
+    /* ---- Diferenciais ---- */
+    .diff-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    @media (max-width: 900px) { .diff-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px) { .diff-grid { grid-template-columns: 1fr; } }
+    .diff { background: var(--limestone); border-radius: var(--radius-card); padding: 32px 28px; }
+    .diff .num { font-family: 'Anton', sans-serif; color: var(--ember); font-size: 2rem; }
+    .diff h3 { font-size: 1.0625rem; margin: 8px 0 6px; }
+    .diff p { color: var(--stone); font-size: .9375rem; }
+
+    /* ---- Passos ---- */
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    @media (max-width: 760px) { .steps { grid-template-columns: 1fr; } }
+    .step { border-top: 2px dotted var(--obsidian); padding-top: 20px; }
+    .step .n { font-family: 'Anton', sans-serif; font-size: 4rem; line-height: 1; color: var(--ember); }
+    .step h3 { font-size: 1.125rem; margin: 10px 0 6px; }
+    .step p { color: var(--stone); }
+    .section-cta { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 40px; flex-wrap: wrap; }
+
+    /* ---- Avaliações ---- */
+    .reviews { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    @media (max-width: 760px) { .reviews { grid-template-columns: 1fr; } }
+    .review { background: var(--limestone); border-radius: var(--radius-card); padding: 32px 28px; display: flex; flex-direction: column; gap: 12px; }
+    .review .stars { color: var(--ember); letter-spacing: 2px; }
+    .review p { flex: 1; }
+    .review .who { font-size: .875rem; color: var(--stone); }
+    .reviews-note { margin-top: 20px; font-size: .8125rem; color: var(--stone); }
+
+    /* ---- Form (seção dark obsidian, inputs pill chalk) ---- */
+    .form-section { background: var(--obsidian); color: var(--chalk); border-radius: var(--radius-card); padding: 64px 32px; }
+    .form-section .h2 { color: var(--chalk); }
+    .form-section .body-dim { color: var(--pumice); }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 36px; align-items: start; }
+    @media (max-width: 860px) { .form-grid { grid-template-columns: 1fr; } }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: .875rem; margin-bottom: 8px; }
+    .field input, .field select, .field textarea {
+      width: 100%; background: transparent; border: 1.5px solid var(--chalk);
+      border-radius: 100px; padding: 16px 24px; color: var(--chalk);
+      font-family: 'Inter', sans-serif; font-weight: 500; font-size: 1rem;
+    }
+    .field textarea { border-radius: 24px; resize: vertical; min-height: 110px; }
+    .field select option { color: var(--obsidian); }
+    .field input.invalid, .field select.invalid { border-color: var(--ember); }
+    .err { display: none; font-size: .8125rem; color: var(--ember); margin-top: 6px; }
+    .err.show { display: block; }
+    .contact-list { list-style: none; display: flex; flex-direction: column; gap: 14px; font-size: 1rem; }
+    .contact-list a { color: var(--chalk); }
+    .contact-list a:hover { color: var(--ember); }
+
+    /* ---- CTA final (plasma card) ---- */
+    .final-cta {
+      background: var(--plasma); color: var(--chalk); border-radius: var(--radius-card);
+      padding: 72px 32px; text-align: center; position: relative; overflow: hidden;
+    }
+    .final-cta::before {
+      content: ""; position: absolute; inset: 0;
+      background-image: radial-gradient(rgba(252,80,0,.5) 1.2px, transparent 1.6px);
+      background-size: 9px 9px; opacity: .6;
+    }
+    .final-cta > * { position: relative; }
+    .final-cta .h2 { color: var(--chalk); margin-bottom: 12px; }
+    .final-cta p { margin-bottom: 28px; color: var(--limestone); }
+
+    /* ---- Footer ---- */
+    footer { padding: 48px 0 120px; }
+    .footer-inner { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+    .footer-links { display: flex; gap: 24px; flex-wrap: wrap; }
+    .footer-links a { color: var(--obsidian); text-decoration: none; }
+    .footer-links a:hover { color: var(--ember); }
+    .footer-note { font-size: .8125rem; color: var(--stone); width: 100%; border-top: 1.5px dotted var(--obsidian); padding-top: 20px; margin-top: 8px; }
+
+    /* ---- WhatsApp flutuante ---- */
+    .wa-float {
+      position: fixed; right: 20px; bottom: 20px; z-index: 60;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--ember); color: var(--obsidian); font-weight: 500;
+      border-radius: var(--radius-pill); padding: 14px 22px; text-decoration: none;
+    }
+    .wa-float:hover { background: #e04800; }
+
+    /* ---- Reveal on-scroll (micro-interação) ---- */
+    .reveal { opacity: 0; transform: translateY(16px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .reveal { opacity: 1; transform: none; transition: none; }
+      .hero-video { display: none; }
+      .btn { transition: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="container" id="topnav" aria-label="Navegação principal">
+    <div class="nav-pill">
+      <a class="logo" href="#topo">Achei <em>Ferragens</em></a>
+      <div class="nav-links">
+        <a href="#categorias">Categorias</a>
+        <a href="#porque">Por que a Achei</a>
+        <a href="#como-funciona">Como funciona</a>
+        <a href="#avaliacoes">Avaliações</a>
+        <a class="btn btn-primary" href="https://wa.me/556136279347?text=Ol%C3%A1!%20Quero%20um%20or%C3%A7amento." target="_blank" rel="noopener">Chamar no WhatsApp</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container" id="topo">
+    <!-- HERO (efeito 03: loop ambient) -->
+    <header class="hero">
+      <img class="hero-poster" src="assets/hero-poster.jpg" alt="" aria-hidden="true">
+      <video class="hero-video" id="hero-video" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video>
+      <div class="hero-veil" aria-hidden="true"></div>
+      <div class="hero-halftone" aria-hidden="true"></div>
+      <div class="hero-content">
+        <span class="tag">Jardim Oriente · Valparaíso de Goiás</span>
+        <h1 class="display">Tudo para sua obra, <em>num só lugar</em></h1>
+        <p class="lead">Ferramentas, elétrica, hidráulica, pintura e fixação — com preço justo e atendimento de quem conhece a obra. Chame no WhatsApp e receba o orçamento rapidinho.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="https://wa.me/556136279347?text=Ol%C3%A1!%20Quero%20um%20or%C3%A7amento." target="_blank" rel="noopener">Chamar no WhatsApp</a>
+          <a class="btn btn-ghost" href="#categorias">Ver categorias</a>
+        </div>
+        <div class="google-proof"><span class="g-stars" aria-hidden="true">★★★★★</span><span><b>4,5</b> · 123 avaliações no Google</span></div>
+
+        <!-- Stats (efeito 05: count-up) -->
+        <div class="stats">
+          <div class="stat"><b class="count" data-count="123">0</b><span>avaliações no Google</span></div>
+          <div class="stat"><b class="count" data-count="4.5" data-decimals="1" data-decimal-sep=",">0</b><span>nota média dos clientes</span></div>
+          <div class="stat"><b class="count" data-count="6">0</b><span>dias por semana · seg a sáb</span></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- CATEGORIAS -->
+    <section id="categorias">
+      <div class="sec-head reveal">
+        <span class="tag">Categorias</span>
+        <h2 class="h2">O que você acha aqui</h2>
+        <p>Do parafuso à tinta: se é da obra ou do reparo, tem na prateleira. Não achou? Manda no WhatsApp que a gente consegue pra você.</p>
+      </div>
+      <div class="grid-cats">
+        <article class="cat reveal">
+          <div class="cat-photo" aria-hidden="true">Foto · ferramentas</div>
+          <span class="tag">Ferramentas</span>
+          <h3>Ferramentas</h3>
+          <p>Manuais e elétricas para construir, furar, cortar e apertar.</p>
+          <span class="ex">Ex.: furadeiras, serras, chaves e jogos de soquete</span>
+          <a class="mini-cta" href="https://wa.me/556136279347?text=Ol%C3%A1!%20Preciso%20de%20ferramentas.%20Pode%20me%20ajudar%3F" target="_blank" rel="noopener">Pedir pelo WhatsApp →</a>
+        </article>
+        <article class="cat reveal">
+          <div class="cat-photo" aria-hidden="true">Foto · elétrica</div>
+          <span class="tag">Elétrica</span>
+          <h3>Elétrica</h3>
+          <p>Fios, disjuntores, tomadas e iluminação com segurança.</p>
+          <span class="ex">Ex.: cabos, interruptores, plafons e chuveiros</span>
+          <a class="mini-cta" href="https://wa.me/556136279347?text=Ol%C3%A1!%20Preciso%20de%20material%20el%C3%A9trico.%20Pode%20me%20ajudar%3F" target="_blank" rel="noopener">Pedir pelo WhatsApp →</a>
+        </article>
+        <article class="cat reveal">
+          <div class="cat-photo" aria-hidden="true">Foto · hidráulica</div>
+          <span class="tag">Hidráulica</span>
+          <h3>Hidráulica</h3>
+          <p>Conexões, registros e reparos para água sem vazamento.</p>
+          <span class="ex">Ex.: torneiras, sifões, canos e conexões</span>
+          <a class="mini-cta" href="https://wa.me/556136279347?text=Ol%C3%A1!%20Preciso%20de%20material%20hidr%C3%A1ulico.%20Pode%20me%20ajudar%3F" target="_blank" rel="noopener">Pedir pelo WhatsApp →</a>
+        </article>
+        <article class="cat reveal">
+          <div class="cat-photo" aria-hidden="true">Foto · pintura</div>
+          <span class="tag">Pintura</span>
+          <h3>Pintura</h3>
+          <p>Tintas, rolos e acessórios para renovar qualquer ambiente.</p>
+          <span class="ex">Ex.: tintas acrílicas, esmaltes, rolos e pincéis</span>
+          <a class="mini-cta" href="https://wa.me/556136279347?text=Ol%C3%A1!%20Preciso%20de%20material%20de%20pintura.%20Pode%20me%20ajudar%3F" target="_blank" rel="noopener">Pedir pelo WhatsApp →</a>
+        </article>
+        <article class="cat reveal">
+          <div class="cat-photo" aria-hidden="true">Foto · fixação</div>
+          <span class="tag">Fixação</span>
+          <h3>Fixação e parafusos</h3>
+          <p>O miúdo que segura a obra inteira — no tamanho certo.</p>
+          <span class="ex">Ex.: parafusos, buchas, porcas e dobradiças</span>
+          <a class="mini-cta" href="https://wa.me/556136279347?text=Ol%C3%A1!%20Preciso%20de%20parafusos%20e%20fixa%C3%A7%C3%A3o.%20Pode%20me%20ajudar%3F" target="_blank" rel="noopener">Pedir pelo WhatsApp →</a>
+        </article>
+        <article class="cat reveal">
+          <div class="cat-photo" aria-hidden="true">Foto · utilidades</div>
+          <span class="tag">Casa</span>
+          <h3>Utilidades</h3>
+          <p>Aquele item do dia a dia que resolve na hora.</p>
+          <span class="ex">Ex.: cadeados, fitas, colas e acessórios</span>
+          <a class="mini-cta" href="https://wa.me/556136279347?text=Ol%C3%A1!%20Quero%20um%20or%C3%A7amento." target="_blank" rel="noopener">Pedir pelo WhatsApp →</a>
+        </article>
+      </div>
+    </section>
+
+    <!-- DIFERENCIAIS -->
+    <section id="porque" style="padding-top:0;">
+      <div class="sec-head reveal">
+        <span class="tag">Diferenciais</span>
+        <h2 class="h2">Por que comprar na Achei?</h2>
+      </div>
+      <div class="diff-grid">
+        <div class="diff reveal"><div class="num">01</div><h3>Tudo num lugar</h3><p>Do parafuso à tinta, sem rodar a cidade atrás de material.</p></div>
+        <div class="diff reveal"><div class="num">02</div><h3>Preço justo</h3><p>Orçamento claro pelo WhatsApp antes de sair de casa.</p></div>
+        <div class="diff reveal"><div class="num">03</div><h3>Atendimento de vizinho</h3><p>Quem atende entende de obra e indica a peça certa.</p></div>
+        <div class="diff reveal"><div class="num">04</div><h3>Perto de você</h3><p>No Jardim Oriente, com entrega na região.</p></div>
+      </div>
+    </section>
+
+    <!-- COMO FUNCIONA -->
+    <section id="como-funciona" style="padding-top:0;">
+      <div class="sec-head reveal">
+        <span class="tag">Passo a passo</span>
+        <h2 class="h2">Do pedido à obra em 3 passos</h2>
+      </div>
+      <div class="steps">
+        <div class="step reveal"><div class="n">1</div><h3>Chame no WhatsApp</h3><p>Mande a lista, uma foto ou só a ideia — a gente entende.</p></div>
+        <div class="step reveal"><div class="n">2</div><h3>Receba o orçamento</h3><p>Preço e disponibilidade respondidos rapidinho.</p></div>
+        <div class="step reveal"><div class="n">3</div><h3>Retire ou receba</h3><p>Busque na loja ou receba na região.</p></div>
+      </div>
+      <div class="section-cta reveal">
+        <a class="btn btn-primary" href="https://wa.me/556136279347?text=Ol%C3%A1!%20Quero%20um%20or%C3%A7amento." target="_blank" rel="noopener">Começar meu orçamento</a>
+      </div>
+    </section>
+
+    <!-- AVALIAÇÕES -->
+    <section id="avaliacoes" style="padding-top:0;">
+      <div class="sec-head reveal">
+        <span class="tag">Prova social</span>
+        <h2 class="h2">Quem compra, volta</h2>
+        <p><b>4,5 de 5</b> em 123 avaliações no Google — reputação de quem atende bem o bairro.</p>
+      </div>
+      <div class="reviews">
+        <figure class="review reveal">
+          <span class="stars" aria-label="5 de 5 estrelas">★★★★★</span>
+          <p>“Achei tudo que precisava pro reparo do banheiro sem sair do bairro. Preço bom e atendimento rápido.”</p>
+          <figcaption class="who">— Cliente Google · avaliação ilustrativa</figcaption>
+        </figure>
+        <figure class="review reveal">
+          <span class="stars" aria-label="5 de 5 estrelas">★★★★★</span>
+          <p>“Mandei a foto da peça no WhatsApp e já me responderam com o valor. Retirei no mesmo dia.”</p>
+          <figcaption class="who">— Cliente Google · avaliação ilustrativa</figcaption>
+        </figure>
+        <figure class="review reveal">
+          <span class="stars" aria-label="4 de 5 estrelas">★★★★☆</span>
+          <p>“Loja completa, tem de tudo um pouco. Virou minha primeira parada antes de começar qualquer serviço.”</p>
+          <figcaption class="who">— Cliente Google · avaliação ilustrativa</figcaption>
+        </figure>
+      </div>
+      <p class="reviews-note reveal">Depoimentos ilustrativos para aprovação do layout — serão trocados por avaliações reais com autorização (ver ASSETS_PROMPT.md).</p>
+    </section>
+
+    <!-- FORMULÁRIO -->
+    <section id="orcamento" style="padding-top:0;">
+      <div class="form-section reveal">
+        <span class="tag">Orçamento</span>
+        <h2 class="h2">Peça seu orçamento</h2>
+        <p class="body-dim">Preencha e envie — abre o WhatsApp da loja com tudo pronto.</p>
+        <div class="form-grid">
+          <form id="lead-form" novalidate>
+            <div class="field">
+              <label for="nome">Seu nome</label>
+              <input id="nome" name="nome" type="text" autocomplete="name" placeholder="Ex.: Carlos Souza">
+              <span class="err" id="err-nome">Digite seu nome (mín. 2 letras).</span>
+            </div>
+            <div class="field">
+              <label for="whats">Seu WhatsApp</label>
+              <input id="whats" name="whats" type="tel" autocomplete="tel" placeholder="(61) 99999-9999">
+              <span class="err" id="err-whats">Digite um WhatsApp válido com DDD.</span>
+            </div>
+            <div class="field">
+              <label for="categoria">Categoria</label>
+              <select id="categoria" name="categoria">
+                <option value="">Selecione…</option>
+                <option>Ferramentas</option>
+                <option>Elétrica</option>
+                <option>Hidráulica</option>
+                <option>Pintura</option>
+                <option>Fixação e parafusos</option>
+                <option>Utilidades</option>
+                <option>Outro</option>
+              </select>
+              <span class="err" id="err-categoria">Escolha uma categoria.</span>
+            </div>
+            <div class="field">
+              <label for="mensagem">O que você precisa? <span style="opacity:.7;">(opcional)</span></label>
+              <textarea id="mensagem" name="mensagem" placeholder="Ex.: 2 rolos de pintura 23cm + 1 galão de tinta branca"></textarea>
+            </div>
+            <button class="btn btn-primary" type="submit">Enviar pelo WhatsApp</button>
+          </form>
+          <ul class="contact-list">
+            <li><b>Endereço</b><br>Quadra 61 Rua 01 Lote 13, Jardim Oriente<br>Valparaíso de Goiás — GO</li>
+            <li><b>Horário</b><br>Seg–Sex 8h–18h · Sáb 8h–12h</li>
+            <li><b>Telefone / WhatsApp</b><br><a href="https://wa.me/556136279347" target="_blank" rel="noopener">(61) 3627-9347</a></li>
+            <li><a href="https://www.google.com/maps/search/?api=1&query=-16.0697825,-47.9854374" target="_blank" rel="noopener">Ver no Google Maps →</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA FINAL -->
+    <div class="final-cta reveal">
+      <h2 class="h2">Precisou, achou.</h2>
+      <p>Material de obra e reparo no Jardim Oriente — orçamento em minutos.</p>
+      <a class="btn btn-primary" href="https://wa.me/556136279347?text=Ol%C3%A1!%20Quero%20um%20or%C3%A7amento." target="_blank" rel="noopener">Chamar no WhatsApp</a>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+      <div class="footer-inner">
+        <div><a class="logo" href="#topo">Achei <em>Ferragens</em></a></div>
+        <div class="footer-links">
+          <a href="#categorias">Categorias</a>
+          <a href="#como-funciona">Como funciona</a>
+          <a href="#orcamento">Orçamento</a>
+        </div>
+        <div class="footer-note">© 2026 Achei Ferragens · Valparaíso de Goiás — GO · Ao chamar no WhatsApp você concorda em ser atendido pela loja. Seus dados não são compartilhados.</div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- WhatsApp flutuante -->
+  <a class="wa-float" href="https://wa.me/556136279347?text=Ol%C3%A1!%20Quero%20um%20or%C3%A7amento." target="_blank" rel="noopener" aria-label="Abrir WhatsApp">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.148-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+    <span>WhatsApp</span>
+  </a>
+
+  <script>
+    // Efeito 03: loop ambiente no hero — spec: sites/efeitos/03-loop-ambient/EFFECT.md
+    (function () {
+      var stage = document.querySelector('.hero');
+      var video = document.getElementById('hero-video');
+      if (!stage || !video) return;
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if (navigator.connection && navigator.connection.saveData) return;
+
+      function activate() {
+        video.src = 'assets/hero-loop.mp4';
+        video.load();
+        video.addEventListener('canplay', function () {
+          video.classList.add('is-ready');
+          video.play().catch(function () { /* poster permanece */ });
+        }, { once: true });
+      }
+
+      if ('IntersectionObserver' in window) {
+        var obs = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) { activate(); obs.disconnect(); }
+          });
+        }, { threshold: 0.25 });
+        obs.observe(stage);
+      } else {
+        activate();
+      }
+    })();
+
+    // Efeito 05 (inline, copiado de sites/es-manutencoes): count-up nos stats (+ decimais pt-BR)
+    (function () {
+      var els = document.querySelectorAll('.count');
+      function finalText(el) {
+        var target = Number(el.dataset.count);
+        var decimals = Number(el.dataset.decimals || '0');
+        var sep = el.dataset.decimalSep || '.';
+        var s = target.toFixed(decimals);
+        if (sep !== '.') s = s.replace('.', sep);
+        el.textContent = s + (el.dataset.suffix || '');
+      }
+      var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduced || !('IntersectionObserver' in window)) {
+        els.forEach(finalText);
+        return;
+      }
+      var obs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          var el = entry.target;
+          obs.unobserve(el);
+          var target = Number(el.dataset.count);
+          var decimals = Number(el.dataset.decimals || '0');
+          var sep = el.dataset.decimalSep || '.';
+          var suffix = el.dataset.suffix || '';
+          var t0 = null;
+          function tick(ts) {
+            if (!t0) t0 = ts;
+            var p = Math.min(1, (ts - t0) / 1200);
+            var eased = 1 - Math.pow(1 - p, 3);
+            var s = (target * eased).toFixed(decimals);
+            if (sep !== '.') s = s.replace('.', sep);
+            el.textContent = s + suffix;
+            if (p < 1) requestAnimationFrame(tick);
+          }
+          requestAnimationFrame(tick);
+        });
+      }, { threshold: 0.4 });
+      els.forEach(function (el) { obs.observe(el); });
+    })();
+
+    // Validação do formulário → WhatsApp deep-link
+    (function () {
+      var form = document.getElementById('lead-form');
+      var fields = [
+        { id: 'nome', err: 'err-nome', test: function (v) { return v.trim().length >= 2; } },
+        { id: 'whats', err: 'err-whats', test: function (v) { return v.replace(/\D/g, '').length >= 10; } },
+        { id: 'categoria', err: 'err-categoria', test: function (v) { return v.trim().length > 0; } },
+      ];
+      fields.forEach(function (f) {
+        var input = document.getElementById(f.id);
+        input.addEventListener('input', function () {
+          input.classList.remove('invalid');
+          document.getElementById(f.err).classList.remove('show');
+        });
+      });
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var valid = true;
+        var data = {};
+        fields.forEach(function (f) {
+          var input = document.getElementById(f.id);
+          var ok = f.test(input.value);
+          data[f.id] = input.value.trim();
+          if (!ok) {
+            valid = false;
+            input.classList.add('invalid');
+            document.getElementById(f.err).classList.add('show');
+          }
+        });
+        if (!valid) return;
+        var msg = 'Olá! Sou ' + data.nome + '.\nWhatsApp: ' + data.whats + '\nCategoria: ' + data.categoria;
+        var extra = document.getElementById('mensagem').value.trim();
+        if (extra) msg += '\nDetalhes: ' + extra;
+        msg += '\nGostaria de um orçamento.';
+        window.open('https://wa.me/556136279347?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+      });
+    })();
+
+    // Reveal on-scroll
+    (function () {
+      var els = document.querySelectorAll('.reveal');
+      if (!('IntersectionObserver' in window)) {
+        els.forEach(function (el) { el.classList.add('visible'); });
+        return;
+      }
+      var obs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            obs.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15 });
+      els.forEach(function (el) { obs.observe(el); });
+    })();
+  </script>
+</body>
+</html>
