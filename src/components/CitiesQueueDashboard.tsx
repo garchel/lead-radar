@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MapPin, RefreshCw, TrendingUp, Search, Users } from 'lucide-react';
 
 interface City {
@@ -25,6 +25,7 @@ export const CitiesQueueDashboard: React.FC = () => {
   const [cities, setCities] = useState<City[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [ufFilter, setUfFilter] = useState('');
   const [tierFilter, setTierFilter] = useState('');
@@ -34,40 +35,60 @@ export const CitiesQueueDashboard: React.FC = () => {
   const [appliedMaxPop, setAppliedMaxPop] = useState('');
   const [searchedFilter, setSearchedFilter] = useState<'all' | 'never' | 'done'>('all');
   const [enabledFilter, setEnabledFilter] = useState<'all' | 'on' | 'off'>('all');
+  const [appliedUf, setAppliedUf] = useState('');
+  const abortRef = useRef<AbortController | null>(null);
+  const firstLoadRef = useRef(true);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    // Recarregamento por filtro mantém as linhas visíveis (só o 1º load usa skeleton)
+    if (firstLoadRef.current) setLoading(true);
+    else setRefreshing(true);
     try {
       const params = new URLSearchParams();
-      if (ufFilter) params.set('uf', ufFilter);
+      if (appliedUf) params.set('uf', appliedUf);
       if (appliedMinPop) params.set('minPopulation', appliedMinPop);
       if (appliedMaxPop) params.set('maxPopulation', appliedMaxPop);
       params.set('limit', '500');
-      const [citiesRes, statsRes] = await Promise.all([
-        fetch(`/api/cities?${params}`).then((r) => r.json()),
-        fetch('/api/cities/stats').then((r) => r.json()),
-      ]);
-      if (citiesRes.success) setCities(citiesRes.cities);
-      if (statsRes.success) setStats(statsRes);
-    } catch {
-      /* silencioso */
+      const citiesRes = await fetch(`/api/cities?${params}`, { signal: ctrl.signal }).then((r) => r.json());
+      if (citiesRes.success) {
+        setCities(citiesRes.cities);
+        firstLoadRef.current = false;
+      }
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') { /* silencioso */ }
     } finally {
-      setLoading(false);
+      if (!ctrl.signal.aborted) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
-  }, [ufFilter, appliedMinPop, appliedMaxPop]);
+  }, [appliedUf, appliedMinPop, appliedMaxPop]);
+
+  // Stats globais: carrega 1x (não dependem dos filtros)
+  useEffect(() => {
+    fetch('/api/cities/stats')
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setStats(d); })
+      .catch(() => {});
+    return () => abortRef.current?.abort();
+  }, []);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  // Aplica pop mín/máx no servidor com debounce (evita 1 request por tecla)
+  // Aplica UF + pop mín/máx no servidor com debounce (evita 1 request por tecla)
   useEffect(() => {
     const t = window.setTimeout(() => {
+      setAppliedUf(ufFilter);
       setAppliedMinPop(minPop.replace(/\D/g, ''));
       setAppliedMaxPop(maxPop.replace(/\D/g, ''));
-    }, 600);
+    }, 500);
     return () => window.clearTimeout(t);
-  }, [minPop, maxPop]);
+  }, [ufFilter, minPop, maxPop]);
 
   const toggleCity = async (code: string, enabled: boolean) => {
     setCities((prev) => prev.map((c) => (c.ibgeCode === code ? { ...c, enabled } : c)));
@@ -117,8 +138,8 @@ export const CitiesQueueDashboard: React.FC = () => {
             </h1>
             <p className="text-slate-500 text-sm mt-1">Base de municípios usada na rotação de prospecção. Desabilite cidades que não quer buscar; a fila sempre pega as há mais tempo sem busca.</p>
           </div>
-          <button onClick={load} disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5">
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Atualizar
+          <button onClick={load} disabled={loading || refreshing} className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5">
+            <RefreshCw className={`w-4 h-4 ${(loading || refreshing) ? 'animate-spin' : ''}`} /> Atualizar
           </button>
         </div>
 
@@ -205,12 +226,15 @@ export const CitiesQueueDashboard: React.FC = () => {
                 Limpar filtros
               </button>
             )}
-            <span className="ml-auto text-xs text-slate-500">{filtered.length} de {cities.length} cidade(s) exibidas</span>
+            <span className="ml-auto text-xs text-slate-500 flex items-center gap-1.5">
+              {refreshing && <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />}
+              {filtered.length} de {cities.length} cidade(s) exibidas
+            </span>
           </div>
         </div>
 
         {/* Tabela */}
-        <div className="mt-4 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        <div className={`mt-4 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden transition-opacity ${refreshing ? 'opacity-60' : ''}`}>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
