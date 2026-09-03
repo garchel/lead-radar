@@ -24,6 +24,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   hasGeminiKey,
   hasMapsKey
 }) => {
+  const navBtn = (tab: SidebarProps['activeTab'], active: boolean) =>
+    `w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+      active
+        ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
+        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+    }`;
+
+  const sectionTitle = (Icon: React.ReactNode, label: string) => (
+    <div className="px-2 pb-2 text-[10px] uppercase tracking-widest font-bold text-slate-500 flex items-center space-x-1.5">
+      {Icon}
+      <span>{label}</span>
+    </div>
+  );
+
   return (
     <aside className="w-64 shrink-0 h-screen sticky top-0 bg-slate-900 border-r border-slate-800 text-white shadow-md flex flex-col overflow-y-auto">
       {/* Logo & Brand */}
@@ -45,48 +59,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Informação */}
+      {/* 1 — Capturar: busca → fila → categorias → empresas */}
       <div className="px-3 pt-5">
-        <div className="px-2 pb-2 text-[10px] uppercase tracking-widest font-bold text-slate-500 flex items-center space-x-1.5">
-          <Radar className="w-3.5 h-3.5" />
-          <span>Informação</span>
-        </div>
+        {sectionTitle(<Radar className="w-3.5 h-3.5" />, 'Capturar')}
         <nav className="space-y-1">
-          <button
-            id="nav-search-btn"
-            onClick={() => setActiveTab('search')}
-            className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'search'
-                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
+          <button id="nav-search-btn" onClick={() => setActiveTab('search')} className={navBtn('search', activeTab === 'search')}>
             <Search className="w-4 h-4 shrink-0" />
             <span>Busca de Região</span>
           </button>
 
-          <button
-            id="nav-companies-btn"
-            onClick={() => setActiveTab('companies')}
-            className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'companies'
-                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
+          <button id="nav-cities-btn" onClick={() => setActiveTab('cities')} className={navBtn('cities', activeTab === 'cities')}>
+            <MapPin className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Fila de Cidades</span>
+          </button>
+
+          <button id="nav-categories-btn" onClick={() => setActiveTab('categories')} className={navBtn('categories', activeTab === 'categories')}>
+            <Briefcase className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Categorias</span>
+          </button>
+
+          <button id="nav-companies-btn" onClick={() => setActiveTab('companies')} className={navBtn('companies', activeTab === 'companies')}>
             <Building2 className="w-4 h-4 shrink-0" />
             <span>Empresas Encontradas</span>
           </button>
+        </nav>
+      </div>
 
-          <button
-            id="nav-crm-btn"
-            onClick={() => setActiveTab('crm')}
-            className={`relative w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'crm'
-                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
+      {/* 2 — Converter: pipeline → pitch → projetos → agentes */}
+      <div className="px-3 pt-6">
+        {sectionTitle(<FolderKanban className="w-3.5 h-3.5" />, 'Converter')}
+        <nav className="space-y-1">
+          <button id="nav-crm-btn" onClick={() => setActiveTab('crm')} className={`relative ${navBtn('crm', activeTab === 'crm')}`}>
             <FolderKanban className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Dashboard de Leads</span>
             {savedCount > 0 && (
@@ -96,67 +99,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </button>
 
-          <button
-            id="nav-guide-btn"
-            onClick={() => setActiveTab('guide')}
-            className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'guide'
-                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
+          <button id="nav-guide-btn" onClick={() => setActiveTab('guide')} className={navBtn('guide', activeTab === 'guide')}>
             <BookOpen className="w-4 h-4 shrink-0" />
             <span>Estratégia & Pitch</span>
           </button>
 
-          <button
-            id="nav-cities-btn"
-            onClick={() => setActiveTab('cities')}
-            className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'cities'
-                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <MapPin className="w-4 h-4 shrink-0" />
-            <span className="flex-1 text-left">Fila de Cidades</span>
-          </button>
-
-          <button
-            id="nav-categories-btn"
-            onClick={() => setActiveTab('categories')}
-            className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'categories'
-                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <Briefcase className="w-4 h-4 shrink-0" />
-            <span className="flex-1 text-left">Categorias</span>
-          </button>
-
-          <button
-            id="nav-automation-btn"
-            onClick={() => setActiveTab('automation')}
-            className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'automation'
-                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <Settings className="w-4 h-4 shrink-0" />
-            <span className="flex-1 text-left">Automação</span>
-          </button>
-
-          <button
-            id="nav-projects-btn"
-            onClick={() => setActiveTab('projects')}
-            className={`relative w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'projects'
-                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
+          <button id="nav-projects-btn" onClick={() => setActiveTab('projects')} className={`relative ${navBtn('projects', activeTab === 'projects')}`}>
             <Rocket className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Projetos</span>
             {projectCount > 0 && (
@@ -166,41 +114,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </button>
 
-          <button
-            id="nav-agents-btn"
-            onClick={() => setActiveTab('agents')}
-            className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'agents'
-                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
+          <button id="nav-agents-btn" onClick={() => setActiveTab('agents')} className={navBtn('agents', activeTab === 'agents')}>
             <Bot className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Agentes</span>
           </button>
         </nav>
       </div>
 
-      {/* Automação */}
+      {/* 3 — Automação & dados */}
       <div className="px-3 pt-6">
-        <div className="px-2 pb-2 text-[10px] uppercase tracking-widest font-bold text-slate-500 flex items-center space-x-1.5">
-          <Layers className="w-3.5 h-3.5" />
-          <span>Automação</span>
-        </div>
-        <div className="space-y-2">
-          <button
-            id="monitoring-dashboard-btn"
-            onClick={() => setActiveTab('monitoring')}
-            className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'monitoring'
-                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
+        {sectionTitle(<Settings className="w-3.5 h-3.5" />, 'Automação & Dados')}
+        <div className="space-y-1">
+          <button id="nav-automation-btn" onClick={() => setActiveTab('automation')} className={navBtn('automation', activeTab === 'automation')}>
+            <Settings className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Automação</span>
+          </button>
+
+          <button id="monitoring-dashboard-btn" onClick={() => setActiveTab('monitoring')} className={navBtn('monitoring', activeTab === 'monitoring')}>
             <Activity className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Monitoramento</span>
           </button>
+        </div>
+      </div>
 
+      {/* Ações rápidas */}
+      <div className="px-3 pt-6 pb-6">
+        <div className="space-y-2">
           <button
             id="async-queue-btn"
             onClick={onOpenQueueModal}
