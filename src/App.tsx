@@ -24,7 +24,7 @@ import { AutomationSettingsPage } from './components/AutomationSettingsPage';
 
 import { BusinessLead, InteractionOutcome, ProjectType, SearchFilters } from './types';
 import { exportLeadsToCSV } from './utils/exportUtils';
-import { SearchX, Sparkles, Filter, Info, ShieldCheck, AlertCircle } from 'lucide-react';
+import { SearchX, Sparkles, Filter, Info, ShieldCheck, AlertCircle, Globe, Crown, Award } from 'lucide-react';
 
 const PIPELINE_STATUS_LABELS: Record<string, string> = {
   prospect: 'Novos Prospects',
@@ -57,6 +57,8 @@ interface DuplicateCandidate {
 export default function App() {
   const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation'>('search');
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+  // Filtro de VISUALIZAÇÃO por presença digital (não afeta a busca — a busca sempre traz tudo)
+  const [presenceViewFilter, setPresenceViewFilter] = useState<'all' | 'gold' | 'silver'>('all');
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [hasGeminiKey, setHasGeminiKey] = useState<boolean>(false);
   const [hasMapsKey, setHasMapsKey] = useState<boolean>(false);
@@ -67,7 +69,7 @@ export default function App() {
     state: 'SP',
     location: 'São Paulo',
     category: 'Todas as Categorias',
-    filterNoWebsiteOnly: true,
+    filterNoWebsiteOnly: false, // busca sempre traz tudo; presença digital é só filtro de visualização
     minRating: 4.0,
     minReviews: 10,
     sortBy: 'score',
@@ -252,7 +254,8 @@ export default function App() {
       const searchLocation = [filters.location, filters.state].filter(Boolean).join(', ');
       const body: any = {
         category: filters.category,
-        filterNoWebsiteOnly: filters.filterNoWebsiteOnly,
+        // Presença digital virou filtro de visualização (presenceViewFilter) — a busca sempre traz todas
+        filterNoWebsiteOnly: false,
         provider: filters.provider,
         useCityRotation: isRotation,
       };
@@ -437,6 +440,15 @@ export default function App() {
   const noWebsiteCount = leads.filter(
     (l) => l.websiteStatus === 'none' || l.websiteStatus === 'social_only'
   ).length;
+  // Filtro de visualização por presença digital (segmentado Ouro/Prata sobre os resultados)
+  const goldCount = leads.filter((l) => l.websiteStatus === 'none').length;
+  const silverCount = leads.filter((l) => l.websiteStatus === 'social_only').length;
+  const visibleLeads =
+    presenceViewFilter === 'gold'
+      ? leads.filter((l) => l.websiteStatus === 'none')
+      : presenceViewFilter === 'silver'
+        ? leads.filter((l) => l.websiteStatus === 'social_only')
+        : leads;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans antialiased selection:bg-indigo-600 selection:text-white">
@@ -525,10 +537,61 @@ export default function App() {
 
             {/* Results Display */}
             <div className="px-4 sm:px-6 lg:px-8 pb-12">
+              {/* Filtro de visualização por Presença Digital (Ouro vs Prata) */}
+              {leads.length > 0 && (
+                <div className="flex flex-wrap items-center gap-3 mb-4">
+                  <span className="text-slate-500 font-bold text-xs">Presença digital:</span>
+                  <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200 text-xs shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setPresenceViewFilter('all')}
+                      className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center space-x-1 ${
+                        presenceViewFilter === 'all'
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      <Globe className="w-3.5 h-3.5" />
+                      <span>Todos ({leads.length})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPresenceViewFilter('gold')}
+                      className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center space-x-1.5 ${
+                        presenceViewFilter === 'gold'
+                          ? 'bg-amber-500 text-white shadow-xs'
+                          : 'text-amber-700 hover:bg-amber-100/50'
+                      }`}
+                      title="Empresas sem nenhum site (Oportunidade Ouro - Fechamento Alto)"
+                    >
+                      <Crown className="w-3.5 h-3.5 fill-amber-200 text-amber-100" />
+                      <span>Sem Site (Ouro 👑) ({goldCount})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPresenceViewFilter('silver')}
+                      className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center space-x-1.5 ${
+                        presenceViewFilter === 'silver'
+                          ? 'bg-slate-700 text-white shadow-xs'
+                          : 'text-slate-700 hover:bg-slate-200/60'
+                      }`}
+                      title="Empresas apenas com perfil no Instagram (Oportunidade Prata - Falta LP de Conversão)"
+                    >
+                      <Award className="w-3.5 h-3.5 text-slate-200" />
+                      <span>Apenas Instagram (Prata 🥈) ({silverCount})</span>
+                    </button>
+                  </div>
+                  {presenceViewFilter !== 'all' && (
+                    <span className="text-[11px] text-slate-400">
+                      Mostrando {visibleLeads.length} de {leads.length}
+                    </span>
+                  )}
+                </div>
+              )}
               {viewMode === 'grid' ? (
-                leads.length > 0 ? (
+                visibleLeads.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {leads.map((lead) => (
+                    {visibleLeads.map((lead) => (
                       <BusinessCard
                         key={lead.id}
                         lead={lead}
@@ -541,15 +604,28 @@ export default function App() {
                 ) : (
                   <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center space-y-4 my-8 shadow-sm">
                     <SearchX className="w-12 h-12 text-slate-400 mx-auto" />
-                    <h3 className="text-lg font-bold text-slate-900">Nenhuma empresa encontrada com estes filtros</h3>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      {leads.length > 0 ? 'Nenhuma empresa com este filtro de presença' : 'Nenhuma empresa encontrada com estes filtros'}
+                    </h3>
                     <p className="text-slate-500 text-sm max-w-md mx-auto">
-                      Tente alterar a cidade ou a categoria e execute uma nova busca real.
+                      {leads.length > 0
+                        ? 'Troque o filtro de presença digital acima para ver as demais empresas já mapeadas.'
+                        : 'Tente alterar a cidade ou a categoria e execute uma nova busca real.'}
                     </p>
+                    {leads.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setPresenceViewFilter('all')}
+                        className="bg-slate-900 hover:bg-slate-700 text-white font-semibold px-4 py-2 rounded-xl text-xs"
+                      >
+                        Mostrar todas ({leads.length})
+                      </button>
+                    )}
                   </div>
                 )
               ) : (
                 <MapView
-                  leads={leads}
+                  leads={visibleLeads}
                   onAnalyze={(l) => setAnalyzingLead(l)}
                   onToggleSave={handleToggleSave}
                   savedLeadIds={savedLeadIds}

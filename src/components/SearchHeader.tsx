@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, MapPin, Filter, Sparkles, LayoutGrid, Map, RefreshCw, Globe, Download, Crown, Award, Database, Zap, AlertTriangle, Clock, Calendar, Key, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, MapPin, Filter, Sparkles, LayoutGrid, Map, RefreshCw, Globe, Download, Database, Zap, AlertTriangle, Clock, Calendar, Key, ChevronDown, ChevronUp } from 'lucide-react';
 import { SearchFilters, SerpApiUsage } from '../types';
 import { CATEGORY_OPTIONS } from '../data/catalog';
 import { BRAZIL_STATES, CITIES_BY_STATE, getCitiesForState } from '../data/brazilLocations';
@@ -461,55 +461,8 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
             </div>
           )}
 
-          {/* Filtro Rápido por Presença Digital (Melhoria 5: Ouro vs Prata) */}
-          <div className="flex flex-wrap items-center justify-between pt-3 border-t border-slate-100 gap-3 text-xs sm:text-sm text-slate-600">
-            <div className="flex items-center space-x-2">
-              <span className="text-slate-500 font-bold text-xs">Nível de Presença Digital:</span>
-              <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setFilters((prev) => ({ ...prev, presenceFilter: 'all', filterNoWebsiteOnly: false }))}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center space-x-1 ${
-                    (!filters.presenceFilter || filters.presenceFilter === 'all') && !filters.filterNoWebsiteOnly
-                      ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  <Globe className="w-3.5 h-3.5" />
-                  <span>Todos</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFilters((prev) => ({ ...prev, presenceFilter: 'gold', filterNoWebsiteOnly: true }))}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center space-x-1.5 ${
-                    filters.presenceFilter === 'gold' || (filters.filterNoWebsiteOnly && filters.presenceFilter !== 'silver')
-                      ? 'bg-amber-500 text-white shadow-xs'
-                      : 'text-amber-700 hover:bg-amber-100/50'
-                  }`}
-                  title="Empresas sem nenhum site (Oportunidade Ouro - Fechamento Alto)"
-                >
-                  <Crown className="w-3.5 h-3.5 fill-amber-200 text-amber-100" />
-                  <span>Sem Site (Ouro 👑)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFilters((prev) => ({ ...prev, presenceFilter: 'silver', filterNoWebsiteOnly: false }))}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center space-x-1.5 ${
-                    filters.presenceFilter === 'silver'
-                      ? 'bg-slate-700 text-white shadow-xs'
-                      : 'text-slate-700 hover:bg-slate-200/60'
-                  }`}
-                  title="Empresas apenas com perfil no Instagram (Oportunidade Prata - Falta LP de Conversão)"
-                >
-                  <Award className="w-3.5 h-3.5 text-slate-200" />
-                  <span>Apenas Instagram (Prata 🥈)</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Sort & View Mode Controls */}
+          {/* Sort & View Mode Controls */}
+          <div className="flex flex-wrap items-center justify-end pt-3 border-t border-slate-100 gap-3 text-xs sm:text-sm text-slate-600">
             <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-1.5">
                 <span className="text-slate-500 text-xs font-semibold">Ordenar por:</span>
