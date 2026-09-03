@@ -98,7 +98,7 @@ export interface SearchFilters {
   minPopulation?: number;
   maxPopulation?: number;
   minPropensity?: number;
-  autoSaveNoWebsite?: boolean;
+  autoSaveMode?: 'off' | 'gold' | 'gold_silver';
 }
 
 export interface PipelineStats {

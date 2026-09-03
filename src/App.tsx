@@ -80,7 +80,7 @@ export default function App() {
     minPopulation: 30000,
     maxPopulation: 200000,
     minPropensity: 0,
-    autoSaveNoWebsite: false,
+    autoSaveMode: 'off',
   });
 
   // Leads de busca e CRM começam vazios. O banco compartilhado é a única fonte de verdade.
@@ -283,10 +283,12 @@ export default function App() {
       if (data.serpApiMeta) setSerpApiMeta(data.serpApiMeta);
       setLastSearchCached(Boolean(data.cached));
       setLocationsProcessed(Array.isArray(data.locationsProcessed) ? data.locationsProcessed : null);
-      // auto-save Ouro (sem website) quando switch ligado
-      if (filters.autoSaveNoWebsite && Array.isArray(data.businesses)) {
+      // auto-save no CRM após a busca: 'gold' = só Ouro (sem site), 'gold_silver' = Ouro + Prata (só Instagram)
+      const autoSaveMode = filters.autoSaveMode ?? 'off';
+      if (autoSaveMode !== 'off' && Array.isArray(data.businesses)) {
         const existingIds = new Set(savedLeads.map((l) => l.id));
-        const toSave = (data.businesses as BusinessLead[]).filter((l) => l.websiteStatus === 'none' && !l.isAlreadySaved && !existingIds.has(l.id));
+        const wantStatus = (s: BusinessLead['websiteStatus']) => s === 'none' || (autoSaveMode === 'gold_silver' && s === 'social_only');
+        const toSave = (data.businesses as BusinessLead[]).filter((l) => wantStatus(l.websiteStatus) && !l.isAlreadySaved && !existingIds.has(l.id));
         if (toSave.length > 0) {
           let savedCount = 0;
           for (const l of toSave) {
@@ -302,7 +304,7 @@ export default function App() {
             } catch {}
           }
           if (savedCount > 0) {
-            setJobToast({ ok: true, message: `💾 Auto-salvo ${savedCount} empresa(s) Ouro sem website no CRM` });
+            setJobToast({ ok: true, message: `💾 Auto-salvo ${savedCount} empresa(s) ${autoSaveMode === 'gold_silver' ? 'Ouro + Prata' : 'Ouro'} no CRM` });
             window.setTimeout(() => setJobToast(null), 6000);
           }
         }
