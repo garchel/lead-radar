@@ -28,12 +28,20 @@ export const CitiesQueueDashboard: React.FC = () => {
   const [search, setSearch] = useState('');
   const [ufFilter, setUfFilter] = useState('');
   const [tierFilter, setTierFilter] = useState('');
+  const [minPop, setMinPop] = useState('');
+  const [maxPop, setMaxPop] = useState('');
+  const [appliedMinPop, setAppliedMinPop] = useState('');
+  const [appliedMaxPop, setAppliedMaxPop] = useState('');
+  const [searchedFilter, setSearchedFilter] = useState<'all' | 'never' | 'done'>('all');
+  const [enabledFilter, setEnabledFilter] = useState<'all' | 'on' | 'off'>('all');
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (ufFilter) params.set('uf', ufFilter);
+      if (appliedMinPop) params.set('minPopulation', appliedMinPop);
+      if (appliedMaxPop) params.set('maxPopulation', appliedMaxPop);
       params.set('limit', '500');
       const [citiesRes, statsRes] = await Promise.all([
         fetch(`/api/cities?${params}`).then((r) => r.json()),
@@ -46,11 +54,20 @@ export const CitiesQueueDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [ufFilter]);
+  }, [ufFilter, appliedMinPop, appliedMaxPop]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  // Aplica pop mín/máx no servidor com debounce (evita 1 request por tecla)
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setAppliedMinPop(minPop.replace(/\D/g, ''));
+      setAppliedMaxPop(maxPop.replace(/\D/g, ''));
+    }, 600);
+    return () => window.clearTimeout(t);
+  }, [minPop, maxPop]);
 
   const toggleCity = async (code: string, enabled: boolean) => {
     setCities((prev) => prev.map((c) => (c.ibgeCode === code ? { ...c, enabled } : c)));
@@ -68,8 +85,25 @@ export const CitiesQueueDashboard: React.FC = () => {
   const filtered = cities.filter((c) => {
     if (search && !`${c.name} ${c.uf}`.toLowerCase().includes(search.toLowerCase())) return false;
     if (tierFilter && c.marketTier !== tierFilter) return false;
+    if (searchedFilter === 'never' && c.searchCount > 0) return false;
+    if (searchedFilter === 'done' && c.searchCount === 0) return false;
+    if (enabledFilter === 'on' && !c.enabled) return false;
+    if (enabledFilter === 'off' && c.enabled) return false;
     return true;
   });
+
+  const hasActiveFilters = Boolean(search || ufFilter || tierFilter || minPop || maxPop || searchedFilter !== 'all' || enabledFilter !== 'all');
+  const clearFilters = () => {
+    setSearch('');
+    setUfFilter('');
+    setTierFilter('');
+    setMinPop('');
+    setMaxPop('');
+    setAppliedMinPop('');
+    setAppliedMaxPop('');
+    setSearchedFilter('all');
+    setEnabledFilter('all');
+  };
 
   return (
     <div className="space-y-6">
@@ -103,30 +137,76 @@ export const CitiesQueueDashboard: React.FC = () => {
 
       {/* Filtros */}
       <div className="px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-2xl p-3 shadow-sm">
-          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
-            <Search className="w-3.5 h-3.5 text-slate-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar cidade..."
-              className="bg-transparent text-xs outline-none w-40"
-            />
+        <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm space-y-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
+            <div className="col-span-2 flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar cidade..."
+                className="bg-transparent text-xs outline-none w-full"
+              />
+            </div>
+            <div>
+              <input
+                value={ufFilter}
+                onChange={(e) => setUfFilter(e.target.value.toUpperCase().slice(0, 2))}
+                placeholder="UF"
+                title="Filtrar por estado (ex: SP)"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs uppercase"
+              />
+            </div>
+            <div>
+              <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value)} title="Tier de mercado (PIB per capita)" className="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs px-2 py-1.5">
+                <option value="">Todos os tiers</option>
+                <option value="A">Tier A (≥80k)</option>
+                <option value="B">Tier B (≥45k)</option>
+                <option value="C">Tier C (≥25k)</option>
+                <option value="D">Tier D (&lt;25k)</option>
+              </select>
+            </div>
+            <div>
+              <input
+                value={minPop}
+                onChange={(e) => setMinPop(e.target.value)}
+                placeholder="Pop. mín"
+                title="População mínima (ex: 30000)"
+                inputMode="numeric"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs"
+              />
+            </div>
+            <div>
+              <input
+                value={maxPop}
+                onChange={(e) => setMaxPop(e.target.value)}
+                placeholder="Pop. máx"
+                title="População máxima (ex: 200000)"
+                inputMode="numeric"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs"
+              />
+            </div>
+            <div>
+              <select value={searchedFilter} onChange={(e) => setSearchedFilter(e.target.value as any)} title="Status de busca na rotação" className="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs px-2 py-1.5">
+                <option value="all">Buscadas + novas</option>
+                <option value="never">Nunca buscadas</option>
+                <option value="done">Já buscadas</option>
+              </select>
+            </div>
           </div>
-          <input
-            value={ufFilter}
-            onChange={(e) => setUfFilter(e.target.value.toUpperCase().slice(0, 2))}
-            placeholder="UF"
-            className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs w-16 uppercase"
-          />
-          <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg text-xs px-2.5 py-1.5">
-            <option value="">Todos os tiers</option>
-            <option value="A">Tier A</option>
-            <option value="B">Tier B</option>
-            <option value="C">Tier C</option>
-            <option value="D">Tier D</option>
-          </select>
-          <span className="ml-auto text-xs text-slate-500">{filtered.length} cidade(s) exibidas</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={enabledFilter} onChange={(e) => setEnabledFilter(e.target.value as any)} title="Situação na rotação" className="bg-slate-50 border border-slate-200 rounded-lg text-xs px-2 py-1.5">
+              <option value="all">Ativas + desativadas</option>
+              <option value="on">Só ativas na rotação</option>
+              <option value="off">Só desativadas</option>
+            </select>
+            {hasActiveFilters && (
+              <button type="button" onClick={clearFilters} className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline px-1">
+                Limpar filtros
+              </button>
+            )}
+            <span className="ml-auto text-xs text-slate-500">{filtered.length} de {cities.length} cidade(s) exibidas</span>
+          </div>
         </div>
 
         {/* Tabela */}
