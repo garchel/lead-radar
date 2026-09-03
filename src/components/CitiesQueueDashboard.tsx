@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { MapPin, RefreshCw, TrendingUp, Search, Users } from 'lucide-react';
+import { MapPin, RefreshCw, TrendingUp, Search, Users, ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
 
 interface City {
   ibgeCode: string;
@@ -36,6 +36,8 @@ export const CitiesQueueDashboard: React.FC = () => {
   const [searchedFilter, setSearchedFilter] = useState<'all' | 'never' | 'done'>('all');
   const [enabledFilter, setEnabledFilter] = useState<'all' | 'on' | 'off'>('all');
   const [appliedUf, setAppliedUf] = useState('');
+  const [sortKey, setSortKey] = useState<'name' | 'population' | 'pibPerCapita' | 'marketTier' | 'searchCount' | 'lastSearchedAt' | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const abortRef = useRef<AbortController | null>(null);
   const firstLoadRef = useRef(true);
 
@@ -112,6 +114,44 @@ export const CitiesQueueDashboard: React.FC = () => {
     if (enabledFilter === 'off' && c.enabled) return false;
     return true;
   });
+
+  const toggleSort = (key: NonNullable<typeof sortKey>) => {
+    if (sortKey !== key) {
+      setSortKey(key);
+      // Direção inicial sensata por coluna: nome A→Z, resto maior→menor
+      setSortDir(key === 'name' ? 'asc' : 'desc');
+    } else {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    }
+  };
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (!sortKey) return 0;
+    const dir = sortDir === 'asc' ? 1 : -1;
+    switch (sortKey) {
+      case 'name':
+        return dir * `${a.name} ${a.uf}`.localeCompare(`${b.name} ${b.uf}`, 'pt-BR');
+      case 'population':
+        return dir * (a.population - b.population);
+      case 'pibPerCapita':
+        return dir * (a.pibPerCapita - b.pibPerCapita);
+      case 'marketTier':
+        return dir * (a.marketTier.localeCompare(b.marketTier));
+      case 'searchCount':
+        return dir * (a.searchCount - b.searchCount);
+      case 'lastSearchedAt':
+        return dir * ((a.lastSearchedAt || '').localeCompare(b.lastSearchedAt || ''));
+      default:
+        return 0;
+    }
+  });
+
+  const SortIcon = ({ col }: { col: NonNullable<typeof sortKey> }) => {
+    if (sortKey !== col) return <ChevronsUpDown className="w-3 h-3 opacity-40" />;
+    return sortDir === 'asc'
+      ? <ArrowUp className="w-3 h-3 text-indigo-600" />
+      : <ArrowDown className="w-3 h-3 text-indigo-600" />;
+  };
 
   const hasActiveFilters = Boolean(search || ufFilter || tierFilter || minPop || maxPop || searchedFilter !== 'all' || enabledFilter !== 'all');
   const clearFilters = () => {
@@ -239,12 +279,36 @@ export const CitiesQueueDashboard: React.FC = () => {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <tr>
-                  <th className="px-3 py-2.5 text-left">Cidade</th>
-                  <th className="px-3 py-2.5 text-center">População</th>
-                  <th className="px-3 py-2.5 text-center">PIB per capita</th>
-                  <th className="px-3 py-2.5 text-center">Tier</th>
-                  <th className="px-3 py-2.5 text-center">Buscas</th>
-                  <th className="px-3 py-2.5 text-center">Última busca</th>
+                  <th className="px-3 py-2.5 text-left">
+                    <button type="button" onClick={() => toggleSort('name')} title="Ordenar por cidade" className={`inline-flex items-center gap-1 hover:text-indigo-600 ${sortKey === 'name' ? 'text-indigo-600' : ''}`}>
+                      Cidade <SortIcon col="name" />
+                    </button>
+                  </th>
+                  <th className="px-3 py-2.5 text-center">
+                    <button type="button" onClick={() => toggleSort('population')} title="Ordenar por população" className={`inline-flex items-center gap-1 hover:text-indigo-600 ${sortKey === 'population' ? 'text-indigo-600' : ''}`}>
+                      População <SortIcon col="population" />
+                    </button>
+                  </th>
+                  <th className="px-3 py-2.5 text-center">
+                    <button type="button" onClick={() => toggleSort('pibPerCapita')} title="Ordenar por PIB per capita" className={`inline-flex items-center gap-1 hover:text-indigo-600 ${sortKey === 'pibPerCapita' ? 'text-indigo-600' : ''}`}>
+                      PIB per capita <SortIcon col="pibPerCapita" />
+                    </button>
+                  </th>
+                  <th className="px-3 py-2.5 text-center">
+                    <button type="button" onClick={() => toggleSort('marketTier')} title="Ordenar por tier" className={`inline-flex items-center gap-1 hover:text-indigo-600 ${sortKey === 'marketTier' ? 'text-indigo-600' : ''}`}>
+                      Tier <SortIcon col="marketTier" />
+                    </button>
+                  </th>
+                  <th className="px-3 py-2.5 text-center">
+                    <button type="button" onClick={() => toggleSort('searchCount')} title="Ordenar por nº de buscas" className={`inline-flex items-center gap-1 hover:text-indigo-600 ${sortKey === 'searchCount' ? 'text-indigo-600' : ''}`}>
+                      Buscas <SortIcon col="searchCount" />
+                    </button>
+                  </th>
+                  <th className="px-3 py-2.5 text-center">
+                    <button type="button" onClick={() => toggleSort('lastSearchedAt')} title="Ordenar por última busca" className={`inline-flex items-center gap-1 hover:text-indigo-600 ${sortKey === 'lastSearchedAt' ? 'text-indigo-600' : ''}`}>
+                      Última busca <SortIcon col="lastSearchedAt" />
+                    </button>
+                  </th>
                   <th className="px-3 py-2.5 text-center">Ativa</th>
                 </tr>
               </thead>
@@ -252,7 +316,7 @@ export const CitiesQueueDashboard: React.FC = () => {
                 {loading && (
                   <tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-400">Carregando base IBGE...</td></tr>
                 )}
-                {!loading && filtered.map((city) => (
+                {!loading && sorted.map((city) => (
                   <tr key={city.ibgeCode} className={`hover:bg-slate-50 ${!city.enabled ? 'opacity-50' : ''}`}>
                     <td className="px-3 py-2.5">
                       <div className="font-bold text-slate-900 text-xs">{city.name}</div>
@@ -282,7 +346,7 @@ export const CitiesQueueDashboard: React.FC = () => {
                     </td>
                   </tr>
                 ))}
-                {!loading && filtered.length === 0 && (
+                {!loading && sorted.length === 0 && (
                   <tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-400">Nenhuma cidade com esses filtros.</td></tr>
                 )}
               </tbody>
