@@ -3,6 +3,15 @@
 > Copie este arquivo para `sites/<cliente>/ASSETS_PROMPT.md` e preencha por slot.
 > Nenhum prompt de asset é aceito sem os 7 blocos abaixo.
 
+## KICKOFF OBRIGATÓRIO (toda LP nova — preencher antes dos assets)
+
+- [ ] Guia escolhido via `design/README.md`: `design/<guia>.md` (segmento → guia)
+- [ ] Efeitos (máx 2–3) via `sites/efeitos/README.md`: `NN-nome` + `NN-nome`
+- [ ] 1 técnica "impressionante" via `sites/efeitos/referencias/sceneai-tecnicas.md`
+      (receita cinematográfica: dark + serif gigante + luz emissiva + cursor especial +
+      microcopy-as-texture — pick 3 de 5 quando o cliente pedir "algo impressionante")
+- [ ] Zona de texto de cada slot mapeada em % antes de escrever qualquer prompt
+
 ## 0. Anatomia do prompt perfeito (7 blocos — não pule nenhum)
 
 1. **SLOT BLUEPRINT** — arquivo, dimensões de exibição, `object-fit`, overlays por cima
