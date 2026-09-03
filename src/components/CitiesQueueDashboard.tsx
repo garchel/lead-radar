@@ -21,6 +21,12 @@ const TIER_STYLES: Record<string, string> = {
   D: 'bg-amber-50 text-amber-700 border-amber-200',
 };
 
+/** Exibe dígitos com espaço a cada 3 casas (ex: 30000 → "30 000"). Guarda só dígitos no estado. */
+const formatThousands = (digits: string) => {
+  const d = digits.replace(/\D/g, '');
+  return d.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+};
+
 export const CitiesQueueDashboard: React.FC = () => {
   const [cities, setCities] = useState<City[]>([]);
   const [stats, setStats] = useState<any>(null);
@@ -229,20 +235,20 @@ export const CitiesQueueDashboard: React.FC = () => {
             </div>
             <div>
               <input
-                value={minPop}
-                onChange={(e) => setMinPop(e.target.value)}
+                value={formatThousands(minPop)}
+                onChange={(e) => setMinPop(e.target.value.replace(/\D/g, ''))}
                 placeholder="Pop. mín"
-                title="População mínima (ex: 30000)"
+                title="População mínima (ex: 30 000)"
                 inputMode="numeric"
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs"
               />
             </div>
             <div>
               <input
-                value={maxPop}
-                onChange={(e) => setMaxPop(e.target.value)}
+                value={formatThousands(maxPop)}
+                onChange={(e) => setMaxPop(e.target.value.replace(/\D/g, ''))}
                 placeholder="Pop. máx"
-                title="População máxima (ex: 200000)"
+                title="População máxima (ex: 200 000)"
                 inputMode="numeric"
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs"
               />
