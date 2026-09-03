@@ -1,9 +1,81 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Search, MapPin, Filter, Sparkles, LayoutGrid, Map, RefreshCw, Globe, Download, Database, Zap, AlertTriangle, Clock, Calendar, Key, Crown, Award } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { Search, MapPin, Filter, Sparkles, LayoutGrid, Map, RefreshCw, Globe, Download, Database, Zap, AlertTriangle, Clock, Calendar, Key, Crown, Award, Power, ChevronDown } from 'lucide-react';
 import { SearchFilters, SerpApiUsage } from '../types';
 import { CATEGORY_OPTIONS } from '../data/catalog';
 import { BRAZIL_STATES, CITIES_BY_STATE, getCitiesForState } from '../data/brazilLocations';
 import { SerpApiKeyManager } from './SerpApiKeyManager';
+
+interface SectorInfo {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
+/** Seletor de setor com liga/desliga global (mesmo isActive da aba Categorias). */
+const SectorPicker: React.FC<{
+  id: string;
+  value: string;
+  onChange: (name: string) => void;
+  sectors: SectorInfo[];
+  togglingId: string | null;
+  onToggleActive: (s: SectorInfo) => void;
+}> = ({ id, value, onChange, sectors, togglingId, onToggleActive }) => {
+  const [open, setOpen] = useState(false);
+  const activeCount = sectors.filter((s) => s.isActive).length;
+  const shown = value === 'Todas as Categorias' ? `Todas as Categorias (${activeCount})` : value;
+  return (
+    <div className="relative">
+      <button
+        id={id}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full pl-10 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium flex items-center justify-between gap-2 text-left"
+      >
+        <Filter className="w-5 h-5 absolute left-3 top-2.5 text-slate-400 pointer-events-none" />
+        <span className="truncate">{shown}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <>
+          <button type="button" aria-label="Fechar lista de setores" onClick={() => setOpen(false)} className="fixed inset-0 z-30 cursor-default bg-transparent border-0 p-0" />
+          <div className="absolute z-40 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-72 overflow-y-auto py-1 text-sm min-w-[220px]">
+            <button
+              type="button"
+              onClick={() => { onChange('Todas as Categorias'); setOpen(false); }}
+              className={`w-full text-left px-3 py-2 font-semibold transition-colors ${value === 'Todas as Categorias' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700 hover:bg-slate-50'}`}
+            >
+              Todas as Categorias ({activeCount})
+            </button>
+            <div className="border-t border-slate-100" />
+            {sectors.map((s) => (
+              <div key={s.id} className={`flex items-center gap-2 px-3 py-1.5 transition-colors ${s.isActive ? 'hover:bg-slate-50' : 'opacity-45'}`}>
+                <button
+                  type="button"
+                  disabled={!s.isActive}
+                  onClick={() => { onChange(s.name); setOpen(false); }}
+                  title={s.isActive ? `Buscar só em ${s.name}` : 'Setor desativado — ative ao lado para usar'}
+                  className={`flex-1 text-left truncate ${value === s.name ? 'text-indigo-700 font-bold' : 'text-slate-700 font-medium'}`}
+                >
+                  {s.name}
+                </button>
+                <button
+                  type="button"
+                  disabled={togglingId === s.id}
+                  onClick={() => onToggleActive(s)}
+                  title={s.isActive ? `Desativar ${s.name} (vale para buscas e rotação)` : `Ativar ${s.name}`}
+                  className={`p-1 rounded-md transition-colors disabled:opacity-50 ${s.isActive ? 'text-emerald-600 hover:bg-emerald-50' : 'text-slate-400 hover:bg-slate-100'}`}
+                >
+                  <Power className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+            <p className="px-3 py-1.5 text-[10px] text-slate-400 border-t border-slate-100">O liga/desliga vale para todas as buscas e a rotação.</p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 interface SearchHeaderProps {
   filters: SearchFilters;
@@ -33,16 +105,48 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
   const [providers, setProviders] = useState<{ id: string; configured: boolean }[]>([]);
   const [usageError, setUsageError] = useState<string | null>(null);
   const [isKeyManagerOpen, setIsKeyManagerOpen] = useState(false);
-  const [dynamicCategories, setDynamicCategories] = useState<string[]>(CATEGORY_OPTIONS);
+  const [sectors, setSectors] = useState<SectorInfo[]>(() =>
+    CATEGORY_OPTIONS.filter((n) => n !== 'Todas as Categorias').map((n) => ({ id: n, name: n, isActive: true }))
+  );
+  const [togglingSectorId, setTogglingSectorId] = useState<string | null>(null);
+
+  const loadSectors = useCallback(async () => {
+    try {
+      const d = await fetch('/api/categories').then((r) => r.json());
+      const list = Array.isArray(d?.categories) ? d.categories : [];
+      const clean = list
+        .filter((c: any) => c?.name && c.name !== 'Todas as Categorias')
+        .map((c: any) => ({ id: String(c.id ?? c.name), name: String(c.name), isActive: c.isActive !== false }));
+      if (clean.length) setSectors(clean);
+    } catch {
+      /* mantém fallback local */
+    }
+  }, []);
 
   useEffect(() => {
-    fetch('/api/categories').then(r=>r.json()).then(d=>{
-      if (Array.isArray(d?.categories) && d.categories.length) {
-        const names = d.categories.filter((c:any)=>c.isActive!==false).map((c:any)=>c.name);
-        if (names.length) setDynamicCategories(['Todas as Categorias', ...names]);
+    void loadSectors();
+  }, [loadSectors]);
+
+  const toggleSectorActive = async (s: SectorInfo) => {
+    setTogglingSectorId(s.id);
+    try {
+      const r = await fetch(`/api/categories/${encodeURIComponent(s.id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !s.isActive }),
+      }).then((x) => x.json());
+      if (!r?.success) throw new Error(r?.error || 'Falha ao atualizar setor.');
+      const nextActive = !s.isActive;
+      setSectors((prev) => prev.map((x) => (x.id === s.id ? { ...x, isActive: nextActive } : x)));
+      if (!nextActive) {
+        setFilters((prev) => (prev.category === s.name ? { ...prev, category: 'Todas as Categorias' } : prev));
       }
-    }).catch(()=>{});
-  }, []);
+    } catch {
+      /* silencioso — o toggle mostra o estado real após recarregar */
+    } finally {
+      setTogglingSectorId(null);
+    }
+  };
 
   const fetchUsage = async () => {
     try {
@@ -375,22 +479,15 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
 
             {/* Category Select */}
             <div className="md:col-span-3 relative">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Setor Comercial</label>
-              <div className="relative">
-                <Filter className="w-5 h-5 absolute left-3 top-2.5 text-slate-400" />
-                <select
-                  id="search-category-select"
-                  value={filters.category}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, category: e.target.value }))}
-                  className="w-full pl-10 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all appearance-none cursor-pointer font-medium"
-                >
-                  {dynamicCategories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <label htmlFor="search-category-select" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Setor Comercial</label>
+              <SectorPicker
+                id="search-category-select"
+                value={filters.category}
+                onChange={(name) => setFilters((prev) => ({ ...prev, category: name }))}
+                sectors={sectors}
+                togglingId={togglingSectorId}
+                onToggleActive={(s) => void toggleSectorActive(s)}
+              />
             </div>
 
             {/* Search Action Button */}
@@ -452,22 +549,15 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
               {/* Category Select */}
               <div className="md:col-span-9 relative">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Setor Comercial</label>
-                <div className="relative">
-                  <Filter className="w-5 h-5 absolute left-3 top-2.5 text-slate-400" />
-                  <select
-                    id="search-category-select-rotation"
-                    value={filters.category}
-                    onChange={(e) => setFilters((prev) => ({ ...prev, category: e.target.value }))}
-                    className="w-full pl-10 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all appearance-none cursor-pointer font-medium"
-                  >
-                    {dynamicCategories.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <label htmlFor="search-category-select-rotation" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Setor Comercial</label>
+                <SectorPicker
+                  id="search-category-select-rotation"
+                  value={filters.category}
+                  onChange={(name) => setFilters((prev) => ({ ...prev, category: name }))}
+                  sectors={sectors}
+                  togglingId={togglingSectorId}
+                  onToggleActive={(s) => void toggleSectorActive(s)}
+                />
               </div>
 
               {/* Search Action Button */}
@@ -494,8 +584,50 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
           </div>
           )}
 
-          {/* Sort & View Mode Controls */}
-          <div className="flex flex-wrap items-center justify-end pt-3 border-t border-slate-100 gap-3 text-xs sm:text-sm text-slate-600">
+          {/* Auto-save + Sort & View Mode Controls */}
+          <div className="flex flex-wrap items-center justify-between pt-3 border-t border-slate-100 gap-3 text-xs sm:text-sm text-slate-600">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-slate-500 text-xs font-semibold">Auto-salvar no CRM:</span>
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setFilters((prev) => ({ ...prev, autoSaveMode: 'off' }))}
+                  className={`px-2 py-0.5 rounded-md font-bold transition-all ${
+                    autoSaveMode === 'off'
+                      ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Não
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilters((prev) => ({ ...prev, autoSaveMode: 'gold' }))}
+                  className={`px-2 py-0.5 rounded-md font-bold transition-all flex items-center space-x-1 ${
+                    autoSaveMode === 'gold'
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'text-amber-700 hover:bg-amber-100/50'
+                  }`}
+                  title="Salva sozinho no CRM as empresas sem nenhum site"
+                >
+                  <Crown className="w-3 h-3 fill-amber-200 text-amber-100" />
+                  <span>Ouro</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilters((prev) => ({ ...prev, autoSaveMode: 'gold_silver' }))}
+                  className={`px-2 py-0.5 rounded-md font-bold transition-all flex items-center space-x-1 ${
+                    autoSaveMode === 'gold_silver'
+                      ? 'bg-slate-700 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-200/60'
+                  }`}
+                  title="Salva sozinho no CRM as empresas sem site e as que só têm Instagram"
+                >
+                  <Award className="w-3 h-3 text-slate-200" />
+                  <span>Ouro+Prata</span>
+                </button>
+              </div>
+            </div>
             <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-1.5">
                 <span className="text-slate-500 text-xs font-semibold">Ordenar por:</span>
@@ -535,50 +667,6 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                 </button>
               </div>
             </div>
-          </div>
-          {/* Salvamento automático no CRM */}
-          <div className="flex flex-wrap items-center gap-3 pt-3 mt-3 border-t border-slate-100">
-            <span className="text-xs font-semibold text-slate-700">Salvar automaticamente no CRM:</span>
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
-              <button
-                type="button"
-                onClick={() => setFilters((prev) => ({ ...prev, autoSaveMode: 'off' }))}
-                className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                  autoSaveMode === 'off'
-                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Desligado
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilters((prev) => ({ ...prev, autoSaveMode: 'gold' }))}
-                className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center space-x-1.5 ${
-                  autoSaveMode === 'gold'
-                    ? 'bg-amber-500 text-white shadow-xs'
-                    : 'text-amber-700 hover:bg-amber-100/50'
-                }`}
-                title="Salva sozinho no CRM as empresas sem nenhum site"
-              >
-                <Crown className="w-3.5 h-3.5 fill-amber-200 text-amber-100" />
-                <span>Só Ouro 👑</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilters((prev) => ({ ...prev, autoSaveMode: 'gold_silver' }))}
-                className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center space-x-1.5 ${
-                  autoSaveMode === 'gold_silver'
-                    ? 'bg-slate-700 text-white shadow-xs'
-                    : 'text-slate-700 hover:bg-slate-200/60'
-                }`}
-                title="Salva sozinho no CRM as empresas sem site e as que só têm Instagram"
-              >
-                <Award className="w-3.5 h-3.5 text-slate-200" />
-                <span>Ouro + Prata 👑🥈</span>
-              </button>
-            </div>
-            <span className="text-[11px] text-slate-400 hidden sm:inline">Após a busca, salva sozinho no CRM</span>
           </div>
         </form>
       </div>
