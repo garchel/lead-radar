@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { BusinessLead, InteractionOutcome } from '../types';
-import { FolderKanban, Download, Edit3, Sparkles, Trash2 } from 'lucide-react';
+import { FolderKanban, Download, Edit3, Sparkles, Trash2, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 interface CrmPipelineProps {
   savedLeads: BusinessLead[];
@@ -49,27 +49,76 @@ interface PipelineColumnProps {
   title: string;
   color: string;
   count: number;
+  collapsed: boolean;
+  onToggle: () => void;
   children: React.ReactNode;
 }
 
-const PipelineColumn: React.FC<PipelineColumnProps> = ({ id, title, color, count, children }) => {
+/**
+ * Etapa do kanban como ACORDEÃO horizontal: cada coluna fica lado a lado (a tela
+ * nunca empilha as etapas) e o cabeçalho abre/fecha o conteúdo.
+ * Recolhida ela continua sendo alvo de drop — dá para mover um card para uma
+ * etapa fechada.
+ */
+const PipelineColumn: React.FC<PipelineColumnProps> = ({ id, title, color, count, collapsed, onToggle, children }) => {
   const { setNodeRef, isOver } = useDroppable({ id });
 
+  // Recolhida: a coluna inteira é o botão de expandir (alvo grande, cor da etapa).
+  if (collapsed) {
+    return (
+      <section
+        ref={setNodeRef}
+        aria-label={`Etapa ${title}`}
+        className={`shrink-0 w-[78px] transition-all duration-200 ${isOver ? 'ring-2 ring-indigo-300 rounded-2xl' : ''}`}
+      >
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={false}
+          title={`Expandir ${title} (${count})`}
+          className={`w-full min-h-[220px] flex flex-col items-center gap-2 py-3 rounded-2xl border font-bold cursor-pointer transition-transform hover:scale-[1.02] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${color}`}
+        >
+          <ChevronRight className="w-4 h-4" />
+          <span className="px-1.5 py-0.5 rounded-full bg-white text-slate-800 text-[10px] font-bold border border-slate-200">
+            {count}
+          </span>
+          <span className="[writing-mode:vertical-rl] rotate-180 text-[11px] tracking-wide">
+            {title}
+          </span>
+          <span className="mt-auto text-[9px] uppercase tracking-wider opacity-70">abrir</span>
+        </button>
+      </section>
+    );
+  }
+
   return (
-    <div
+    <section
       ref={setNodeRef}
-      className={`bg-slate-50 border rounded-2xl p-3 flex flex-col space-y-3 min-h-125 transition-colors ${
+      aria-label={`Etapa ${title}`}
+      className={`shrink-0 w-[330px] bg-slate-50 border rounded-2xl flex flex-col transition-all duration-200 ${
         isOver ? 'border-indigo-400 ring-2 ring-indigo-100' : 'border-slate-200'
       }`}
     >
-      <div className={`p-2.5 rounded-xl border font-bold text-xs flex items-center justify-between ${color}`}>
-        <span>{title}</span>
-        <span className="px-2 py-0.5 rounded-full bg-white text-slate-800 text-[10px] font-bold border border-slate-200">
-          {count}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded
+        title={`Recolher ${title}`}
+        className={`w-full p-2.5 rounded-t-2xl border-b font-bold text-xs flex items-center justify-between gap-2 cursor-pointer hover:brightness-[0.98] ${color}`}
+      >
+        <span className="truncate">{title}</span>
+        <span className="flex items-center gap-1.5 shrink-0">
+          <span className="px-2 py-0.5 rounded-full bg-white text-slate-800 text-[10px] font-bold border border-slate-200">
+            {count}
+          </span>
+          <ChevronDown className="w-3.5 h-3.5" />
         </span>
+      </button>
+
+      <div className="p-2.5 flex-1 min-h-[160px] max-h-[68vh] overflow-y-auto overscroll-contain">
+        {children}
       </div>
-      {children}
-    </div>
+    </section>
   );
 };
 
@@ -216,6 +265,18 @@ const SortableLeadCard: React.FC<SortableLeadCardProps> = ({
   );
 };
 
+const COLLAPSED_STORAGE_KEY = 'leadradar.crm.stages.collapsed.v1';
+
+function readCollapsedStages(): string[] {
+  try {
+    const raw = localStorage.getItem(COLLAPSED_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 export const CrmPipeline: React.FC<CrmPipelineProps> = ({
   savedLeads,
   onUpdateStatus,
@@ -224,6 +285,27 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
   onRemoveLead,
   onAnalyze,
 }) => {
+  // Quais etapas estão recolhidas — persistido para sobreviver a recarregar a página.
+  const [collapsedStages, setCollapsedStages] = useState<string[]>(() => readCollapsedStages());
+
+  const persistCollapsed = (next: string[]) => {
+    setCollapsedStages(next);
+    try {
+      localStorage.setItem(COLLAPSED_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* modo privado / storage cheio: só não persiste */
+    }
+  };
+
+  const toggleStage = (id: string) => {
+    persistCollapsed(
+      collapsedStages.includes(id) ? collapsedStages.filter((item) => item !== id) : [...collapsedStages, id]
+    );
+  };
+
+  const collapseAll = () => persistCollapsed(PIPELINE_COLUMNS.map((col) => col.id));
+  const expandAll = () => persistCollapsed([]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -346,40 +428,73 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            {PIPELINE_COLUMNS.map(col => {
-              const columnLeads = savedLeads.filter(l => l.pipelineStatus === col.id);
-              const columnLeadIds = columnLeads.map(l => l.id);
-
-              return (
-                <PipelineColumn
-                  key={col.id}
-                  id={col.id}
-                  title={col.title}
-                  color={col.color}
-                  count={columnLeads.length}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-slate-500">
+                Etapas lado a lado — clique no cabeçalho da etapa para recolher ou expandir. O estado fica salvo.
+              </p>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={expandAll}
+                  disabled={collapsedStages.length === 0}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40"
                 >
-                  {/* Column Cards */}
-                  <SortableContext
-                    items={columnLeadIds}
-                    strategy={verticalListSortingStrategy}
+                  <PanelLeftOpen className="w-3.5 h-3.5" /> Expandir todas
+                </button>
+                <button
+                  type="button"
+                  onClick={collapseAll}
+                  disabled={collapsedStages.length === PIPELINE_COLUMNS.length}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                >
+                  <PanelLeftClose className="w-3.5 h-3.5" /> Recolher todas
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 overflow-x-auto pb-3 scroll-smooth">
+              {PIPELINE_COLUMNS.map(col => {
+                const columnLeads = savedLeads.filter(l => l.pipelineStatus === col.id);
+                const columnLeadIds = columnLeads.map(l => l.id);
+                const isCollapsed = collapsedStages.includes(col.id);
+
+                return (
+                  <PipelineColumn
+                    key={col.id}
+                    id={col.id}
+                    title={col.title}
+                    color={col.color}
+                    count={columnLeads.length}
+                    collapsed={isCollapsed}
+                    onToggle={() => toggleStage(col.id)}
                   >
-                    <div className="space-y-3 flex-1">
-                      {columnLeads.map(lead => (
-                        <SortableLeadCard
-                          key={lead.id}
-                          lead={lead}
-                          onUpdateNotes={onUpdateNotes}
-                          onRecordOutcome={onRecordOutcome}
-                          onRemoveLead={onRemoveLead}
-                          onAnalyze={onAnalyze}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </PipelineColumn>
-              );
-            })}
+                    <SortableContext
+                      items={columnLeadIds}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-3">
+                        {columnLeads.map(lead => (
+                          <SortableLeadCard
+                            key={lead.id}
+                            lead={lead}
+                            onUpdateNotes={onUpdateNotes}
+                            onRecordOutcome={onRecordOutcome}
+                            onRemoveLead={onRemoveLead}
+                            onAnalyze={onAnalyze}
+                          />
+                        ))}
+                        {columnLeads.length === 0 && (
+                          <p className="text-[11px] text-slate-400 text-center py-6 border border-dashed border-slate-300 rounded-xl">
+                            arraste um lead para cá
+                          </p>
+                        )}
+                      </div>
+                    </SortableContext>
+                  </PipelineColumn>
+                );
+              })}
+            </div>
           </div>
         </DndContext>
       )}
