@@ -1,8 +1,9 @@
-import { contactLead, ContactOptions, ContactResult } from "./contactService";
+import { contactLead, ContactOptions, ContactResult, sendEmail, sendWhatsApp } from "./contactService";
 import {
   createInteraction,
   getInteractionById,
   getInteractionsByLead,
+  getCommunicationsByLead,
   updateInteraction,
   upsertLead,
   getLeadById,
@@ -83,7 +84,10 @@ export async function dispatchLeadContact(
   lead: StoredLead,
   options: ContactOptions = {}
 ): Promise<ContactDispatchResult> {
-  const policy = getContactPolicy(lead);
+  // A cadência (D0/D3/D7) já decidiu que é hora do próximo toque; ela só não
+  // pode furar o opt-out LGPD.
+  const policy: ContactPolicy =
+    options.ignoreCooldown && !lead.doNotContact ? { allowed: true } : getContactPolicy(lead);
   const channel = options.channel || (lead.phone ? "whatsapp" : "email");
   const to = channel === "whatsapp" ? String(lead.phone || "").replace(/\D/g, "") : String(lead.email || "");
 
@@ -99,7 +103,7 @@ export async function dispatchLeadContact(
     };
   }
 
-  const result = await contactLead(lead, options);
+  const result = await contactLead(lead, { ...options, purpose: options.purpose ?? "prospect" });
   const occurredAt = new Date().toISOString();
   const interactionType = lead.lastContactAt ? "follow_up" : "initial_contact";
   const interaction = createInteraction({
@@ -128,6 +132,76 @@ export async function dispatchLeadContact(
       interactionId: interaction.id,
       nextContactAt: updatedLead.nextContactAt,
     };
+  }
+
+  return { ...result, interactionId: interaction.id };
+}
+
+/**
+ * Responde a uma mensagem recebida do lead.
+ *
+ * Responder quem escreveu não é spam: a janela de recontato (7/30 dias) não se
+ * aplica a uma conversa aberta. O opt-out LGPD (`doNotContact`) continua
+ * bloqueando sempre. Quando não há conversa aberta, delega para
+ * `dispatchLeadContact` (portanto mantém a política anti-duplicidade).
+ */
+export async function dispatchLeadReply(
+  lead: StoredLead,
+  options: ContactOptions = {}
+): Promise<ContactDispatchResult> {
+  const channel = options.channel || (lead.phone ? "whatsapp" : "email");
+  const to = channel === "whatsapp" ? String(lead.phone || "").replace(/\D/g, "") : String(lead.email || "");
+
+  if (lead.doNotContact) {
+    return {
+      channel,
+      status: "failed",
+      communicationId: "",
+      to,
+      detail: "A empresa solicitou não receber novos contatos.",
+      blocked: true,
+    };
+  }
+
+  const history = getCommunicationsByLead(lead.id);
+  // A conversa está aberta quando a ÚLTIMA mensagem do lead foi recebida.
+  const latest = history[0];
+  const hasOpenReply = latest?.direction === "inbound";
+
+  if (!hasOpenReply) {
+    return dispatchLeadContact(lead, options);
+  }
+
+  const message = options.message?.trim();
+  if (!message) {
+    throw new Error(`Informe o texto da resposta para ${lead.name}.`);
+  }
+
+  const result =
+    channel === "email"
+      ? await sendEmail(lead, options.subject || `Resposta — ${lead.name}`, message, options.hook)
+      : await sendWhatsApp(lead, message, options.hook, "reply");
+
+  const occurredAt = new Date().toISOString();
+  const interaction = createInteraction({
+    leadId: lead.id,
+    type: "follow_up",
+    channel: result.channel,
+    deliveryStatus: result.status,
+    outcome: "pending",
+    message,
+    occurredAt,
+    communicationId: result.communicationId || undefined,
+  });
+
+  if (result.status === "sent") {
+    upsertLead({
+      ...lead,
+      lastContactAt: occurredAt,
+      lastContactOutcome: "pending",
+      contactAttempts: (lead.contactAttempts || 0) + 1,
+      updatedAt: occurredAt,
+    });
   }
 
   return { ...result, interactionId: interaction.id };

@@ -1,6 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { Settings, Power, Database, RefreshCw, MessageCircle, Bot, FileText, HardDrive, AlertTriangle, Save } from 'lucide-react';
 
+interface HumanizeSettings {
+  enabled: boolean;
+  replyStartHour: number;
+  replyEndHour: number;
+  prospectStartHour: number;
+  prospectEndHour: number;
+  prospectWeekdaysOnly: boolean;
+  typingBaseMs: number;
+  typingPerCharMs: number;
+  typingMaxMs: number;
+  pauseMinSeconds: number;
+  pauseMaxSeconds: number;
+  dailyTotalCap: number;
+  dailyNewCap: number;
+}
+
 interface AutomationSettings {
   schedulerEnabled: boolean;
   backupEnabled: boolean;
@@ -13,8 +29,41 @@ interface AutomationSettings {
   autopilotAutoEnrich: boolean;
   autopilotAnalyzeTopN: number;
   autopilotSendPitches: boolean;
-  autopilotCreateLandingPages: boolean;
+  cadenceEnabled: boolean;
+  cadenceDailyCap: number;
+  humanize: HumanizeSettings;
 }
+
+interface HumanizeStatus {
+  enabled: boolean;
+  usage: { sentToday: number; newContactsToday: number };
+  remaining: { total: number; newContacts: number };
+  withinWindow: { reply: boolean; prospect: boolean };
+  nextSendAt: string | null;
+  lastSendAt: string | null;
+}
+
+const NumField: React.FC<{
+  label: string;
+  value: number;
+  min?: number;
+  max?: number;
+  suffix?: string;
+  onCommit: (v: number) => void;
+}> = ({ label, value, min = 0, max = 9999, suffix, onCommit }) => (
+  <label className="flex items-center gap-2 text-xs font-bold text-slate-600">
+    {label}
+    <input
+      type="number"
+      min={min}
+      max={max}
+      value={value}
+      onChange={(e) => onCommit(Math.min(max, Math.max(min, Math.floor(Number(e.target.value) || 0))))}
+      className="w-20 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-normal"
+    />
+    {suffix && <span className="font-normal text-slate-400">{suffix}</span>}
+  </label>
+);
 
 const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void; danger?: boolean }> = ({ checked, onChange, danger }) => (
   <button
@@ -28,13 +77,25 @@ const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void; dange
 
 export const AutomationSettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<AutomationSettings | null>(null);
+  const [humanizeStatus, setHumanizeStatus] = useState<HumanizeStatus | null>(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  const loadStatus = async () => {
+    try {
+      const r = await fetch('/api/whatsapp/humanize');
+      const d = await r.json();
+      if (d?.success) setHumanizeStatus(d as HumanizeStatus);
+    } catch {
+      /* painel de consumo é informativo */
+    }
+  };
 
   const load = async () => {
     const r = await fetch('/api/automation/settings');
     const d = await r.json();
     if (d?.success) setSettings(d.settings);
+    void loadStatus();
   };
   useEffect(() => { void load(); }, []);
 
@@ -50,6 +111,26 @@ export const AutomationSettingsPage: React.FC = () => {
       if (!d?.success) throw new Error(d?.error || 'Falha ao salvar');
       setSettings(d.settings);
       setMsg('Salvo');
+      setTimeout(() => setMsg(null), 2000);
+    } catch (e: any) {
+      setMsg(e?.message || 'Erro ao salvar');
+      void load();
+    } finally { setSaving(false); }
+  };
+
+  const updateHumanize = async (patch: Partial<HumanizeSettings>) => {
+    if (!settings) return;
+    const next = { ...settings, humanize: { ...settings.humanize, ...patch } };
+    setSettings(next);
+    setSaving(true);
+    setMsg(null);
+    try {
+      const r = await fetch('/api/automation/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ humanize: patch }) });
+      const d = await r.json();
+      if (!d?.success) throw new Error(d?.error || 'Falha ao salvar');
+      setSettings(d.settings);
+      setMsg('Salvo');
+      void loadStatus();
       setTimeout(() => setMsg(null), 2000);
     } catch (e: any) {
       setMsg(e?.message || 'Erro ao salvar');
@@ -169,13 +250,113 @@ export const AutomationSettingsPage: React.FC = () => {
           </div>
           <Toggle checked={settings.autopilotSendPitches} onChange={(v) => void update({ autopilotSendPitches: v })} danger />
         </div>
-        <div className="flex items-center justify-between py-2">
+      </div>
+
+      {/* Cadência de outbound */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+        <h2 className="font-bold text-slate-900 flex items-center gap-2"><RefreshCw className="w-4 h-4 text-indigo-600" /> Cadência de outbound (D+3 / D+7)</h2>
+        <div className="flex items-center justify-between py-2 border-b border-slate-100">
           <div>
-            <div className="text-sm font-semibold text-slate-800">Criar Landing Pages automaticamente</div>
-            <div className="text-xs text-slate-500">Gera rascunho aguardando aprovação (não publica).</div>
+            <div className="text-sm font-semibold text-slate-800">Permitir recontato automático</div>
+            <div className="text-xs text-slate-500">Só toca em quem recebeu a abordagem inicial e não respondeu. Para sozinho em conversa aberta, opt-out, resposta ou 3 tentativas.</div>
           </div>
-          <Toggle checked={settings.autopilotCreateLandingPages} onChange={(v) => void update({ autopilotCreateLandingPages: v })} />
+          <Toggle checked={settings.cadenceEnabled} onChange={(v) => void update({ cadenceEnabled: v })} />
         </div>
+        <div className="flex items-center gap-3">
+          <label className="text-xs font-bold text-slate-600">Teto de envios da cadência por dia</label>
+          <input type="number" min={0} max={200} value={settings.cadenceDailyCap} onChange={(e) => void update({ cadenceDailyCap: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} className="w-20 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
+          <span className="text-xs text-slate-400">0 bloqueia envios reais (simulação continua liberada)</span>
+        </div>
+      </div>
+
+      {/* Humanização do WhatsApp */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+        <h2 className="font-bold text-slate-900 flex items-center gap-2"><MessageCircle className="w-4 h-4 text-emerald-600" /> Humanização do WhatsApp (anti-ban)</h2>
+        <div className="flex items-center justify-between py-2 border-b border-slate-100">
+          <div>
+            <div className="text-sm font-semibold text-slate-800">Simular comportamento humano</div>
+            <div className="text-xs text-slate-500">Aplica janela de horário, delay de digitação, pausa entre envios e tetos diários em TODO envio de WhatsApp. Desligado = envia na hora.</div>
+          </div>
+          <Toggle checked={settings.humanize.enabled} onChange={(v) => void updateHumanize({ enabled: v })} />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="text-xs font-bold text-slate-700">Janela de respostas</div>
+            <div className="flex flex-wrap items-center gap-3">
+              <NumField label="início" value={settings.humanize.replyStartHour} max={23} suffix="h" onCommit={(v) => void updateHumanize({ replyStartHour: v })} />
+              <NumField label="fim" value={settings.humanize.replyEndHour} max={24} suffix="h" onCommit={(v) => void updateHumanize({ replyEndHour: v })} />
+            </div>
+            <div className="text-xs text-slate-400">Responde quem já está em conversa com você. Vale todos os dias.</div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs font-bold text-slate-700 flex items-center justify-between gap-2">
+              Janela de prospecção
+              <span className="flex items-center gap-2 font-normal text-slate-500">
+                só seg–sex
+                <Toggle checked={settings.humanize.prospectWeekdaysOnly} onChange={(v) => void updateHumanize({ prospectWeekdaysOnly: v })} />
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <NumField label="início" value={settings.humanize.prospectStartHour} max={23} suffix="h" onCommit={(v) => void updateHumanize({ prospectStartHour: v })} />
+              <NumField label="fim" value={settings.humanize.prospectEndHour} max={24} suffix="h" onCommit={(v) => void updateHumanize({ prospectEndHour: v })} />
+            </div>
+            <div className="text-xs text-slate-400">Primeiro contato e follow-ups da cadência.</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+          <div className="space-y-2">
+            <div className="text-xs font-bold text-slate-700">Delay de digitação</div>
+            <div className="flex flex-wrap items-center gap-3">
+              <NumField label="base" value={settings.humanize.typingBaseMs} max={60000} suffix="ms" onCommit={(v) => void updateHumanize({ typingBaseMs: v })} />
+              <NumField label="por caractere" value={settings.humanize.typingPerCharMs} max={500} suffix="ms" onCommit={(v) => void updateHumanize({ typingPerCharMs: v })} />
+              <NumField label="teto" value={settings.humanize.typingMaxMs} max={120000} suffix="ms" onCommit={(v) => void updateHumanize({ typingMaxMs: v })} />
+            </div>
+            <div className="text-xs text-slate-400">Tempo "digitando" antes de cada envio, proporcional ao texto.</div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs font-bold text-slate-700">Pausa entre envios</div>
+            <div className="flex flex-wrap items-center gap-3">
+              <NumField label="mín" value={settings.humanize.pauseMinSeconds} max={3600} suffix="s" onCommit={(v) => void updateHumanize({ pauseMinSeconds: v })} />
+              <NumField label="máx" value={settings.humanize.pauseMaxSeconds} max={3600} suffix="s" onCommit={(v) => void updateHumanize({ pauseMaxSeconds: v })} />
+            </div>
+            <div className="text-xs text-slate-400">Intervalo sorteado entre uma mensagem e a seguinte (todas as origens).</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+          <div className="space-y-2">
+            <div className="text-xs font-bold text-slate-700">Teto diário total</div>
+            <div className="flex flex-wrap items-center gap-3">
+              <NumField label="mensagens/dia" value={settings.humanize.dailyTotalCap} max={500} onCommit={(v) => void updateHumanize({ dailyTotalCap: v })} />
+            </div>
+            <div className="text-xs text-slate-400">Soma TUDO que sai do número: respostas, prospecção e cadência.</div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs font-bold text-slate-700">Teto de contatos novos</div>
+            <div className="flex flex-wrap items-center gap-3">
+              <NumField label="novos/dia" value={settings.humanize.dailyNewCap} max={500} onCommit={(v) => void updateHumanize({ dailyNewCap: v })} />
+            </div>
+            <div className="text-xs text-slate-400">Só primeiros contatos (quem nunca recebeu nada nosso).</div>
+          </div>
+        </div>
+
+        {humanizeStatus && (
+          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600 flex flex-wrap items-center gap-x-5 gap-y-1">
+            <span className={humanizeStatus.enabled ? 'font-bold text-emerald-600' : 'font-bold text-slate-400'}>
+              {humanizeStatus.enabled ? 'Humanização ativa' : 'Humanização desligada'}
+            </span>
+            <span>Enviadas hoje: <b>{humanizeStatus.usage.sentToday}</b> / {settings.humanize.dailyTotalCap}</span>
+            <span>Contatos novos hoje: <b>{humanizeStatus.usage.newContactsToday}</b> / {settings.humanize.dailyNewCap}</span>
+            <span>Respostas: <b>{humanizeStatus.withinWindow.reply ? 'janela aberta' : 'janela fechada'}</b></span>
+            <span>Prospecção: <b>{humanizeStatus.withinWindow.prospect ? 'janela aberta' : 'janela fechada'}</b></span>
+            {humanizeStatus.nextSendAt && <span>Próximo envio: <b>{new Date(humanizeStatus.nextSendAt).toLocaleTimeString('pt-BR')}</b></span>}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2 text-xs text-slate-400">

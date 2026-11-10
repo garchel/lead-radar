@@ -11,3 +11,11 @@ data/
 !server/data/
 server/data/*
 !server/data/cities_ibge.csv
+
+# Artefatos locais de pareamento do WhatsApp (carregam credenciais da sessão)
+qr-*.json
+qrcode*.png
+conectar-whatsapp.html
+
+# Fonte vendorizado do WhatsMiau (fork local, build via Docker — não versionar)
+.whatsmiau-src/

@@ -1,10 +1,14 @@
 import { Express, Request, Response } from "express";
 import crypto from "node:crypto";
-import { getLeads, getLeadById, recordCommunication, createInteraction, updateLeadResponse, updateLeadStatusByPhone, setDoNotContactByPhone, getSetting, setSetting } from "../store/db";
+import { getLeads, getLeadById, updateCommunicationMessage, createInteraction, updateLeadResponse, updateLeadStatusByPhone, setDoNotContactByPhone, getSetting, setSetting, upsertLead } from "../store/db";
 import { getDb } from "../store/schema";
 import { getAutomationSettings } from "./automationRoutes";
-import { normalizePhone } from "../services/leadIdentity";
+import { normalizePhone, buildStableLeadId } from "../services/leadIdentity";
 import { resolveWhatsappProvider, type WhatsappProviderChoice } from "../services/contactService";
+import { handleAckEvent, recordInboundIfNew, reconcileLeadMessages } from "../services/whatsappInboundService";
+import { detectOptOut } from "../services/optOutService";
+import { fetchGatewayInstanceState, getGatewayConfig } from "../services/whatsappGateway";
+import { getHumanizeStatus } from "../services/humanizeService";
 import { eventHub } from "../events/eventHub";
 
 /**
@@ -59,7 +63,15 @@ function classifyIntent(text: string): { intent: string; status?: "negotiating" 
 }
 
 /** Extrai a primeira mensagem de texto de um payload Evolution. */
-function extractInbound(req: Request): { from: string; text: string; instance: string } | null {
+function extractInbound(req: Request): {
+  from: string;
+  text: string;
+  instance: string;
+  pushName?: string;
+  messageId?: string;
+  stanzaId?: string;
+  isEdit?: boolean;
+} | null {
   const body = req.body || {};
 
   // Eventos ignorados rapidamente
@@ -82,11 +94,29 @@ function extractInbound(req: Request): { from: string; text: string; instance: s
     "";
 
   if (!text.trim()) return null;
-  return { from, text: text.trim(), instance: body.instance || "" };
+  const pushName = data.pushName || key.pushName || body.pushName || "";
+  const messageType = data.messageType || m.type || "";
+  return {
+    from,
+    text: text.trim(),
+    instance: body.instance || "",
+    pushName: pushName || undefined,
+    messageId: key.id || data.id || undefined,
+    stanzaId: data.contextInfo?.stanzaId || undefined,
+    isEdit: messageType === "editedMessage" || m.type === "editedMessage",
+  };
 }
 
 /** Extrai mensagem de texto de um payload Meta Cloud API. */
-function extractInboundMeta(req: Request): { from: string; text: string; instance: string } | null {
+function extractInboundMeta(req: Request): {
+  from: string;
+  text: string;
+  instance: string;
+  pushName?: string;
+  messageId?: string;
+  stanzaId?: string;
+  isEdit?: boolean;
+} | null {
   const body = req.body || {};
   const entries = Array.isArray(body.entry) ? body.entry : [];
   for (const entry of entries) {
@@ -98,7 +128,15 @@ function extractInboundMeta(req: Request): { from: string; text: string; instanc
         if (msg?.type !== "text" || !msg.text?.body?.trim()) continue;
         const from = String(msg.from || "").replace(/\D/g, "");
         if (!from) continue;
-        return { from, text: msg.text.body.trim(), instance: "meta-cloud-api" };
+        const contacts = value.contacts || [];
+        const profile = contacts.find((c: any) => c?.wa_id === from);
+        return {
+          from,
+          text: msg.text.body.trim(),
+          instance: "meta-cloud-api",
+          pushName: profile?.profile?.name || undefined,
+          messageId: msg.id || undefined,
+        };
       }
     }
   }
@@ -148,15 +186,68 @@ export function registerWhatsAppWebhook(app: Express) {
         savedChoice: getSetting("whatsapp_provider") || "auto",
         activeProvider: provider,
         reason,
-        available: { evolution: hasEvolution, meta: hasMeta, legacy: hasLegacy },
+        available: {
+          evolution: hasEvolution,
+          whatsmiau: Boolean((process.env.WHATSMIAU_API_URL || "").trim() && (process.env.WHATSMIAU_API_KEY || "").trim()),
+          meta: hasMeta,
+          legacy: hasLegacy,
+        },
       });
     } catch (error: any) {
       return res.status(500).json({ success: false, error: error?.message || "Falha ao consultar status WhatsApp." });
     }
   });
 
+  app.get("/api/whatsapp/health", async (_req: Request, res: Response) => {
+    const startedAt = Date.now();
+    const config = getGatewayConfig();
+    if (!config) {
+      return res.json({
+        success: true,
+        configured: false,
+        ok: false,
+        provider: "whatsmiau",
+        error: "Gateway não configurado (WHATSMIAU_API_URL/WHATSMIAU_API_KEY).",
+      });
+    }
+    try {
+      const instance = await fetchGatewayInstanceState();
+      return res.json({
+        success: true,
+        configured: true,
+        ok: instance.connected,
+        provider: "whatsmiau",
+        instance: instance.id,
+        state: instance.state,
+        latencyMs: Date.now() - startedAt,
+      });
+    } catch (error: any) {
+      return res.json({
+        success: true,
+        configured: true,
+        ok: false,
+        provider: "whatsmiau",
+        state: "unreachable",
+        latencyMs: Date.now() - startedAt,
+        error: error?.message || "Gateway inacessível.",
+      });
+    }
+  });
+
+  // -----------------------------------------------------------------
+  // Humanização: estado atual (janelas, tetos e consumo do dia)
+  // -----------------------------------------------------------------
+
+  app.get("/api/whatsapp/humanize", (_req: Request, res: Response) => {
+    try {
+      return res.json({ success: true, ...getHumanizeStatus() });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao consultar a humanização." });
+    }
+  });
+
   app.post("/api/whatsapp/provider", (req: Request, res: Response) => {
-    const valid: WhatsappProviderChoice[] = ["auto", "evolution", "meta", "legacy"];
+    const valid: WhatsappProviderChoice[] = ["auto", "evolution", "whatsmiau", "meta", "legacy"];
     const choice = String(req.body?.provider || "").trim().toLowerCase() as WhatsappProviderChoice;
     if (!valid.includes(choice)) {
       return res.status(400).json({ success: false, error: `Backend inválido. Use: ${valid.join(", ")}.` });
@@ -172,6 +263,39 @@ export function registerWhatsAppWebhook(app: Express) {
       return res.json({ success: true, provider, reason });
     } catch (error: any) {
       return res.status(500).json({ success: false, error: error?.message || "Falha ao salvar backend." });
+    }
+  });
+
+  // -----------------------------------------------------------------
+  // Reconciliação manual (webhook perdido / mensagens recebidas offline)
+  // -----------------------------------------------------------------
+
+  app.post("/api/whatsapp/reconcile", async (req: Request, res: Response) => {
+    try {
+      const leadId = String(req.body?.leadId || "").trim();
+      const phone = String(req.body?.phone || "").trim();
+      const count = Number(req.body?.count) || undefined;
+      const since = String(req.body?.since || "").trim() || undefined;
+      const anchor = String(req.body?.anchor || "").trim() || undefined;
+      const fromMe = typeof req.body?.fromMe === "boolean" ? req.body.fromMe : undefined;
+
+      let lead: any = leadId ? getLeadById(leadId) : null;
+      if (!lead && phone) {
+        const normalized = normalizePhone(phone);
+        const row = normalized
+          ? (getDb().prepare("SELECT * FROM leads WHERE normalized_phone = ? LIMIT 1").get(normalized) as any)
+          : null;
+        lead = row ? getLeadById(row.id) : null;
+      }
+      if (!lead) {
+        return res.status(404).json({ success: false, error: "Lead não encontrado. Informe leadId ou phone." });
+      }
+
+      const result = await reconcileLeadMessages(lead, { count, since, anchor, fromMe });
+      const status = result.ok ? 200 : result.reason === "no_anchor" ? 400 : 502;
+      return res.status(status).json({ success: result.ok, leadId: lead.id, ...result });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao reconciliar mensagens." });
     }
   });
 
@@ -217,10 +341,22 @@ export function registerWhatsAppWebhook(app: Express) {
     }
 
     const inbound = extractInbound(req) || extractInboundMeta(req);
-    if (!inbound) return;
+    if (!inbound) {
+      // ACK de entrega/leitura das mensagens que enviamos (messages.update / statuses).
+      try {
+        handleAckEvent(req.body);
+      } catch (e: any) {
+        console.warn(`[whatsapp] Falha ao aplicar ACK: ${e?.message}`);
+      }
+      return;
+    }
 
     const normalized = normalizePhone(inbound.from);
     if (!normalized) return;
+
+    // respeita toggles de automação
+    let auto: any = null;
+    try { auto = getAutomationSettings(); } catch {}
 
     // casa lead por telefone normalizado (usa índice normalized_phone)
     const row = getDb().prepare("SELECT * FROM leads WHERE normalized_phone = ? LIMIT 1").get(normalized) as any;
@@ -229,34 +365,81 @@ export function registerWhatsAppWebhook(app: Express) {
       const leads = getLeads();
       lead = leads.find((l) => l.phone && normalizePhone(l.phone) === normalized) || null;
     }
-    if (!lead) return;
+
+    // Número desconhecido: cria o lead (lead inbound) para que a mensagem não
+    // se perca e o agente possa responder.
+    if (!lead) {
+      const autoCreate = auto ? auto.whatsappAutoCreateLead !== false : true;
+      if (!autoCreate) {
+        console.warn(`[whatsapp] Mensagem de ${normalized} ignorada: nenhum lead com esse número.`);
+        return;
+      }
+      try {
+        const now = new Date().toISOString();
+        const created = upsertLead({
+          id: buildStableLeadId({ name: inbound.pushName || `WhatsApp ${normalized}`, phone: inbound.from }),
+          name: inbound.pushName || `WhatsApp ${normalized}`,
+          phone: inbound.from,
+          pipelineStatus: "prospect",
+          notes: `[Inbound] Mandou mensagem no WhatsApp em ${now}.`,
+          savedAt: now,
+          updatedAt: now,
+        } as any);
+        lead = created;
+        console.log(`[whatsapp] Lead criado a partir do inbound: ${lead.id} (${normalized}).`);
+      } catch (e: any) {
+        console.error(`[whatsapp] Falha ao criar lead a partir do inbound ${normalized}: ${e?.message}`);
+        return;
+      }
+    }
 
     let { intent, status } = classifyIntent(inbound.text);
-    // respeita toggles de automação
-    let auto: any = null;
-    try { auto = getAutomationSettings(); } catch {}
     if (auto && !auto.whatsappAutoIntent) { intent = "outro"; status = undefined; }
     const pipelineEnabled = auto ? auto.whatsappAutoPipeline : true;
     const followUpEnabled = auto ? auto.whatsappAutoFollowUp : true;
 
-    // Opt-out LGPD: pedido de exclusão bloqueia recontatos automaticamente
+    // Opt-out LGPD: roda sempre, mesmo com classificação automática desligada.
     let optedOut: boolean = false;
-    if (intent === "recusa") {
+    const optOutRequested = detectOptOut(inbound.text) || intent === "recusa";
+    if (optOutRequested) {
       try {
         optedOut = Boolean(setDoNotContactByPhone(normalized, true));
       } catch {
         /* best-effort */
       }
+      // Mesmo sem automação de intenção, o pipeline não deve seguir tratando
+      // como oportunidade ativa.
+      if (pipelineEnabled) {
+        try {
+          updateLeadStatusByPhone(normalized, "declined");
+        } catch {
+          /* best-effort */
+        }
+      }
     }
 
     // registra a mensagem recebida
-    recordCommunication({
-      leadId: lead.id,
-      channel: "whatsapp",
-      status: "sent", // recebida com sucesso
-      toAddress: lead.phone,
-      message: `[RECEBIDA] ${inbound.text}`,
-    });
+    // Edição de mensagem: o gateway reenvia com novo id e o id original em
+    // contextInfo.stanzaId — atualizamos o texto em vez de duplicar a conversa.
+    if (inbound.isEdit && inbound.stanzaId) {
+      const updated = updateCommunicationMessage(inbound.stanzaId, `[RECEBIDA] ${inbound.text}`);
+      if (updated) {
+        eventHub.emit("whatsapp_inbound", {
+          leadId: lead.id,
+          name: lead.name,
+          intent: "edicao",
+          movedTo: null,
+          optedOut: false,
+          text: inbound.text.slice(0, 200),
+          edited: true,
+        });
+        return;
+      }
+    }
+
+    const recorded = recordInboundIfNew({ lead, text: inbound.text, externalId: inbound.messageId });
+    // Webhook reentregue: a mensagem já existe — não duplica interação/pipeline.
+    if (!recorded.created) return;
 
     // marca resposta no lead (zera "frieza")
     try {

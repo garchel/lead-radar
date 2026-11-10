@@ -2,6 +2,12 @@ import { Express, Request, Response } from "express";
 import { getSetting, setSetting } from "../store/db";
 import { scheduler } from "../scheduler/scheduler";
 import { getSchedulerConfig } from "../config";
+import {
+  getHumanizeSettings,
+  saveHumanizeSettings,
+  HumanizeSettingsError,
+  type HumanizeSettings,
+} from "../services/humanizeService";
 
 export interface AutomationSettings {
   schedulerEnabled: boolean;
@@ -12,13 +18,19 @@ export interface AutomationSettings {
   whatsappAutoIntent: boolean;
   whatsappAutoPipeline: boolean;
   whatsappAutoFollowUp: boolean;
+  whatsappAutoCreateLead: boolean;
   autopilotAutoEnrich: boolean;
   autopilotAnalyzeTopN: number;
   autopilotSendPitches: boolean;
-  autopilotCreateLandingPages: boolean;
+  /** Liga/desliga a cadência D3/D7 (o envio real continua exigindo dryRun=false). */
+  cadenceEnabled: boolean;
+  /** Teto diário de mensagens outbound (proteção contra ban do WhatsApp). */
+  cadenceDailyCap: number;
+  /** Humanização do envio: janelas, delays, pausa e tetos diários. */
+  humanize: HumanizeSettings;
 }
 
-const DEFAULTS: AutomationSettings = {
+const DEFAULTS: Omit<AutomationSettings, "humanize"> = {
   schedulerEnabled: true,
   backupEnabled: true,
   backupIntervalHours: 24,
@@ -27,10 +39,12 @@ const DEFAULTS: AutomationSettings = {
   whatsappAutoIntent: true,
   whatsappAutoPipeline: true,
   whatsappAutoFollowUp: true,
+  whatsappAutoCreateLead: true,
   autopilotAutoEnrich: true,
   autopilotAnalyzeTopN: 3,
   autopilotSendPitches: false,
-  autopilotCreateLandingPages: false,
+  cadenceEnabled: true,
+  cadenceDailyCap: 60,
 };
 
 function getAutomationSettings(): AutomationSettings {
@@ -54,6 +68,8 @@ function getAutomationSettings(): AutomationSettings {
   const whatsappAutoPipeline = waPipeRaw !== null ? waPipeRaw === "true" : DEFAULTS.whatsappAutoPipeline;
   const waFollowRaw = getSetting("automation_whatsapp_auto_followup");
   const whatsappAutoFollowUp = waFollowRaw !== null ? waFollowRaw === "true" : DEFAULTS.whatsappAutoFollowUp;
+  const waCreateRaw = getSetting("automation_whatsapp_auto_create_lead");
+  const whatsappAutoCreateLead = waCreateRaw !== null ? waCreateRaw === "true" : DEFAULTS.whatsappAutoCreateLead;
 
   const enrichRaw = getSetting("automation_autopilot_auto_enrich");
   const autopilotAutoEnrich = enrichRaw !== null ? enrichRaw === "true" : DEFAULTS.autopilotAutoEnrich;
@@ -61,8 +77,13 @@ function getAutomationSettings(): AutomationSettings {
   const autopilotAnalyzeTopN = topNRaw !== null ? Math.max(0, Math.min(5, Math.floor(Number(topNRaw) || DEFAULTS.autopilotAnalyzeTopN))) : DEFAULTS.autopilotAnalyzeTopN;
   const sendRaw = getSetting("automation_autopilot_send_pitches");
   const autopilotSendPitches = sendRaw !== null ? sendRaw === "true" : DEFAULTS.autopilotSendPitches;
-  const lpRaw = getSetting("automation_autopilot_create_landing_pages");
-  const autopilotCreateLandingPages = lpRaw !== null ? lpRaw === "true" : DEFAULTS.autopilotCreateLandingPages;
+
+  const cadenceRaw = getSetting("automation_cadence_enabled");
+  const cadenceEnabled = cadenceRaw !== null ? cadenceRaw === "true" : DEFAULTS.cadenceEnabled;
+  const capRaw = getSetting("automation_cadence_daily_cap");
+  const cadenceDailyCap = capRaw !== null && capRaw !== ""
+    ? Math.max(0, Math.min(200, Math.floor(Number(capRaw) || 0)))
+    : DEFAULTS.cadenceDailyCap;
 
   return {
     schedulerEnabled,
@@ -73,10 +94,13 @@ function getAutomationSettings(): AutomationSettings {
     whatsappAutoIntent,
     whatsappAutoPipeline,
     whatsappAutoFollowUp,
+    whatsappAutoCreateLead,
     autopilotAutoEnrich,
     autopilotAnalyzeTopN,
     autopilotSendPitches,
-    autopilotCreateLandingPages,
+    cadenceEnabled,
+    cadenceDailyCap,
+    humanize: getHumanizeSettings(),
   };
 }
 
@@ -94,19 +118,28 @@ export function registerAutomationRoutes(app: Express) {
     const body = req.body || {};
     const allowed: (keyof AutomationSettings)[] = [
       "schedulerEnabled","backupEnabled","backupIntervalHours","typeformPollingEnabled","typeformIntervalMin",
-      "whatsappAutoIntent","whatsappAutoPipeline","whatsappAutoFollowUp",
-      "autopilotAutoEnrich","autopilotAnalyzeTopN","autopilotSendPitches","autopilotCreateLandingPages"
+      "whatsappAutoIntent","whatsappAutoPipeline","whatsappAutoFollowUp","whatsappAutoCreateLead",
+      "autopilotAutoEnrich","autopilotAnalyzeTopN","autopilotSendPitches","cadenceEnabled","cadenceDailyCap"
     ];
     try {
+      if (body.humanize !== undefined) {
+        if (typeof body.humanize !== "object" || body.humanize === null) {
+          return res.status(400).json({ success: false, error: "humanize deve ser um objeto de configuração." });
+        }
+        saveHumanizeSettings(body.humanize as Record<string, unknown>);
+      }
       for (const key of allowed) {
         if (body[key] !== undefined) {
           const val = body[key];
           // validação por chave
-          if (["schedulerEnabled","backupEnabled","typeformPollingEnabled","whatsappAutoIntent","whatsappAutoPipeline","whatsappAutoFollowUp","autopilotAutoEnrich","autopilotSendPitches","autopilotCreateLandingPages"].includes(key)) {
+          if (["schedulerEnabled","backupEnabled","typeformPollingEnabled","whatsappAutoIntent","whatsappAutoPipeline","whatsappAutoFollowUp","whatsappAutoCreateLead","autopilotAutoEnrich","autopilotSendPitches","cadenceEnabled"].includes(key)) {
             if (typeof val !== "boolean") return res.status(400).json({ success: false, error: `${key} deve ser boolean.` });
           }
           if (key === "backupIntervalHours" || key === "typeformIntervalMin") {
             if (!Number.isFinite(Number(val)) || Number(val) <= 0) return res.status(400).json({ success: false, error: `${key} deve ser número >0.` });
+          }
+          if (key === "cadenceDailyCap") {
+            if (!Number.isInteger(Number(val)) || Number(val) < 0 || Number(val) > 200) return res.status(400).json({ success: false, error: `${key} deve ser inteiro 0-200 (0 = só simulação).` });
           }
           if (key === "autopilotAnalyzeTopN") {
             if (!Number.isInteger(Number(val)) || Number(val) < 0 || Number(val) > 5) return res.status(400).json({ success: false, error: `${key} deve ser 0-5.` });
@@ -130,7 +163,8 @@ export function registerAutomationRoutes(app: Express) {
       const settings = getAutomationSettings();
       res.json({ success: true, settings });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err?.message || "Falha ao salvar automações." });
+      const status = err instanceof HumanizeSettingsError ? 400 : 500;
+      res.status(status).json({ success: false, error: err?.message || "Falha ao salvar automações." });
     }
   });
 }
