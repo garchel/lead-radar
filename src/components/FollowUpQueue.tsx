@@ -123,7 +123,7 @@ export const FollowUpQueue: React.FC = () => {
         ) : followUps.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-500 space-y-1">
             <p>Nenhum recontato com prazo vencido no momento.</p>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500">
               Recusas liberam novo contato após 30 dias; sem-resposta após 7 dias.
             </p>
           </div>
@@ -134,7 +134,7 @@ export const FollowUpQueue: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2">
                     <span className="font-semibold text-slate-800 text-sm truncate">{item.lead.name}</span>
-                    <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                    <span className="text-[11px] text-slate-500 font-mono shrink-0">
                       {item.lead.city}{item.lead.state ? ` · ${item.lead.state}` : ''}
                     </span>
                   </div>
@@ -149,11 +149,11 @@ export const FollowUpQueue: React.FC = () => {
                       <Clock className="w-3 h-3" />
                       <span>Últ. contato: {fmtDate(item.occurredAt)}</span>
                     </span>
-                    <span className="px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-[10px] font-semibold text-slate-600">
+                    <span className="px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-600">
                       {OUTCOME_LABELS[item.outcome] || item.outcome}
                     </span>
                     {item.notes && (
-                      <span className="text-slate-400 truncate max-w-xs" title={item.notes}>
+                      <span className="text-slate-500 truncate max-w-xs" title={item.notes}>
                         {item.notes}
                       </span>
                     )}
@@ -170,7 +170,7 @@ export const FollowUpQueue: React.FC = () => {
                     <span>Enviar contato</span>
                   </button>
                   {item.lead.doNotContact && (
-                    <span className="inline-flex items-center space-x-1 text-[10px] font-semibold text-rose-600">
+                    <span className="inline-flex items-center space-x-1 text-[11px] font-semibold text-rose-600">
                       <UserX className="w-3 h-3" />
                       <span>Bloqueado</span>
                     </span>

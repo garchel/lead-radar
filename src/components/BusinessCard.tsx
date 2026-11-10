@@ -93,19 +93,19 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
           <div className={`px-2.5 py-1 rounded-lg border font-bold text-xs flex items-center space-x-1 ${getScoreColor(lead.opportunityScore)}`}>
             <span>Score:</span>
             <span className="text-sm font-extrabold">{lead.opportunityScore}</span>
-            <span className="text-[10px] text-slate-400">/100</span>
+            <span className="text-[11px] text-slate-500">/100</span>
           </div>
         </div>
 
         {/* Location & Phone Info */}
         <div className="space-y-1.5 text-xs text-slate-600 font-medium">
           <div className="flex items-start space-x-2">
-            <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+            <MapPin className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
             <span className="line-clamp-1">{lead.address}, {lead.city} ({lead.state || 'UF não informada'})</span>
           </div>
           {lead.phone && (
             <div className="flex items-center space-x-2 text-slate-700 font-mono">
-              <Phone className="w-4 h-4 text-slate-400 shrink-0" />
+              <Phone className="w-4 h-4 text-slate-500 shrink-0" />
               <span>{lead.phone}</span>
             </div>
           )}
@@ -127,7 +127,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
         {/* Key Insights bullets */}
         {lead.keyInsights && lead.keyInsights.length > 0 && (
           <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 text-xs space-y-1.5">
-            <div className="font-bold text-slate-500 uppercase tracking-wider text-[10px] mb-1">
+            <div className="font-bold text-slate-500 uppercase tracking-wider text-[11px] mb-1">
               Pontos de Oportunidade:
             </div>
             {lead.keyInsights.slice(0, 3).map((insight, idx) => (

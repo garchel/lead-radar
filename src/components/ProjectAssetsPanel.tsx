@@ -36,7 +36,7 @@ const BrandThumb: React.FC<{ url: string; alt: string; className?: string }> = (
   const [failed, setFailed] = useState(false);
   if (failed) {
     return (
-      <div className={`flex items-center justify-center bg-slate-100 text-slate-400 ${className || ''}`}>
+      <div className={`flex items-center justify-center bg-slate-100 text-slate-500 ${className || ''}`}>
         <ImageIcon className="w-4 h-4" />
       </div>
     );
@@ -77,7 +77,7 @@ const FilePreview: React.FC<{ file: ProjectAssetFile }> = ({ file }) => {
     );
   }
   return (
-    <div className="w-full h-24 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
+    <div className="w-full h-24 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
       <FolderOpen className="w-5 h-5" />
     </div>
   );
@@ -109,7 +109,7 @@ const BrandSection: React.FC<{ brand?: BrandSnapshot }> = ({ brand }) => {
                 className="w-4 h-4 rounded border border-slate-300 shrink-0"
                 style={{ backgroundColor: color.hex }}
               />
-              <span className="text-[10px] font-mono font-semibold text-slate-600">{color.hex}</span>
+              <span className="text-[11px] font-mono font-semibold text-slate-600">{color.hex}</span>
             </span>
           ))}
         </div>
@@ -120,17 +120,17 @@ const BrandSection: React.FC<{ brand?: BrandSnapshot }> = ({ brand }) => {
           {brand.logo.url ? (
             <BrandThumb url={brand.logo.url} alt="Logo identificado" className="w-14 h-14 rounded-md border border-slate-200 shrink-0" />
           ) : (
-            <div className="w-14 h-14 rounded-md bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
+            <div className="w-14 h-14 rounded-md bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
               <ImageIcon className="w-5 h-5" />
             </div>
           )}
           <div className="min-w-0">
-            <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Logo</span>
+            <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Logo</span>
             <p className="text-[11px] text-slate-700 leading-snug">
               {brand.logo.description || 'Logo identificado nas imagens públicas.'}
             </p>
             {typeof brand.logo.confidence === 'number' && (
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 Confiança {Math.round(brand.logo.confidence * 100)}%
                 {brand.logo.url && (
                   <>
@@ -153,7 +153,7 @@ const BrandSection: React.FC<{ brand?: BrandSnapshot }> = ({ brand }) => {
 
       {brand.imagery.length > 0 && (
         <div>
-          <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+          <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
             Referências visuais
           </span>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -167,7 +167,7 @@ const BrandSection: React.FC<{ brand?: BrandSnapshot }> = ({ brand }) => {
                 title={item.description || 'Referência visual'}
               >
                 <BrandThumb url={item.url} alt={item.description || 'Referência visual'} className="w-full h-20" />
-                <span className="block px-2 py-1.5 text-[10px] text-slate-600 line-clamp-2 leading-snug">
+                <span className="block px-2 py-1.5 text-[11px] text-slate-600 line-clamp-2 leading-snug">
                   {item.description || 'Referência visual'}
                 </span>
               </a>
@@ -266,15 +266,15 @@ export const ProjectAssetsPanel: React.FC<ProjectAssetsPanelProps> = ({ projectI
             <span className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
               Assets do projeto
             </span>
-            <span className="block text-[10px] text-slate-500 truncate">
+            <span className="block text-[11px] text-slate-500 truncate">
               {data?.sitePath || 'pasta da LP ainda não definida'}
             </span>
           </span>
           <span className="hidden sm:inline-flex items-center gap-1.5 ml-1">
-            <span className="inline-flex items-center gap-1 bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-[10px] font-bold">
+            <span className="inline-flex items-center gap-1 bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-[11px] font-bold">
               <Palette className="w-3 h-3" /> {counts.identified} identificado(s)
             </span>
-            <span className="inline-flex items-center gap-1 bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-[10px] font-bold">
+            <span className="inline-flex items-center gap-1 bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-[11px] font-bold">
               <FolderOpen className="w-3 h-3" /> {counts.files} arquivo(s)
             </span>
           </span>
@@ -283,7 +283,7 @@ export const ProjectAssetsPanel: React.FC<ProjectAssetsPanelProps> = ({ projectI
           <button
             type="button"
             onClick={load}
-            className="p-1.5 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-white transition-colors"
+            className="p-1.5 rounded-md text-slate-500 hover:text-indigo-600 hover:bg-white transition-colors"
             title="Recarregar assets"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -291,7 +291,7 @@ export const ProjectAssetsPanel: React.FC<ProjectAssetsPanelProps> = ({ projectI
           <button
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
-            className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-white transition-colors"
+            className="p-1 rounded-md text-slate-500 hover:text-slate-600 hover:bg-white transition-colors"
             title={expanded ? 'Recolher assets' : 'Expandir assets'}
           >
             <ChevronDown
@@ -318,14 +318,14 @@ export const ProjectAssetsPanel: React.FC<ProjectAssetsPanelProps> = ({ projectI
           {data && (
             <>
               <div>
-                <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
                   <Palette className="w-3.5 h-3.5" /> Identificados na pesquisa de marca
                 </span>
                 <BrandSection brand={data.brand} />
               </div>
 
               <div>
-                <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
                   <FolderOpen className="w-3.5 h-3.5" /> Adicionados à pasta da LP
                 </span>
                 {!data.siteExists ? (
@@ -352,7 +352,7 @@ export const ProjectAssetsPanel: React.FC<ProjectAssetsPanelProps> = ({ projectI
                         <FilePreview file={file} />
                         <span className="block px-2 py-1.5">
                           <span className="block text-[11px] font-semibold text-slate-700 truncate">{file.name}</span>
-                          <span className="block text-[10px] text-slate-400 truncate">
+                          <span className="block text-[11px] text-slate-500 truncate">
                             {file.path} • {formatBytes(file.size)}
                           </span>
                         </span>

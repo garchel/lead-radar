@@ -107,6 +107,37 @@ export function registerCityRoutes(app: Express) {
     }
   });
 
+  /** Ativa/desativa várias cidades de uma vez (ação em lote da Fila de Cidades). */
+  app.patch("/api/cities", (req: Request, res: Response) => {
+    try {
+      const { codes, enabled } = req.body || {};
+      if (!Array.isArray(codes) || codes.length === 0) {
+        return res.status(400).json({ success: false, error: "Informe `codes` com ao menos uma cidade." });
+      }
+      if (typeof enabled !== "boolean") {
+        return res.status(400).json({ success: false, error: "`enabled` deve ser booleano." });
+      }
+      if (codes.length > 1000) {
+        return res.status(400).json({ success: false, error: "Máximo de 1.000 cidades por chamada." });
+      }
+      let updated = 0;
+      const missing: string[] = [];
+      for (const code of codes) {
+        const id = String(code || "").trim();
+        if (!id) continue;
+        if (!getCityByCode(id)) {
+          missing.push(id);
+          continue;
+        }
+        updateCity(id, { enabled });
+        updated += 1;
+      }
+      return res.json({ success: true, updated, missing });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao atualizar cidades." });
+    }
+  });
+
   app.get("/api/cities/stats", (_req: Request, res: Response) => {
     try {
       ensureCitiesLoaded();

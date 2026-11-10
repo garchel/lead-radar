@@ -186,7 +186,7 @@ export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> =
           <div key={card.label} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <card.icon className="w-4 h-4 text-indigo-400 mb-2" />
             <div className="text-2xl font-bold text-white">{card.value}</div>
-            <div className="text-[11px] uppercase tracking-wide text-slate-500 mt-1">{card.label}</div>
+            <div className="text-[11px] uppercase tracking-wide text-slate-400 mt-1">{card.label}</div>
           </div>
         ))}
       </div>
@@ -200,7 +200,7 @@ export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> =
                 <div className="flex justify-between text-xs text-slate-400 mb-1">
                   <span>{step.step}</span>
                   <span>
-                    {step.count} <span className="text-slate-500">({fmtPct(step.rate)})</span>
+                    {step.count} <span className="text-slate-400">({fmtPct(step.rate)})</span>
                   </span>
                 </div>
                 <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
@@ -212,7 +212,7 @@ export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> =
               </div>
             ))}
             {(metrics?.funnel || []).length === 0 && (
-              <p className="text-xs text-slate-500">Sem envios na janela — rode a cadência ou faça um contato manual.</p>
+              <p className="text-xs text-slate-400">Sem envios na janela — rode a cadência ou faça um contato manual.</p>
             )}
           </div>
         </section>
@@ -225,7 +225,7 @@ export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> =
               ({fmtPct(metrics.bestHook.replyRate)} de resposta, {metrics.bestHook.replies}/{metrics.bestHook.leads} leads)
             </p>
           ) : (
-            <p className="text-xs text-slate-500 mb-3">Ainda sem dados suficientes de resposta por gancho.</p>
+            <p className="text-xs text-slate-400 mb-3">Ainda sem dados suficientes de resposta por gancho.</p>
           )}
           <div className="space-y-2">
             {(metrics?.byHook || []).map((hook) => (
@@ -236,7 +236,7 @@ export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> =
                 </span>
               </div>
             ))}
-            {(metrics?.byHook || []).length === 0 && <p className="text-xs text-slate-500">Sem dados ainda.</p>}
+            {(metrics?.byHook || []).length === 0 && <p className="text-xs text-slate-400">Sem dados ainda.</p>}
           </div>
         </section>
       </div>
@@ -262,11 +262,11 @@ export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> =
           ].map((item) => (
             <div key={item.label} className="bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-2">
               <div className={`text-xl font-bold ${item.tone}`}>{item.value}</div>
-              <div className="text-[10px] uppercase tracking-wide text-slate-500 mt-0.5">{item.label}</div>
+              <div className="text-[11px] uppercase tracking-wide text-slate-400 mt-0.5">{item.label}</div>
             </div>
           ))}
         </div>
-        <p className="text-[11px] text-slate-500 mt-3">
+        <p className="text-[11px] text-slate-400 mt-3">
           ACKs vêm do webhook; use <code className="text-slate-400">whatsapp_sync_history</code> para reconciliar
           mensagens sem confirmação.
         </p>
@@ -275,7 +275,7 @@ export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> =
       <section className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-white">Top oportunidades por dor</h3>
-          <span className="text-[11px] text-slate-500">score = sem site próprio + reputação + auditoria</span>
+          <span className="text-[11px] text-slate-400">score = sem site próprio + reputação + auditoria</span>
         </div>
         <div className="divide-y divide-slate-800">
           {leads.map((lead) => (
@@ -283,21 +283,21 @@ export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> =
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-semibold text-white truncate">{lead.name}</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full border ${levelStyle(lead.priority.level)}`}>
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full border ${levelStyle(lead.priority.level)}`}>
                     {lead.priority.score} · {lead.priority.level}
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
                     {STATUS_LABELS[lead.websiteStatus || 'none'] || lead.websiteStatus}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-1 truncate">
+                <p className="text-xs text-slate-400 mt-1 truncate">
                   {[lead.category, lead.city].filter(Boolean).join(' · ') || 'Sem categoria'}
                 </p>
                 <p className="text-xs text-slate-400 mt-1 line-clamp-2">{lead.priority.reasons.slice(0, 3).join(' • ')}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {lead.siteAudit && (
-                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                  <span className="text-[11px] text-slate-400 flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> {lead.siteAudit.healthScore}/100
                   </span>
                 )}
@@ -313,14 +313,14 @@ export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> =
               </div>
             </div>
           ))}
-          {leads.length === 0 && <p className="p-4 text-sm text-slate-500">Nenhum lead na base ainda.</p>}
+          {leads.length === 0 && <p className="p-4 text-sm text-slate-400">Nenhum lead na base ainda.</p>}
         </div>
       </section>
 
       <section className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-white">Follow-ups (recontato e cadência)</h3>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-400 mt-1">
             Recontatos autorizados e a cadência D+3/D+7 saíram daqui: envio de mensagem agora mora só em <strong className="text-slate-300">Follow-ups</strong>.
           </p>
         </div>

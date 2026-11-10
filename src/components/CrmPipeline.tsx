@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { BusinessLead, InteractionOutcome } from '../types';
-import { FolderKanban, Download, Edit3, Trash2, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { FolderKanban, Download, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { computePipelineValue } from '../utils/pipelineValue';
 
 interface CrmPipelineProps {
@@ -88,7 +88,7 @@ const PipelineColumn: React.FC<PipelineColumnProps> = ({ id, title, color, count
             {count}
           </span>
         </span>
-        <span className="text-[10px] font-semibold opacity-70 shrink-0">
+        <span className="text-[11px] font-semibold opacity-70 shrink-0">
           {collapsed ? 'expandir' : 'recolher'}
         </span>
       </button>
@@ -96,7 +96,7 @@ const PipelineColumn: React.FC<PipelineColumnProps> = ({ id, title, color, count
       {!collapsed && (
         <div className="p-3">
           {count === 0 ? (
-            <p className="text-[11px] text-slate-400 text-center py-6 border border-dashed border-slate-300 rounded-xl">
+            <p className="text-[11px] text-slate-500 text-center py-6 border border-dashed border-slate-300 rounded-xl">
               arraste um lead para cá
             </p>
           ) : (
@@ -119,6 +119,7 @@ const SortableLeadCard: React.FC<SortableLeadCardProps> = ({
 }) => {
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [tempNotes, setTempNotes] = useState<string>('');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const {
     attributes,
@@ -148,22 +149,58 @@ const SortableLeadCard: React.FC<SortableLeadCardProps> = ({
           <div className="font-bold text-slate-900 line-clamp-1">{lead.name}</div>
           <div className="text-slate-500 text-[11px] font-medium truncate">{lead.category} • {lead.city}</div>
         </div>
-        <span
-          title="Score de oportunidade"
-          className={`shrink-0 px-2 py-0.5 rounded-md border text-[11px] font-bold tabular-nums ${scoreBadge(lead.opportunityScore)}`}
-        >
-          {typeof lead.opportunityScore === 'number' ? lead.opportunityScore : '—'}
-        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          <span
+            title="Score de oportunidade"
+            className={`px-2 py-0.5 rounded-md border text-[11px] font-bold tabular-nums ${scoreBadge(lead.opportunityScore)}`}
+          >
+            {typeof lead.opportunityScore === 'number' ? lead.opportunityScore : '—'}
+          </span>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
+              aria-label={`Ações de ${lead.name}`}
+              aria-expanded={menuOpen}
+              className="min-h-8 min-w-8 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-100 inline-flex items-center justify-center"
+            >
+              ⋯
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-9 z-20 w-44 bg-white border border-slate-200 rounded-xl shadow-lg py-1">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    setEditingNotesId(lead.id);
+                    setTempNotes(lead.notes || '');
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Editar anotações
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onRemoveLead(lead.id); }}
+                  className="w-full text-left px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                >
+                  Remover do pipeline
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 font-semibold text-indigo-700 flex items-center justify-between">
-        <span className="text-slate-500 text-[10px]">Projeto:</span>
+        <span className="text-slate-500 text-[11px]">Projeto:</span>
         <span className="font-bold">{lead.estimatedValue || 'Valor não informado'}</span>
       </div>
 
       {lead.lastContactAt && (
         <div className="space-y-2 rounded-lg border border-indigo-100 bg-indigo-50 p-2">
-          <label className="text-[10px] text-indigo-700 font-bold uppercase block">Resultado do contato</label>
+          <label className="text-[11px] text-indigo-700 font-bold uppercase block">Resultado do contato</label>
           {lead.lastContactOutcome === 'pending' && !lead.doNotContact && (
             <select
               defaultValue=""
@@ -183,28 +220,16 @@ const SortableLeadCard: React.FC<SortableLeadCardProps> = ({
             </select>
           )}
           {lead.nextContactAt && !lead.doNotContact && (
-            <p className="text-[10px] text-indigo-700">
+            <p className="text-[11px] text-indigo-700">
               Próximo contato: {new Date(lead.nextContactAt).toLocaleDateString('pt-BR')}
             </p>
           )}
-          {lead.doNotContact && <p className="text-[10px] text-red-700">Recontato bloqueado pela empresa.</p>}
+          {lead.doNotContact && <p className="text-[11px] text-red-700">Recontato bloqueado pela empresa.</p>}
         </div>
       )}
 
       <div className="pt-2 border-t border-slate-100 space-y-1">
-        <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium">
-          <span>Anotações:</span>
-          <button
-            onClick={() => {
-              setEditingNotesId(lead.id);
-              setTempNotes(lead.notes || '');
-            }}
-            className="text-indigo-600 hover:underline flex items-center space-x-1 font-semibold"
-          >
-            <Edit3 className="w-3 h-3" />
-            <span>Editar</span>
-          </button>
-        </div>
+        <div className="text-[11px] text-slate-600 font-semibold">Anotações</div>
 
         {editingNotesId === lead.id ? (
           <div className="space-y-2">
@@ -221,13 +246,13 @@ const SortableLeadCard: React.FC<SortableLeadCardProps> = ({
                   onUpdateNotes(lead.id, tempNotes);
                   setEditingNotesId(null);
                 }}
-                className="bg-indigo-600 text-white font-semibold px-2 py-1 rounded text-[10px]"
+                className="bg-indigo-600 text-white font-semibold px-2 py-1 rounded text-[11px]"
               >
                 Salvar
               </button>
               <button
                 onClick={() => setEditingNotesId(null)}
-                className="bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px]"
+                className="bg-slate-200 text-slate-700 px-2 py-1 rounded text-[11px]"
               >
                 Cancelar
               </button>
@@ -240,15 +265,6 @@ const SortableLeadCard: React.FC<SortableLeadCardProps> = ({
         )}
       </div>
 
-      <div className="pt-2 border-t border-slate-100 flex items-center justify-end">
-        <button
-          onClick={() => onRemoveLead(lead.id)}
-          className="text-slate-400 hover:text-red-500 transition-colors p-1"
-          title="Remover do Pipeline"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      </div>
     </div>
   );
 };
@@ -406,7 +422,7 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
       {/* Kanban Board Columns */}
       {savedLeads.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center space-y-3 shadow-sm">
-          <FolderKanban className="w-12 h-12 text-slate-400 mx-auto" />
+          <FolderKanban className="w-12 h-12 text-slate-500 mx-auto" />
           <h3 className="text-slate-800 font-bold text-lg">Seu Pipeline CRM está vazio</h3>
           <p className="text-slate-500 text-sm max-w-md mx-auto">
             Navegue no <strong>Mapeamento de Região</strong> e clique em <strong>"Salvar"</strong> nas empresas encontradas para começar a gerenciar suas abordagens comerciais.

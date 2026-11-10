@@ -44,6 +44,12 @@ export const CitiesQueueDashboard: React.FC = () => {
   const [appliedUf, setAppliedUf] = useState('');
   const [sortKey, setSortKey] = useState<'name' | 'population' | 'pibPerCapita' | 'marketTier' | 'searchCount' | 'lastSearchedAt' | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  // Paginação: 500 linhas de uma vez eram um paredão de 26 mil px.
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
+  // Seleção em lote (desabilitar 100 cidades não deve custar 100 cliques).
+  const [selected, setSelected] = useState<string[]>([]);
+  const [bulkSaving, setBulkSaving] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const firstLoadRef = useRef(true);
 
@@ -111,6 +117,31 @@ export const CitiesQueueDashboard: React.FC = () => {
     }
   };
 
+  const bulkToggle = async (enabled: boolean) => {
+    if (selected.length === 0) return;
+    setBulkSaving(true);
+    try {
+      const res = await fetch('/api/cities', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codes: selected, enabled }),
+      });
+      const data = await res.json();
+      if (!data?.success) throw new Error(data?.error || 'Falha ao atualizar em lote');
+      const alvo = new Set(selected);
+      setCities((prev) => prev.map((c) => (alvo.has(c.ibgeCode) ? { ...c, enabled } : c)));
+      setSelected([]);
+    } catch (err: any) {
+      window.alert(err?.message || 'Falha ao atualizar em lote');
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
+  const toggleSelected = (code: string) => {
+    setSelected((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
+  };
+
   const filtered = cities.filter((c) => {
     if (search && !`${c.name} ${c.uf}`.toLowerCase().includes(search.toLowerCase())) return false;
     if (tierFilter && c.marketTier !== tierFilter) return false;
@@ -131,7 +162,7 @@ export const CitiesQueueDashboard: React.FC = () => {
     }
   };
 
-  const sorted = [...filtered].sort((a, b) => {
+  const sortedAll = [...filtered].sort((a, b) => {
     if (!sortKey) return 0;
     const dir = sortDir === 'asc' ? 1 : -1;
     switch (sortKey) {
@@ -151,6 +182,13 @@ export const CitiesQueueDashboard: React.FC = () => {
         return 0;
     }
   });
+
+  // recorte da página atual
+  const totalPages = Math.max(1, Math.ceil(sortedAll.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const sorted = sortedAll.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const pageSelected = sorted.filter((c) => selected.includes(c.ibgeCode)).length;
+  const allPageSelected = sorted.length > 0 && pageSelected === sorted.length;
 
   const SortIcon = ({ col }: { col: NonNullable<typeof sortKey> }) => {
     if (sortKey !== col) return <ChevronsUpDown className="w-3 h-3 opacity-40" />;
@@ -207,7 +245,7 @@ export const CitiesQueueDashboard: React.FC = () => {
         <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm space-y-2.5">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
             <div className="col-span-2 flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
-              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <Search className="w-3.5 h-3.5 text-slate-500 shrink-0" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -283,10 +321,26 @@ export const CitiesQueueDashboard: React.FC = () => {
         <div className={`mt-4 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden transition-opacity ${refreshing ? 'opacity-60' : ''}`}>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <tr>
+                  <th className="px-2 py-2.5 text-center w-8">
+                    <input
+                      type="checkbox"
+                      checked={allPageSelected}
+                      onChange={() => {
+                        setSelected((prev) => {
+                          const pageCodes = sorted.map((c) => c.ibgeCode);
+                          if (allPageSelected) return prev.filter((code) => !pageCodes.includes(code));
+                          return Array.from(new Set([...prev, ...pageCodes]));
+                        });
+                      }}
+                      aria-label="Selecionar todas desta página"
+                      title="Selecionar todas desta página"
+                      className="rounded cursor-pointer"
+                    />
+                  </th>
                   <th className="px-3 py-2.5 text-left">
-                    <button type="button" onClick={() => toggleSort('name')} title="Ordenar por cidade" className={`inline-flex items-center gap-1 hover:text-indigo-600 ${sortKey === 'name' ? 'text-indigo-600' : ''}`}>
+                    <button type="button" onClick={() => toggleSort('name')} title="Ordenar por cidade" className={`inline-flex items-center gap-1 min-h-8 px-1 hover:text-indigo-600 ${sortKey === 'name' ? 'text-indigo-600' : ''}`}>
                       Cidade <SortIcon col="name" />
                     </button>
                   </th>
@@ -320,10 +374,19 @@ export const CitiesQueueDashboard: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading && (
-                  <tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-400">Carregando base IBGE...</td></tr>
+                  <tr><td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500">Carregando base IBGE...</td></tr>
                 )}
                 {!loading && sorted.map((city) => (
                   <tr key={city.ibgeCode} className={`hover:bg-slate-50 ${!city.enabled ? 'opacity-50' : ''}`}>
+                    <td className="px-2 py-2.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(city.ibgeCode)}
+                        onChange={() => toggleSelected(city.ibgeCode)}
+                        aria-label={`Selecionar ${city.name}`}
+                        className="rounded cursor-pointer"
+                      />
+                    </td>
                     <td className="px-3 py-2.5">
                       <div className="font-bold text-slate-900 text-xs">{city.name}</div>
                       <div className="text-[11px] text-slate-500">{city.uf}</div>
@@ -335,7 +398,7 @@ export const CitiesQueueDashboard: React.FC = () => {
                     </td>
                     <td className="px-3 py-2.5 text-center text-xs">
                       <span className="inline-flex items-center gap-1">
-                        <Users className="w-3 h-3 text-slate-400" /> {city.searchCount}
+                        <Users className="w-3 h-3 text-slate-500" /> {city.searchCount}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 text-center text-xs text-slate-500">
@@ -353,10 +416,64 @@ export const CitiesQueueDashboard: React.FC = () => {
                   </tr>
                 ))}
                 {!loading && sorted.length === 0 && (
-                  <tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-400">Nenhuma cidade com esses filtros.</td></tr>
+                  <tr><td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500">Nenhuma cidade com esses filtros.</td></tr>
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Ações em lote + paginação */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5 border-t border-slate-200 bg-slate-50">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              {selected.length > 0 ? (
+                <>
+                  <span className="font-bold text-slate-700">{selected.length} selecionada(s)</span>
+                  <button
+                    type="button"
+                    disabled={bulkSaving}
+                    onClick={() => void bulkToggle(false)}
+                    className="px-2.5 py-1.5 rounded-lg font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                  >
+                    Desabilitar selecionadas
+                  </button>
+                  <button
+                    type="button"
+                    disabled={bulkSaving}
+                    onClick={() => void bulkToggle(true)}
+                    className="px-2.5 py-1.5 rounded-lg font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    Habilitar selecionadas
+                  </button>
+                  <button type="button" onClick={() => setSelected([])} className="text-slate-500 hover:text-slate-800 font-semibold px-1">
+                    limpar seleção
+                  </button>
+                </>
+              ) : (
+                <span className="text-slate-500">Marque cidades para ativar/desativar em lote.</span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 text-xs">
+              <button
+                type="button"
+                disabled={currentPage <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="px-3 py-1.5 min-h-8 rounded-lg border border-slate-200 bg-white text-slate-700 disabled:opacity-40"
+              >
+                Anterior
+              </button>
+              <span className="text-slate-600 tabular-nums">
+                {currentPage}/{totalPages} · {sortedAll.length} cidade(s)
+              </span>
+              <button
+                type="button"
+                disabled={currentPage >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                className="px-3 py-1.5 min-h-8 rounded-lg border border-slate-200 bg-white text-slate-700 disabled:opacity-40"
+              >
+                Próxima
+              </button>
+            </div>
           </div>
         </div>
       </div>

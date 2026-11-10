@@ -73,7 +73,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ onClose, onAddLead }
             <PlusCircle className="w-5 h-5 text-indigo-400" />
             <span>Adicionar Novo Lead Manualmente</span>
           </div>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="p-1 text-slate-500 hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>

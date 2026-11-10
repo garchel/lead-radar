@@ -140,7 +140,7 @@ export const SerpApiKeyManager: React.FC<Props> = ({ onClose, onChanged }) => {
             <Key className="w-5 h-5 text-indigo-600" />
             <h3 className="text-lg font-bold text-slate-900">Gerenciar chaves SerpAPI</h3>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100">
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -192,7 +192,7 @@ export const SerpApiKeyManager: React.FC<Props> = ({ onClose, onChanged }) => {
                   placeholder="Ex: 15"
                   className="w-full bg-white border border-slate-300 rounded-lg text-slate-800 text-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-                <p className="text-[10px] text-slate-400 mt-1">Dia do mês que renova (padrão: hoje). O app detecta a próxima ocorrência automaticamente.</p>
+                <p className="text-[11px] text-slate-500 mt-1">Dia do mês que renova (padrão: hoje). O app detecta a próxima ocorrência automaticamente.</p>
               </div>
             </div>
             <button
@@ -220,7 +220,7 @@ export const SerpApiKeyManager: React.FC<Props> = ({ onClose, onChanged }) => {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs font-bold text-slate-800">{k.maskedKey}</span>
                         {k.isActive && (
-                          <span className="inline-flex items-center gap-1 bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          <span className="inline-flex items-center gap-1 bg-indigo-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
                             <Star className="w-3 h-3 fill-white" /> Ativa
                           </span>
                         )}

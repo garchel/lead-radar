@@ -85,7 +85,7 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
     return (
       <div className="px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center space-y-4 shadow-sm">
-          <SearchX className="w-12 h-12 text-slate-400 mx-auto" />
+          <SearchX className="w-12 h-12 text-slate-500 mx-auto" />
           <h3 className="text-lg font-bold text-slate-900">Nenhuma empresa visualizada</h3>
           <p className="text-slate-500 text-sm max-w-md mx-auto">Faça uma busca em <strong>Busca de Região → Filtrar e Mapear Região</strong> com o provedor <strong>SerpAPI</strong> para ver as empresas reais aqui e o JSON bruto.</p>
         </div>
@@ -99,7 +99,7 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <Building2 className="w-6 h-6 text-indigo-600" /> Empresas Encontradas
+              <Building2 className="w-6 h-6 text-indigo-600" /> Resultado da Busca
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">SerpAPI real</span>
               {cached && <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Cache • 0 gasto (7 dias)</span>}
             </h1>
@@ -214,11 +214,11 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
                     const alreadySaved = Boolean(lead.isAlreadySaved || savedLeadIds.has(lead.id));
                     return (
                     <tr key={lead.id} className={`hover:bg-slate-50 ${alreadySaved ? 'bg-amber-50/50' : ''}`}>
-                      <td className="px-3 py-2.5 text-xs text-slate-400">{idx + 1}</td>
+                      <td className="px-3 py-2.5 text-xs text-slate-500">{idx + 1}</td>
                       <td className="px-3 py-2.5">
                         <div className="font-bold text-slate-900 text-xs flex items-center gap-1">
                           {lead.name}
-                          {alreadySaved && <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold">Já cadastrada</span>}
+                          {alreadySaved && <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 text-[11px] font-bold">Já cadastrada</span>}
                         </div>
                         <div className="text-[11px] text-slate-500 flex items-center gap-1"><MapPin className="w-3 h-3" /> {lead.city} • {lead.state}</div>
                       </td>
@@ -228,7 +228,7 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
                       <td className="px-3 py-2.5 text-center">
                         <span className="inline-flex items-center gap-1 text-xs font-bold">
                           <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> {lead.rating ?? '—'}
-                          <span className="text-[11px] text-slate-400">({lead.reviewsCount ?? 0})</span>
+                          <span className="text-[11px] text-slate-500">({lead.reviewsCount ?? 0})</span>
                         </span>
                       </td>
                       <td className="px-3 py-2.5 text-center">
@@ -239,7 +239,7 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
                         ) : lead.websiteStatus === 'none' ? (
                           <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full text-[11px] font-bold"><Award className="w-3 h-3" /> Ouro</span>
                         ) : (
-                          <span className="text-slate-400 text-xs">—</span>
+                          <span className="text-slate-500 text-xs">—</span>
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-center">
@@ -257,7 +257,7 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
                             <Banknote className="w-3 h-3" /> R$ {lead.suggestedTicket.toLocaleString('pt-BR')}
                           </span>
                         ) : (
-                          <span className="text-slate-400 text-xs">—</span>
+                          <span className="text-slate-500 text-xs">—</span>
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-center">

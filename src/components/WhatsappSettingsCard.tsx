@@ -150,14 +150,14 @@ export const WhatsappSettingsCard: React.FC = () => {
               </div>
               <p className="text-[11px] text-slate-500 mt-0.5">{opt.desc}</p>
               {!configured && opt.value !== 'auto' && (
-                <p className="text-[10px] text-amber-600 mt-1">⚠ Não configurado no .env</p>
+                <p className="text-[11px] text-amber-600 mt-1">⚠ Não configurado no .env</p>
               )}
             </button>
           );
         })}
       </div>
 
-      <p className="px-5 pb-4 text-[11px] text-slate-400">
+      <p className="px-5 pb-4 text-[11px] text-slate-500">
         A escolha fica salva no banco e vale imediatamente (sem reiniciar). As credenciais de cada backend
         continuam no arquivo .env — veja docs/WHATSMIAU.md ou docs/EVOLUTION-API.md.
       </p>

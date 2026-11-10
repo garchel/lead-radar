@@ -13,7 +13,7 @@ interface DuplicateMergeModalProps {
 function ValueCell({ label, value }: { label: string; value?: string | number }) {
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{label}</div>
+      <div className="text-[11px] uppercase tracking-wider font-bold text-slate-500">{label}</div>
       <div className="text-xs font-semibold text-slate-800 truncate" title={String(value ?? '—')}>
         {value || '—'}
       </div>
@@ -36,7 +36,7 @@ export const DuplicateMergeModal: React.FC<DuplicateMergeModalProps> = ({
             <AlertTriangle className="w-5 h-5 text-amber-400" />
             <span>Possível empresa duplicada</span>
           </div>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white transition-colors" aria-label="Fechar">
+          <button onClick={onClose} className="p-1 text-slate-500 hover:text-white transition-colors" aria-label="Fechar">
             <X className="w-5 h-5" />
           </button>
         </div>

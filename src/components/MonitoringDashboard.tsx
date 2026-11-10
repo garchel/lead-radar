@@ -197,7 +197,7 @@ export const MonitoringDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className={`grid grid-cols-2 md:grid-cols-5 gap-4 ${metrics.total === 0 ? 'hidden' : ''}`}>
         {kpiCards.map((k) => (
           <div key={k.label} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
             <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${k.color}`}>
@@ -237,7 +237,7 @@ export const MonitoringDashboard: React.FC = () => {
         </div>
         {jobs.length === 0 ? (
           <div className="p-10 text-center text-sm text-slate-500">
-            Nenhum job ainda. Inicie uma prospecção em lote ou crie uma landing page pela aba Automação.
+            Nenhum job ainda. Use <strong>Nova tarefa em lote</strong> acima ou crie um agendamento abaixo.
           </div>
         ) : (
           <ul className="divide-y divide-slate-100">
@@ -247,8 +247,8 @@ export const MonitoringDashboard: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2">
                       <span className="font-semibold text-slate-800 text-sm truncate">{job.title}</span>
-                      <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ${STATUS_STYLES[job.status] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>{job.status}</span>
-                      <span className="text-[10px] text-slate-400 font-mono">{job.type}</span>
+                      <span className={`text-[11px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ${STATUS_STYLES[job.status] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>{job.status}</span>
+                      <span className="text-[11px] text-slate-500 font-mono">{job.type}</span>
                     </div>
                     <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                       <div
@@ -274,14 +274,14 @@ export const MonitoringDashboard: React.FC = () => {
                     {job.error && <p className="text-xs text-rose-600">Erro: {job.error}</p>}
                     {(job.logs || []).map((log, i) => (
                       <div key={i} className="flex items-start space-x-2 text-xs">
-                        <span className="text-slate-400 font-mono shrink-0">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                        <span className="text-slate-500 font-mono shrink-0">{new Date(log.timestamp).toLocaleTimeString()}</span>
                         <span className={log.level === 'error' ? 'text-rose-600' : log.level === 'warning' ? 'text-amber-600' : log.level === 'success' ? 'text-emerald-600' : 'text-slate-600'}>
                           {log.message}
                         </span>
                       </div>
                     ))}
                     {job.result && (
-                      <pre className="text-[10px] text-slate-500 bg-white border border-slate-200 rounded-lg p-2 overflow-x-auto">{JSON.stringify(job.result, null, 2)}</pre>
+                      <pre className="text-[11px] text-slate-500 bg-white border border-slate-200 rounded-lg p-2 overflow-x-auto">{JSON.stringify(job.result, null, 2)}</pre>
                     )}
                   </div>
                 )}

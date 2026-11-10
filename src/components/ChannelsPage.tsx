@@ -136,11 +136,11 @@ export const ChannelsPage: React.FC<{ onOpenAutomation?: () => void }> = ({ onOp
                     : <span className="w-3.5 h-3.5 shrink-0" />}
                   <span className="font-mono text-slate-600">{key.maskedKey}</span>
                   {key.label && <span className="text-slate-500 truncate">· {key.label}</span>}
-                  {key.isActive && <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px]">ATIVA</span>}
+                  {key.isActive && <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px]">ATIVA</span>}
                 </div>
                 <div className="text-slate-600 tabular-nums">
                   hoje <strong>{key.usedToday}/{key.dailyBudget}</strong>
-                  <span className="text-slate-400"> · </span>
+                  <span className="text-slate-500"> · </span>
                   {key.usedThisMonth} usadas no ciclo · <strong>{key.remainingThisMonth}</strong> restantes · renova {fmtDate(key.nextMonthlyReset)}
                 </div>
               </div>

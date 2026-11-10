@@ -95,17 +95,21 @@ const NumField: React.FC<{
       onChange={(e) => onCommit(Math.min(max, Math.max(min, Math.floor(Number(e.target.value) || 0))))}
       className="w-20 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-normal"
     />
-    {suffix && <span className="font-normal text-slate-400">{suffix}</span>}
+    {suffix && <span className="font-normal text-slate-500">{suffix}</span>}
   </label>
 );
 
-const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void; danger?: boolean }> = ({ checked, onChange, danger }) => (
+const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void; danger?: boolean; label: string }> = ({ checked, onChange, danger, label }) => (
   <button
     type="button"
+    role="switch"
+    aria-checked={checked}
+    aria-label={label}
+    title={label}
     onClick={() => onChange(!checked)}
-    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${checked ? (danger ? 'bg-amber-600' : 'bg-indigo-600') : 'bg-slate-300'}`}
+    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 ${checked ? (danger ? 'bg-amber-600' : 'bg-indigo-600') : 'bg-slate-300'}`}
   >
-    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-4' : 'translate-x-0.5'}`} />
+    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
   </button>
 );
 
@@ -248,27 +252,27 @@ export const AutomationSettingsPage: React.FC = () => {
           <>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                <div className="text-[10px] font-bold uppercase text-slate-400">Orçamento hoje</div>
+                <div className="text-[11px] font-bold uppercase text-slate-500">Orçamento hoje</div>
                 <div className="text-lg font-bold text-slate-900">{auto.budget.usedToday}/{auto.budget.dailyBudget}</div>
-                <div className="text-[10px] text-slate-500">buscas usadas</div>
+                <div className="text-[11px] text-slate-500">buscas usadas</div>
               </div>
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                <div className="text-[10px] font-bold uppercase text-slate-400">Cota do ciclo</div>
+                <div className="text-[11px] font-bold uppercase text-slate-500">Cota do ciclo</div>
                 <div className="text-lg font-bold text-slate-900">{auto.budget.remainingThisMonth}</div>
-                <div className="text-[10px] text-slate-500">
+                <div className="text-[11px] text-slate-500">
                   de {auto.budget.monthlyQuota}
                   {auto.budget.keys && auto.budget.keys > 1 ? ` · ${auto.budget.keys} chaves` : ''} · {auto.budget.daysLeftInCycle} dia(s)
                 </div>
               </div>
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                <div className="text-[10px] font-bold uppercase text-slate-400">Intervalo</div>
+                <div className="text-[11px] font-bold uppercase text-slate-500">Intervalo</div>
                 <div className="text-lg font-bold text-slate-900">{auto.budget.intervalMinutes} min</div>
-                <div className="text-[10px] text-slate-500">{auto.budget.windowOpen ? 'janela aberta' : 'janela fechada'}</div>
+                <div className="text-[11px] text-slate-500">{auto.budget.windowOpen ? 'janela aberta' : 'janela fechada'}</div>
               </div>
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                <div className="text-[10px] font-bold uppercase text-slate-400">Hoje</div>
+                <div className="text-[11px] font-bold uppercase text-slate-500">Hoje</div>
                 <div className="text-lg font-bold text-slate-900">{auto.state.collectedToday}</div>
-                <div className="text-[10px] text-slate-500">leads · {auto.state.prospectedToday} D0</div>
+                <div className="text-[11px] text-slate-500">leads · {auto.state.prospectedToday} D0</div>
               </div>
             </div>
 
@@ -276,7 +280,7 @@ export const AutomationSettingsPage: React.FC = () => {
               <span>{auto.armed ? `✅ armado (${auto.state.armedUntil ? new Date(auto.state.armedUntil).toLocaleString('pt-BR') : '-'})` : '⏸️ não armado — abra o app para armar'}</span>
               <span>{auto.budget.nextRunAt ? `próxima busca: ${new Date(auto.budget.nextRunAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : 'sem próxima busca'}</span>
               <span>{auto.candidatesReady} lead(s) prontos para D0</span>
-              {auto.state.lastSummary && <span className="text-slate-400">último: {auto.state.lastSummary}</span>}
+              {auto.state.lastSummary && <span className="text-slate-500">último: {auto.state.lastSummary}</span>}
               {auto.state.lastError && <span className="text-amber-600">erro: {auto.state.lastError}</span>}
             </div>
 
@@ -285,7 +289,7 @@ export const AutomationSettingsPage: React.FC = () => {
                 <div className="text-sm font-semibold text-slate-800">Coleta automática</div>
                 <div className="text-xs text-slate-500">Enquanto o app estiver aberto (armado por 8h), faz uma busca espaçada por vez.</div>
               </div>
-              <Toggle checked={auto.settings.enabled} onChange={(v) => void updateAutopilot({ enabled: v })} />
+              <Toggle checked={auto.settings.enabled} onChange={(v) => void updateAutopilot({ enabled: v })} label="Coleta automática (autopilot SerpAPI)" />
             </div>
 
             <div className="flex items-center justify-between py-2 border-b border-slate-100">
@@ -293,7 +297,7 @@ export const AutomationSettingsPage: React.FC = () => {
                 <div className="text-sm font-semibold text-slate-800">Prospectar os melhores</div>
                 <div className="text-xs text-slate-500">Manda D0 no WhatsApp para o lead de maior score (respeita a humanização e o teto de contatos novos).</div>
               </div>
-              <Toggle checked={auto.settings.autoProspect} onChange={(v) => void updateAutopilot({ autoProspect: v })} />
+              <Toggle checked={auto.settings.autoProspect} onChange={(v) => void updateAutopilot({ autoProspect: v })} label="Prospectar automaticamente os melhores leads" />
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
@@ -314,11 +318,11 @@ export const AutomationSettingsPage: React.FC = () => {
                 <input type="number" min={0} max={23} value={auto.budget.windowStartHour}
                   onChange={(e) => void fetch('/api/autopilot/window', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ startHour: Number(e.target.value), endHour: auto.budget.windowEndHour }) }).then(() => void loadAutopilot())}
                   className="w-14 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-normal" />
-                <Zap className="w-3 h-3 text-slate-400" />
+                <Zap className="w-3 h-3 text-slate-500" />
                 <input type="number" min={0} max={23} value={auto.budget.windowEndHour}
                   onChange={(e) => void fetch('/api/autopilot/window', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ startHour: auto.budget.windowStartHour, endHour: Number(e.target.value) }) }).then(() => void loadAutopilot())}
                   className="w-14 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-normal" />
-                <span className="font-normal text-slate-400">h</span>
+                <span className="font-normal text-slate-500">h</span>
               </label>
             </div>
           </>
@@ -341,12 +345,12 @@ export const AutomationSettingsPage: React.FC = () => {
             <div className="text-sm font-semibold text-slate-800">Backup automático</div>
             <div className="text-xs text-slate-500">Snapshot diário do SQLite em data/backups (VACUUM INTO).</div>
           </div>
-          <Toggle checked={settings.backupEnabled} onChange={(v) => void update({ backupEnabled: v })} />
+          <Toggle checked={settings.backupEnabled} onChange={(v) => void update({ backupEnabled: v })} label="Backup automático do banco" />
         </div>
         <div className="flex items-center gap-3">
           <label className="text-xs font-bold text-slate-600">Intervalo (horas)</label>
           <input type="number" min={1} max={168} value={settings.backupIntervalHours} onChange={(e) => void update({ backupIntervalHours: Math.max(1, Math.floor(Number(e.target.value) || 24)) })} className="w-20 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
-          <span className="text-xs text-slate-400">Requer reinício</span>
+          <span className="text-xs text-slate-500">Requer reinício</span>
         </div>
       </div>
 
@@ -358,7 +362,7 @@ export const AutomationSettingsPage: React.FC = () => {
             <div className="text-sm font-semibold text-slate-800">Polling automático</div>
             <div className="text-xs text-slate-500">Busca respostas do formulário a cada N minutos e importa para o projeto.</div>
           </div>
-          <Toggle checked={settings.typeformPollingEnabled} onChange={(v) => void update({ typeformPollingEnabled: v })} />
+          <Toggle checked={settings.typeformPollingEnabled} onChange={(v) => void update({ typeformPollingEnabled: v })} label="Polling automático do Typeform" />
         </div>
         <div className="flex items-center gap-3">
           <label className="text-xs font-bold text-slate-600">Intervalo (min)</label>
@@ -374,21 +378,21 @@ export const AutomationSettingsPage: React.FC = () => {
             <div className="text-sm font-semibold text-slate-800">Classificar intenção automaticamente</div>
             <div className="text-xs text-slate-500">Detecta recusa / interesse / preço por regex.</div>
           </div>
-          <Toggle checked={settings.whatsappAutoIntent} onChange={(v) => void update({ whatsappAutoIntent: v })} />
+          <Toggle checked={settings.whatsappAutoIntent} onChange={(v) => void update({ whatsappAutoIntent: v })} label="Classificar intenção das mensagens" />
         </div>
         <div className="flex items-center justify-between py-2 border-b border-slate-100">
           <div>
             <div className="text-sm font-semibold text-slate-800">Mover pipeline automaticamente</div>
             <div className="text-xs text-slate-500">Recusa → Perdeu, interesse/preço → Em Negociação. Requer intenção ligada.</div>
           </div>
-          <Toggle checked={settings.whatsappAutoPipeline} onChange={(v) => void update({ whatsappAutoPipeline: v })} />
+          <Toggle checked={settings.whatsappAutoPipeline} onChange={(v) => void update({ whatsappAutoPipeline: v })} label="Mover o lead no pipeline pela intenção" />
         </div>
         <div className="flex items-center justify-between py-2 border-b border-slate-100">
           <div>
             <div className="text-sm font-semibold text-slate-800">Criar follow-up automático</div>
             <div className="text-xs text-slate-500">Interesse/preço cria interação pendente com próximo contato agora.</div>
           </div>
-          <Toggle checked={settings.whatsappAutoFollowUp} onChange={(v) => void update({ whatsappAutoFollowUp: v })} />
+          <Toggle checked={settings.whatsappAutoFollowUp} onChange={(v) => void update({ whatsappAutoFollowUp: v })} label="Criar follow-up pela intenção" />
         </div>
         <div className="flex items-center justify-between py-2">
           <div>
@@ -398,7 +402,7 @@ export const AutomationSettingsPage: React.FC = () => {
               Recusa e descadastro (LGPD) continuam só por palavra-chave — a IA nunca marca opt-out.
             </div>
           </div>
-          <Toggle checked={settings.intentAi} onChange={(v) => void update({ intentAi: v })} />
+          <Toggle checked={settings.intentAi} onChange={(v) => void update({ intentAi: v })} label="Classificação de intenção com IA" />
         </div>
       </div>
 
@@ -410,7 +414,7 @@ export const AutomationSettingsPage: React.FC = () => {
             <div className="text-sm font-semibold text-slate-800">Enriquecer leads automaticamente</div>
             <div className="text-xs text-slate-500">Busca Google Places / CNPJ após prospecção.</div>
           </div>
-          <Toggle checked={settings.autopilotAutoEnrich} onChange={(v) => void update({ autopilotAutoEnrich: v })} />
+          <Toggle checked={settings.autopilotAutoEnrich} onChange={(v) => void update({ autopilotAutoEnrich: v })} label="Enriquecer leads do autopilot" />
         </div>
         <div className="flex items-center justify-between py-2 border-b border-slate-100">
           <div>
@@ -427,7 +431,7 @@ export const AutomationSettingsPage: React.FC = () => {
             <div className="text-sm font-semibold text-slate-800 flex items-center gap-1"><AlertTriangle className="w-3 h-3 text-amber-500" /> Enviar pitches automaticamente</div>
             <div className="text-xs text-amber-600 font-medium">Perigoso: dispara WhatsApp/E-mail sem aprovação humana.</div>
           </div>
-          <Toggle checked={settings.autopilotSendPitches} onChange={(v) => void update({ autopilotSendPitches: v })} danger />
+          <Toggle checked={settings.autopilotSendPitches} onChange={(v) => void update({ autopilotSendPitches: v })} danger label="Enviar pitches no autopilot" />
         </div>
       </div>
 
@@ -439,12 +443,12 @@ export const AutomationSettingsPage: React.FC = () => {
             <div className="text-sm font-semibold text-slate-800">Permitir recontato automático</div>
             <div className="text-xs text-slate-500">Só toca em quem recebeu a abordagem inicial e não respondeu. Para sozinho em conversa aberta, opt-out, resposta ou 3 tentativas.</div>
           </div>
-          <Toggle checked={settings.cadenceEnabled} onChange={(v) => void update({ cadenceEnabled: v })} />
+          <Toggle checked={settings.cadenceEnabled} onChange={(v) => void update({ cadenceEnabled: v })} label="Cadência de outbound D+3/D+7" />
         </div>
         <div className="flex items-center gap-3">
           <label className="text-xs font-bold text-slate-600">Teto de envios da cadência por dia</label>
           <input type="number" min={0} max={200} value={settings.cadenceDailyCap} onChange={(e) => void update({ cadenceDailyCap: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} className="w-20 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
-          <span className="text-xs text-slate-400">0 bloqueia envios reais (simulação continua liberada)</span>
+          <span className="text-xs text-slate-500">0 bloqueia envios reais (simulação continua liberada)</span>
         </div>
       </div>
 
@@ -456,7 +460,7 @@ export const AutomationSettingsPage: React.FC = () => {
             <div className="text-sm font-semibold text-slate-800">Simular comportamento humano</div>
             <div className="text-xs text-slate-500">Aplica janela de horário, delay de digitação, pausa entre envios e tetos diários em TODO envio de WhatsApp. Desligado = envia na hora.</div>
           </div>
-          <Toggle checked={settings.humanize.enabled} onChange={(v) => void updateHumanize({ enabled: v })} />
+          <Toggle checked={settings.humanize.enabled} onChange={(v) => void updateHumanize({ enabled: v })} label="Humanização do WhatsApp" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -466,7 +470,7 @@ export const AutomationSettingsPage: React.FC = () => {
               <NumField label="início" value={settings.humanize.replyStartHour} max={23} suffix="h" onCommit={(v) => void updateHumanize({ replyStartHour: v })} />
               <NumField label="fim" value={settings.humanize.replyEndHour} max={24} suffix="h" onCommit={(v) => void updateHumanize({ replyEndHour: v })} />
             </div>
-            <div className="text-xs text-slate-400">Responde quem já está em conversa com você. Vale todos os dias.</div>
+            <div className="text-xs text-slate-500">Responde quem já está em conversa com você. Vale todos os dias.</div>
           </div>
 
           <div className="space-y-2">
@@ -474,14 +478,14 @@ export const AutomationSettingsPage: React.FC = () => {
               Janela de prospecção
               <span className="flex items-center gap-2 font-normal text-slate-500">
                 só seg–sex
-                <Toggle checked={settings.humanize.prospectWeekdaysOnly} onChange={(v) => void updateHumanize({ prospectWeekdaysOnly: v })} />
+                <Toggle checked={settings.humanize.prospectWeekdaysOnly} onChange={(v) => void updateHumanize({ prospectWeekdaysOnly: v })} label="Prospecção só em dias úteis" />
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <NumField label="início" value={settings.humanize.prospectStartHour} max={23} suffix="h" onCommit={(v) => void updateHumanize({ prospectStartHour: v })} />
               <NumField label="fim" value={settings.humanize.prospectEndHour} max={24} suffix="h" onCommit={(v) => void updateHumanize({ prospectEndHour: v })} />
             </div>
-            <div className="text-xs text-slate-400">Primeiro contato e follow-ups da cadência.</div>
+            <div className="text-xs text-slate-500">Primeiro contato e follow-ups da cadência.</div>
           </div>
         </div>
 
@@ -493,7 +497,7 @@ export const AutomationSettingsPage: React.FC = () => {
               <NumField label="por caractere" value={settings.humanize.typingPerCharMs} max={500} suffix="ms" onCommit={(v) => void updateHumanize({ typingPerCharMs: v })} />
               <NumField label="teto" value={settings.humanize.typingMaxMs} max={120000} suffix="ms" onCommit={(v) => void updateHumanize({ typingMaxMs: v })} />
             </div>
-            <div className="text-xs text-slate-400">Tempo "digitando" antes de cada envio, proporcional ao texto.</div>
+            <div className="text-xs text-slate-500">Tempo "digitando" antes de cada envio, proporcional ao texto.</div>
           </div>
 
           <div className="space-y-2">
@@ -502,7 +506,7 @@ export const AutomationSettingsPage: React.FC = () => {
               <NumField label="mín" value={settings.humanize.pauseMinSeconds} max={3600} suffix="s" onCommit={(v) => void updateHumanize({ pauseMinSeconds: v })} />
               <NumField label="máx" value={settings.humanize.pauseMaxSeconds} max={3600} suffix="s" onCommit={(v) => void updateHumanize({ pauseMaxSeconds: v })} />
             </div>
-            <div className="text-xs text-slate-400">Intervalo sorteado entre uma mensagem e a seguinte (todas as origens).</div>
+            <div className="text-xs text-slate-500">Intervalo sorteado entre uma mensagem e a seguinte (todas as origens).</div>
           </div>
         </div>
 
@@ -512,7 +516,7 @@ export const AutomationSettingsPage: React.FC = () => {
             <div className="flex flex-wrap items-center gap-3">
               <NumField label="mensagens/dia" value={settings.humanize.dailyTotalCap} max={500} onCommit={(v) => void updateHumanize({ dailyTotalCap: v })} />
             </div>
-            <div className="text-xs text-slate-400">Soma TUDO que sai do número: respostas, prospecção e cadência.</div>
+            <div className="text-xs text-slate-500">Soma TUDO que sai do número: respostas, prospecção e cadência.</div>
           </div>
 
           <div className="space-y-2">
@@ -520,13 +524,13 @@ export const AutomationSettingsPage: React.FC = () => {
             <div className="flex flex-wrap items-center gap-3">
               <NumField label="novos/dia" value={settings.humanize.dailyNewCap} max={500} onCommit={(v) => void updateHumanize({ dailyNewCap: v })} />
             </div>
-            <div className="text-xs text-slate-400">Só primeiros contatos (quem nunca recebeu nada nosso).</div>
+            <div className="text-xs text-slate-500">Só primeiros contatos (quem nunca recebeu nada nosso).</div>
           </div>
         </div>
 
         {humanizeStatus && (
           <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600 flex flex-wrap items-center gap-x-5 gap-y-1">
-            <span className={humanizeStatus.enabled ? 'font-bold text-emerald-600' : 'font-bold text-slate-400'}>
+            <span className={humanizeStatus.enabled ? 'font-bold text-emerald-600' : 'font-bold text-slate-500'}>
               {humanizeStatus.enabled ? 'Humanização ativa' : 'Humanização desligada'}
             </span>
             <span>Enviadas hoje: <b>{humanizeStatus.usage.sentToday}</b> / {settings.humanize.dailyTotalCap}</span>
@@ -538,7 +542,7 @@ export const AutomationSettingsPage: React.FC = () => {
         )}
       </div>
 
-      <div className="flex items-center gap-2 text-xs text-slate-400">
+      <div className="flex items-center gap-2 text-xs text-slate-500">
         <Database className="w-3 h-3" /> Configurações salvas em <code className="bg-white px-1 rounded border">app_settings</code> e aplicadas em tempo real quando possível.
       </div>
     </div>

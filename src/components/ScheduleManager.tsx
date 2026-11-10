@@ -257,26 +257,26 @@ export const ScheduleManager: React.FC = () => {
               {useCityRotation ? (
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-2 items-end">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Cidades/disparo</label>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Cidades/disparo</label>
                     <input type="number" min={1} max={20} value={citiesPerRun} onChange={(e) => setCitiesPerRun(Math.max(1, Math.min(20, Number(e.target.value))))} className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">UF (opcional)</label>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">UF (opcional)</label>
                     <input value={rotUf} onChange={(e) => setRotUf(e.target.value.toUpperCase().slice(0, 2))} placeholder="GO" className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg uppercase" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Pop. mín</label>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Pop. mín</label>
                     <input type="number" min={0} step={5000} value={minPopulation} onChange={(e) => setMinPopulation(Number(e.target.value))} className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Pop. máx</label>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Pop. máx</label>
                     <input type="number" min={0} step={10000} value={maxPopulation} onChange={(e) => setMaxPopulation(Number(e.target.value))} className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Propensão mín: {minPropensity}</label>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Propensão mín: {minPropensity}</label>
                     <input type="range" min={0} max={100} step={5} value={minPropensity} onChange={(e) => setMinPropensity(Number(e.target.value))} className="w-full" />
                   </div>
-                  <p className="text-[10px] text-slate-500 col-span-full">Cada disparo pega as cidades há mais tempo sem buscar. Faixa sugerida: 30 mil–200 mil hab.</p>
+                  <p className="text-[11px] text-slate-500 col-span-full">Cada disparo pega as cidades há mais tempo sem buscar. Faixa sugerida: 30 mil–200 mil hab.</p>
                 </div>
               ) : (
                 <p className="text-[11px] text-slate-500">Sem rotação: busca sempre a mesma cidade fixa. Ative para varrer municípios da base IBGE automaticamente.</p>
@@ -306,10 +306,10 @@ export const ScheduleManager: React.FC = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center space-x-2">
                   <span className="font-semibold text-slate-800 text-sm truncate">{s.name}</span>
-                  <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ${s.enabled ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-slate-500 border-slate-200 bg-slate-100'}`}>
+                  <span className={`text-[11px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ${s.enabled ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-slate-500 border-slate-200 bg-slate-100'}`}>
                     {s.enabled ? 'ativo' : 'pausado'}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">{s.jobType}</span>
+                  <span className="text-[11px] text-slate-500 font-mono">{s.jobType}</span>
                 </div>
                 <div className="mt-1 text-xs text-slate-500 flex items-center space-x-3 flex-wrap">
                   <span className="inline-flex items-center space-x-1"><CalendarDays className="w-3 h-3" /><span className="font-mono">{s.cron}</span></span>
@@ -319,7 +319,7 @@ export const ScheduleManager: React.FC = () => {
               </div>
               <div className="flex items-center space-x-2">
                 <button onClick={() => toggleEnabled(s)} className="flex items-center space-x-1 text-xs font-medium text-slate-600 hover:text-indigo-600 px-2 py-1 rounded-lg border border-slate-200 hover:border-indigo-300 transition-all" title={s.enabled ? 'Pausar' : 'Ativar'}>
-                  {s.enabled ? <ToggleRight className="w-4 h-4 text-emerald-600" /> : <ToggleLeft className="w-4 h-4 text-slate-400" />}
+                  {s.enabled ? <ToggleRight className="w-4 h-4 text-emerald-600" /> : <ToggleLeft className="w-4 h-4 text-slate-500" />}
                   <span>{s.enabled ? 'Pausar' : 'Ativar'}</span>
                 </button>
                 <button onClick={() => remove(s.id)} className="flex items-center space-x-1 text-xs font-medium text-rose-600 hover:text-rose-700 px-2 py-1 rounded-lg border border-rose-200 hover:bg-rose-50 transition-all">

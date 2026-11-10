@@ -141,7 +141,7 @@ export const NextActionsBar: React.FC<NextActionsBarProps> = ({ onNavigate, onOp
               Próximas ações
             </span>
             {total > 0 ? (
-              <span className="inline-flex items-center justify-center min-w-5 px-1.5 h-5 rounded-full bg-rose-600 text-white text-[10px] font-bold">
+              <span className="inline-flex items-center justify-center min-w-5 px-1.5 h-5 rounded-full bg-rose-600 text-white text-[11px] font-bold">
                 {total}
               </span>
             ) : (
@@ -163,12 +163,12 @@ export const NextActionsBar: React.FC<NextActionsBarProps> = ({ onNavigate, onOp
                   void load();
                 }
               }}
-              className="p-1.5 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-colors"
+              className="p-1.5 rounded-md text-slate-500 hover:text-indigo-600 hover:bg-slate-100 transition-colors"
               title="Atualizar"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </span>
-            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expanded ? '' : '-rotate-90'}`} />
+            <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${expanded ? '' : '-rotate-90'}`} />
           </span>
         </button>
 
@@ -199,7 +199,9 @@ export const NextActionsBar: React.FC<NextActionsBarProps> = ({ onNavigate, onOp
                     >
                       {KIND_ICON[item.kind]}
                       <span className="max-w-52 truncate">{item.title}</span>
-                      <span className="text-[10px] font-bold opacity-70">×{item.count}</span>
+                      {!new RegExp(`\\b${item.count}\\b`).test(item.title) && (
+                        <span className="text-[11px] font-bold opacity-70">×{item.count}</span>
+                      )}
                     </button>
                   );
                 })}
@@ -226,7 +228,7 @@ export const NextActionsBar: React.FC<NextActionsBarProps> = ({ onNavigate, onOp
                         ) : (
                           <TriangleAlert className="w-3.5 h-3.5 text-amber-600" />
                         )}
-                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                           {isFailed ? 'Falhados — reenvio manual' : 'Sem ACK há +24h'}
                         </span>
                       </div>
@@ -236,16 +238,16 @@ export const NextActionsBar: React.FC<NextActionsBarProps> = ({ onNavigate, onOp
                             <div className="min-w-0">
                               <p className="text-[11px] font-semibold text-slate-700 truncate">
                                 {row.leadName}
-                                <span className="text-slate-400 font-normal"> • {row.channel} • {ageLabel(row.ageHours)}</span>
+                                <span className="text-slate-500 font-normal"> • {row.channel} • {ageLabel(row.ageHours)}</span>
                               </p>
-                              <p className="text-[10px] text-slate-500 truncate">{row.message}</p>
+                              <p className="text-[11px] text-slate-500 truncate">{row.message}</p>
                             </div>
                             {isFailed && (
                               <button
                                 type="button"
                                 onClick={() => void handleRetry(row.communicationId)}
                                 disabled={retrying === row.communicationId}
-                                className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md px-2 py-1 transition-colors disabled:opacity-50"
+                                className="shrink-0 inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md px-2 py-1 transition-colors disabled:opacity-50"
                               >
                                 {retrying === row.communicationId ? (
                                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -265,7 +267,7 @@ export const NextActionsBar: React.FC<NextActionsBarProps> = ({ onNavigate, onOp
                   <button
                     type="button"
                     onClick={() => onNavigate('growth')}
-                    className="text-[10px] font-bold text-indigo-600 hover:underline"
+                    className="text-[11px] font-bold text-indigo-600 hover:underline"
                   >
                     Ver métricas de entrega no Crescimento →
                   </button>

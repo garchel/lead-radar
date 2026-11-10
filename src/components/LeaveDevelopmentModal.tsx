@@ -30,7 +30,7 @@ export const LeaveDevelopmentModal: React.FC<LeaveDevelopmentModalProps> = ({
               <p className="text-xs text-slate-600">Sairá da etapa do pipeline</p>
             </div>
           </div>
-          <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 p-1" title="Fechar">
+          <button onClick={onCancel} className="text-slate-500 hover:text-slate-600 p-1" title="Fechar">
             <X className="w-5 h-5" />
           </button>
         </div>

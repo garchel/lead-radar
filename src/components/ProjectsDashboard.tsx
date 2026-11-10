@@ -72,7 +72,7 @@ const STAGE_ACCENT: Record<ProjectStage, { stripe: string; bar: string; label: s
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 function dueDateInfo(dueDate: string): { label: string; className: string } {
-  if (!dueDate) return { label: 'Sem prazo definido', className: 'text-slate-400' };
+  if (!dueDate) return { label: 'Sem prazo definido', className: 'text-slate-500' };
   const due = new Date(`${dueDate.slice(0, 10)}T23:59:59`).getTime();
   const now = Date.now();
   const days = Math.ceil((due - now) / MS_PER_DAY);
@@ -150,13 +150,13 @@ const ProjectColumn: React.FC<ProjectColumnProps> = ({ id, title, color, count, 
             {count}
           </span>
         </span>
-        <span className="text-[10px] font-semibold opacity-70 shrink-0">{collapsed ? 'expandir' : 'recolher'}</span>
+        <span className="text-[11px] font-semibold opacity-70 shrink-0">{collapsed ? 'expandir' : 'recolher'}</span>
       </button>
 
       {!collapsed && (
         <div className="p-3">
           {count === 0 ? (
-            <p className="text-[11px] text-slate-400 text-center py-6 border border-dashed border-slate-300 rounded-xl">
+            <p className="text-[11px] text-slate-500 text-center py-6 border border-dashed border-slate-300 rounded-xl">
               arraste um projeto para cá
             </p>
           ) : (
@@ -228,15 +228,15 @@ const SortableProjectCard: React.FC<SortableProjectCardProps> = ({ project, onCl
 
         {/* Badges */}
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[10px] ${projectType.className}`}>
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[11px] ${projectType.className}`}>
             {projectType.label}
           </span>
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[10px] ${priority.className}`}>
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[11px] ${priority.className}`}>
             <Flag className="w-3 h-3 inline mr-0.5 -mt-px" />
             {priority.label}
           </span>
           {isConcluded && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[11px] bg-emerald-50 text-emerald-700 border-emerald-200">
               <CheckCircle2 className="w-3 h-3 inline mr-0.5 -mt-px" />
               Concluído
             </span>
@@ -244,7 +244,7 @@ const SortableProjectCard: React.FC<SortableProjectCardProps> = ({ project, onCl
           {!isConcluded && project.devStatus === 'codigo_entregue' && (
             <span
               title="O agente entregou o código — abra o projeto e revise para aprovar."
-              className="inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[10px] bg-amber-50 text-amber-800 border-amber-300"
+              className="inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[11px] bg-amber-50 text-amber-800 border-amber-300"
             >
               <Code2 className="w-3 h-3 inline mr-0.5 -mt-px" />
               Código entregue
@@ -253,7 +253,7 @@ const SortableProjectCard: React.FC<SortableProjectCardProps> = ({ project, onCl
           {!isConcluded && project.devStatus === 'aguardando_agente' && (
             <span
               title="Aguardando o agente de IA implementar este projeto."
-              className="inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[10px] bg-slate-50 text-slate-500 border-slate-200"
+              className="inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[11px] bg-slate-50 text-slate-500 border-slate-200"
             >
               <Bot className="w-3 h-3 inline mr-0.5 -mt-px" />
               Aguardando agente
@@ -262,7 +262,7 @@ const SortableProjectCard: React.FC<SortableProjectCardProps> = ({ project, onCl
           {!isConcluded && project.devStatus === 'aprovado' && (
             <span
               title="Código aprovado — falta fazer deploy."
-              className="inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[10px] bg-teal-50 text-teal-700 border-teal-200"
+              className="inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[11px] bg-teal-50 text-teal-700 border-teal-200"
             >
               <BadgeCheck className="w-3 h-3 inline mr-0.5 -mt-px" />
               Aprovado
@@ -272,11 +272,11 @@ const SortableProjectCard: React.FC<SortableProjectCardProps> = ({ project, onCl
 
         {/* Progresso da etapa */}
         <div>
-          <div className="flex items-center justify-between text-[10px] font-semibold mb-1.5">
+          <div className="flex items-center justify-between text-[11px] font-semibold mb-1.5">
             <span className={isConcluded ? 'text-emerald-700' : accent.label}>
               {isConcluded ? 'Finalizado' : STAGES[stageIndex(project.stage)].title}
             </span>
-            <span className="text-slate-400 font-bold">{progress}%</span>
+            <span className="text-slate-500 font-bold">{progress}%</span>
           </div>
           <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
             <div
@@ -525,7 +525,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({ focusProje
 
       {visibleProjects.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center space-y-3 shadow-sm">
-          <Rocket className="w-12 h-12 text-slate-400 mx-auto" />
+          <Rocket className="w-12 h-12 text-slate-500 mx-auto" />
           <h3 className="text-slate-800 font-bold text-lg">Nenhum projeto em andamento</h3>
           <p className="text-slate-500 text-sm max-w-md mx-auto">
             Clique em <strong>"Novo Projeto"</strong> para vincular um lead do CRM e começar a acompanhar o desenvolvimento da landing page.

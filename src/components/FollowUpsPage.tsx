@@ -102,32 +102,6 @@ export const FollowUpsPage: React.FC = () => {
             Quem deve ser procurado de novo, e por quê. Todo envio de recontato sai daqui.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Atualizar
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-          <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-sky-600" /> Recontato autorizado
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Você registrou que ia falar de novo em tal data (ou o lead pediu para chamar depois). O envio é <strong>manual</strong>, um por vez.
-          </p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-          <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-            <Zap className="w-4 h-4 text-violet-600" /> Cadência automática D+3 / D+7
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Quem foi contatado e não respondeu. Respeita teto diário, cooldown e opt-out — e <strong>nunca</strong> toca em quem já respondeu.
-          </p>
-        </div>
       </div>
 
       <section>
@@ -138,8 +112,11 @@ export const FollowUpsPage: React.FC = () => {
         <div className="px-5 py-4 border-b border-slate-200 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-violet-600" /> Cadência D+3 / D+7
+              <Zap className="w-4 h-4 text-violet-600" /> Cadência automática D+3 / D+7
             </h2>
+            <p className="text-xs text-slate-600 mt-1">
+              Quem foi contatado e não respondeu. Respeita teto diário, cooldown e opt-out — e nunca toca em quem já respondeu.
+            </p>
             <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
               {plan ? (
@@ -153,6 +130,14 @@ export const FollowUpsPage: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void load()}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Atualizar
+            </button>
             <button
               type="button"
               onClick={() => void runCadence(true)}

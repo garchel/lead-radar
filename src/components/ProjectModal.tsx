@@ -414,11 +414,11 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider truncate">
               {section.group.title}
             </span>
-            <span className="text-[10px] font-bold text-slate-400 shrink-0">
+            <span className="text-[11px] font-bold text-slate-500 shrink-0">
               {section.items.length}
             </span>
           </span>
-          <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
+          <ChevronDown className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
         </button>
         {isExpanded && (
           <div className="p-3 space-y-3 border-t border-slate-200">
@@ -465,13 +465,13 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
             Tarefas da etapa
           </span>
-          <span className={`text-[10px] font-bold ${doneCount === stageTasks.length && stageTasks.length > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+          <span className={`text-[11px] font-bold ${doneCount === stageTasks.length && stageTasks.length > 0 ? 'text-emerald-600' : 'text-slate-500'}`}>
             {doneCount}/{stageTasks.length} concluídas
           </span>
         </div>
         <div className="space-y-1.5">
           {stageTasks.length === 0 && (
-            <p className="text-xs text-slate-400 bg-slate-50 border border-dashed border-slate-300 rounded-lg p-3">
+            <p className="text-xs text-slate-500 bg-slate-50 border border-dashed border-slate-300 rounded-lg p-3">
               Nenhuma tarefa para esta etapa. Adicione uma abaixo.
             </p>
           )}
@@ -492,7 +492,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
               >
                 {task.done && <Check className="w-3 h-3" />}
               </button>
-              <span className={`flex-1 text-xs font-medium ${task.done ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+              <span className={`flex-1 text-xs font-medium ${task.done ? 'text-slate-500 line-through' : 'text-slate-800'}`}>
                 {task.title}
               </span>
               <button
@@ -563,7 +563,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                 </span>
                 <span>
                   <span className="block text-xs font-bold text-slate-900">{opt.title}</span>
-                  <span className="block text-[10px] text-slate-500">{opt.description}</span>
+                  <span className="block text-[11px] text-slate-500">{opt.description}</span>
                 </span>
               </button>
             ))}
@@ -849,17 +849,17 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
               </p>
               {mode === 'edit' && project && (
                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[10px] ${typeMeta.className}`}>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[11px] ${typeMeta.className}`}>
                     {typeMeta.label}
                   </span>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[10px] ${statusMeta.className}`}>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[11px] ${statusMeta.className}`}>
                     {statusMeta.label}
                   </span>
                 </div>
               )}
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors" title="Fechar">
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors" title="Fechar">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -898,7 +898,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                   style={{ width: `${deadline.pct}%` }}
                 />
               </div>
-              <p className="text-[10px] text-slate-400 mt-1.5">
+              <p className="text-[11px] text-slate-500 mt-1.5">
                 {Math.round(deadline.pct)}% do prazo utilizado • entrega em{' '}
                 {new Date(dueDate).toLocaleDateString('pt-BR')}
               </p>
@@ -965,13 +965,13 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                               ? 'bg-indigo-500 border-indigo-500 text-white'
                               : i === currentStageIdx
                                 ? 'bg-white border-indigo-500 text-indigo-600 ring-4 ring-indigo-100'
-                                : 'bg-white border-slate-200 text-slate-400 group-hover/step:border-slate-300 group-hover/step:text-slate-500'
+                                : 'bg-white border-slate-200 text-slate-500 group-hover/step:border-slate-300 group-hover/step:text-slate-500'
                           }`}
                         >
                           {STAGE_ICONS[tab.id]}
                         </span>
                         <span className={`text-[9px] font-bold uppercase tracking-wide ${
-                          i <= currentStageIdx ? 'text-indigo-700' : 'text-slate-400'
+                          i <= currentStageIdx ? 'text-indigo-700' : 'text-slate-500'
                         }`}>
                           {tab.title}
                         </span>
@@ -1004,7 +1004,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                       </p>
                     )}
                     {briefing.length === 0 ? (
-                      <p className="text-xs text-slate-400 bg-slate-50 border border-dashed border-slate-300 rounded-lg p-3">
+                      <p className="text-xs text-slate-500 bg-slate-50 border border-dashed border-slate-300 rounded-lg p-3">
                         Nenhuma resposta do Typeform vinculada a este projeto ainda.
                         Clique em <strong>Importar briefing</strong> para buscar as respostas
                         do formulário e preencher os campos abaixo.
@@ -1150,7 +1150,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                       <span className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-700 uppercase tracking-wider">
                         <Bot className="w-3.5 h-3.5" /> Agente de IA de código
                       </span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[10px] ${devStatusMeta.className}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[11px] ${devStatusMeta.className}`}>
                         {devStatusMeta.label}
                       </span>
                     </div>
@@ -1188,7 +1188,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                     )}
 
                     <div className="mt-2">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                         Repositório único (todas as LPs)
                       </label>
                       <input value={githubRepo} onChange={(e) => setGithubRepo(e.target.value)} className={inputClass} placeholder="https://github.com/garchel/lead-radar" />
@@ -1196,13 +1196,13 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                           Pasta da LP (nicho/slug)
                         </label>
                         <input value={sitePath} onChange={(e) => setSitePath(e.target.value)} className={inputClass} placeholder="sites/dentista/clinica-sorriso" />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                           URL de preview (antes do deploy)
                         </label>
                         <input value={previewUrl} onChange={(e) => setPreviewUrl(e.target.value)} className={inputClass} placeholder="https://org.github.io/lead-radar/" />
@@ -1210,7 +1210,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                     </div>
 
                     <div className="mt-2">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                         Mensagem / notificação do agente
                       </label>
                       <textarea rows={2} value={devMessageField} onChange={(e) => setDevMessageField(e.target.value)} className={inputClass} placeholder="Última atualização do agente..." />

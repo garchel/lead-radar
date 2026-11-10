@@ -31,9 +31,9 @@ const SectorPicker: React.FC<{
         onClick={() => setOpen((v) => !v)}
         className="w-full pl-10 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium flex items-center justify-between gap-2 text-left"
       >
-        <Filter className="w-5 h-5 absolute left-3 top-2.5 text-slate-400 pointer-events-none" />
+        <Filter className="w-5 h-5 absolute left-3 top-2.5 text-slate-500 pointer-events-none" />
         <span className="truncate">{shown}</span>
-        <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <>
@@ -63,13 +63,13 @@ const SectorPicker: React.FC<{
                   disabled={togglingId === s.id}
                   onClick={() => onToggleActive(s)}
                   title={s.isActive ? `Desativar ${s.name} (vale para buscas e rotação)` : `Ativar ${s.name}`}
-                  className={`p-1 rounded-md transition-colors disabled:opacity-50 ${s.isActive ? 'text-emerald-600 hover:bg-emerald-50' : 'text-slate-400 hover:bg-slate-100'}`}
+                  className={`p-1 rounded-md transition-colors disabled:opacity-50 ${s.isActive ? 'text-emerald-600 hover:bg-emerald-50' : 'text-slate-500 hover:bg-slate-100'}`}
                 >
                   <Power className="w-3.5 h-3.5" />
                 </button>
               </div>
             ))}
-            <p className="px-3 py-1.5 text-[10px] text-slate-400 border-t border-slate-100">O liga/desliga vale para todas as buscas e a rotação.</p>
+            <p className="px-3 py-1.5 text-[11px] text-slate-500 border-t border-slate-100">O liga/desliga vale para todas as buscas e a rotação.</p>
           </div>
         </>
       )}
@@ -281,13 +281,13 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                       ? 'bg-indigo-600 text-white shadow-sm'
                       : serpConfigured
                         ? 'text-slate-600 hover:text-slate-900'
-                        : 'text-slate-400 cursor-not-allowed'
+                        : 'text-slate-500 cursor-not-allowed'
                   }`}
                   title={serpConfigured ? 'Google Maps real via SerpAPI (sem invenção)' : 'Configure SERPAPI_API_KEY no .env'}
                 >
                   <Database className="w-3.5 h-3.5" />
                   SerpAPI
-                  {!serpConfigured && <span className="text-[10px]">(sem chave)</span>}
+                  {!serpConfigured && <span className="text-[11px]">(sem chave)</span>}
                 </button>
                 <button
                   type="button"
@@ -298,13 +298,13 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                       ? 'bg-emerald-600 text-white shadow-sm'
                       : geminiConfigured
                         ? 'text-slate-600 hover:text-slate-900'
-                        : 'text-slate-400 cursor-not-allowed'
+                        : 'text-slate-500 cursor-not-allowed'
                   }`}
                   title={geminiConfigured ? 'Gemini com Google Search grounding' : 'Configure GEMINI_API_KEY'}
                 >
                   <Zap className="w-3.5 h-3.5" />
                   Gemini
-                  {!geminiConfigured && <span className="text-[10px]">(sem chave)</span>}
+                  {!geminiConfigured && <span className="text-[11px]">(sem chave)</span>}
                 </button>
               </div>
               <p className="text-[11px] text-slate-500">
@@ -364,7 +364,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                       <span className="inline-flex items-center gap-1"><Calendar className="w-3 h-3" /> Renova mês: {new Date(usage.nextMonthlyReset).toLocaleDateString('pt-BR')}</span>
                       {usage.nextHourlyReset && <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" /> Renova hora: {new Date(usage.nextHourlyReset).toLocaleTimeString('pt-BR')}</span>}
                     </div>
-                    <p className="text-[11px] text-slate-400">Apenas sucesso conta. Cache (1h) e erros não consomem. Free: 250/mês, 50/hora por chave — renova no dia da criação (ou data que você definir).</p>
+                    <p className="text-[11px] text-slate-500">Apenas sucesso conta. Cache (1h) e erros não consomem. Free: 250/mês, 50/hora por chave — renova no dia da criação (ou data que você definir).</p>
                   </>
                 )}
                 {usageError && <p className="text-[11px] text-red-600">{usageError}</p>}
@@ -399,10 +399,10 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Rotação automática
-                {isRotation && <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold">ATIVA</span>}
+                {isRotation && <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full bg-white/20 text-white text-[11px] font-bold">ATIVA</span>}
               </button>
             </div>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-500">
               {isRotation
                 ? 'A cidade digitada é ignorada — a busca usa as próximas cidades da fila IBGE.'
                 : 'Busca manual na cidade e UF que você escolher abaixo.'}
@@ -416,7 +416,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
             <div className="md:col-span-2 relative">
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Estado (UF)</label>
               <div className="relative">
-                <Globe className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <Globe className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
                 <select
                   id="search-state-select"
                   value={filters.state || 'SP'}
@@ -437,7 +437,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
             <div className="md:col-span-4 relative">
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Cidade / Bairro / Região</label>
               <div className="relative">
-                <MapPin className="w-5 h-5 absolute left-3 top-2.5 text-slate-400" />
+                <MapPin className="w-5 h-5 absolute left-3 top-2.5 text-slate-500" />
                 <input
                   id="search-location-input"
                   type="text"
@@ -448,7 +448,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                   placeholder="Digite cidade ou bairro (ex: Pinheiros)"
                   list="city-suggestions-list"
                   autoComplete="off"
-                  className="w-full pl-10 pr-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-400 font-medium bg-slate-50 border-slate-200 text-slate-900 focus:bg-white"
+                  className="w-full pl-10 pr-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-500 font-medium bg-slate-50 border-slate-200 text-slate-900 focus:bg-white"
                 />
 
                 {/* HTML Datalist Fallback */}
@@ -461,7 +461,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                 {/* Custom Autocomplete Dropdown List */}
                 {isCityFocused && filteredCitySuggestions.length > 0 && (
                   <div className="absolute z-30 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto py-1 text-xs">
-                    <div className="px-3 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">
+                    <div className="px-3 py-1 text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-100">
                       Sugestões para {filters.state === 'ALL' ? 'Brasil' : filters.state}:
                     </div>
                     {filteredCitySuggestions.map((city) => (
@@ -475,7 +475,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                         className="w-full text-left px-3 py-2 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 font-medium transition-colors flex items-center justify-between"
                       >
                         <span>{city}</span>
-                        <span className="text-[10px] text-slate-400 font-normal">{filters.state || 'UF'}</span>
+                        <span className="text-[11px] text-slate-500 font-normal">{filters.state || 'UF'}</span>
                       </button>
                     ))}
                   </div>
@@ -598,7 +598,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                 <button
                   type="button"
                   onClick={() => setFilters((prev) => ({ ...prev, autoSaveMode: 'off' }))}
-                  className={`px-2 py-0.5 rounded-md font-bold transition-all ${
+                  className={`px-2.5 py-1.5 min-h-8 rounded-md font-bold transition-all ${
                     autoSaveMode === 'off'
                       ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
                       : 'text-slate-500 hover:text-slate-800'
@@ -609,10 +609,10 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                 <button
                   type="button"
                   onClick={() => setFilters((prev) => ({ ...prev, autoSaveMode: 'gold' }))}
-                  className={`px-2 py-0.5 rounded-md font-bold transition-all flex items-center space-x-1 ${
+                  className={`px-2.5 py-1.5 min-h-8 rounded-md font-bold transition-all flex items-center space-x-1 ${
                     autoSaveMode === 'gold'
                       ? 'bg-amber-500 text-white shadow-xs'
-                      : 'text-amber-700 hover:bg-amber-100/50'
+                      : 'text-amber-800 hover:bg-amber-100'
                   }`}
                   title="Salva sozinho no CRM as empresas sem nenhum site"
                 >
@@ -622,7 +622,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                 <button
                   type="button"
                   onClick={() => setFilters((prev) => ({ ...prev, autoSaveMode: 'gold_silver' }))}
-                  className={`px-2 py-0.5 rounded-md font-bold transition-all flex items-center space-x-1 ${
+                  className={`px-2.5 py-1.5 min-h-8 rounded-md font-bold transition-all flex items-center space-x-1 ${
                     autoSaveMode === 'gold_silver'
                       ? 'bg-slate-700 text-white shadow-xs'
                       : 'text-slate-700 hover:bg-slate-200/60'

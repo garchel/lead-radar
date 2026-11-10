@@ -187,7 +187,7 @@ export const CategoriesDashboard: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading && (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-400">Carregando...</td></tr>
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-500">Carregando...</td></tr>
               )}
               {!loading && categories.map((cat) => {
                 const draft = drafts[cat.id];
@@ -233,7 +233,7 @@ export const CategoriesDashboard: React.FC = () => {
                           </button>
                         </div>
                       ) : (
-                        <span className="text-[11px] text-slate-400 flex items-center justify-center gap-1"><Power className="w-3 h-3" /> sem mudanças</span>
+                        <span className="text-[11px] text-slate-500 flex items-center justify-center gap-1"><Power className="w-3 h-3" /> sem mudanças</span>
                       )}
                     </td>
                   </tr>

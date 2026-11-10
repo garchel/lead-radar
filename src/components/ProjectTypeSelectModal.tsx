@@ -48,7 +48,7 @@ export const ProjectTypeSelectModal: React.FC<ProjectTypeSelectModalProps> = ({
               <p className="text-xs text-slate-600">Mover <strong>{leadName}</strong> para Em Desenvolvimento</p>
             </div>
           </div>
-          <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 p-1" title="Fechar">
+          <button onClick={onCancel} className="text-slate-500 hover:text-slate-600 p-1" title="Fechar">
             <X className="w-5 h-5" />
           </button>
         </div>
