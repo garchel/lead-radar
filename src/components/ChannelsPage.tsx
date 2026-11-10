@@ -22,6 +22,10 @@ interface SerpApiKeyRow {
   nextMonthlyReset: string;
   usedThisHour: number;
   remainingThisHour: number;
+  usedToday: number;
+  dailyBudget: number;
+  dailyRemaining: number;
+  daysLeftInCycle: number;
 }
 
 const fmtDate = (iso?: string | null) => {
@@ -135,8 +139,9 @@ export const ChannelsPage: React.FC<{ onOpenAutomation?: () => void }> = ({ onOp
                   {key.isActive && <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px]">ATIVA</span>}
                 </div>
                 <div className="text-slate-600 tabular-nums">
-                  {key.usedThisMonth} usadas · <strong>{key.remainingThisMonth}</strong> restantes · renova {fmtDate(key.nextMonthlyReset)}
-                  <span className="text-slate-400"> · {key.usedThisHour}/h</span>
+                  hoje <strong>{key.usedToday}/{key.dailyBudget}</strong>
+                  <span className="text-slate-400"> · </span>
+                  {key.usedThisMonth} usadas no ciclo · <strong>{key.remainingThisMonth}</strong> restantes · renova {fmtDate(key.nextMonthlyReset)}
                 </div>
               </div>
             ))}

@@ -45,6 +45,7 @@ interface AutopilotStatus {
     windowEndHour: number;
     windowOpen: boolean;
     nextRunAt: string | null;
+    keys?: number;
   };
   candidatesReady: number;
 }
@@ -254,7 +255,10 @@ export const AutomationSettingsPage: React.FC = () => {
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
                 <div className="text-[10px] font-bold uppercase text-slate-400">Cota do ciclo</div>
                 <div className="text-lg font-bold text-slate-900">{auto.budget.remainingThisMonth}</div>
-                <div className="text-[10px] text-slate-500">de {auto.budget.monthlyQuota} · {auto.budget.daysLeftInCycle} dia(s)</div>
+                <div className="text-[10px] text-slate-500">
+                  de {auto.budget.monthlyQuota}
+                  {auto.budget.keys && auto.budget.keys > 1 ? ` · ${auto.budget.keys} chaves` : ''} · {auto.budget.daysLeftInCycle} dia(s)
+                </div>
               </div>
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
                 <div className="text-[10px] font-bold uppercase text-slate-400">Intervalo</div>

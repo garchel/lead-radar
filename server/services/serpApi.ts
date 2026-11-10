@@ -95,7 +95,21 @@ export interface SerpApiUsage {
   monthKey: string; // YYYY-MM
   hourWindowStart: string | null; // ISO
   nextMonthlyReset: string; // ISO — 1º dia do próximo mês UTC
-  nextHourlyReset: string | null; // ISO
+  nextHourlyReset: string | null;
+  /** Quantas chaves cadastradas entram na conta (a cota soma). */
+  keys?: number;
+  /** Buscas feitas hoje, somando todas as chaves. */
+  usedToday?: number;
+  /** Orçamento de hoje, somando o direito diário de cada chave. */
+  dailyBudget?: number;
+}
+
+/** Dia local (YYYY-MM-DD) — usado pelo orçamento diário por chave. */
+function todayKey(date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function monthKeyFor(date = new Date()): string {
@@ -165,6 +179,14 @@ export interface SerpApiKeyInfo {
   nextHourlyReset: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Buscas que esta chave já fez hoje. */
+  usedToday: number;
+  /** Orçamento diário desta chave = restante no ciclo ÷ dias que faltam. */
+  dailyBudget: number;
+  /** Quanto ainda cabe hoje nesta chave. */
+  dailyRemaining: number;
+  /** Dias até a renovação do ciclo desta chave. */
+  daysLeftInCycle: number;
 }
 
 function maskKey(key: string): string {
@@ -200,6 +222,16 @@ function refreshKeyRow(db: any, row: any): any {
     const d = getRenewalDay(row);
     db.prepare("UPDATE serpapi_keys SET renewal_day = @d, updated_at = @now WHERE id = @id").run({
       d,
+      now: new Date().toISOString(),
+      id: row.id,
+    });
+    row = db.prepare("SELECT * FROM serpapi_keys WHERE id = @id").get({ id: row.id }) as any;
+  }
+  // virou o dia: zera o contador diário desta chave
+  const day = todayKey();
+  if (row.day_key !== day) {
+    db.prepare("UPDATE serpapi_keys SET day_key = @day, used_today = 0, updated_at = @now WHERE id = @id").run({
+      day,
       now: new Date().toISOString(),
       id: row.id,
     });
@@ -250,6 +282,14 @@ function ensureUsageTable() {
     if (!cols.some((c: any) => c.name === "renewal_day")) {
       db.exec("ALTER TABLE serpapi_keys ADD COLUMN renewal_day INTEGER");
     }
+    // Contador DIÁRIO por chave: cada chave tem sua cota mensal, então cada uma
+    // tem direito a (restante ÷ dias que faltam) chamadas por dia.
+    if (!cols.some((c: any) => c.name === "used_today")) {
+      db.exec("ALTER TABLE serpapi_keys ADD COLUMN used_today INTEGER NOT NULL DEFAULT 0");
+    }
+    if (!cols.some((c: any) => c.name === "day_key")) {
+      db.exec("ALTER TABLE serpapi_keys ADD COLUMN day_key TEXT");
+    }
   } catch {}
 }
 
@@ -285,7 +325,14 @@ function getActiveKeyRow(): any | null {
   return refreshKeyRow(db, active);
 }
 
-function toKeyInfo(row: any): SerpApiKeyInfo {
+function daysUntil(iso: string | null): number {
+  if (!iso) return 1;
+  const ms = new Date(iso).getTime() - Date.now();
+  if (!Number.isFinite(ms) || ms <= 0) return 1;
+  return Math.max(1, Math.ceil(ms / 86400000));
+}
+
+export function toKeyInfo(row: any): SerpApiKeyInfo {
   const cfg = getSerpApiConfig();
   const hourStart = row.hour_window_start ? new Date(row.hour_window_start) : null;
   const nextHourlyReset = hourStart ? new Date(hourStart.getTime() + 3600000).toISOString() : null;
@@ -305,6 +352,14 @@ function toKeyInfo(row: any): SerpApiKeyInfo {
     nextHourlyReset,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    usedToday: Number(row.used_today) || 0,
+    dailyBudget: Math.floor(Math.max(0, cfg.searchesPerMonth - row.used_this_month) / daysUntil(nextMonthlyResetForRow(row))),
+    dailyRemaining: Math.max(
+      0,
+      Math.floor(Math.max(0, cfg.searchesPerMonth - row.used_this_month) / daysUntil(nextMonthlyResetForRow(row))) -
+        (Number(row.used_today) || 0)
+    ),
+    daysLeftInCycle: daysUntil(nextMonthlyResetForRow(row)),
   };
 }
 
@@ -416,22 +471,36 @@ export function activateSerpApiKey(id: string): SerpApiKeyInfo {
 
 export function getSerpApiUsage(): SerpApiUsage {
   const cfg = getSerpApiConfig();
-  const active = getActiveKeyRow();
-  if (active) {
-    const info = toKeyInfo(active);
+  ensureUsageTable();
+  const db = getDb();
+  const keyRows = db.prepare("SELECT * FROM serpapi_keys ORDER BY created_at ASC").all() as any[];
+
+  // TODAS as chaves contam: cada uma tem a própria cota mensal, então o total
+  // disponível é a soma. É isso que o orçamento diário divide pelos dias.
+  if (keyRows.length > 0) {
+    const infos = keyRows.map((r: any) => toKeyInfo(refreshKeyRow(db, r)));
+    const quota = cfg.searchesPerMonth * infos.length;
+    const usedMonth = infos.reduce((sum, i) => sum + i.usedThisMonth, 0);
+    const usedToday = infos.reduce((sum, i) => sum + i.usedToday, 0);
+    const dailyBudget = infos.reduce((sum, i) => sum + i.dailyBudget, 0);
+    const nextReset = infos.map((i) => i.nextMonthlyReset).sort()[0] || nextMonthlyResetISO();
+    const usedHour = Math.max(...infos.map((i) => i.usedThisHour));
     return {
       configured: true,
-      searchesPerMonth: cfg.searchesPerMonth,
+      searchesPerMonth: quota,
       throughputPerHour: cfg.throughputPerHour,
-      usedThisMonth: info.usedThisMonth,
-      remainingThisMonth: info.remainingThisMonth,
-      usedThisHour: info.usedThisHour,
-      remainingThisHour: info.remainingThisHour,
-      monthKey: info.monthKey,
-      hourWindowStart: info.hourWindowStart,
-      nextMonthlyReset: info.nextMonthlyReset,
-      nextHourlyReset: info.nextHourlyReset,
-    };
+      usedThisMonth: usedMonth,
+      remainingThisMonth: Math.max(0, quota - usedMonth),
+      usedThisHour: usedHour,
+      remainingThisHour: Math.max(0, cfg.throughputPerHour - usedHour),
+      monthKey: infos[0].monthKey,
+      hourWindowStart: infos.find((i) => i.hourWindowStart)?.hourWindowStart ?? null,
+      nextMonthlyReset: nextReset,
+      nextHourlyReset: infos.find((i) => i.nextHourlyReset)?.nextHourlyReset ?? null,
+      keys: infos.length,
+      usedToday,
+      dailyBudget,
+    } as SerpApiUsage;
   }
   const row = readUsageRow();
   const hourStart = row.hour_window_start ? new Date(row.hour_window_start) : null;
@@ -448,6 +517,9 @@ export function getSerpApiUsage(): SerpApiUsage {
     hourWindowStart: row.hour_window_start,
     nextMonthlyReset: nextMonthlyResetISO(),
     nextHourlyReset,
+    keys: 1,
+    usedToday: 0,
+    dailyBudget: 0,
   };
 }
 
@@ -470,8 +542,10 @@ function canConsume(): { allowed: boolean; reason?: string } {
   return { allowed: true };
 }
 
-function recordSuccess(): void {
-  const active = getActiveKeyRow();
+function recordSuccess(keyId?: string | null): void {
+  const db0 = getDb();
+  const explicit = keyId ? (db0.prepare("SELECT * FROM serpapi_keys WHERE id = ?").get(keyId) as any) : null;
+  const active = explicit || getActiveKeyRow();
   if (active) {
     const db = getDb();
     const now = new Date().toISOString();
@@ -479,8 +553,8 @@ function recordSuccess(): void {
     const hourStart = row.hour_window_start || now;
     const nextHour = row.hour_window_start ? row.used_this_hour + 1 : 1;
     db.prepare(
-      "UPDATE serpapi_keys SET used_this_month = used_this_month + 1, hour_window_start = @hourStart, used_this_hour = @nextHour, updated_at = @now WHERE id = @id"
-    ).run({ hourStart, nextHour, now, id: row.id });
+      "UPDATE serpapi_keys SET used_this_month = used_this_month + 1, used_today = COALESCE(used_today, 0) + 1, day_key = @day, hour_window_start = @hourStart, used_this_hour = @nextHour, updated_at = @now WHERE id = @id"
+    ).run({ day: todayKey(), hourStart, nextHour, now, id: row.id });
     return;
   }
   ensureUsageTable();
@@ -565,6 +639,47 @@ function mapSerpPlaceToBusiness(place: any, fallbackCategory: string, fallbackCi
   };
 }
 
+/**
+ * Escolhe qual chave faz a próxima chamada.
+ *
+ * Antes tudo caía na chave "ativa" até ela estourar o mês e só então rotacionava —
+ * com 2 chaves, uma ficava parada o mês inteiro. Agora a escolha é por DIREITO
+ * DIÁRIO: prefere quem ainda tem orçamento hoje e, entre essas, a que usou menos
+ * (proporcional ao próprio orçamento). Assim cada chave contribui todos os dias.
+ */
+export function selectKeyForSearch(opts?: { excludeId?: string | null }): any | null {
+  ensureUsageTable();
+  const db = getDb();
+  const cfg = getSerpApiConfig();
+  const rows = (db.prepare("SELECT * FROM serpapi_keys ORDER BY created_at ASC").all() as any[])
+    .filter((row: any) => !opts?.excludeId || row.id !== opts.excludeId)
+    .map((row: any) => refreshKeyRow(db, row));
+
+  const candidates = rows.filter((row: any) => {
+    const remainingMonth = Math.max(0, cfg.searchesPerMonth - row.used_this_month);
+    const hourOk =
+      !row.hour_window_start ||
+      Date.now() - new Date(row.hour_window_start).getTime() >= 3600000 ||
+      row.used_this_hour < cfg.throughputPerHour;
+    return remainingMonth > 0 && hourOk;
+  });
+  if (candidates.length === 0) return null;
+
+  const scored = candidates.map((row: any) => {
+    const info = toKeyInfo(row);
+    const ratio = info.dailyBudget > 0 ? info.usedToday / info.dailyBudget : info.usedToday;
+    return { row, info, ratio };
+  });
+  const withDaily = scored.filter((item) => item.info.dailyRemaining > 0);
+  const pool = withDaily.length > 0 ? withDaily : scored;
+  pool.sort((a, b) => {
+    if (a.ratio !== b.ratio) return a.ratio - b.ratio;
+    // empate: a usada há mais tempo
+    return new Date(a.row.updated_at || 0).getTime() - new Date(b.row.updated_at || 0).getTime();
+  });
+  return pool[0].row;
+}
+
 function getEffectiveApiKey(): string | null {
   const active = getActiveKeyRow();
   if (active) return active.api_key as string;
@@ -634,23 +749,12 @@ export async function searchSerpApiMaps(input: {
   lastWasCached = false;
 
   const cfg = getSerpApiConfig();
-  let effectiveKey = getEffectiveApiKey();
-  if (!effectiveKey) throw new SerpApiQuotaError("Nenhuma chave SerpAPI cadastrada. Adicione uma chave em Gerenciar chaves ou defina SERPAPI_API_KEY no .env.");
-
-  let guard = canConsume();
-  if (!guard.allowed) {
-    // tenta rotação automática para outra chave com cota
-    const active = getActiveKeyRow();
-    const next = findAvailableKeyExcluding(active?.id || null);
-    if (next) {
-      activateSerpApiKey(next.id);
-      effectiveKey = getEffectiveApiKey();
-      guard = canConsume();
-      if (!guard.allowed) throw new SerpApiQuotaError(guard.reason!);
-    } else {
-      throw new SerpApiQuotaError(guard.reason!);
-    }
+  const pickedKey = selectKeyForSearch();
+  const effectiveKey = pickedKey ? (pickedKey.api_key as string) : getEffectiveApiKey();
+  if (!effectiveKey) {
+    throw new SerpApiQuotaError("Nenhuma chave SerpAPI com cota disponível. Adicione uma chave em Canais & APIs ou aguarde a renovação do ciclo.");
   }
+  const pickedKeyId: string | null = pickedKey ? (pickedKey.id as string) : null;
 
   const isTodas = input.category === "Todas as Categorias";
   const q = isTodas ? `empresas em ${input.location}` : `${input.category} em ${input.location}`;
@@ -690,10 +794,8 @@ export async function searchSerpApiMaps(input: {
     const msg: string = data?.error || `HTTP ${res.status}`;
     if (res.status === 429 || /quota|rate limit|throughput/i.test(msg)) {
       if (!_retried) {
-        const active = getActiveKeyRow();
-        const next = findAvailableKeyExcluding(active?.id || null);
+        const next = selectKeyForSearch({ excludeId: pickedKeyId });
         if (next) {
-          activateSerpApiKey(next.id);
           return await searchSerpApiMaps(input, true);
         }
       }
@@ -704,10 +806,8 @@ export async function searchSerpApiMaps(input: {
   if (data?.error) {
     if (/quota|rate limit|throughput|exceeded/i.test(data.error)) {
       if (!_retried) {
-        const active = getActiveKeyRow();
-        const next = findAvailableKeyExcluding(active?.id || null);
+        const next = selectKeyForSearch({ excludeId: pickedKeyId });
         if (next) {
-          activateSerpApiKey(next.id);
           return await searchSerpApiMaps(input, true);
         }
       }
@@ -718,7 +818,7 @@ export async function searchSerpApiMaps(input: {
 
   const places: any[] = data.local_results || data.place_results || [];
   if (!Array.isArray(places) || places.length === 0) {
-    recordSuccess();
+    recordSuccess(pickedKeyId);
     setCachedSearch(
       cacheHash,
       { location: input.location, state: input.state, category: input.category, filterNoWebsiteOnly: Boolean(input.filterNoWebsiteOnly), query: input.query, provider: "serpapi" },
@@ -733,7 +833,7 @@ export async function searchSerpApiMaps(input: {
     .map((p, i) => mapSerpPlaceToBusiness(p, input.category, input.location, input.state, i))
     .filter(Boolean);
 
-  recordSuccess();
+  recordSuccess(pickedKeyId);
   setCachedSearch(
     cacheHash,
     { location: input.location, state: input.state, category: input.category, filterNoWebsiteOnly: Boolean(input.filterNoWebsiteOnly), query: input.query, provider: "serpapi" },
@@ -772,23 +872,10 @@ export interface SerpApiWebResult {
  */
 async function serpApiRequest(params: URLSearchParams, retried = false): Promise<any> {
   const cfg = getSerpApiConfig();
-  let effectiveKey = getEffectiveApiKey();
-  if (!effectiveKey) {
-    throw new SerpApiQuotaError(
-      "Nenhuma chave SerpAPI cadastrada. Adicione uma chave em Gerenciar chaves ou defina SERPAPI_API_KEY no .env."
-    );
-  }
-
-  let guard = canConsume();
-  if (!guard.allowed) {
-    const active = getActiveKeyRow();
-    const next = findAvailableKeyExcluding(active?.id || null);
-    if (!next) throw new SerpApiQuotaError(guard.reason!);
-    activateSerpApiKey(next.id);
-    effectiveKey = getEffectiveApiKey();
-    guard = canConsume();
-    if (!guard.allowed) throw new SerpApiQuotaError(guard.reason!);
-  }
+  const picked = selectKeyForSearch();
+  const effectiveKey = picked ? (picked.api_key as string) : getEffectiveApiKey();
+  const pickedId: string | null = picked ? (picked.id as string) : null;
+  if (!effectiveKey) throw new SerpApiQuotaError("Nenhuma chave SerpAPI com cota disponível.");
 
   const requestParams = new URLSearchParams(params);
   requestParams.set("api_key", effectiveKey!);
@@ -807,10 +894,8 @@ async function serpApiRequest(params: URLSearchParams, retried = false): Promise
   if (!res.ok || data?.error) {
     if (res.status === 429 || /quota|rate limit|throughput|exceeded/i.test(message)) {
       if (!retried) {
-        const active = getActiveKeyRow();
-        const next = findAvailableKeyExcluding(active?.id || null);
+        const next = selectKeyForSearch({ excludeId: pickedId });
         if (next) {
-          activateSerpApiKey(next.id);
           return serpApiRequest(params, true);
         }
       }
@@ -822,7 +907,7 @@ async function serpApiRequest(params: URLSearchParams, retried = false): Promise
     throw new Error(`SerpAPI erro (${res.status}): ${message}`);
   }
 
-  recordSuccess();
+  recordSuccess(pickedId);
   return data;
 }
 

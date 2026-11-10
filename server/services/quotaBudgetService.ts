@@ -48,6 +48,8 @@ export interface QuotaBudgetPlan {
   hourlyCap: number;
   nextResetAt: string | null;
   nextRunAt: string | null;
+  /** Quantas chaves SerpAPI entram na conta (a cota soma). */
+  keys: number;
 }
 
 function localDayKey(date = new Date()): string {
@@ -146,13 +148,18 @@ export function getBudgetPlan(now = new Date()): QuotaBudgetPlan {
   const { startHour, endHour } = getBudgetWindow();
   const daysLeft = daysLeftInCycle(usage.nextMonthlyReset, now);
   const remaining = Math.max(0, usage.remainingThisMonth);
-  const dailyBudget = computeDailyBudget(remaining, daysLeft);
+  // Com mais de uma chave, cada uma tem o próprio direito diário
+  // (restante da chave ÷ dias dela) e o orçamento do dia é a soma.
+  const perKeyDaily = Number(usage.dailyBudget) || 0;
+  const dailyBudget = perKeyDaily > 0 ? perKeyDaily : computeDailyBudget(remaining, daysLeft);
+  // O contador que vale é o das CHAVES (inclui busca manual), não só o do autopilot.
+  const usedToday = Math.max(Number(usage.usedToday) || 0, state.usedToday);
   const intervalMinutes = computeIntervalMinutes(
     dailyBudget,
     endHour - startHour,
     usage.throughputPerHour
   );
-  const remainingToday = Math.max(0, dailyBudget - state.usedToday);
+  const remainingToday = Math.max(0, dailyBudget - usedToday);
   const windowOpen = isWindowOpen(now);
 
   let nextRunAt: string | null = null;
@@ -176,9 +183,10 @@ export function getBudgetPlan(now = new Date()): QuotaBudgetPlan {
     remainingThisMonth: remaining,
     daysLeftInCycle: daysLeft,
     dailyBudget,
-    usedToday: state.usedToday,
+    usedToday,
     remainingToday,
     attemptsToday: state.attemptsToday,
+    keys: Number(usage.keys) || 1,
     intervalMinutes,
     windowStartHour: startHour,
     windowEndHour: endHour,

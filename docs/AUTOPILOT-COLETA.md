@@ -12,9 +12,21 @@ sobrou pelos dias que faltam e espaça as buscas dentro do dia.
 ## A conta
 
 ```
-buscas por dia   = cota restante ÷ dias restantes do ciclo   (arredonda para baixo)
-intervalo (min)  = horas da janela × 60 ÷ buscas por dia    (piso de 6 min)
+por chave:  buscas/dia = cota restante da chave ÷ dias até a renovação dela
+total:      buscas/dia = soma do direito diário de TODAS as chaves
+intervalo:  horas da janela × 60 ÷ total por dia   (piso de 6 min)
 ```
+
+**Todas as chaves cadastradas entram na conta.** Cada chave tem a própria cota
+mensal, então a cota total é a soma (2 chaves free = 500/mês). A escolha de qual
+chave faz cada chamada é por **direito diário**: prefere quem ainda não gastou o
+orçamento do dia e, entre essas, a que usou menos (proporcional ao próprio
+orçamento). Antes a chave "ativa" era usada até estourar o mês e só então
+rotacionava — com 2 chaves, uma ficava parada o mês inteiro.
+
+Contador por chave: `serpapi_keys.used_today` + `day_key` (zera na virada do dia).
+O contador do dia que vale para o gate é o das chaves (inclui busca manual), não
+só o do autopilot.
 
 Exemplo real (cota 250, 207 restantes, 12 dias para renovar, janela 8h–22h):
 
