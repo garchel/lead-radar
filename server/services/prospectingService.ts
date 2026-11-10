@@ -181,17 +181,40 @@ Retorne estritamente JSON com as chaves:
 `;
 
   const generate = async (extraHint = ""): Promise<any> => {
-    const response = await ai.models.generateContent({
-      model: getGeminiModel(),
-      contents: `${promptText}${extraHint}`,
-      config: {
-        responseMimeType: "application/json",
-        abortSignal: AbortSignal.timeout(Number(process.env.GEMINI_TIMEOUT_MS || 60000)),
-      },
-    });
-    const text = response.text?.trim();
-    if (!text) throw new Error("A IA não retornou um diagnóstico válido.");
-    return JSON.parse(text);
+    // Modelo principal + reserva: "gemini-flash-latest" devolve 503 com frequência
+    // (UNAVAILABLE / high demand) e sem reserva a análise morre inteira.
+    const primary = getGeminiModel();
+    const fallbacks = (process.env.GEMINI_PROFILE_FALLBACK_MODEL || process.env.GEMINI_VISION_FALLBACK_MODEL || "gemini-3.1-flash-lite")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const models = Array.from(new Set([primary, ...fallbacks]));
+
+    let lastError: any = null;
+    for (const model of models) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: `${promptText}${extraHint}`,
+          config: {
+            responseMimeType: "application/json",
+            abortSignal: AbortSignal.timeout(Number(process.env.GEMINI_TIMEOUT_MS || 60000)),
+          },
+        });
+        const text = response.text?.trim();
+        if (!text) throw new Error("A IA não retornou um diagnóstico válido.");
+        return JSON.parse(text);
+      } catch (err: any) {
+        lastError = err;
+        const message = String(err?.message || err || "");
+        if (/aborted|timeout|timed out|UNAVAILABLE|high demand|overloaded|503|500|502|429|quota/i.test(message)) {
+          console.warn(`[analise] Gemini ${model} indisponível, tentando próximo modelo...`);
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error("Falha ao analisar o lead com a IA.");
   };
 
   const qaContext = {

@@ -215,11 +215,23 @@ export default function App() {
         // Notificação de resposta de lead via WhatsApp (toast auto-dismiss 8s)
         if (d?.event === 'whatsapp_inbound') {
           const w = d.payload || {};
+          const viaIA = w.intentSource === 'ia';
           const msg = w.optedOut
             ? `🚫 ${w.name || 'Lead'} pediu para não receber mais mensagens — recontato bloqueado.`
-            : `💬 ${w.name || 'Lead'} respondeu no WhatsApp${w.movedTo ? ` → ${w.movedTo}` : ''}: "${String(w.text || '').slice(0, 80)}"`;
+            : `${viaIA ? '🤖' : '💬'} ${w.name || 'Lead'} respondeu no WhatsApp${w.movedTo ? ` → ${w.movedTo}` : ''}: "${String(w.text || '').slice(0, 80)}"${viaIA ? ' (lido pela IA)' : ''}`;
           setJobToast({ ok: !w.optedOut, message: msg });
           window.setTimeout(() => setJobToast(null), 8000);
+        }
+        // Ficha do cliente pronta (gerada quando o lead demonstra interesse) — 10s
+        if (d?.event === 'client_profile_ready') {
+          const f = d.payload || {};
+          const conf = f.confidence !== undefined ? Math.round(Number(f.confidence) * 100) : null;
+          const gaps = Number(f.gaps || 0);
+          setJobToast({
+            ok: true,
+            message: `📋 Ficha de ${f.name || 'cliente'} pronta${conf !== null ? ` — confiança ${conf}%` : ''}${gaps ? ` · ${gaps} lacuna(s) a confirmar` : ''}${f.markdown ? ` · ${String(f.markdown).split('/').pop()}` : ''}`,
+          });
+          window.setTimeout(() => setJobToast(null), 10000);
         }
       } catch (err: any) {
         setErrorMessage(`Falha ao interpretar uma atualização do servidor: ${err?.message || 'evento inválido'}`);
