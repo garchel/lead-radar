@@ -598,3 +598,74 @@ Resultado esperado:
 lint sem erros
 build concluído com sucesso
 ```
+
+## 12. Lead de simulação (o próprio dono)
+
+O lead **`pv-landing-1`** ("Paulo Victor | Landing Pages", +55 61 99525-4732) é o
+dono do projeto e está marcado em `notes` como `[SIMULAÇÃO]`: serve para testar a
+**experiência do cliente** — receber a abordagem, seguir os follow-ups e responder
+como se fosse um prospect real.
+
+Ele fica com `pipeline_status = prospect` e `contact_attempts = 0` justamente para
+se comportar como um lead virgem (se estivesse em `em_desenvolvimento`, a cadência
+o ignoraria).
+
+### Disparar a abordagem inicial (D0)
+
+Dentro da janela de prospecção (seg–sex, 8–18h) e respeitando os tetos diários:
+
+```powershell
+Invoke-RestMethod -Method Post http://localhost:3000/api/leads/pv-landing-1/contact `
+  -ContentType "application/json; charset=utf-8" `
+  -Body (@{ channel = "whatsapp"; message = "Olá, Paulo! ..." } | ConvertTo-Json)
+```
+
+O envio passa pela humanização (delay de digitação + pausa + teto), então ele leva
+alguns segundos e consome 1 do teto de **contatos novos** do dia.
+
+### Simular D+3 / D+7 sem esperar 3 dias
+
+A cadência só toca quem está com `last_contact_at` há N dias. Para encurtar:
+
+```sql
+-- "voltar no tempo" o último contato em 3 dias
+UPDATE leads SET last_contact_at = datetime(last_contact_at, '-3 days') WHERE id = 'pv-landing-1';
+```
+
+Depois rode a cadência em modo real (painel Automação → cadência, ou o job
+`outbound_cadence` com `dryRun: false`). O toque seguinte usa o ângulo "prova";
+com `-7 days`, o ângulo "prazo".
+
+### Responder como cliente
+
+Basta mandar mensagem do seu celular para o número comercial. O webhook
+classifica a intenção e move o pipeline:
+
+| Resposta | Efeito |
+|---|---|
+| "tenho interesse", "como funciona" | → Em Negociação + follow-up pendente |
+| "quanto custa", "qual o valor" | → Em Negociação + follow-up pendente |
+| "não tenho interesse", "pare de mandar" | → Perdido **e marca opt-out LGPD** (`do_not_contact = 1`) |
+
+⚠️ O opt-out é permanente: depois de testar uma recusa, limpe antes de repetir:
+
+```sql
+UPDATE leads SET do_not_contact = 0, pipeline_status = 'prospect' WHERE id = 'pv-landing-1';
+```
+
+### Resetar entre rodadas
+
+Zera histórico de contato e tentativas para o lead voltar a ser um prospect virgem
+(a ordem importa: `interactions` referencia `communications`):
+
+```sql
+DELETE FROM interactions   WHERE lead_id = 'pv-landing-1';
+DELETE FROM communications WHERE lead_id = 'pv-landing-1';
+UPDATE leads SET pipeline_status = 'prospect', contact_attempts = 0,
+  last_contact_at = NULL, last_response_at = NULL, next_contact_at = NULL,
+  last_contact_outcome = NULL, do_not_contact = 0, updated_at = datetime('now')
+WHERE id = 'pv-landing-1';
+```
+
+Lembre que cada rodada consome teto diário (60 mensagens / 30 contatos novos): para
+repetir muitos cenários no mesmo dia, use mensagens curtas e conte as rodadas.
