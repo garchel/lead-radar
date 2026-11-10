@@ -414,10 +414,7 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
           onDragEnd={handleDragEnd}
         >
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs text-slate-500">
-                Cada etapa é um bloco com os leads em grid — clique no cabeçalho para recolher ou expandir. O estado fica salvo.
-              </p>
+            <div className="flex items-center justify-end gap-2">
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"

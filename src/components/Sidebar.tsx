@@ -1,11 +1,24 @@
-import React from 'react';
-import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings, Bot, TrendingUp, Users, KeyRound, ClipboardList } from 'lucide-react';
+import React, { useState } from 'react';
+import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings, Bot, TrendingUp, Users, KeyRound, ClipboardList, ChevronDown } from 'lucide-react';
 
 /** Abas do app — a navegação segue a etapa do funil, não a idade da feature. */
 export type AppTab =
   | 'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents'
   | 'companies' | 'cities' | 'categories' | 'automation' | 'database'
   | 'followups' | 'channels';
+
+/** Grupos recolhidos ficam salvos no navegador. */
+const GROUPS_STORAGE_KEY = 'leadradar.sidebar.groups.collapsed.v1';
+
+function readCollapsedGroups(): string[] {
+  try {
+    const raw = localStorage.getItem(GROUPS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 interface SidebarProps {
   activeTab: AppTab;
@@ -35,15 +48,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
         : 'text-slate-400 hover:text-white hover:bg-slate-800'
     }`;
 
-  const sectionTitle = (Icon: React.ReactNode, label: string) => (
-    <div className="px-2 pb-2 text-[10px] uppercase tracking-widest font-bold text-slate-500 flex items-center space-x-1.5">
-      {Icon}
-      <span>{label}</span>
-    </div>
-  );
+  const [collapsedGroups, setCollapsedGroups] = useState<string[]>(() => readCollapsedGroups());
+
+  const toggleGroup = (id: string) => {
+    const next = collapsedGroups.includes(id)
+      ? collapsedGroups.filter((item) => item !== id)
+      : [...collapsedGroups, id];
+    setCollapsedGroups(next);
+    try {
+      localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* modo privado: só não persiste */
+    }
+  };
+
+  /** Grupo da navegação como acordeão — a lateral não tem barra de rolagem. */
+  const group = (id: string, icon: React.ReactNode, label: string, children: React.ReactNode) => {
+    const open = !collapsedGroups.includes(id);
+    return (
+      <div className="px-3 pt-3">
+        <button
+          type="button"
+          onClick={() => toggleGroup(id)}
+          aria-expanded={open}
+          className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] uppercase tracking-widest font-bold text-slate-500 hover:text-slate-300 hover:bg-slate-800/60 transition-colors"
+        >
+          {icon}
+          <span className="flex-1 text-left">{label}</span>
+          <ChevronDown className={`w-3 h-3 transition-transform ${open ? '' : '-rotate-90'}`} />
+        </button>
+        {open && <nav className="space-y-1 mt-1">{children}</nav>}
+      </div>
+    );
+  };
 
   return (
-    <aside className="w-64 shrink-0 h-screen sticky top-0 bg-slate-900 border-r border-slate-800 text-white shadow-md flex flex-col overflow-y-auto">
+    <aside className="w-64 shrink-0 h-screen sticky top-0 bg-slate-900 border-r border-slate-800 text-white shadow-md flex flex-col overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       {/* Logo & Brand */}
       <div className="px-4 py-5 border-b border-slate-800 flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('search')}>
         <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-white shadow-md shadow-indigo-600/20">
@@ -63,10 +103,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
+      {/* Grupos (roláveis, sem barra visível) */}
+      <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+
       {/* 1 — Capturar: busca → fila → categorias → empresas */}
-      <div className="px-3 pt-5">
-        {sectionTitle(<Radar className="w-3.5 h-3.5" />, 'Capturar')}
-        <nav className="space-y-1">
+      {group(
+        'capturar',
+        <Radar className="w-3.5 h-3.5" />,
+        'Capturar',
+        <>
           <button id="nav-search-btn" onClick={() => setActiveTab('search')} className={navBtn('search', activeTab === 'search')}>
             <Search className="w-4 h-4 shrink-0" />
             <span>Busca de Região</span>
@@ -82,13 +127,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="flex-1 text-left">Categorias</span>
           </button>
 
-        </nav>
-      </div>
+        </>
+      )}
 
       {/* 2 — Dados: o que já existe no banco */}
-      <div className="px-3 pt-6">
-        {sectionTitle(<Database className="w-3.5 h-3.5" />, 'Dados')}
-        <nav className="space-y-1">
+      {group(
+        'dados',
+        <Database className="w-3.5 h-3.5" />,
+        'Dados',
+        <>
           <button id="nav-database-btn" onClick={() => setActiveTab('database')} className={navBtn('database', activeTab === 'database')}>
             <Database className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Banco de Dados</span>
@@ -98,13 +145,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Building2 className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Resultado da Busca</span>
           </button>
-        </nav>
-      </div>
+        </>
+      )}
 
       {/* 2 — Converter: pipeline → pitch → projetos → agentes */}
-      <div className="px-3 pt-6">
-        {sectionTitle(<FolderKanban className="w-3.5 h-3.5" />, 'Converter')}
-        <nav className="space-y-1">
+      {group(
+        'converter',
+        <FolderKanban className="w-3.5 h-3.5" />,
+        'Converter',
+        <>
           <button id="nav-crm-btn" onClick={() => setActiveTab('crm')} className={`relative ${navBtn('crm', activeTab === 'crm')}`}>
             <FolderKanban className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Dashboard de Leads</span>
@@ -119,13 +168,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Users className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Follow-ups</span>
           </button>
-        </nav>
-      </div>
+        </>
+      )}
 
       {/* 4 — Entregar: projetos → agentes */}
-      <div className="px-3 pt-6">
-        {sectionTitle(<Rocket className="w-3.5 h-3.5" />, 'Entregar')}
-        <nav className="space-y-1">
+      {group(
+        'entregar',
+        <Rocket className="w-3.5 h-3.5" />,
+        'Entregar',
+        <>
           <button id="nav-projects-btn" onClick={() => setActiveTab('projects')} className={`relative ${navBtn('projects', activeTab === 'projects')}`}>
             <Rocket className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Projetos</span>
@@ -140,13 +191,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Bot className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Agentes</span>
           </button>
-        </nav>
-      </div>
+        </>
+      )}
 
       {/* 5 — Inteligência: método e métricas */}
-      <div className="px-3 pt-6">
-        {sectionTitle(<TrendingUp className="w-3.5 h-3.5" />, 'Inteligência')}
-        <nav className="space-y-1">
+      {group(
+        'inteligencia',
+        <TrendingUp className="w-3.5 h-3.5" />,
+        'Inteligência',
+        <>
           <button id="nav-guide-btn" onClick={() => setActiveTab('guide')} className={navBtn('guide', activeTab === 'guide')}>
             <BookOpen className="w-4 h-4 shrink-0" />
             <span>Estratégia &amp; Pitch</span>
@@ -156,13 +209,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <TrendingUp className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Crescimento</span>
           </button>
-        </nav>
-      </div>
+        </>
+      )}
 
       {/* 6 — Operação: o que roda sozinho e o que conecta */}
-      <div className="px-3 pt-6">
-        {sectionTitle(<Activity className="w-3.5 h-3.5" />, 'Operação')}
-        <div className="space-y-1">
+      {group(
+        'operacao',
+        <Activity className="w-3.5 h-3.5" />,
+        'Operação',
+        <>
           <button id="monitoring-dashboard-btn" onClick={() => setActiveTab('monitoring')} className={navBtn('monitoring', activeTab === 'monitoring')}>
             <ClipboardList className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Fila &amp; Agendamentos</span>
@@ -177,22 +232,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <KeyRound className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Canais &amp; APIs</span>
           </button>
-        </div>
+        </>
+      )}
+
       </div>
 
-      {/* Ações rápidas */}
-      <div className="px-3 pt-6 pb-6">
-        <div className="space-y-2">
+      {/* Ações rápidas — sempre visíveis no rodapé */}
+      <div className="shrink-0 border-t border-slate-800 bg-slate-900 px-3 py-3 space-y-2">
+        <button
+          id="mcp-server-btn"
+          onClick={onOpenMcpModal}
+          className="w-full flex items-center space-x-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 text-sm font-semibold px-3 py-2 rounded-lg transition-all"
+          title="Conectar Agentes de IA via protocolo MCP (Model Context Protocol)"
+        >
+          <Cpu className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span className="flex-1 text-left font-mono text-xs">MCP Server</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+        </button>
 
-          <button
-            id="add-manual-lead-btn"
-            onClick={onOpenAddModal}
-            className="w-full flex items-center space-x-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-3 py-2.5 rounded-lg transition-all shadow-sm shadow-indigo-600/30 active:scale-95"
-          >
-            <PlusCircle className="w-4 h-4 shrink-0" />
-            <span className="flex-1 text-left">Adicionar Lead</span>
-          </button>
-        </div>
+        <button
+          id="add-manual-lead-btn"
+          onClick={onOpenAddModal}
+          className="w-full flex items-center space-x-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-3 py-2.5 rounded-lg transition-all shadow-sm shadow-indigo-600/30 active:scale-95"
+        >
+          <PlusCircle className="w-4 h-4 shrink-0" />
+          <span className="flex-1 text-left">Adicionar Lead</span>
+        </button>
       </div>
     </aside>
   );

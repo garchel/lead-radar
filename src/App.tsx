@@ -673,18 +673,6 @@ export default function App() {
 
         {activeTab === 'crm' && (
           <>
-            <div className="px-4 sm:px-6 lg:px-8 pt-4">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span>Funil de vendas — o que fazer com cada lead.</span>
-                <button type="button" onClick={() => setActiveTab('database')} className="font-semibold text-indigo-600 hover:text-indigo-800">
-                  ver inventário no Banco de Dados →
-                </button>
-                <span className="text-slate-300">|</span>
-                <button type="button" onClick={() => setActiveTab('followups')} className="font-semibold text-indigo-600 hover:text-indigo-800">
-                  follow-ups e recontatos →
-                </button>
-              </div>
-            </div>
             <CrmPipeline
               savedLeads={savedLeads}
               onUpdateStatus={handleUpdateStatus}
