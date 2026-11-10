@@ -1,7 +1,7 @@
 import { getDb, importFromJson } from './schema';
 import { eventHub } from '../events/eventHub';
 import { StoredLead, Schedule, LeadInteraction, InteractionOutcome, Project, PipelineStatus, City, BusinessCategory, SiteAudit, LeadPriority, WebsiteStatus, BrandSnapshot, ClientProfile } from './types';
-import { getLeadIdentityCandidates, normalizeText, normalizePhone } from '../services/leadIdentity';
+import { getLeadIdentityCandidates, normalizeText, normalizePhone, phoneVariants } from '../services/leadIdentity';
 import type { Job } from '../jobs/queueManager';
 import path from 'path';
 import fs from 'fs';
@@ -152,14 +152,20 @@ export function getLeadById(id: string): StoredLead | undefined {
   return row ? rowToLead(row) : undefined;
 }
 
-/** Busca o lead pelo telefone normalizado (índice normalized_phone). */
+/**
+ * Busca o lead pelo telefone, aceitando as variantes brasileiras com e sem o
+ * 9º dígito (o WhatsApp às vezes informa o formato antigo).
+ */
 export function getLeadByNormalizedPhone(phone: string): StoredLead | undefined {
-  const normalized = normalizePhone(phone);
-  if (!normalized) return undefined;
-  const row = getDb().prepare('SELECT * FROM leads WHERE normalized_phone = ? LIMIT 1').get(normalized) as any;
+  const variants = phoneVariants(phone);
+  if (variants.length === 0) return undefined;
+  const placeholders = variants.map(() => "?").join(",");
+  const row = getDb()
+    .prepare(`SELECT * FROM leads WHERE normalized_phone IN (${placeholders}) LIMIT 1`)
+    .get(...variants) as any;
   if (row) return rowToLead(row);
   // fallback para leads antigos sem normalized_phone preenchido
-  return getLeads().find((lead) => lead.phone && normalizePhone(lead.phone) === normalized);
+  return getLeads().find((lead) => lead.phone && variants.includes(normalizePhone(lead.phone)));
 }
 
 function mergeDiscoveredLead(existing: StoredLead, incoming: StoredLead): StoredLead {
@@ -1106,10 +1112,14 @@ export function updateLeadResponse(leadId: string): void {
 
 /** Atualiza o estágio do pipeline buscando o lead por telefone normalizado (usa índice normalized_phone). */
 export function updateLeadStatusByPhone(normalizedPhone: string, status: PipelineStatus): boolean {
-  const row = getDb().prepare("SELECT id FROM leads WHERE normalized_phone = ? LIMIT 1").get(normalizedPhone) as any;
+  const variants = phoneVariants(normalizedPhone);
+  const marks = variants.map(() => "?").join(",");
+  const row = variants.length
+    ? (getDb().prepare(`SELECT id FROM leads WHERE normalized_phone IN (${marks}) LIMIT 1`).get(...variants) as any)
+    : null;
   if (!row) {
     // fallback legacy sem normalized_phone preenchido
-    const lead = getLeads().find((l) => l.phone && normalizePhone(l.phone) === normalizedPhone);
+    const lead = getLeads().find((l) => l.phone && variants.includes(normalizePhone(l.phone)));
     if (!lead) return false;
     const r = getDb().prepare("UPDATE leads SET pipeline_status = @status, updated_at = @now WHERE id = @id").run({ status, now: new Date().toISOString(), id: lead.id });
     return r.changes > 0;
@@ -1125,7 +1135,11 @@ export function updateLeadStatusByPhone(normalizedPhone: string, status: Pipelin
  * Retorna o lead atualizado ou null se não encontrado.
  */
 export function setDoNotContactByPhone(normalizedPhone: string, blocked = true): StoredLead | null {
-  const row = getDb().prepare("SELECT * FROM leads WHERE normalized_phone = ? LIMIT 1").get(normalizedPhone) as any;
+  const variants = phoneVariants(normalizedPhone);
+  const marks = variants.map(() => "?").join(",");
+  const row = variants.length
+    ? (getDb().prepare(`SELECT * FROM leads WHERE normalized_phone IN (${marks}) LIMIT 1`).get(...variants) as any)
+    : null;
   if (row) {
     getDb()
       .prepare("UPDATE leads SET do_not_contact = @blocked, updated_at = @now WHERE id = @id")
@@ -1134,7 +1148,7 @@ export function setDoNotContactByPhone(normalizedPhone: string, blocked = true):
     return { ...lead, doNotContact: blocked };
   }
   // fallback legacy
-  const lead = getLeads().find((l) => l.phone && normalizePhone(l.phone) === normalizedPhone);
+  const lead = getLeads().find((l) => l.phone && variants.includes(normalizePhone(l.phone)));
   if (!lead) return null;
   getDb()
     .prepare("UPDATE leads SET do_not_contact = @blocked, updated_at = @now WHERE id = @id")

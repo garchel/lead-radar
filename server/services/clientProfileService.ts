@@ -200,7 +200,11 @@ function normalizeForMatch(text: string): string {
  * ele devolve Goiás Esporte Clube. Jogar isso no prompt contamina a ficha, então
  * só passam resultados que citam o negócio (prefixo de 6 letras de cada palavra do nome).
  */
-export function isRelevantSearchResult(result: { title?: string; link?: string; snippet?: string }, name: string): boolean {
+export function isRelevantSearchResult(
+  result: { title?: string; link?: string; snippet?: string },
+  name: string,
+  city?: string
+): boolean {
   const tokens = normalizeForMatch(name)
     .split(/[^a-z0-9]+/)
     .filter((word) => word.length >= 4 && !STOPWORDS.has(word));
@@ -209,6 +213,18 @@ export function isRelevantSearchResult(result: { title?: string; link?: string; 
   const haystack = normalizeForMatch(`${result.title || ""} ${result.snippet || ""} ${result.link || ""}`);
   const prefixes = Array.from(new Set(tokens.map((token) => token.slice(0, 6))));
   const hits = prefixes.filter((prefix) => haystack.includes(prefix)).length;
+
+  // Nome de uma palavra só ("Paulo", "Bella") casa com qualquer coisa: buscar
+  // "Paulo" devolve São Paulo de Tarso (Wikipedia/Disney+). Nesse caso a cidade
+  // também precisa aparecer no resultado.
+  if (prefixes.length === 1) {
+    const cityPrefixes = normalizeForMatch(city || "")
+      .split(/[^a-z0-9]+/)
+      .filter((word) => word.length >= 4)
+      .map((word) => word.slice(0, 6));
+    const cityHit = cityPrefixes.some((prefix) => haystack.includes(prefix));
+    return hits >= 1 && cityHit;
+  }
 
   return hits >= Math.max(1, Math.ceil(prefixes.length / 2));
 }
@@ -683,7 +699,7 @@ export async function buildClientProfile(
       try {
         const found: SerpApiWebResult[] = await searchSerpApiWeb({ query, limit: 8 });
         searchesUsed += 1;
-        const results = found.filter((result) => isRelevantSearchResult(result, lead.name));
+        const results = found.filter((result) => isRelevantSearchResult(result, lead.name, lead.city));
         if (results.length === 0) continue;
         const block = results
           .map((result, index) => {

@@ -19,11 +19,39 @@ export function normalizeText(value?: string): string {
     .replace(/\s+/g, " ");
 }
 
+/**
+ * Normaliza para o formato canônico brasileiro **com o 9º dígito**.
+ *
+ * O WhatsApp devolve celular antigo sem o nono dígito (55 61 9525-4732) enquanto
+ * o Google Maps/CRM guarda com ele (55 61 99525-4732). Sem canonicalizar, a
+ * resposta do lead não casa com o cadastro e o webhook cria um LEAD DUPLICADO —
+ * foi o que aconteceu numa simulação real (lead "Paulo" duplicado, ficha gerada
+ * com fontes erradas).
+ */
 export function normalizePhone(value?: string): string {
-  const digits = String(value || "").replace(/\D/g, "");
+  let digits = String(value || "").replace(/\D/g, "");
   if (!digits) return "";
-  if ((digits.length === 10 || digits.length === 11) && !digits.startsWith("55")) return `55${digits}`;
+  if ((digits.length === 10 || digits.length === 11) && !digits.startsWith("55")) digits = `55${digits}`;
+  // 55 + DDD + 8 dígitos começando em 6-9 = celular no formato legado → põe o 9.
+  if (digits.length === 12 && digits.startsWith("55")) {
+    const subscriber = digits.slice(4);
+    if (/^[6-9]/.test(subscriber)) return `${digits.slice(0, 4)}9${subscriber}`;
+  }
   return digits;
+}
+
+/**
+ * Todas as formas equivalentes do telefone (canônica + legado sem o 9).
+ * Use ao BUSCAR no banco, para casar registros antigos gravados sem o 9.
+ */
+export function phoneVariants(value?: string): string[] {
+  const canonical = normalizePhone(value);
+  if (!canonical) return [];
+  const variants = new Set<string>([canonical]);
+  if (canonical.length === 13 && canonical.startsWith("55")) {
+    variants.add(`${canonical.slice(0, 4)}${canonical.slice(5)}`);
+  }
+  return [...variants];
 }
 
 export function normalizeCnpj(value?: string): string {

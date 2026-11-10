@@ -92,6 +92,35 @@ Para conferir o que ficou gravado:
 node -e "const D=require('better-sqlite3');const db=new D('data/leadradar.db',{readonly:true});console.log(db.prepare('SELECT message FROM communications ORDER BY created_at DESC LIMIT 1').get())"
 ```
 
+## Quem é quem (contexto do atendimento automático)
+
+Convenção do projeto — vale para o job de resposta e para qualquer bot futuro:
+
+| Papel | Quem é |
+|---|---|
+| **Vértice Páginas Web** | a empresa do Paulo; vende landing pages |
+| **Lead no CRM** | o cliente potencial que recebe a abordagem |
+| **Agente que responde** | um funcionário da Vértice falando com o cliente |
+| **Paulo** | o dono — nunca tratar como cliente (exceção: `pv-landing-1`, que é o lead de simulação rodando no telefone pessoal dele) |
+
+Regra de ouro: ficha/marca com `confidence` < 0,5 ou fontes que claramente não
+são do negócio **não entram na conversa** — a resposta usa só o que o lead
+escreveu + cadastro básico.
+
+## Bug histórico: 9º dígito do celular criava lead duplicado
+
+O WhatsApp informa celular brasileiro **sem** o nono dígito (`55 61 9525-4732`)
+enquanto o Google Maps/CRM guarda com ele (`55 61 99525-4732`). Como o webhook
+casava por telefone exato, a resposta do lead virava um **lead novo** — a conversa
+se dividia em dois cadastros e a ficha era gerada com o nome genérico do perfil
+("Paulo" → fontes de São Paulo de Tarso).
+
+Correção (nov/2026): `normalizePhone()` canoniza todo celular BR para o formato
+com o 9 (`server/services/leadIdentity.ts`) e `phoneVariants()` devolve as duas
+formas. As buscas do webhook, `getLeadByNormalizedPhone`, `updateLeadStatusByPhone`
+e `setDoNotContactByPhone` usam as variantes, então registros antigos sem o 9
+continuam casando. Regressão coberta em `tests/phoneIdentity.test.ts`.
+
 ## Verificação
 
 ```bash

@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import { getLeads, getLeadById, updateCommunicationMessage, createInteraction, updateLeadResponse, updateLeadStatusByPhone, setDoNotContactByPhone, setCommunicationIntent, getSetting, setSetting, upsertLead } from "../store/db";
 import { getDb } from "../store/schema";
 import { getAutomationSettings } from "./automationRoutes";
-import { normalizePhone, buildStableLeadId } from "../services/leadIdentity";
+import { normalizePhone, phoneVariants, buildStableLeadId } from "../services/leadIdentity";
 import { resolveWhatsappProvider, type WhatsappProviderChoice } from "../services/contactService";
 import { handleAckEvent, recordInboundIfNew, reconcileLeadMessages } from "../services/whatsappInboundService";
 import { detectOptOut } from "../services/optOutService";
@@ -332,12 +332,20 @@ export function registerWhatsAppWebhook(app: Express) {
     let auto: any = null;
     try { auto = getAutomationSettings(); } catch {}
 
-    // casa lead por telefone normalizado (usa índice normalized_phone)
-    const row = getDb().prepare("SELECT * FROM leads WHERE normalized_phone = ? LIMIT 1").get(normalized) as any;
+    // Casa o lead por telefone. O WhatsApp pode mandar o celular SEM o 9º dígito
+    // (55 61 9525-4732) enquanto o cadastro tem com ele (55 61 99525-4732):
+    // buscamos todas as variantes antes de concluir que é número novo.
+    const variants = phoneVariants(inbound.from);
+    const placeholders = variants.map(() => "?").join(",");
+    const row = variants.length
+      ? (getDb()
+          .prepare(`SELECT * FROM leads WHERE normalized_phone IN (${placeholders}) LIMIT 1`)
+          .get(...variants) as any)
+      : null;
     let lead: any = row ? getLeadById(row.id) : null;
     if (!lead) {
       const leads = getLeads();
-      lead = leads.find((l) => l.phone && normalizePhone(l.phone) === normalized) || null;
+      lead = leads.find((l) => l.phone && variants.includes(normalizePhone(l.phone))) || null;
     }
 
     // Número desconhecido: cria o lead (lead inbound) para que a mensagem não

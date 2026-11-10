@@ -129,6 +129,14 @@ describe("utilidades da ficha", () => {
     const name = "Transportadora de mudanças Valparaiso de Goias";
     expect(isRelevantSearchResult(junk, name)).toBe(false);
     expect(isRelevantSearchResult(good, name)).toBe(true);
+
+    // Nome de uma palavra só: exige a cidade no resultado, senão "Paulo" traz
+    // "São Paulo de Tarso" (Wikipédia/Disney+) para dentro da ficha.
+    const tarso = { title: "Paulo, apóstolo — Wikipédia", link: "https://pt.wikipedia.org/wiki/Paulo_de_Tarso", snippet: "São Paulo de Tarso" };
+    expect(isRelevantSearchResult(tarso, "Paulo", "Brasília")).toBe(false);
+    expect(isRelevantSearchResult(tarso, "Paulo", "São Paulo")).toBe(true);
+    const realLocal = { title: "Paulo Victor | Landing Pages em Brasília", link: "https://exemplo.com", snippet: "Brasília DF" };
+    expect(isRelevantSearchResult(realLocal, "Paulo", "Brasília")).toBe(true);
   });
 
   it("markdown traz as seções e marca o que não foi encontrado", () => {
