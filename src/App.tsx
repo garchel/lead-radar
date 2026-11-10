@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { SearchHeader } from './components/SearchHeader';
 import { BusinessCard } from './components/BusinessCard';
-import { MapView } from './components/MapView';
 import { LeadAnalysisModal } from './components/LeadAnalysisModal';
 import { CrmPipeline } from './components/CrmPipeline';
 import { StrategyGuide } from './components/StrategyGuide';
@@ -21,6 +20,10 @@ import { SerpApiResultsPage } from './components/SerpApiResultsPage';
 import { CitiesQueueDashboard } from './components/CitiesQueueDashboard';
 import { CategoriesDashboard } from './components/CategoriesDashboard';
 import { AutomationSettingsPage } from './components/AutomationSettingsPage';
+import { NextActionsBar } from './components/NextActionsBar';
+
+const MapView = lazy(() => import('./components/MapView').then((m) => ({ default: m.MapView })));
+const GrowthPage = lazy(() => import('./components/GrowthPage').then((m) => ({ default: m.GrowthPage })));
 
 import { BusinessLead, InteractionOutcome, ProjectType, SearchFilters } from './types';
 import { exportLeadsToCSV } from './utils/exportUtils';
@@ -55,10 +58,11 @@ interface DuplicateCandidate {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation'>('search');
+  const [focusProjectId, setFocusProjectId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   // Filtro de VISUALIZAÇÃO por presença digital (não afeta a busca — a busca sempre traz tudo)
-  const [presenceViewFilter, setPresenceViewFilter] = useState<'all' | 'gold' | 'silver'>('all');
+  const [presenceViewFilter, setPresenceViewFilter] = useState<'all' | 'gold' | 'silver' | 'bronze'>('all');
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [hasGeminiKey, setHasGeminiKey] = useState<boolean>(false);
   const [hasMapsKey, setHasMapsKey] = useState<boolean>(false);
@@ -287,7 +291,8 @@ export default function App() {
       const autoSaveMode = filters.autoSaveMode ?? 'off';
       if (autoSaveMode !== 'off' && Array.isArray(data.businesses)) {
         const existingIds = new Set(savedLeads.map((l) => l.id));
-        const wantStatus = (s: BusinessLead['websiteStatus']) => s === 'none' || (autoSaveMode === 'gold_silver' && s === 'social_only');
+        const wantStatus = (s: BusinessLead['websiteStatus']) =>
+          s === 'none' || (autoSaveMode === 'gold_silver' && (s === 'social_only' || s === 'marketplace_only'));
         const toSave = (data.businesses as BusinessLead[]).filter((l) => wantStatus(l.websiteStatus) && !l.isAlreadySaved && !existingIds.has(l.id));
         if (toSave.length > 0) {
           let savedCount = 0;
@@ -440,17 +445,20 @@ export default function App() {
 
   const savedLeadIds = new Set(savedLeads.map((l) => l.id));
   const noWebsiteCount = leads.filter(
-    (l) => l.websiteStatus === 'none' || l.websiteStatus === 'social_only'
+    (l) => l.websiteStatus === 'none' || l.websiteStatus === 'social_only' || l.websiteStatus === 'marketplace_only'
   ).length;
-  // Filtro de visualização por presença digital (segmentado Ouro/Prata sobre os resultados)
+  // Filtro de visualização por presença digital (Ouro/Prata/Bronze sobre os resultados)
   const goldCount = leads.filter((l) => l.websiteStatus === 'none').length;
   const silverCount = leads.filter((l) => l.websiteStatus === 'social_only').length;
+  const bronzeCount = leads.filter((l) => l.websiteStatus === 'marketplace_only').length;
   const visibleLeads =
     presenceViewFilter === 'gold'
       ? leads.filter((l) => l.websiteStatus === 'none')
       : presenceViewFilter === 'silver'
         ? leads.filter((l) => l.websiteStatus === 'social_only')
-        : leads;
+        : presenceViewFilter === 'bronze'
+          ? leads.filter((l) => l.websiteStatus === 'marketplace_only')
+          : leads;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans antialiased selection:bg-indigo-600 selection:text-white">
@@ -494,6 +502,9 @@ export default function App() {
 
       {/* Main Container Body */}
       <main className="flex-1">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4">
+          <NextActionsBar onNavigate={setActiveTab} onOpenProject={setFocusProjectId} />
+        </div>
         {activeTab === 'search' && (
           <div className="space-y-6">
             {/* Search Header Controls */}
@@ -580,7 +591,20 @@ export default function App() {
                       title="Empresas apenas com perfil no Instagram (Oportunidade Prata - Falta LP de Conversão)"
                     >
                       <Award className="w-3.5 h-3.5 text-slate-200" />
-                      <span>Apenas Instagram (Prata 🥈) ({silverCount})</span>
+                      <span>Apenas Instagram (Prata) ({silverCount})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPresenceViewFilter('bronze')}
+                      className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center space-x-1.5 ${
+                        presenceViewFilter === 'bronze'
+                          ? 'bg-orange-600 text-white shadow-xs'
+                          : 'text-orange-700 hover:bg-orange-100/60'
+                      }`}
+                      title="Empresas que só têm perfil em marketplace (iFood, Mercado Livre...) — sem site próprio"
+                    >
+                      <Globe className="w-3.5 h-3.5" />
+                      <span>Só Marketplace ({bronzeCount})</span>
                     </button>
                   </div>
                   {presenceViewFilter !== 'all' && (
@@ -626,16 +650,24 @@ export default function App() {
                   </div>
                 )
               ) : (
-                <MapView
-                  leads={visibleLeads}
-                  onAnalyze={(l) => setAnalyzingLead(l)}
-                  onToggleSave={handleToggleSave}
-                  savedLeadIds={savedLeadIds}
-                  hasMapsKey={hasMapsKey}
-                />
+                <Suspense fallback={<div className="p-8 text-sm text-slate-500">Carregando mapa…</div>}>
+                  <MapView
+                    leads={visibleLeads}
+                    onAnalyze={(l) => setAnalyzingLead(l)}
+                    onToggleSave={handleToggleSave}
+                    savedLeadIds={savedLeadIds}
+                    hasMapsKey={hasMapsKey}
+                  />
+                </Suspense>
               )}
             </div>
           </div>
+        )}
+
+        {activeTab === 'growth' && (
+          <Suspense fallback={<div className="p-8 text-sm text-slate-500">Carregando crescimento…</div>}>
+            <GrowthPage />
+          </Suspense>
         )}
 
         {activeTab === 'crm' && (
@@ -657,7 +689,9 @@ export default function App() {
 
         {activeTab === 'monitoring' && <MonitoringDashboard />}
 
-        {activeTab === 'projects' && <ProjectsDashboard />}
+        {activeTab === 'projects' && (
+          <ProjectsDashboard focusProjectId={focusProjectId} onFocused={() => setFocusProjectId(null)} />
+        )}
 
         {activeTab === 'agents' && <AgentsDashboard />}
 

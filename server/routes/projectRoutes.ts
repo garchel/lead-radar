@@ -21,7 +21,9 @@ import {
 import { ProjectStage } from "../store/types";
 import { getTypeformFormBaseUrl } from "../config";
 import { generateBriefingPdf } from "../briefing/pdf";
+import { generateWireframeApprovalPdf } from "../wireframe/approvalPdf";
 import { buildAgentRunbook } from "../projects/agentGuide";
+import { listProjectAssets, resolveProjectAssetFile } from "../projects/assets";
 
 export function registerProjectRoutes(app: Express) {
   app.get("/api/projects", (req: Request, res: Response) => {
@@ -67,6 +69,7 @@ export function registerProjectRoutes(app: Express) {
       "githubRepoUrl",
       "repoOwner",
       "repoName",
+      "sitePath",
       "previewUrl",
       "devStatus",
       "devMessage",
@@ -140,6 +143,29 @@ export function registerProjectRoutes(app: Express) {
     }
   });
 
+  // GET /api/projects/:id/assets — identidade visual identificada + arquivos da LP.
+  app.get("/api/projects/:id/assets", (req: Request, res: Response) => {
+    try {
+      const assets = listProjectAssets(req.params.id);
+      res.json({ success: true, ...assets });
+    } catch (err: any) {
+      res.status(404).json({ success: false, error: err?.message || "Projeto não encontrado." });
+    }
+  });
+
+  // GET /api/projects/:id/asset?path=assets/hero.jpg — serve um arquivo da pasta do site.
+  app.get("/api/projects/:id/asset", (req: Request, res: Response) => {
+    try {
+      const file = resolveProjectAssetFile(req.params.id, String(req.query.path || ""));
+      res.type(file.mime);
+      res.setHeader("Cache-Control", "private, max-age=60");
+      res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(file.name)}"`);
+      res.sendFile(file.absolutePath);
+    } catch (err: any) {
+      res.status(404).json({ success: false, error: err?.message || "Asset não encontrado." });
+    }
+  });
+
   // GET /api/projects/:id/agent-runbook — guia do app + estado + passo a passo
   // para o bot de execução (evita análise da codebase a cada spawn).
   app.get("/api/projects/:id/agent-runbook", (req: Request, res: Response) => {
@@ -151,12 +177,12 @@ export function registerProjectRoutes(app: Express) {
     }
   });
 
-  // POST .../dev-repo — registra o repositório GitHub onde o agente está codando.
+  // POST .../dev-repo — registra o repositório único e a pasta da LP do agente.
   app.post("/api/projects/:id/dev-repo", (req: Request, res: Response) => {
-    const { repoUrl } = req.body || {};
+    const { repoUrl, sitePath } = req.body || {};
     if (!repoUrl) return res.status(400).json({ success: false, error: "repoUrl é obrigatório." });
     try {
-      const project = setProjectDevRepo(req.params.id, repoUrl);
+      const project = setProjectDevRepo(req.params.id, repoUrl, sitePath);
       res.json({ success: true, project });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err?.message || "Falha ao registrar repositório." });
@@ -165,9 +191,9 @@ export function registerProjectRoutes(app: Express) {
 
   // POST .../submit-code — agente notifica que o código está pronto (com preview).
   app.post("/api/projects/:id/submit-code", (req: Request, res: Response) => {
-    const { repoUrl, previewUrl, message } = req.body || {};
+    const { repoUrl, sitePath, previewUrl, message } = req.body || {};
     try {
-      const project = submitProjectCode(req.params.id, { repoUrl, previewUrl, message });
+      const project = submitProjectCode(req.params.id, { repoUrl, sitePath, previewUrl, message });
       res.json({ success: true, project });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err?.message || "Falha ao registrar entrega do código." });
@@ -219,6 +245,24 @@ export function registerProjectRoutes(app: Express) {
       res.send(pdf);
     } catch (err: any) {
       res.status(500).json({ success: false, error: err?.message || "Falha ao gerar o PDF do briefing." });
+    }
+  });
+
+  // Termo de aprovação do wireframe: snapshot/registro do OK do cliente (URL,
+  // checklist da etapa, base de copy/design). Baixado na aba Wireframe do modal.
+  app.get("/api/projects/:id/wireframe-approval.pdf", async (req: Request, res: Response) => {
+    const project = getProjectById(req.params.id);
+    if (!project) return res.status(404).json({ success: false, error: "Projeto não encontrado." });
+    try {
+      const pdf = await generateWireframeApprovalPdf(project);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `inline; filename="aprovacao-wireframe-${project.id}.pdf"`
+      );
+      res.send(pdf);
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || "Falha ao gerar o PDF de aprovação do wireframe." });
     }
   });
 }

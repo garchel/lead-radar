@@ -1,9 +1,9 @@
 import React from 'react';
-import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Layers, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings, Bot } from 'lucide-react';
+import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Layers, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings, Bot, TrendingUp } from 'lucide-react';
 
 interface SidebarProps {
-  activeTab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation';
-  setActiveTab: (tab: 'search' | 'crm' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation') => void;
+  activeTab: 'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation';
+  setActiveTab: (tab: 'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation') => void;
   savedCount: number;
   projectCount: number;
   onOpenAddModal: () => void;
@@ -102,6 +102,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button id="nav-guide-btn" onClick={() => setActiveTab('guide')} className={navBtn('guide', activeTab === 'guide')}>
             <BookOpen className="w-4 h-4 shrink-0" />
             <span>Estratégia & Pitch</span>
+          </button>
+
+          <button id="nav-growth-btn" onClick={() => setActiveTab('growth')} className={navBtn('growth', activeTab === 'growth')}>
+            <TrendingUp className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Crescimento</span>
           </button>
 
           <button id="nav-projects-btn" onClick={() => setActiveTab('projects')} className={`relative ${navBtn('projects', activeTab === 'projects')}`}>

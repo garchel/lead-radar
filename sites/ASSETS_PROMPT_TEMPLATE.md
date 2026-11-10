@@ -1,7 +1,12 @@
 # TEMPLATE — ASSETS_PROMPT (padrão v2 slot-aware, OBRIGATÓRIO em toda LP nova)
 
-> Copie este arquivo para `sites/<cliente>/ASSETS_PROMPT.md` e preencha por slot.
+> Copie este arquivo para `sites/<nicho>/<slug>/ASSETS_PROMPT.md` e preencha por slot.
 > Nenhum prompt de asset é aceito sem os 7 blocos abaixo.
+>
+> **Repo único:** todas as LPs vivem no repositório `lead-radar`, em
+> `sites/<nicho>/<slug>/` (ex.: `sites/medico/`, `sites/dentista/`,
+> `sites/advogado/`). `sites/efeitos/` é biblioteca compartilhada e fica fora
+> das pastas de nicho.
 
 ## KICKOFF OBRIGATÓRIO (toda LP nova — preencher antes dos assets)
 

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b4bd6'/%3E%3Cpath d='M9 20h14l-2-8H11z' fill='%23faf9f5'/%3E%3C/svg%3E">
+  <title>Mudanças Valparaíso | Mudança residencial e comercial em Valparaíso de Goiás</title>
+  <meta name="description" content="Mudanças residenciais e comerciais em Valparaíso de Goiás e Entorno. Equipe própria, caminhão fechado. Orçamento pelo WhatsApp em minutos.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/csz?family=Archivo+Black&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       Mudanças Valparaíso — fluxo de design: taste v2 (design-taste-frontend)
+       Design read: landing serviço local, trust-first logístico
+       Dials: VARIANCE 7 · MOTION 5 · DENSITY 3
+       Paleta: Cobalt & Cream (light) / zinc + cobalt claro (dark, auto)
+       Shape lock: radius 12px. Um acento: cobalto. Zero em-dash. Zero eyebrow.
+       ============================================================ */
+    :root {
+      --cream: #faf9f5;
+      --ink: #141412;
+      --ink-soft: #4a4a44;
+      --line: #e4e2d8;
+      --cobalt: #2b4bd6;
+      --cobalt-ink: #faf9f5;
+      --cobalt-soft: #eef1fd;
+      --radius: 12px;
+      --font-display: 'Archivo Black', 'Arial Black', sans-serif;
+      --font-body: 'Outfit', system-ui, sans-serif;
+      --duotone-a: #2b4bd6;  /* duotone: sombra */
+      --duotone-b: #faf9f5;   /* duotone: luz */
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --cream: #101012;
+        --ink: #f2f1ea;
+        --ink-soft: #a8a89f;
+        --line: #2a2a2e;
+        --cobalt: #6c86ff;
+        --cobalt-ink: #101012;
+        --cobalt-soft: #1a1f3d;
+        --duotone-a: #1a2450;
+        --duotone-b: #6c86ff;
+      }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-body);
+      background: var(--cream);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    section { padding: 96px 0; }
+    @media (max-width: 768px) { section { padding: 56px 0; } }
+
+    h1, h2, .display { font-family: var(--font-display); font-weight: 400; text-transform: none; line-height: 1.05; letter-spacing: -0.01em; }
+    h1 { font-size: clamp(2.1rem, 4.2vw, 3.3rem); }
+    h2 { font-size: clamp(1.8rem, 3.6vw, 2.8rem); }
+    p { max-width: 62ch; }
+    .soft { color: var(--ink-soft); }
+
+    :focus-visible { outline: 3px solid var(--cobalt); outline-offset: 3px; border-radius: 4px; }
+
+    /* ---- Botões (shape lock 12px; 1 intent de contato) ---- */
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 14px 26px; border-radius: var(--radius);
+      font-family: var(--font-body); font-weight: 600; font-size: 1rem;
+      text-decoration: none; cursor: pointer; border: none;
+      transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1), background .25s ease;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn-primary { background: var(--cobalt); color: var(--cobalt-ink); }
+    .btn-primary:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .btn-ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
+    .btn-ghost:hover { border-color: var(--ink); }
+
+    /* ---- Nav (1 linha desktop, 72px) ---- */
+    nav { position: sticky; top: 0; z-index: 10; background: var(--cream); border-bottom: 1px solid var(--line); }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 72px; gap: 16px; }
+    .logo { font-family: var(--font-display); font-size: 1.05rem; color: var(--ink); text-decoration: none; letter-spacing: .01em; }
+    .logo b { color: var(--cobalt); font-weight: 400; }
+    .nav-links { display: flex; gap: 26px; align-items: center; }
+    .nav-links a { color: var(--ink-soft); text-decoration: none; font-size: .95rem; font-weight: 500; }
+    .nav-links a:hover { color: var(--cobalt); }
+    .nav-cta { padding: 10px 20px; font-size: .92rem; }
+    @media (max-width: 900px) { .nav-links a:not(.btn) { display: none; } }
+
+    /* ---- Hero (split assimétrico; anti-center) ---- */
+    .hero { padding: 64px 0 0; }
+    .hero-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 48px; align-items: center; }
+    @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; gap: 32px; } .hero { padding-top: 40px; } }
+    .hero h1 { margin-bottom: 20px; }
+    .hero h1 b { color: var(--cobalt); font-weight: 400; }
+    .hero .sub { font-size: clamp(1rem, 1.6vw, 1.15rem); color: var(--ink-soft); max-width: 46ch; margin-bottom: 32px; }
+    .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
+    /* foto duotone cobalto com mask-reveal na entrada */
+    .hero-photo { position: relative; border-radius: var(--radius); overflow: hidden; aspect-ratio: 4 / 3.4; }
+    .hero-photo img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      filter: grayscale(1) contrast(1.05);
+      filter: grayscale(1) contrast(1.05) sepia(1) hue-rotate(215deg) saturate(3.2) brightness(.95);
+    }
+    .hero-photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(10,12,40,.35)); pointer-events: none; }
+    @media (prefers-reduced-motion: no-preference) {
+      .hero-photo { clip-path: inset(0 0 100% 0); animation: mask-reveal 1s cubic-bezier(0.16, 1, 0.3, 1) .15s forwards; }
+      @keyframes mask-reveal { to { clip-path: inset(0 0 0 0); } }
+      .hero-copy > * { opacity: 0; transform: translateY(14px); animation: rise .6s cubic-bezier(0.16,1,.3,1) forwards; }
+      .hero-copy > *:nth-child(1) { animation-delay: .05s; }
+      .hero-copy > *:nth-child(2) { animation-delay: .15s; }
+      .hero-copy > *:nth-child(3) { animation-delay: .25s; }
+      .hero-copy > *:nth-child(4) { animation-delay: .35s; }
+      @keyframes rise { to { opacity: 1; transform: none; } }
+    }
+
+    /* ---- Stats (hairline, sem cards) ---- */
+    .stats { margin-top: 56px; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .stats > div { padding: 26px 8px; text-align: center; }
+    .stats > div + div { border-left: 1px solid var(--line); }
+    .stats b { font-family: var(--font-display); font-size: clamp(2rem, 4vw, 3rem); color: var(--cobalt); display: block; line-height: 1; margin-bottom: 6px; }
+    .stats span { color: var(--ink-soft); font-size: .9rem; }
+    @media (max-width: 600px) { .stats { grid-template-columns: 1fr; } .stats > div + div { border-left: none; border-top: 1px solid var(--line); } }
+
+    /* ---- Serviços (bento 3 células: foto + tint + pattern) ---- */
+    .bento { display: grid; grid-template-columns: 1.35fr 1fr; grid-auto-rows: 220px; gap: 16px; }
+    .bento .cell-photo { grid-row: span 2; }
+    .cell { border-radius: var(--radius); padding: 28px; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; position: relative; overflow: hidden; }
+    .cell h3 { font-family: var(--font-display); font-size: 1.3rem; line-height: 1.15; }
+    .cell p { font-size: .95rem; color: var(--ink-soft); max-width: 40ch; }
+    .cell a { color: var(--cobalt); font-weight: 600; font-size: .95rem; text-decoration: none; }
+    .cell a:hover { text-decoration: underline; }
+    .cell-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+      filter: grayscale(1) contrast(1.05) sepia(1) hue-rotate(215deg) saturate(3.2) brightness(.9); }
+    .cell-photo .cell-body { position: relative; z-index: 1; color: var(--cobalt-ink); text-shadow: 0 2px 14px rgba(10,12,40,.5); }
+    .cell-photo .cell-body p { color: inherit; opacity: .92; }
+    .cell-photo .cell-body a { color: var(--cobalt-b, #fff); color: #fff; }
+    .cell-tint { background: var(--cobalt-soft); }
+    .cell-pattern {
+      background-image: repeating-linear-gradient(45deg, var(--line) 0 1px, transparent 1px 14px);
+      background-color: var(--cream);
+      border: 1px solid var(--line);
+    }
+    @media (max-width: 768px) { .bento { grid-template-columns: 1fr; grid-auto-rows: auto; } .cell { min-height: 180px; } .bento .cell-photo { grid-row: auto; } }
+
+    /* ---- Como funciona (verb-noun, hairline, sem cards) ---- */
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; border-top: 1px solid var(--line); padding-top: 36px; }
+    .steps .n { font-family: var(--font-display); font-size: .95rem; color: var(--cobalt); margin-bottom: 10px; }
+    .steps h3 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 8px; }
+    .steps p { font-size: .95rem; color: var(--ink-soft); }
+    @media (max-width: 768px) { .steps { grid-template-columns: 1fr; gap: 28px; } }
+
+    /* ---- Depoimentos (2 quotes curtas) ---- */
+    .quotes { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 40px; }
+    @media (max-width: 768px) { .quotes { grid-template-columns: 1fr; gap: 28px; } }
+    blockquote { border-left: 3px solid var(--cobalt); padding-left: 20px; }
+    blockquote p { font-size: 1.05rem; line-height: 1.5; margin-bottom: 10px; }
+    blockquote footer { font-size: .88rem; color: var(--ink-soft); }
+
+    /* ---- Marquee (1 por página) ---- */
+    .marquee { overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 18px 0; margin-top: 64px; }
+    .marquee-track { display: flex; gap: 48px; width: max-content; }
+    @media (prefers-reduced-motion: no-preference) {
+      .marquee-track { animation: marquee 28s linear infinite; }
+      @keyframes marquee { to { transform: translateX(-50%); } }
+    }
+    .marquee span { font-family: var(--font-display); font-size: 1rem; color: var(--ink-soft); white-space: nowrap; }
+    .marquee .m-note { font-family: var(--font-body); font-weight: 600; color: var(--cobalt); font-size: .95rem; }
+    @media (prefers-reduced-motion: reduce) {
+      .marquee { overflow-x: auto; }
+      .marquee-track { animation: none; }
+    }
+
+    /* ---- CTA final + form (bloco cobalto) ---- */
+    .cta-final { background: var(--cobalt); color: var(--cobalt-ink); border-radius: var(--radius); padding: 64px 48px; }
+    @media (max-width: 768px) { .cta-final { padding: 40px 24px; } }
+    .cta-final h2 { margin-bottom: 12px; }
+    .cta-final p { color: var(--cobalt-ink); opacity: .85; margin-bottom: 32px; }
+    .cta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
+    @media (max-width: 860px) { .cta-grid { grid-template-columns: 1fr; } }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: .88rem; font-weight: 600; margin-bottom: 7px; }
+    .field input, .field select {
+      width: 100%; padding: 13px 16px; border-radius: var(--radius);
+      border: 1.5px solid rgba(250,249,245,.45); background: rgba(250,249,245,.08);
+      color: var(--cobalt-ink); font-family: var(--font-body); font-size: 1rem;
+    }
+    .field input::placeholder { color: rgba(250,249,245,.55); }
+    .field select option { color: #141412; }
+    .field input.invalid { border-color: #ffd43b; }
+    .err { display: none; font-size: .82rem; color: #ffd43b; margin-top: 6px; }
+    .err.show { display: block; }
+    .cta-final .btn-primary { background: var(--cobalt-ink); color: var(--cobalt); }
+    .cta-list { list-style: none; display: flex; flex-direction: column; gap: 14px; font-size: .98rem; }
+    .cta-list a { color: inherit; text-decoration: underline; text-decoration-color: rgba(250,249,245,.4); }
+    .cta-list a:hover { text-decoration-color: currentColor; }
+
+    /* ---- Footer ---- */
+    footer { padding: 48px 0 120px; }
+    .foot { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+    .foot-note { width: 100%; border-top: 1px solid var(--line); margin-top: 24px; padding-top: 20px; font-size: .85rem; color: var(--ink-soft); }
+
+    /* ---- WhatsApp flutuante ---- */
+    .wa-float {
+      position: fixed; right: 20px; bottom: 20px; z-index: 20;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--cobalt); color: var(--cobalt-ink);
+      border-radius: var(--radius); padding: 13px 20px;
+      font-weight: 600; font-size: .95rem; text-decoration: none;
+      box-shadow: 0 8px 28px rgba(43,75,214,.35);
+    }
+    .wa-float:active { transform: scale(.98); }
+
+    /* ---- Reveal on-scroll (stagger) ----
+       IntersectionObserver, sem listener de scroll (regra 5.D) */
+    .reveal { opacity: 0; transform: translateY(18px); }
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal { transition: opacity .6s cubic-bezier(0.16,1,.3,1), transform .6s cubic-bezier(0.16,1,.3,1); transition-delay: calc(var(--i, 0) * 80ms); }
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .reveal { opacity: 1; transform: none; }
+      .hero-photo, .hero-copy > * { animation: none; clip-path: none; opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav aria-label="Navegação principal">
+    <div class="wrap nav-inner">
+      <a class="logo" href="#topo">Mudanças <b>Valparaíso</b></a>
+      <div class="nav-links">
+        <a href="#servicos">Serviços</a>
+        <a href="#como-funciona">Como funciona</a>
+        <a href="#depoimentos">Depoimentos</a>
+        <a href="#atendimento">Atendimento</a>
+        <a class="btn btn-primary nav-cta" href="https://wa.me/5561995028647?text=Ol%C3%A1!%20Quero%20um%20or%C3%A7amento%20de%20mudan%C3%A7a." target="_blank" rel="noopener">Chamar no WhatsApp</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="wrap" id="topo">
+    <!-- HERO (split) -->
+    <header class="hero">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <h1>Sua mudança, <b>sem dor de cabeça</b>.</h1>
+          <p class="sub">Equipe própria, caminhão fechado e cuidado do começo ao fim. Orçamento pelo WhatsApp em minutos.</p>
+          <div class="hero-ctas">
+            <a class="btn btn-primary" href="https://wa.me/5561995028647?text=Ol%C3%A1!%20Quero%20um%20or%C3%A7amento%20de%20mudan%C3%A7a." target="_blank" rel="noopener">Chamar no WhatsApp</a>
+            <a class="btn btn-ghost" href="#servicos">Ver serviços</a>
+          </div>
+        </div>
+        <div class="hero-photo">
+          <img src="https://picsum.photos/seed/mudancas-valparaiso-caminhao/1200/1000.jpg" alt="Equipe de mudança carregando móveis embrulhados em caminhão fechado" width="1200" height="1000">
+        </div>
+      </div>
+
+      <!-- Stats reais do CRM (count-up) -->
+      <div class="stats">
+        <div><b class="count" data-count="4.8" data-decimals="1" data-decimal-sep=",">0</b><span>nota no Google</span></div>
+        <div><b class="count" data-count="25">0</b><span>avaliações de clientes</span></div>
+        <div><b class="count" data-count="6">0</b><span>dias por semana, seg a sáb</span></div>
+      </div>
+    </header>
+
+    <!-- SERVIÇOS (bento: foto + tint + pattern) -->
+    <section id="servicos">
+      <h2 class="reveal">O que a gente carrega</h2>
+      <p class="soft reveal" style="margin-top:12px;">Da casa pequena ao escritório inteiro. Se não couber na lista, chama que a gente resolve junto.</p>
+      <div class="bento" style="margin-top:40px;">
+        <div class="cell cell-photo reveal" style="--i:0;">
+          <img src="https://picsum.photos/seed/mudancas-valparaiso-residencial/900/1100.jpg" alt="Mudança residencial com caixas e sofá sendo carregados" loading="lazy" width="900" height="1100">
+          <div class="cell-body">
+            <h3>Mudanças residenciais</h3>
+            <p>Apartamento, casa ou quitinete. Embalamos, desmontamos e montamos de volta.</p>
+            <a href="https://wa.me/5561995028647?text=Ol%C3%A1!%20Quero%20or%C3%A7amento%20de%20mudan%C3%A7a%20residencial." target="_blank" rel="noopener">Pedir orçamento</a>
+          </div>
+        </div>
+        <div class="cell cell-tint reveal" style="--i:1;">
+          <h3>Comerciais e escritórios</h3>
+          <p>Loja, consultório, clínica. Mudança fora do horário de funcionamento, sem parar o movimento.</p>
+          <a href="https://wa.me/5561995028647?text=Ol%C3%A1!%20Quero%20or%C3%A7amento%20de%20mudan%C3%A7a%20comercial." target="_blank" rel="noopener">Pedir orçamento</a>
+        </div>
+        <div class="cell cell-pattern reveal" style="--i:2;">
+          <h3>Itens especiais</h3>
+          <p>Piano, cofre, quadros, aquário. Peça por peça, com equipamento certo.</p>
+          <a href="https://wa.me/5561995028647?text=Ol%C3%A1!%20Tenho%20um%20item%20especial%20para%20mudar." target="_blank" rel="noopener">Pedir orçamento</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMO FUNCIONA (verb-noun) -->
+    <section id="como-funciona" style="padding-top:0;">
+      <h2 class="reveal">Simples assim</h2>
+      <div class="steps" style="margin-top:36px;">
+        <div class="reveal" style="--i:0;"><div class="n">01</div><h3>Chame no WhatsApp</h3><p>Manda a lista do que vai mudar, ou só uma foto do ambiente. A gente entende.</p></div>
+        <div class="reveal" style="--i:1;"><div class="n">02</div><h3>Receba o orçamento</h3><p>Preço e prazo respondidos no mesmo dia, sem letra miúda.</p></div>
+        <div class="reveal" style="--i:2;"><div class="n">03</div><h3>A gente muda você</h3><p>Equipe própria no dia marcado. Você só aponta o lugar de cada coisa.</p></div>
+      </div>
+    </section>
+
+    <!-- DEPOIMENTOS -->
+    <section id="depoimentos" style="padding-top:0;">
+      <h2 class="reveal">Quem mudou, indica</h2>
+      <div class="quotes">
+        <blockquote class="reveal" style="--i:0;">
+          <p>"Mudança de 3 quartos em um dia, sem prejuízo nenhum. Sofá, geladeira e um armário antigo da avó chegaram inteiros."</p>
+          <footer>Moradora de Valparaíso, mudança residencial (avaliação ilustrativa)</footer>
+        </blockquote>
+        <blockquote class="reveal" style="--i:1;">
+          <p>"Trocamos de loja e a equipe trabalhou de noite, dentro do meu prazo. No dia seguinte estava tudo funcionando."</p>
+          <footer>Lojista do Novo Gama, mudança comercial (avaliação ilustrativa)</footer>
+        </blockquote>
+      </div>
+    </section>
+
+    <!-- ATENDIMENTO (marquee) -->
+    <section id="atendimento" style="padding-top:0;">
+      <div class="marquee reveal" aria-label="Cidades atendidas">
+        <div class="marquee-track">
+          <span class="m-note">Atendemos</span><span>Valparaíso de Goiás</span><span>Novo Gama</span><span>Cidade Ocidental</span><span>Águas Lindas</span><span>Formosa</span><span>Brasília</span><span class="m-note">e região</span>
+          <span class="m-note" aria-hidden="true">Atendemos</span><span aria-hidden="true">Valparaíso de Goiás</span><span aria-hidden="true">Novo Gama</span><span aria-hidden="true">Cidade Ocidental</span><span aria-hidden="true">Águas Lindas</span><span aria-hidden="true">Formosa</span><span aria-hidden="true">Brasília</span><span class="m-note" aria-hidden="true">e região</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA FINAL + FORM -->
+    <section id="orcamento" style="padding-top:0;">
+      <div class="cta-final reveal">
+        <h2>Pronto para marcar sua mudança?</h2>
+        <p>Preencha que a gente responde rápido, direto no WhatsApp da empresa.</p>
+        <div class="cta-grid">
+          <form id="lead-form" novalidate>
+            <div class="field">
+              <label for="nome">Seu nome</label>
+              <input id="nome" type="text" autocomplete="name" placeholder="Ex.: Mariana Ribeiro">
+              <span class="err" id="err-nome">Digite seu nome (mín. 2 letras).</span>
+            </div>
+            <div class="field">
+              <label for="whats">Seu WhatsApp</label>
+              <input id="whats" type="tel" autocomplete="tel" placeholder="(61) 99999-9999">
+              <span class="err" id="err-whats">Digite um WhatsApp válido com DDD.</span>
+            </div>
+            <div class="field">
+              <label for="tipo">Tipo de mudança</label>
+              <select id="tipo">
+                <option value="">Selecione...</option>
+                <option>Residencial</option>
+                <option>Comercial ou escritório</option>
+                <option>Item especial</option>
+                <option>Outro</option>
+              </select>
+              <span class="err" id="err-tipo">Escolha o tipo de mudança.</span>
+            </div>
+            <div class="field">
+              <label for="quando">Para quando? <span style="opacity:.65;">(opcional)</span></label>
+              <input id="quando" type="text" placeholder="Ex.: fim do mês, dia 28">
+            </div>
+            <button class="btn btn-primary" type="submit">Enviar pelo WhatsApp</button>
+          </form>
+          <ul class="cta-list">
+            <li><b>Endereço</b><br>R. Vinte e Dois, Qd. 08, Casa 14, Jd. Novo Oriente<br>Valparaíso de Goiás, GO</li>
+            <li><b>Telefone e WhatsApp</b><br><a href="https://wa.me/5561995028647" target="_blank" rel="noopener">(61) 99502-8647</a></li>
+            <li><b>Horário</b><br>Seg a sáb, 7h às 19h</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+      <div class="foot">
+        <a class="logo" href="#topo">Mudanças <b>Valparaíso</b></a>
+        <div style="display:flex; gap:24px; flex-wrap:wrap;">
+          <a href="#servicos" style="color:var(--ink-soft); text-decoration:none;">Serviços</a>
+          <a href="#como-funciona" style="color:var(--ink-soft); text-decoration:none;">Como funciona</a>
+          <a href="#orcamento" style="color:var(--ink-soft); text-decoration:none;">Orçamento</a>
+        </div>
+      </div>
+      <p class="foot-note">Mudanças Valparaíso, Valparaíso de Goiás, GO. Ao chamar no WhatsApp você concorda em ser atendido pela equipe. Seus dados não são compartilhados (LGPD). Depoimentos ilustrativos no lançamento, substituídos por avaliações reais com autorização.</p>
+    </footer>
+  </main>
+
+  <!-- WhatsApp flutuante -->
+  <a class="wa-float" href="https://wa.me/5561995028647?text=Ol%C3%A1!%20Quero%20um%20or%C3%A7amento%20de%20mudan%C3%A7a." target="_blank" rel="noopener" aria-label="Chamar no WhatsApp">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.148-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+    <span>WhatsApp</span>
+  </a>
+
+  <script>
+    // Count-up (efeito 05 lead-radar; mesma implementação verificada da LP Achei)
+    (function () {
+      var els = document.querySelectorAll('.count');
+      function finalText(el) {
+        var target = Number(el.dataset.count);
+        var decimals = Number(el.dataset.decimals || '0');
+        var sep = el.dataset.decimalSep || '.';
+        var s = target.toFixed(decimals);
+        if (sep !== '.') s = s.replace('.', sep);
+        el.textContent = s;
+      }
+      var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduced || !('IntersectionObserver' in window)) { els.forEach(finalText); return; }
+      var obs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          var el = entry.target; obs.unobserve(el);
+          var target = Number(el.dataset.count);
+          var decimals = Number(el.dataset.decimals || '0');
+          var sep = el.dataset.decimalSep || '.';
+          var t0 = null;
+          function tick(ts) {
+            if (!t0) t0 = ts;
+            var p = Math.min(1, (ts - t0) / 1200);
+            var eased = 1 - Math.pow(1 - p, 3);
+            var s = (target * eased).toFixed(decimals);
+            if (sep !== '.') s = s.replace('.', sep);
+            el.textContent = s;
+            if (p < 1) requestAnimationFrame(tick);
+          }
+          requestAnimationFrame(tick);
+        });
+      }, { threshold: 0.4 });
+      els.forEach(function (el) { obs.observe(el); });
+    })();
+
+    // Form → WhatsApp deep-link (validação inline)
+    (function () {
+      var form = document.getElementById('lead-form');
+      var fields = [
+        { id: 'nome', err: 'err-nome', test: function (v) { return v.trim().length >= 2; } },
+        { id: 'whats', err: 'err-whats', test: function (v) { return v.replace(/\D/g, '').length >= 10; } },
+        { id: 'tipo', err: 'err-tipo', test: function (v) { return v.trim().length > 0; } },
+      ];
+      fields.forEach(function (f) {
+        var input = document.getElementById(f.id);
+        input.addEventListener('input', function () {
+          input.classList.remove('invalid');
+          document.getElementById(f.err).classList.remove('show');
+        });
+      });
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var valid = true; var data = {};
+        fields.forEach(function (f) {
+          var input = document.getElementById(f.id);
+          var ok = f.test(input.value);
+          data[f.id] = input.value.trim();
+          if (!ok) { valid = false; input.classList.add('invalid'); document.getElementById(f.err).classList.add('show'); }
+        });
+        if (!valid) return;
+        var msg = 'Olá! Sou ' + data.nome + '.\nWhatsApp: ' + data.whats + '\nTipo: ' + data.tipo;
+        var quando = document.getElementById('quando').value.trim();
+        if (quando) msg += '\nQuando: ' + quando;
+        msg += '\nQuero um orçamento de mudança.';
+        window.open('https://wa.me/5561995028647?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+      });
+    })();
+
+    // Reveal stagger (IntersectionObserver, sem scroll listener)
+    (function () {
+      var els = document.querySelectorAll('.reveal');
+      if (!('IntersectionObserver' in window)) { els.forEach(function (el) { el.classList.add('visible'); }); return; }
+      var obs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) { entry.target.classList.add('visible'); obs.unobserve(entry.target); }
+        });
+      }, { threshold: 0.15 });
+      els.forEach(function (el) { obs.observe(el); });
+    })();
+  </script>
+</body>
+</html>

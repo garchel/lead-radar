@@ -4,7 +4,7 @@ import {
   sendEmail,
   sendWhatsApp,
 } from "../server/services/contactService";
-import { upsertLead } from "../server/store/db";
+import { upsertLead, setSetting } from "../server/store/db";
 import type { StoredLead } from "../server/store/types";
 
 const leadWithPhone: StoredLead = {
@@ -36,8 +36,17 @@ beforeEach(() => {
 
 describe("sendWhatsApp", () => {
   beforeEach(() => {
+    delete process.env.WHATSAPP_PROVIDER;
+    delete process.env.EVOLUTION_API_URL;
+    delete process.env.EVOLUTION_API_KEY;
+    delete process.env.EVOLUTION_INSTANCE;
+    delete process.env.WHATSMIAU_API_KEY;
+    delete process.env.WHATSMIAU_INSTANCE;
+    delete process.env.META_WHATSAPP_TOKEN;
+    delete process.env.META_PHONE_NUMBER_ID;
     delete process.env.WHATSAPP_API_URL;
     delete process.env.WHATSAPP_API_TOKEN;
+    setSetting("whatsapp_provider", "");
     vi.stubGlobal("fetch", vi.fn());
   });
   afterEach(() => {
@@ -74,6 +83,27 @@ describe("sendWhatsApp", () => {
     );
   });
 
+  it("envia texto pelo WhatsMiau self-hosted com apikey, instância e número", async () => {
+    process.env.WHATSAPP_PROVIDER = "whatsmiau";
+    process.env.WHATSMIAU_API_URL = "http://localhost:8081";
+    process.env.WHATSMIAU_API_KEY = "miau-test-key";
+    process.env.WHATSMIAU_INSTANCE = "leadradar";
+    setSetting("whatsapp_provider", "");
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } })
+    );
+
+    const r = await sendWhatsApp(leadWithPhone, "Olá pela Whatsmiau");
+    expect(r.status).toBe("sent");
+    expect(r.detail).toContain("WhatsMiau");
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const [url, options] = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("http://localhost:8081/v1/message/sendText/leadradar");
+    expect(options.headers.apikey).toBe("miau-test-key");
+    // DTO real do WhatsMiau: campo "text" (não "textMessage")
+    expect(options.body).toBe(JSON.stringify({ number: "5511987654321", text: "Olá pela Whatsmiau" }));
+  });
+
   it("marca como failed quando a API retorna erro HTTP", async () => {
     process.env.WHATSAPP_API_URL = "https://api.exemplo/zapi";
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -105,8 +135,17 @@ describe("sendEmail", () => {
 
 describe("contactLead (seleção de canal e pitch)", () => {
   beforeEach(() => {
+    delete process.env.WHATSAPP_PROVIDER;
+    delete process.env.EVOLUTION_API_URL;
+    delete process.env.EVOLUTION_API_KEY;
+    delete process.env.EVOLUTION_INSTANCE;
+    delete process.env.WHATSMIAU_API_KEY;
+    delete process.env.WHATSMIAU_INSTANCE;
+    delete process.env.META_WHATSAPP_TOKEN;
+    delete process.env.META_PHONE_NUMBER_ID;
     delete process.env.WHATSAPP_API_URL;
     delete process.env.SMTP_HOST;
+    setSetting("whatsapp_provider", "");
     vi.stubGlobal("fetch", vi.fn());
   });
   afterEach(() => {

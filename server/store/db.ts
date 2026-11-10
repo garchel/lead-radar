@@ -1,6 +1,6 @@
 import { getDb, importFromJson } from './schema';
 import { eventHub } from '../events/eventHub';
-import { StoredLead, LandingPage, Schedule, LeadInteraction, InteractionOutcome, Project, PipelineStatus, City, BusinessCategory } from './types';
+import { StoredLead, Schedule, LeadInteraction, InteractionOutcome, Project, PipelineStatus, City, BusinessCategory, SiteAudit, LeadPriority, WebsiteStatus, BrandSnapshot } from './types';
 import { getLeadIdentityCandidates, normalizeText, normalizePhone } from '../services/leadIdentity';
 import type { Job } from '../jobs/queueManager';
 import path from 'path';
@@ -59,6 +59,11 @@ function rowToLead(row: any): StoredLead {
     nextContactAt: row.next_contact_at || undefined,
     contactAttempts: row.contact_attempts ?? 0,
     doNotContact: Boolean(row.do_not_contact),
+    siteAudit: row.site_audit_json ? JSON.parse(row.site_audit_json) : undefined,
+    brandSnapshot: row.brand_snapshot_json ? JSON.parse(row.brand_snapshot_json) : undefined,
+    priorityScore: row.priority_score ?? undefined,
+    priorityLevel: row.priority_level || undefined,
+    priorityReasons: row.priority_reasons ? JSON.parse(row.priority_reasons) : undefined,
     savedAt: row.saved_at || undefined,
     updatedAt: row.updated_at || undefined,
   };
@@ -95,30 +100,13 @@ function leadToRow(lead: StoredLead): any {
     next_contact_at: lead.nextContactAt || null,
     contact_attempts: lead.contactAttempts ?? 0,
     do_not_contact: lead.doNotContact ? 1 : 0,
+    site_audit_json: lead.siteAudit ? JSON.stringify(lead.siteAudit) : null,
+    brand_snapshot_json: lead.brandSnapshot ? JSON.stringify(lead.brandSnapshot) : null,
+    priority_score: lead.priorityScore ?? null,
+    priority_level: lead.priorityLevel || null,
+    priority_reasons: lead.priorityReasons ? JSON.stringify(lead.priorityReasons) : null,
     saved_at: lead.savedAt || null,
     updated_at: lead.updatedAt || null,
-  };
-}
-
-function rowToLp(row: any): LandingPage {
-  return {
-    id: row.id, leadId: row.lead_id, businessName: row.business_name,
-    slug: row.slug, stage: row.stage, status: row.status,
-    html: row.html || undefined, url: row.url || undefined,
-    concept: row.concept ? JSON.parse(row.concept) : undefined,
-    jobId: row.job_id || undefined,
-    createdAt: row.created_at, updatedAt: row.updated_at,
-  };
-}
-
-function lpToRow(lp: LandingPage): any {
-  return {
-    id: lp.id, lead_id: lp.leadId, business_name: lp.businessName,
-    slug: lp.slug, stage: lp.stage, status: lp.status,
-    html: lp.html || null, url: lp.url || null,
-    concept: lp.concept ? JSON.stringify(lp.concept) : null,
-    job_id: lp.jobId || null,
-    created_at: lp.createdAt, updated_at: lp.updatedAt,
   };
 }
 
@@ -162,10 +150,21 @@ export function getLeadById(id: string): StoredLead | undefined {
   return row ? rowToLead(row) : undefined;
 }
 
+/** Busca o lead pelo telefone normalizado (índice normalized_phone). */
+export function getLeadByNormalizedPhone(phone: string): StoredLead | undefined {
+  const normalized = normalizePhone(phone);
+  if (!normalized) return undefined;
+  const row = getDb().prepare('SELECT * FROM leads WHERE normalized_phone = ? LIMIT 1').get(normalized) as any;
+  if (row) return rowToLead(row);
+  // fallback para leads antigos sem normalized_phone preenchido
+  return getLeads().find((lead) => lead.phone && normalizePhone(lead.phone) === normalized);
+}
+
 function mergeDiscoveredLead(existing: StoredLead, incoming: StoredLead): StoredLead {
   const protectedFields = new Set([
     "id", "pipelineStatus", "savedAt", "updatedAt", "lastContactAt", "lastResponseAt",
     "lastContactOutcome", "nextContactAt", "contactAttempts", "doNotContact", "notes", "analysis",
+    "siteAudit", "priorityScore", "priorityLevel", "priorityReasons",
   ]);
   const merged = { ...existing } as StoredLead;
   for (const [key, value] of Object.entries(incoming)) {
@@ -295,13 +294,15 @@ export function upsertLead(
       rating, reviews_count, website_status, website_url, instagram_handle, lat, lng,
       opportunity_score, opportunity_level, estimated_value, key_insights, pipeline_status, notes,
       analysis, normalized_name, normalized_city, normalized_phone, last_contact_at, last_response_at,
-      last_contact_outcome, next_contact_at, contact_attempts, do_not_contact, saved_at, updated_at
+      last_contact_outcome, next_contact_at, contact_attempts, do_not_contact, saved_at, updated_at,
+      brand_snapshot_json
     ) VALUES (
       @id, @name, @category, @address, @neighborhood, @city, @state, @phone, @email, @cnpj, @google_place_id,
       @rating, @reviews_count, @website_status, @website_url, @instagram_handle, @lat, @lng,
       @opportunity_score, @opportunity_level, @estimated_value, @key_insights, @pipeline_status, @notes,
       @analysis, @normalized_name, @normalized_city, @normalized_phone, @last_contact_at, @last_response_at,
-      @last_contact_outcome, @next_contact_at, @contact_attempts, @do_not_contact, @saved_at, @updated_at
+      @last_contact_outcome, @next_contact_at, @contact_attempts, @do_not_contact, @saved_at, @updated_at,
+      @brand_snapshot_json
     )`).run(data);
   }
 
@@ -387,6 +388,7 @@ function rowToProject(row: any): Project {
     githubRepoUrl: row.github_repo_url || undefined,
     repoOwner: row.repo_owner || undefined,
     repoName: row.repo_name || undefined,
+    sitePath: row.site_path || undefined,
     previewUrl: row.preview_url || undefined,
     devStatus: row.dev_status || undefined,
     devMessage: row.dev_message || undefined,
@@ -404,7 +406,7 @@ function rowToProject(row: any): Project {
 
 const PROJECT_COLUMNS =
   'p.id, p.lead_id, p.name, p.type, p.typeform_token, p.stage, p.status, p.priority, p.brief, p.briefing_json, p.tasks_json, p.copy, p.design_notes, p.wireframe_url, p.dev_notes, ' +
-  'p.review_notes, p.deploy_url, p.github_repo_url, p.repo_owner, p.repo_name, p.preview_url, p.dev_status, p.dev_message, p.due_date, p.completed_at, p.archived, p.archived_at, p.created_at, p.updated_at, ' +
+  'p.review_notes, p.deploy_url, p.github_repo_url, p.repo_owner, p.repo_name, p.site_path, p.preview_url, p.dev_status, p.dev_message, p.due_date, p.completed_at, p.archived, p.archived_at, p.created_at, p.updated_at, ' +
   'l.name AS lead_name, l.city AS lead_city, l.category AS lead_category';
 
 const PROJECT_SELECT = `SELECT ${PROJECT_COLUMNS} FROM projects p LEFT JOIN leads l ON l.id = p.lead_id`;
@@ -451,6 +453,7 @@ export function upsertProject(project: Project) {
     github_repo_url: project.githubRepoUrl ?? null,
     repo_owner: project.repoOwner ?? null,
     repo_name: project.repoName ?? null,
+    site_path: project.sitePath ?? null,
     preview_url: project.previewUrl ?? null,
     dev_status: project.devStatus ?? null,
     dev_message: project.devMessage ?? null,
@@ -469,8 +472,8 @@ export function upsertProject(project: Project) {
   } else {
     getDb()
       .prepare(
-        `INSERT INTO projects (id, lead_id, name, type, typeform_token, stage, status, priority, brief, briefing_json, tasks_json, copy, design_notes, wireframe_url, dev_notes, review_notes, deploy_url, github_repo_url, repo_owner, repo_name, preview_url, dev_status, dev_message, due_date, completed_at, archived, archived_at, created_at, updated_at)
-         VALUES (@id, @lead_id, @name, @type, @typeform_token, @stage, @status, @priority, @brief, @briefing_json, @tasks_json, @copy, @design_notes, @wireframe_url, @dev_notes, @review_notes, @deploy_url, @github_repo_url, @repo_owner, @repo_name, @preview_url, @dev_status, @dev_message, @due_date, @completed_at, @archived, @archived_at, @created_at, @updated_at)`
+        `INSERT INTO projects (id, lead_id, name, type, typeform_token, stage, status, priority, brief, briefing_json, tasks_json, copy, design_notes, wireframe_url, dev_notes, review_notes, deploy_url, github_repo_url, repo_owner, repo_name, site_path, preview_url, dev_status, dev_message, due_date, completed_at, archived, archived_at, created_at, updated_at)
+         VALUES (@id, @lead_id, @name, @type, @typeform_token, @stage, @status, @priority, @brief, @briefing_json, @tasks_json, @copy, @design_notes, @wireframe_url, @dev_notes, @review_notes, @deploy_url, @github_repo_url, @repo_owner, @repo_name, @site_path, @preview_url, @dev_status, @dev_message, @due_date, @completed_at, @archived, @archived_at, @created_at, @updated_at)`
       )
       .run(data);
   }
@@ -547,40 +550,6 @@ export function removeFinishedJobs(): number {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Landing Pages                                                       */
-/* ------------------------------------------------------------------ */
-export function getLandingPages(): LandingPage[] {
-  const rows = getDb().prepare('SELECT * FROM landing_pages ORDER BY updated_at DESC').all();
-  return rows.map(rowToLp);
-}
-
-export function getLandingPageById(id: string): LandingPage | undefined {
-  const row = getDb().prepare('SELECT * FROM landing_pages WHERE id = ?').get(id) as any;
-  return row ? rowToLp(row) : undefined;
-}
-
-export function upsertLandingPage(lp: LandingPage): LandingPage {
-  const now = new Date().toISOString();
-  lp.updatedAt = now;
-  const existing = getDb().prepare('SELECT id FROM landing_pages WHERE id = ?').get(lp.id) as any;
-  const data = { ...lpToRow(lp), updated_at: now };
-
-  if (existing) {
-    const sets = Object.keys(data).map((k) => `${k} = @${k}`).join(', ');
-    getDb().prepare(`UPDATE landing_pages SET ${sets} WHERE id = @id`).run(data);
-  } else {
-    lp.createdAt = lp.createdAt || now;
-    getDb()
-      .prepare(`INSERT INTO landing_pages (id, lead_id, business_name, slug, stage, status, html, url, concept, job_id, created_at, updated_at)
-        VALUES (@id, @lead_id, @business_name, @slug, @stage, @status, @html, @url, @concept, @job_id, @created_at, @updated_at)`)
-      .run(lpToRow(lp));
-  }
-
-  eventHub.emit('landing_pages', { id: lp.id, status: lp.status });
-  return lp;
-}
-
-/* ------------------------------------------------------------------ */
 /*  Query helpers (enrichment)                                         */
 /* ------------------------------------------------------------------ */
 export function searchLeadsByCity(city: string): StoredLead[] {
@@ -618,6 +587,57 @@ export function updateLeadAnalysis(leadId: string, analysis: any) {
   eventHub.emit('leads', { id: leadId });
 }
 
+/** Persiste a identidade visual captada em perfis públicos (ou null para limpar). */
+export function setLeadBrandSnapshot(leadId: string, snapshot: BrandSnapshot | null) {
+  getDb()
+    .prepare('UPDATE leads SET brand_snapshot_json = @snapshot, updated_at = @updated_at WHERE id = @id')
+    .run({
+      id: leadId,
+      snapshot: snapshot ? JSON.stringify(snapshot) : null,
+      updated_at: new Date().toISOString(),
+    });
+  eventHub.emit('leads', { id: leadId });
+}
+
+/** Persiste o resultado da auditoria técnica do site do lead. */
+export function updateLeadSiteAudit(leadId: string, audit: SiteAudit | null): void {
+  getDb()
+    .prepare('UPDATE leads SET site_audit_json = @audit, updated_at = @updated_at WHERE id = @id')
+    .run({
+      id: leadId,
+      audit: audit ? JSON.stringify(audit) : null,
+      updated_at: new Date().toISOString(),
+    });
+  eventHub.emit('leads', { id: leadId });
+}
+
+/** Persiste a prioridade comercial calculada (score + motivos). */
+/** Corrige o status de presença digital (backfill/classificação pela URL). */
+export function updateLeadWebsiteStatus(leadId: string, status: WebsiteStatus): void {
+  getDb()
+    .prepare('UPDATE leads SET website_status = @status, updated_at = @updatedAt WHERE id = @id')
+    .run({ id: leadId, status, updatedAt: new Date().toISOString() });
+  eventHub.emit('leads', { id: leadId });
+}
+
+export function updateLeadPriority(leadId: string, priority: LeadPriority): void {
+  getDb()
+    .prepare(`UPDATE leads SET
+      priority_score = @score,
+      priority_level = @level,
+      priority_reasons = @reasons,
+      updated_at = @updated_at
+      WHERE id = @id`)
+    .run({
+      id: leadId,
+      score: priority.score,
+      level: priority.level,
+      reasons: JSON.stringify(priority.reasons),
+      updated_at: new Date().toISOString(),
+    });
+  eventHub.emit('leads', { id: leadId });
+}
+
 /* ------------------------------------------------------------------ */
 /*  Communications (contact dispatch log)                              */
 /* ------------------------------------------------------------------ */
@@ -626,12 +646,25 @@ export interface Communication {
   leadId: string;
   channel: string;
   direction: string;
-  status: 'pending' | 'sent' | 'failed';
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
   subject?: string;
   toAddress?: string;
   message?: string;
   sentAt?: string;
+  /** ID da mensagem no provedor (wamid/id do gateway) — casa o ACK de entrega. */
+  externalId?: string;
+  /** Gancho comercial usado na abordagem (código do defeito, "sem_site", "generico"...). */
+  hook?: string;
   createdAt: string;
+}
+
+/** Comunicação enrichida com os dados do lead — usada pelo inbox do agente. */
+export interface CommunicationWithLead extends Communication {
+  leadName?: string;
+  leadPhone?: string;
+  leadPipelineStatus?: string;
+  /** true quando a última mensagem do lead foi recebida e não respondida. */
+  awaitingReply?: boolean;
 }
 
 export function recordCommunication(input: {
@@ -643,13 +676,15 @@ export function recordCommunication(input: {
   toAddress?: string;
   message: string;
   sentAt?: string;
+  externalId?: string;
+  hook?: string;
 }): string {
   const id = `comm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const now = new Date().toISOString();
   getDb()
     .prepare(`INSERT INTO communications
-      (id, lead_id, channel, direction, status, subject, to_address, message, sent_at, created_at)
-      VALUES (@id, @leadId, @channel, @direction, @status, @subject, @toAddress, @message, @sentAt, @createdAt)`)
+      (id, lead_id, channel, direction, status, subject, to_address, message, sent_at, created_at, external_id, hook)
+      VALUES (@id, @leadId, @channel, @direction, @status, @subject, @toAddress, @message, @sentAt, @createdAt, @externalId, @hook)`)
     .run({
       id,
       leadId: input.leadId,
@@ -661,14 +696,57 @@ export function recordCommunication(input: {
       message: input.message,
       sentAt: input.sentAt || (input.status === 'sent' ? now : null),
       createdAt: now,
+      externalId: input.externalId || null,
+      hook: input.hook || null,
     });
   eventHub.emit('communications', { id, leadId: input.leadId });
   return id;
 }
 
-export function getCommunications(): Communication[] {
-  const rows = getDb().prepare('SELECT * FROM communications ORDER BY created_at DESC').all() as any[];
-  return rows.map((row) => ({
+/**
+ * Atualiza o texto de uma comunicação já registrada (edição de mensagem no
+ * WhatsApp). Retorna o id atualizado ou null se não encontrar.
+ */
+export function updateCommunicationMessage(externalId: string, message: string): string | null {
+  const row = getDb().prepare('SELECT id FROM communications WHERE external_id = ? LIMIT 1').get(externalId) as any;
+  if (!row) return null;
+  getDb().prepare('UPDATE communications SET message = @message WHERE id = @id').run({ id: row.id, message });
+  eventHub.emit('communications', { id: row.id });
+  return row.id;
+}
+
+const STATUS_RANK: Record<string, number> = { pending: 0, sent: 1, delivered: 2, read: 3 };
+
+/**
+ * Aplica o ACK do provedor. ACK fora de ordem (ex.: "read" chegando antes de
+ * "delivered") não regride o status; falha sempre sobrescreve.
+ */
+export function updateCommunicationStatusByExternalId(
+  externalId: string,
+  status: Communication['status']
+): string | null {
+  const row = getDb()
+    .prepare('SELECT id, status FROM communications WHERE external_id = ? ORDER BY created_at DESC LIMIT 1')
+    .get(externalId) as any;
+  if (!row) return null;
+  if (status !== 'failed' && (STATUS_RANK[status] ?? 0) <= (STATUS_RANK[row.status] ?? 0)) return row.id;
+  getDb()
+    .prepare('UPDATE communications SET status = @status, sent_at = COALESCE(sent_at, @sentAt) WHERE id = @id')
+    .run({ id: row.id, status, sentAt: new Date().toISOString() });
+  eventHub.emit('communications', { id: row.id });
+  return row.id;
+}
+
+/** Busca a comunicação pelo id do provedor (usada na reconciliação de inbound). */
+export function getCommunicationByExternalId(externalId: string): Communication | null {
+  const row = getDb()
+    .prepare('SELECT * FROM communications WHERE external_id = ? ORDER BY created_at DESC LIMIT 1')
+    .get(externalId) as any;
+  return row ? rowToCommunication(row) : null;
+}
+
+function rowToCommunication(row: any): Communication {
+  return {
     id: row.id,
     leadId: row.lead_id,
     channel: row.channel,
@@ -678,13 +756,29 @@ export function getCommunications(): Communication[] {
     toAddress: row.to_address || undefined,
     message: row.message || undefined,
     sentAt: row.sent_at || undefined,
+    externalId: row.external_id || undefined,
+    hook: row.hook || undefined,
     createdAt: row.created_at,
-  }));
+  };
+}
+
+export function getCommunications(): Communication[] {
+  const rows = getDb().prepare('SELECT * FROM communications ORDER BY created_at DESC, rowid DESC').all() as any[];
+  return rows.map(rowToCommunication);
 }
 
 export function getCommunicationsByLead(leadId: string): Communication[] {
-  const rows = getDb().prepare('SELECT * FROM communications WHERE lead_id = ? ORDER BY created_at DESC').all(leadId) as any[];
-  return rows.map((row) => ({
+  const rows = getDb().prepare('SELECT * FROM communications WHERE lead_id = ? ORDER BY created_at DESC, rowid DESC').all(leadId) as any[];
+  return rows.map(rowToCommunication);
+}
+
+export function getCommunicationById(id: string): Communication | undefined {
+  const row = getDb().prepare('SELECT * FROM communications WHERE id = ?').get(id) as any;
+  return row ? rowToCommunication(row) : undefined;
+}
+
+function rowToCommunicationWithLead(row: any): CommunicationWithLead {
+  return {
     id: row.id,
     leadId: row.lead_id,
     channel: row.channel,
@@ -694,8 +788,69 @@ export function getCommunicationsByLead(leadId: string): Communication[] {
     toAddress: row.to_address || undefined,
     message: row.message || undefined,
     sentAt: row.sent_at || undefined,
+    externalId: row.external_id || undefined,
+    hook: row.hook || undefined,
     createdAt: row.created_at,
-  }));
+    leadName: row.lead_name || undefined,
+    leadPhone: row.lead_phone || undefined,
+    leadPipelineStatus: row.lead_pipeline_status || undefined,
+    awaitingReply: Boolean(row.awaiting_reply),
+  };
+}
+
+/**
+ * Histórico de comunicações com dados do lead (últimas primeiro).
+ *
+ * `direction` filtra "inbound" (recebidas) ou "outbound" (enviadas).
+ * `awaitingReply` marca as mensagens recebidas cujo lead ainda não recebeu
+ * resposta — é o que o agente usa para montar a fila de respostas.
+ */
+export function getRecentCommunications(options: {
+  leadId?: string;
+  direction?: "inbound" | "outbound";
+  channel?: string;
+  limit?: number;
+} = {}): CommunicationWithLead[] {
+  const limit = Math.min(Math.max(Number(options.limit || 50), 1), 500);
+  const where: string[] = [];
+  const params: Record<string, any> = { limit };
+
+  if (options.leadId) {
+    where.push("c.lead_id = @leadId");
+    params.leadId = options.leadId;
+  }
+  if (options.direction) {
+    where.push("c.direction = @direction");
+    params.direction = options.direction;
+  }
+  if (options.channel) {
+    where.push("c.channel = @channel");
+    params.channel = options.channel;
+  }
+
+  const rows = getDb()
+    .prepare(`
+      SELECT c.*, l.name AS lead_name, l.phone AS lead_phone, l.pipeline_status AS lead_pipeline_status,
+        CASE WHEN c.direction = 'inbound' AND NOT EXISTS (
+          SELECT 1 FROM communications o
+          WHERE o.lead_id = c.lead_id AND o.direction = 'outbound'
+            AND (o.created_at > c.created_at OR (o.created_at = c.created_at AND o.rowid > c.rowid))
+        ) THEN 1 ELSE 0 END AS awaiting_reply
+      FROM communications c
+      LEFT JOIN leads l ON l.id = c.lead_id
+      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY c.created_at DESC, c.rowid DESC
+      LIMIT @limit
+    `)
+    .all(params) as any[];
+
+  return rows.map(rowToCommunicationWithLead);
+}
+
+/** Mensagens recebidas aguardando resposta do agente. */
+export function getIncomingInbox(options: { limit?: number; onlyAwaitingReply?: boolean } = {}): CommunicationWithLead[] {
+  const items = getRecentCommunications({ direction: "inbound", limit: options.limit ?? 50 });
+  return options.onlyAwaitingReply === false ? items : items.filter((item) => item.awaitingReply);
 }
 
 /* ------------------------------------------------------------------ */
@@ -753,6 +908,12 @@ export function getInteractionById(id: string): LeadInteraction | undefined {
 
 export function getInteractionsByLead(leadId: string): LeadInteraction[] {
   const rows = getDb().prepare('SELECT * FROM interactions WHERE lead_id = ? ORDER BY occurred_at DESC').all(leadId) as any[];
+  return rows.map(rowToInteraction);
+}
+
+/** Todas as interações (usado pelas métricas de funil). */
+export function getAllInteractions(): LeadInteraction[] {
+  const rows = getDb().prepare('SELECT * FROM interactions ORDER BY occurred_at DESC').all() as any[];
   return rows.map(rowToInteraction);
 }
 

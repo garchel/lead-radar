@@ -1,5 +1,6 @@
 import { getProjectById, getLeadById } from "../store/db";
-import { Project, ProjectBriefingField, ProjectType, StoredLead } from "../store/types";
+import { BrandSnapshot, Project, ProjectBriefingField, ProjectType, StoredLead } from "../store/types";
+import { formatBrandSnapshotForPrompt } from "../services/brandResearchService";
 import { updateProject } from "./service";
 
 /* ------------------------------------------------------------------ */
@@ -74,6 +75,74 @@ function typeLabel(type?: ProjectType, kind: string = "projeto"): string {
   return kind;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Repositório único: todas as LPs em `sites/<nicho>/<slug>/`.        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Nichos conhecidos → palavras-chave da categoria do lead. A ordem importa:
+ * nichos específicos vêm antes do genérico `medico`.
+ */
+const NICHE_KEYWORDS: Array<{ niche: string; keywords: string[] }> = [
+  { niche: "dentista", keywords: ["dent", "odonto", "ortodont", "implante"] },
+  { niche: "advogado", keywords: ["advog", "advoc", "juridic", "direito"] },
+  { niche: "transporte", keywords: ["mudanc", "transport", "frete", "logistic"] },
+  { niche: "construcao", keywords: ["ferrage", "construc", "obra", "cimento", "telha", "material"] },
+  { niche: "reformas", keywords: ["manuten", "reforma", "hidraul", "eletric", "pintura", "pedreir", "gesso"] },
+  { niche: "marketing", keywords: ["marketing", "publicid", "agenci", "landing", "web-design"] },
+  { niche: "medico", keywords: ["medic", "clinic", "saude", "hospital", "cardiolog", "pediatr", "dermatolog", "ortoped", "ginecolog", "psicolog", "fisioterap"] },
+];
+
+/** Converte texto livre em slug (`Clínica Sorriso` → `clinica-sorriso`). */
+export function slugifySite(value: string): string {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60)
+    .replace(/-+$/g, "");
+}
+
+/** Deduz o nicho a partir da categoria do lead (fallback: categoria em slug). */
+export function inferNiche(category?: string): string {
+  const text = slugifySite(category || "");
+  if (!text) return "outros";
+  for (const rule of NICHE_KEYWORDS) {
+    if (rule.keywords.some((keyword) => text.includes(keyword))) return rule.niche;
+  }
+  return text;
+}
+
+/** Normaliza um caminho de pasta para o padrão `sites/<nicho>/<slug>`. */
+export function normalizeSitePath(value: string): string {
+  let path = String(value || "")
+    .trim()
+    .replace(/\\/g, "/")
+    .replace(/^\.\//, "")
+    .replace(/\/+$/, "");
+  path = path.replace(/^sites\//i, "").replace(/^\/+/, "");
+  return path ? `sites/${path}` : "";
+}
+
+/**
+ * Caminho onde a LP deve viver. Usa o `sitePath` registrado no projeto; se
+ * ainda não houver, sugere `sites/<nicho>/<slug-do-cliente>`.
+ */
+export function suggestSitePath(project: Project, lead?: StoredLead): string {
+  const explicit = normalizeSitePath(project.sitePath || "");
+  if (explicit) return explicit;
+
+  const niche = inferNiche(lead?.category || project.leadCategory);
+  const slug =
+    slugifySite(lead?.name || project.leadName || "") ||
+    slugifySite(String(project.name || "").replace(/^lp\s+/i, "")) ||
+    "projeto";
+  return `sites/${niche}/${slug}`;
+}
+
+
 function pickBriefing(project: Project): ProjectBriefingField[] {
   return Array.isArray(project.briefing) ? project.briefing : [];
 }
@@ -89,6 +158,12 @@ export function buildProjectDevKit(projectId: string): {
   briefing: ProjectBriefingField[];
   landingPageConcept: any;
   repo?: { owner: string; name: string; url: string };
+  /** Pasta da LP dentro do repo único (ex.: `sites/dentista/clinica-sorriso`). */
+  sitePath: string;
+  /** Nicho da pasta (primeiro segmento depois de `sites/`). */
+  niche: string;
+  /** Identidade visual captada em perfis públicos, quando houver. */
+  brandSnapshot?: BrandSnapshot;
 } {
   const project = getProjectById(projectId);
   if (!project) throw new Error("Projeto não encontrado.");
@@ -96,6 +171,7 @@ export function buildProjectDevKit(projectId: string): {
   const lead = project.leadId ? getLeadById(project.leadId) : undefined;
   const briefing = pickBriefing(project);
   const landingPageConcept = lead?.analysis?.landingPageConcept;
+  const sitePath = suggestSitePath(project, lead);
 
   return {
     project,
@@ -106,6 +182,9 @@ export function buildProjectDevKit(projectId: string): {
     repo: project.githubRepoUrl
       ? { owner: project.repoOwner || "", name: project.repoName || "", url: project.githubRepoUrl }
       : undefined,
+    sitePath,
+    niche: sitePath.split("/")[1] || "outros",
+    brandSnapshot: lead?.brandSnapshot,
   };
 }
 
@@ -120,7 +199,7 @@ function briefingLines(items: ProjectBriefingField[]): string {
  */
 export function buildProjectDevPrompt(projectId: string): string {
   const kit = buildProjectDevKit(projectId);
-  const { project, lead, typeLabel, briefing } = kit;
+  const { project, lead, typeLabel, briefing, sitePath, niche } = kit;
 
   const businessName = lead?.name || project.leadName || project.name;
   const city = lead?.city || project.leadCity;
@@ -151,7 +230,18 @@ export function buildProjectDevPrompt(projectId: string): string {
       ].join("\n")
     : "  (nenhum conceito estruturado da análise de IA armazenado)";
 
-  return `Você é um desenvolvedor front-end sênior. Implemente do zero, em um novo repositório no GitHub, um site funcional e profissional para o negócio abaixo. NÃO use template pronto: construa HTML/CSS/JS (ou o stack que julgar melhor) realmente sob medida para este cliente.
+  const brand =
+    formatBrandSnapshotForPrompt(kit.brandSnapshot) ||
+    "  (nenhuma pesquisa de identidade visual realizada — use o briefing/design e a paleta do conceito)";
+
+  return `Você é um desenvolvedor front-end sênior. Implemente do zero um site funcional e profissional para o negócio abaixo, **no repositório único \`lead-radar\`**, dentro da pasta \`${sitePath}/\`. NÃO crie repositório novo e NÃO use template pronto: construa HTML/CSS/JS (ou o stack que julgar melhor) realmente sob medida para este cliente.
+
+# ONDE ENTREGAR (obrigatório)
+- Repositório: ${project.githubRepoUrl || "o repositório único do LeadRadar (`lead-radar`)"} — todas as LPs vivem nele; não crie outro repositório.
+- Pasta do projeto: \`${sitePath}/\` (nicho \`${niche}\` + slug do cliente).
+- Estrutura esperada: \`index.html\`, \`assets/\`, \`BRIEFING_COPY.md\` e \`ASSETS_PROMPT.md\`.
+- Se a pasta já existir, o projeto está sendo retomado: atualize o que existe, nunca duplique.
+- Biblioteca compartilhada de efeitos: \`sites/efeitos/\` (fica fora das pastas de nicho).
 
 # CONTEXTO DO PROJETO
 - Tipo: ${typeLabel}
@@ -184,32 +274,41 @@ Se houver uma URL acima, siga a estrutura/seções e o posicionamento de textos 
 # CONCEITO DA ANÁLISE DE IA (referência — adapte se os campos acima divergirem)
 ${concept}
 
+# IDENTIDADE VISUAL DO LEAD (pesquisa em imagens/perfis públicos)
+${brand}
+
 # NOTAS DE DESENVOLVIMENTO
 ${dev}
 
 # REQUISITOS
-1. Crie o repositório, implemente o site e faça push/commit das mudanças.
+1. Crie/atualize a pasta \`${sitePath}/\` no repositório único, implemente o site ali e faça commit/push das mudanças.
 2. Siga as seções e a estrutura definidas no briefing/copy: hero com CTA claro em WhatsApp, benefícios, prova social, formulário, FAQ, footer.
-3. Aplique a paleta/identidade do briefing/design. Responsivo (mobile-first), acessível e performático.
+3. Aplique a paleta/identidade do briefing/design e, quando existir, a identidade visual do lead acima. Não copie imagens de terceiros: recrie o clima com fotos/ilustrações próprias ou bancos de imagem. Responsivo (mobile-first), acessível e performático.
 4. O formulário deve validar e dar feedback de erro/sucesso; integre o CTA ao WhatsApp sempre que possível.
-5. Prepare o deploy/preview (ex.: GitHub Pages) e avise quando o código estiver pronto, informando a URL do repositório e o preview.
+5. Prepare o deploy/preview (ex.: GitHub Pages) e avise quando o código estiver pronto, informando o caminho da pasta e o preview.
 
-Ao concluir, use a tool "submit_project_code" informando projectId, repoUrl, previewUrl e uma mensagem de resumo. Não invente dados que não estejam neste kit.`;
+Ao concluir, use a tool "submit_project_code" informando projectId, repoUrl, sitePath ("${sitePath}"), previewUrl e uma mensagem de resumo. Não invente dados que não estejam neste kit.`;
 }
-/** Registra o repositório GitHub do projeto (etapa desenvolvimento). */
-export function setProjectDevRepo(id: string, repoUrl: string): Project {
+/** Registra o repositório GitHub e a pasta da LP (etapa desenvolvimento). */
+export function setProjectDevRepo(id: string, repoUrl: string, sitePath?: string): Project {
   const parsed = parseRepoUrl(repoUrl);
   if (!parsed) {
     throw new Error(
       "URL de repositório inválida. Use o formato https://github.com/owner/repo (ou git@git... )."
     );
   }
-  return updateProject(id, {
+  const patch: Partial<Project> = {
     githubRepoUrl: repoUrl.trim(),
     repoOwner: parsed.owner,
     repoName: parsed.name,
     devStatus: "em_desenvolvimento",
-  });
+  };
+  if (sitePath?.trim()) {
+    const normalized = normalizeSitePath(sitePath);
+    if (!normalized) throw new Error("Caminho da pasta inválido. Use sites/<nicho>/<slug>.");
+    patch.sitePath = normalized;
+  }
+  return updateProject(id, patch);
 }
 
 /**
@@ -219,7 +318,7 @@ export function setProjectDevRepo(id: string, repoUrl: string): Project {
  */
 export function submitProjectCode(
   id: string,
-  input: { repoUrl?: string; previewUrl?: string; message?: string }
+  input: { repoUrl?: string; previewUrl?: string; sitePath?: string; message?: string }
 ): Project {
   const patch: Record<string, unknown> = {
     devStatus: "codigo_entregue",
@@ -235,6 +334,11 @@ export function submitProjectCode(
     patch.githubRepoUrl = input.repoUrl.trim();
     patch.repoOwner = parsed.owner;
     patch.repoName = parsed.name;
+  }
+  if (input.sitePath?.trim()) {
+    const normalized = normalizeSitePath(input.sitePath);
+    if (!normalized) throw new Error("Caminho da pasta inválido. Use sites/<nicho>/<slug>.");
+    patch.sitePath = normalized;
   }
   if (input.previewUrl?.trim()) {
     patch.previewUrl = input.previewUrl.trim();

@@ -307,6 +307,36 @@ export const McpStatusModal: React.FC<McpStatusModalProps> = ({ isOpen, onClose 
                     Move automaticamente o lead entre os estágios do Pipeline (Novo, Contatado, Proposta, Negociação, Em Desenvolvimento, Finalizado).
                   </p>
                 </div>
+
+                <div className="bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-emerald-700">WhatsApp: list_communications · list_inbound_messages · send_whatsapp_message</span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">MCP Tool</span>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1">
+                    Lê o histórico de conversa, mostra as mensagens recebidas que aguardam resposta e envia/responde pelo número configurado (respeitando opt-out LGPD).
+                  </p>
+                </div>
+
+                <div className="bg-indigo-50/60 p-3.5 rounded-xl border border-indigo-200">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-indigo-700">Crescimento: audit_lead_website · prioritize_leads · outbound_metrics · run_cadence</span>
+                    <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-full">MCP Tool</span>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1">
+                    Acha o defeito real do site do lead (gancho de abordagem), ranqueia quem tem mais dor, mede resposta por gancho e executa a cadência D+3/D+7 — sempre em simulação até o operador autorizar o envio.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-indigo-700">Gateway: whatsapp_status · set_whatsapp_provider · whatsapp_instance_status · whatsapp_request_qr · whatsapp_set_webhook</span>
+                    <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-full">MCP Tool</span>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1">
+                    O agente opera o número: consulta o backend ativo, troca de provedor, verifica a instância, gera o QR de pareamento e aponta o webhook de inbound.
+                  </p>
+                </div>
               </div>
 
               <div className="pt-2">
@@ -319,6 +349,12 @@ export const McpStatusModal: React.FC<McpStatusModalProps> = ({ isOpen, onClose 
                   </span>
                   <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200">
                     Resource: leads://pipeline
+                  </span>
+                  <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200">
+                    Resource: leads://queue_status
+                  </span>
+                  <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200">
+                    Resource: leads://inbox
                   </span>
                   <span className="bg-purple-50 text-purple-700 px-2.5 py-1 rounded-lg border border-purple-200">
                     Prompt: autopilot_prospecting

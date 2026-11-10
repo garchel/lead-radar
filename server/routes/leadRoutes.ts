@@ -13,12 +13,20 @@ import {
 } from "../store/db";
 import { StoredLead } from "../store/types";
 import { dispatchLeadContact, recordInteractionOutcome } from "../services/interactionService";
+import { rankLeads } from "../services/leadScoringService";
+import { researchLeadBrand } from "../services/brandResearchService";
+import { SerpApiQuotaError } from "../services/serpApi";
 import { syncLeadProject } from "../projects/service";
 
 export function registerLeadRoutes(app: Express) {
   // List leads
   app.get("/api/leads", (req: Request, res: Response) => {
-    res.json({ success: true, leads: getLeads() });
+    const leads = getLeads();
+    if (req.query.sort === "priority") {
+      const ranked = rankLeads(leads).map(({ priority, ...lead }) => ({ ...lead, priority }));
+      return res.json({ success: true, leads: ranked });
+    }
+    res.json({ success: true, leads });
   });
 
   // Get one lead
@@ -144,6 +152,29 @@ export function registerLeadRoutes(app: Express) {
   // List follow-ups whose cooldown has expired.
   app.get("/api/follow-ups/due", (req: Request, res: Response) => {
     res.json({ success: true, followUps: getDueFollowUps() });
+  });
+
+  // Pesquisa a identidade visual do lead em imagens/perfis públicos.
+  // Manual por design: consome cota SerpAPI e uma chamada de visão do Gemini.
+  app.post("/api/leads/:id/brand-research", async (req: Request, res: Response) => {
+    const lead = getLeadById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
+
+    try {
+      const result = await researchLeadBrand(lead.id, {
+        force: req.body?.force === true,
+        maxImages: req.body?.maxImages,
+        maxSearches: req.body?.maxSearches,
+        includeProfiles: req.body?.includeProfiles,
+      });
+      res.json({ success: true, ...result });
+    } catch (err: any) {
+      const quota = err instanceof SerpApiQuotaError;
+      res.status(quota ? 429 : 502).json({
+        success: false,
+        error: err?.message || "Falha ao pesquisar a identidade visual do lead.",
+      });
+    }
   });
 
   // List all communications

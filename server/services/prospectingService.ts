@@ -1,9 +1,10 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { StoredLead } from "../store/types";
+import { StoredLead, SiteAudit } from "../store/types";
 import { getGeminiModel, getSerpApiConfig } from "../config";
 import { searchSerpApiMaps, SerpApiQuotaError, listSerpApiKeys, getLastSerpApiRaw, wasLastSearchCached } from "./serpApi";
 import { getLeads, getCities, getCityByCode, getBusinessCategories, estimateTicket, type MarketTier } from "../store/db";
 import { normalizePhone, normalizeText } from "./leadIdentity";
+import { qaPitch } from "./pitchQaService";
 
 /* ------------------------------------------------------------------ */
 /*  Shared, real business search + AI analysis used by the queue,      */
@@ -45,17 +46,21 @@ export interface AnalyzeInput {
   category?: string;
   city?: string;
   address?: string;
-  websiteStatus?: "none" | "social_only" | "has_website";
+  websiteStatus?: "none" | "social_only" | "marketplace_only" | "has_website";
   userNotes?: string;
   phone?: string;
   rating?: number;
   reviewsCount?: number;
+  /** URL do site encontrado — usada pelo QA para não contradizer a presença real. */
+  websiteUrl?: string;
   /** UF do lead — usada para resolver o tier da cidade na base IBGE. */
   state?: string;
   /** Ticket sugerido pré-calculado (R$); se ausente, calcula de categoria × tier. */
   suggestedTicket?: number;
   /** Tier de mercado da cidade (A/B/C/D). */
   marketTier?: string;
+  /** Auditoria técnica real do site — quando presente, o pitch cita os defeitos. */
+  siteAudit?: SiteAudit;
 }
 
 /**
@@ -134,6 +139,21 @@ export async function analyzeLead(input: AnalyzeInput): Promise<any> {
     throw new Error("Cidade é obrigatória para gerar a análise.");
   }
 
+  // Defeitos reais medidos no site: a abordagem deixa de ser genérica.
+  const audit = input.siteAudit;
+  const auditHint = audit
+    ? [
+        "- DEFEITOS REAIS ENCONTRADOS NO SITE (auditoria técnica):",
+        `  • Gancho principal: ${audit.headline}`,
+        ...audit.issues.slice(0, 5).map(
+          (item) => `  • [${item.severity}] ${item.title} — ${item.detail}`
+        ),
+        `- Tempo de carregamento medido: ${(audit.responseTimeMs / 1000).toFixed(1)}s | Peso: ${Math.round(audit.sizeKb)} KB | HTTPS: ${audit.https ? "sim" : "não"}`,
+        "- REGRA OBRIGATÓRIA: o customPitchWhatsApp deve citar 2 desses defeitos específicos, com números quando existirem. Nada de \"quer um site novo?\".",
+        "",
+      ].join("\n")
+    : "";
+
   const promptText = `
 Você é um especialista em diagnóstico de marketing e vendas B2B.
 Analise a seguinte empresa e gere um plano de venda de Landing Page:
@@ -143,8 +163,8 @@ Analise a seguinte empresa e gere um plano de venda de Landing Page:
 - Endereço: ${address?.trim() || "não informado"}
 - Telefone: ${phone?.trim() || "não informado"}
 - Nota Google: ${rating ?? "não informada"}★ (${reviewsCount ?? "não informadas"} avaliações)
-- Presença digital: ${websiteStatus === "none" ? "sem site" : websiteStatus === "social_only" ? "somente redes sociais" : websiteStatus === "has_website" ? "com site" : "não informada"}
-${ticketHint}${saturationHint}${userNotes?.trim() ? `- Observações do vendedor: ${userNotes.trim()}` : ""}
+- Presença digital: ${websiteStatus === "none" ? "sem site" : websiteStatus === "social_only" ? "somente redes sociais" : websiteStatus === "marketplace_only" ? "somente em marketplace (iFood/Mercado Livre etc.), sem site próprio" : websiteStatus === "has_website" ? "com site" : "não informada"}
+${ticketHint}${saturationHint}${auditHint}${userNotes?.trim() ? `- Observações do vendedor: ${userNotes.trim()}` : ""}
 
 Retorne estritamente JSON com as chaves:
 - businessName: string
@@ -160,23 +180,45 @@ Retorne estritamente JSON com as chaves:
 - landingPageConcept: objeto com heroHeadline, heroSubheadline, callToAction, recommendedSections (array), suggestedColorPalette, keySellingPoints (array)
 `;
 
-  const response = await ai.models.generateContent({
-    model: getGeminiModel(),
-    contents: promptText,
-    config: {
-      responseMimeType: "application/json",
-      abortSignal: AbortSignal.timeout(Number(process.env.GEMINI_TIMEOUT_MS || 60000)),
-    },
-  });
+  const generate = async (extraHint = ""): Promise<any> => {
+    const response = await ai.models.generateContent({
+      model: getGeminiModel(),
+      contents: `${promptText}${extraHint}`,
+      config: {
+        responseMimeType: "application/json",
+        abortSignal: AbortSignal.timeout(Number(process.env.GEMINI_TIMEOUT_MS || 60000)),
+      },
+    });
+    const text = response.text?.trim();
+    if (!text) throw new Error("A IA não retornou um diagnóstico válido.");
+    return JSON.parse(text);
+  };
 
-  const text = response.text?.trim();
-  if (!text) {
-    throw new Error("A IA não retornou um diagnóstico válido.");
+  const qaContext = {
+    businessName,
+    websiteStatus,
+    websiteUrl: input.websiteUrl,
+    rating,
+    reviewsCount,
+    suggestedTicket,
+    siteAudit: audit,
+  };
+
+  let analysis = await generate();
+  let qa = qaPitch(analysis?.customPitchWhatsApp || "", qaContext);
+  if (!qa.ok && audit) {
+    // Uma segunda tentativa com as correções explícitas costuma bastar.
+    try {
+      analysis = await generate(qa.retryHint);
+      qa = qaPitch(analysis?.customPitchWhatsApp || "", qaContext);
+    } catch {
+      /* mantém o primeiro rascunho e expõe os avisos */
+    }
   }
-  return JSON.parse(text);
-}
-
-/* ------------------------------------------------------------------ */
+  analysis.qa = { ok: qa.ok, issues: qa.issues };
+  if (!qa.ok) analysis.qaWarnings = qa.issues;
+  return analysis;
+}/* ------------------------------------------------------------------ */
 /*  Real search (Gemini Search Grounding), without local/demo fallback. */
 /* ------------------------------------------------------------------ */
 export function validateBusinessResults(value: unknown): any[] {
@@ -200,7 +242,7 @@ export function validateBusinessResults(value: unknown): any[] {
     if (!/^[A-Za-z]{2}$/.test(lead.state as string)) {
       throw new Error(`A busca retornou uma UF inválida para o lead ${lead.name}.`);
     }
-    if (!["none", "social_only", "has_website"].includes(lead.websiteStatus as string)) {
+    if (!["none", "social_only", "marketplace_only", "has_website"].includes(lead.websiteStatus as string)) {
       throw new Error(`A busca retornou um websiteStatus inválido para o lead ${lead.name}.`);
     }
 
@@ -259,7 +301,7 @@ Cada item do array deve ter as seguintes propriedades:
 - phone: telefone fixo ou WhatsApp formatado
 - rating: nota do Google (número entre 3.8 e 5.0)
 - reviewsCount: quantidade de avaliações (número inteiro)
-- websiteStatus: "none" (sem site nem landing page) | "social_only" (apenas Instagram/Facebook) | "has_website" (tem site)
+- websiteStatus: "none" (sem site nem landing page) | "social_only" (apenas Instagram/Facebook) | "marketplace_only" (só perfil em iFood/Mercado Livre/Shopee, sem site próprio) | "has_website" (tem site próprio)
 - googlePlaceId: identificador estável do Google Places, se a fonte real informar
 - websiteUrl: URL do site se a fonte real informar (caso contrário, omita)
 - instagramHandle: @do_instagram somente se a fonte real informar (não invente)
@@ -322,7 +364,7 @@ Cada item do array deve ter as seguintes propriedades:
     let businesses = validateBusinessResults(parsed.businesses);
     if (filterNoWebsiteOnly) {
       businesses = businesses.filter(
-        (b: any) => b.websiteStatus === "none" || b.websiteStatus === "social_only"
+        (b: any) => b.websiteStatus === "none" || b.websiteStatus === "social_only" || b.websiteStatus === "marketplace_only"
       );
     }
     if (businesses.length === 0) {
@@ -373,7 +415,7 @@ export function computeCombinedScore(b: any, opts?: { categoryPropensity?: numbe
 
   // Sem site continua sendo o sinal mais forte (já embutido no base,
   // mas social_only ganha meio degrau)
-  if (b.websiteStatus === "social_only") score += 3;
+  if (b.websiteStatus === "social_only" || b.websiteStatus === "marketplace_only") score += 3;
 
   score = Math.max(0, Math.min(100, Math.round(score)));
   return { score, level: score > 80 ? "high" : score >= 60 ? "medium" : "low" };
@@ -482,7 +524,7 @@ async function searchViaSerpApi(input: SearchInput): Promise<SearchResult> {
   });
   let validated = validateBusinessResults(businesses);
   if (input.filterNoWebsiteOnly) {
-    validated = validated.filter((b: any) => b.websiteStatus === "none" || b.websiteStatus === "social_only");
+    validated = validated.filter((b: any) => b.websiteStatus === "none" || b.websiteStatus === "social_only" || b.websiteStatus === "marketplace_only");
   }
   const withTickets = attachSuggestedTickets(validated);
   const marked = markAlreadySaved(withTickets);

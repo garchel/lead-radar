@@ -11,12 +11,22 @@ import { getSchedulerConfig } from "../config";
 export function buildScheduleJobInput(
   schedule: Schedule,
   maxLeadsPerRun?: number
-): { type: "mcp_autopilot" | "batch_prospecting" | "follow_up_batch"; title: string; payload: any } {
+): { type: "mcp_autopilot" | "batch_prospecting" | "follow_up_batch" | "outbound_cadence"; title: string; payload: any } {
   if (schedule.jobType === "follow_up_reminder") {
     return {
       type: "follow_up_batch",
       title: `[Agendado] ${schedule.name}`,
       payload: {},
+    };
+  }
+
+  if (schedule.jobType === "outbound_cadence") {
+    const { dryRun = true, limit = 10, dailyCap } = schedule.payload || {};
+    // Default seguro: simula. Só envia de verdade com dryRun:false explícito.
+    return {
+      type: "outbound_cadence",
+      title: `[Agendado] ${schedule.name}`,
+      payload: { dryRun: dryRun !== false, limit, dailyCap },
     };
   }
 

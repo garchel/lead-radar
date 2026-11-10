@@ -5,6 +5,7 @@ import { searchBusinesses, analyzeLead } from "../services/prospectingService";
 import { buildStableLeadId } from "../services/leadIdentity";
 import { enrichLeadBatch } from "../enrichment";
 import { dispatchLeadContact } from "../services/interactionService";
+import { runCadence } from "../services/cadenceService";
 import { eventHub } from "../events/eventHub";
 
 
@@ -13,7 +14,8 @@ export type JobType =
   | 'batch_lead_analysis'
   | 'mcp_autopilot'
   | 'follow_up_batch'
-  | 'cold_leads_review';
+  | 'cold_leads_review'
+  | 'outbound_cadence';
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 
 export interface JobLog {
@@ -196,6 +198,8 @@ class QueueManager {
         await this.handleFollowUpBatch(job);
       } else if (job.type === 'cold_leads_review') {
         await this.handleColdLeadsReview(job);
+      } else if (job.type === 'outbound_cadence') {
+        await this.handleOutboundCadence(job);
       } else {
         throw new Error(`Tipo de job desconhecido: ${job.type}`);
       }
@@ -333,7 +337,7 @@ class QueueManager {
           if (requiredFields.some((field) => typeof biz[field] !== 'string' || !biz[field].trim())) {
             throw new Error(`A busca retornou o lead ${index + 1} com dados obrigatórios ausentes.`);
           }
-          if (!['none', 'social_only', 'has_website'].includes(biz.websiteStatus)) {
+          if (!['none', 'social_only', 'marketplace_only', 'has_website'].includes(biz.websiteStatus)) {
             throw new Error(`A busca retornou um websiteStatus inválido para o lead ${biz.name}.`);
           }
           const lead: StoredLead = {
@@ -446,9 +450,43 @@ class QueueManager {
         return { totalDue: r.totalDue ?? undefined };
       case 'cold_leads_review':
         return { totalCold: r.totalCold ?? undefined };
+      case 'outbound_cadence':
+        return {
+          dryRun: r.dryRun ?? undefined,
+          planned: r.planned ?? undefined,
+          sent: Array.isArray(r.sent) ? r.sent.length : undefined,
+          failed: Array.isArray(r.failed) ? r.failed.length : undefined,
+          skipped: r.skipped ?? undefined,
+        };
       default:
         return {};
     }
+  }
+
+  /**
+   * Cadência D+3/D+7 agendada. Envia apenas com `dryRun:false` explícito no
+   * payload do agendamento; o teto diário e o kill switch continuam valendo.
+   */
+  private async handleOutboundCadence(job: Job) {
+    const { dryRun = true, limit = 10, dailyCap } = job.payload || {};
+    this.addLog(
+      job,
+      `Cadência de outbound iniciada (${dryRun === false ? "envio real" : "simulação"}, limite ${limit}).`,
+      'info'
+    );
+
+    const result = await runCadence({ dryRun: dryRun !== false, limit, dailyCap });
+    job.result = result;
+
+    if (!result.enabled) {
+      this.addLog(job, 'Cadência desligada nas configurações — nada foi enviado.', 'warning');
+      return;
+    }
+    this.addLog(
+      job,
+      `${result.planned} candidato(s): ${result.sent.length} enviada(s), ${result.failed.length} falha(s), ${result.blockedByCap} bloqueada(s) pelo teto.`,
+      result.failed.length > 0 ? 'warning' : 'success'
+    );
   }
 
   // Helper to check if job was cancelled
@@ -500,7 +538,7 @@ class QueueManager {
 
   // Task Handler 3: MCP Autopilot Job
   private async handleMcpAutopilot(job: Job) {
-    const { location, state, category, createLandingPages = false, sendPitches = false, maxLeads } = job.payload;
+    const { location, state, category, sendPitches = false, maxLeads } = job.payload;
     if (typeof location !== 'string' || !location.trim() || typeof state !== 'string' || !/^[A-Za-z]{2}$/.test(state.trim()) || typeof category !== 'string' || !category.trim()) {
       throw new Error('Job autopilot inválido: location, state e category são obrigatórios.');
     }
@@ -527,7 +565,7 @@ class QueueManager {
       if (requiredFields.some((field) => typeof biz[field] !== 'string' || !biz[field].trim())) {
         throw new Error(`A busca retornou o lead ${index + 1} com dados obrigatórios ausentes.`);
       }
-      if (!['none', 'social_only', 'has_website'].includes(biz.websiteStatus)) {
+      if (!['none', 'social_only', 'marketplace_only', 'has_website'].includes(biz.websiteStatus)) {
         throw new Error(`A busca retornou um websiteStatus inválido para o lead ${biz.name}.`);
       }
       const lead: StoredLead = {

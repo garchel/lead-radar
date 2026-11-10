@@ -32,6 +32,14 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
         </span>
       );
     }
+    if (lead.websiteStatus === 'marketplace_only') {
+      return (
+        <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">
+          <Globe className="w-3.5 h-3.5" />
+          <span>Só marketplace (sem site próprio)</span>
+        </span>
+      );
+    }
     return (
       <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
         <Globe className="w-3.5 h-3.5" />

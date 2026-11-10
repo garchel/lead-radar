@@ -15,7 +15,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Rocket, Plus, CalendarClock, Flag, CheckCircle2, Link2, Copy, Check } from 'lucide-react';
+import { Rocket, Plus, CalendarClock, Flag, CheckCircle2, Link2, Copy, Check, Code2, Bot, BadgeCheck } from 'lucide-react';
 import { BusinessLead, Project, ProjectStage } from '../types';
 import { ProjectModal } from './ProjectModal';
 
@@ -196,6 +196,33 @@ const SortableProjectCard: React.FC<SortableProjectCardProps> = ({ project, onCl
               Concluído
             </span>
           )}
+          {!isConcluded && project.devStatus === 'codigo_entregue' && (
+            <span
+              title="O agente entregou o código — abra o projeto e revise para aprovar."
+              className="inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[10px] bg-amber-50 text-amber-800 border-amber-300"
+            >
+              <Code2 className="w-3 h-3 inline mr-0.5 -mt-px" />
+              Código entregue
+            </span>
+          )}
+          {!isConcluded && project.devStatus === 'aguardando_agente' && (
+            <span
+              title="Aguardando o agente de IA implementar este projeto."
+              className="inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[10px] bg-slate-50 text-slate-500 border-slate-200"
+            >
+              <Bot className="w-3 h-3 inline mr-0.5 -mt-px" />
+              Aguardando agente
+            </span>
+          )}
+          {!isConcluded && project.devStatus === 'aprovado' && (
+            <span
+              title="Código aprovado — falta fazer deploy."
+              className="inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[10px] bg-teal-50 text-teal-700 border-teal-200"
+            >
+              <BadgeCheck className="w-3 h-3 inline mr-0.5 -mt-px" />
+              Aprovado
+            </span>
+          )}
         </div>
 
         {/* Progresso da etapa */}
@@ -248,7 +275,13 @@ const SortableProjectCard: React.FC<SortableProjectCardProps> = ({ project, onCl
   );
 };
 
-export const ProjectsDashboard: React.FC = () => {
+interface ProjectsDashboardProps {
+  /** Quando definido (via barra de próximas ações), abre o modal deste projeto. */
+  focusProjectId?: string | null;
+  onFocused?: () => void;
+}
+
+export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({ focusProjectId, onFocused }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [leads, setLeads] = useState<BusinessLead[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -298,6 +331,18 @@ export const ProjectsDashboard: React.FC = () => {
     };
     return () => es.close();
   }, [loadProjects, loadLeads]);
+
+  // Abertura via barra de próximas ações: localiza o projeto já carregado
+  // e abre o modal de edição.
+  useEffect(() => {
+    if (!focusProjectId || projects.length === 0) return;
+    const target = projects.find((p) => p.id === focusProjectId);
+    if (target) {
+      setEditing(target);
+      setModalOpen(true);
+      onFocused?.();
+    }
+  }, [focusProjectId, projects, onFocused]);
 
   const handleDrop = async (event: DragEndEvent) => {
     const { active, over } = event;

@@ -4,7 +4,7 @@ import { getSchedules, getScheduleById, upsertSchedule, deleteSchedule } from ".
 import { Schedule, ScheduleJobType } from "../store/types";
 import { scheduler } from "../scheduler/scheduler";
 
-const VALID_JOB_TYPES: ScheduleJobType[] = ["mcp_autopilot", "batch_prospecting", "follow_up_reminder"];
+const VALID_JOB_TYPES: ScheduleJobType[] = ["mcp_autopilot", "batch_prospecting", "follow_up_reminder", "outbound_cadence"];
 
 function isValidCron(cron: string): boolean {
   try {

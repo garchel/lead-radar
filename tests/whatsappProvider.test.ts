@@ -5,6 +5,9 @@ import { getSetting, setSetting } from "../server/store/db";
 function cleanEnvs() {
   delete process.env.WHATSAPP_PROVIDER;
   delete process.env.EVOLUTION_API_URL;
+  delete process.env.WHATSMIAU_API_URL;
+  delete process.env.WHATSMIAU_API_KEY;
+  delete process.env.WHATSMIAU_INSTANCE;
   delete process.env.META_WHATSAPP_TOKEN;
   delete process.env.META_PHONE_NUMBER_ID;
   delete process.env.WHATSAPP_API_URL;
@@ -25,14 +28,22 @@ describe("resolveWhatsappProvider", () => {
     expect(r.provider).toBeNull();
   });
 
-  it("auto resolve na ordem evolution → meta → legacy", () => {
+  it("auto resolve na ordem evolution → whatsmiau → meta → legacy", () => {
     process.env.EVOLUTION_API_URL = "http://localhost:8080";
+    process.env.WHATSMIAU_API_URL = "http://localhost:8081";
+    process.env.WHATSMIAU_API_KEY = "miau-key";
+    process.env.WHATSMIAU_INSTANCE = "leadradar";
     process.env.META_WHATSAPP_TOKEN = "tok";
     process.env.META_PHONE_NUMBER_ID = "123";
     process.env.WHATSAPP_API_URL = "https://legado.exemplo";
     expect(resolveWhatsappProvider().provider).toBe("evolution");
 
     delete process.env.EVOLUTION_API_URL;
+    expect(resolveWhatsappProvider().provider).toBe("whatsmiau");
+
+    delete process.env.WHATSMIAU_API_URL;
+    delete process.env.WHATSMIAU_API_KEY;
+    delete process.env.WHATSMIAU_INSTANCE;
     expect(resolveWhatsappProvider().provider).toBe("meta");
 
     delete process.env.META_WHATSAPP_TOKEN;
@@ -45,12 +56,21 @@ describe("resolveWhatsappProvider", () => {
     expect(resolveWhatsappProvider().provider).toBe("legacy");
   });
 
-  it("escolha manual via env força o backend", () => {
+  it("escolha manual via env força o backend Meta", () => {
     process.env.EVOLUTION_API_URL = "http://localhost:8080";
     process.env.META_WHATSAPP_TOKEN = "tok";
     process.env.META_PHONE_NUMBER_ID = "123";
     process.env.WHATSAPP_PROVIDER = "meta";
     expect(resolveWhatsappProvider().provider).toBe("meta");
+  });
+
+  it("escolha manual via env força o backend", () => {
+    process.env.EVOLUTION_API_URL = "http://localhost:8080";
+    process.env.WHATSMIAU_API_URL = "http://localhost:8081";
+    process.env.WHATSMIAU_API_KEY = "miau-key";
+    process.env.WHATSMIAU_INSTANCE = "leadradar";
+    process.env.WHATSAPP_PROVIDER = "whatsmiau";
+    expect(resolveWhatsappProvider().provider).toBe("whatsmiau");
   });
 
   it("escolha manual sem credenciais falha com motivo claro", () => {
@@ -59,6 +79,13 @@ describe("resolveWhatsappProvider", () => {
     const r = resolveWhatsappProvider();
     expect(r.provider).toBeNull();
     expect(r.reason).toContain("META_WHATSAPP_TOKEN");
+  });
+
+  it("escolha manual via env sem credenciais Whatsmiau falha claramente", () => {
+    process.env.WHATSAPP_PROVIDER = "whatsmiau";
+    const r = resolveWhatsappProvider();
+    expect(r.provider).toBeNull();
+    expect(r.reason).toContain("WHATSMIAU_API_URL/WHATSMIAU_API_KEY");
   });
 
   it("escolha persistida na UI tem precedência sobre o env", () => {

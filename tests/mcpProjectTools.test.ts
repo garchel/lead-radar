@@ -229,5 +229,7 @@ describe("MCP: list_projects / update_project — ciclo do cliente", () => {
     expect(r.prompt).toContain("avaliação gratuita");
     // briefing estruturado aparece no kit (formato - fieldTitle: answer)
     expect(r.prompt).toContain("Nome do negócio: Clínica Vida Sorridente");
+    expect(r.project.sitePath).toMatch(/^sites\/[a-z0-9-]+\/[a-z0-9-]+$/);
+    expect(r.prompt).toContain(r.project.sitePath);
   });
 });

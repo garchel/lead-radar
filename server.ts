@@ -14,6 +14,9 @@ import { registerScheduleRoutes } from "./server/routes/scheduleRoutes";
 import { registerCityRoutes } from "./server/routes/cityRoutes";
 import { registerWhatsAppWebhook } from "./server/routes/whatsappWebhookRoutes";
 import { registerAutomationRoutes } from "./server/routes/automationRoutes";
+import { registerGrowthRoutes } from "./server/routes/growthRoutes";
+import { registerOutboxRoutes } from "./server/routes/outboxRoutes";
+import { registerActionItemsRoutes } from "./server/routes/actionItemsRoutes";
 import { scheduleBackups } from "./server/backup/backupService";
 import { scheduler, ensureDefaultFollowUpSchedule } from "./server/scheduler/scheduler";
 import { startTypeformPolling } from "./server/typeform/polling";
@@ -69,6 +72,9 @@ registerScheduleRoutes(app);
 registerCityRoutes(app);
 registerWhatsAppWebhook(app);
 registerAutomationRoutes(app);
+registerGrowthRoutes(app);
+registerOutboxRoutes(app);
+registerActionItemsRoutes(app);
 
 app.get("/api/health", (_req, res) => {
   let hasSerpApiKey = Boolean((process.env.SERPAPI_API_KEY || "").trim());
@@ -362,6 +368,14 @@ async function startServer() {
     });
   }
 
+  const dataDir = process.env.LEADRADAR_DATA_DIR || path.join(process.cwd(), "data");
+  if (/onedrive/i.test(dataDir)) {
+    console.warn(
+      `[boot] ATENÇÃO: o banco SQLite está em pasta sincronizada (${dataDir}). ` +
+        "OneDrive pode corromper o arquivo durante o sync. Defina LEADRADAR_DATA_DIR para uma pasta local."
+    );
+  }
+
   const httpServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`LeadRadar AI disponível em http://localhost:${PORT}`);
   });
@@ -374,6 +388,23 @@ async function startServer() {
     if (c > 0) console.log(`[boot] Cidades IBGE: ${c} | Categorias: ${cats}`);
   } catch (e: any) {
     console.warn("[boot] Falha no seed IBGE/categorias:", e?.message || e);
+  }
+
+  // Presença digital: corrige leads que tinham só link de iFood/Instagram mas
+  // estavam gravados como "tem site" (e por isso caíam para baixa prioridade).
+  // Versionado: roda uma vez; bump em BACKFILL_VERSION quando as regras mudarem.
+  try {
+    const { getSetting, setSetting } = await import("./server/store/db");
+    const { backfillSitePresence, BACKFILL_VERSION } = await import("./server/services/sitePresenceBackfill");
+    if (getSetting("site_presence_backfill_version") !== BACKFILL_VERSION) {
+      const fixed = backfillSitePresence();
+      setSetting("site_presence_backfill_version", BACKFILL_VERSION);
+      console.log(
+        `[boot] Presença digital (v${BACKFILL_VERSION}) corrigida em ${fixed.updated} lead(s) (${fixed.rescored} repriorizados).`
+      );
+    }
+  } catch (e: any) {
+    console.warn("[boot] Falha no backfill de presença digital:", e?.message || e);
   }
 
   // Agenda padrão de recontatos autorizados (visível na UI mesmo com o

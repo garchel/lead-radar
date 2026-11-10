@@ -52,6 +52,19 @@ describe("scheduler / schedules (orquestração periódica)", () => {
     });
   });
 
+  it("buildScheduleJobInput converte cadência para job com simulação por padrão", () => {
+    const input = buildScheduleJobInput(
+      makeSchedule({ jobType: "outbound_cadence", payload: { limit: 5 } })
+    );
+    expect(input.type).toBe("outbound_cadence");
+    expect(input.payload).toMatchObject({ dryRun: true, limit: 5 });
+
+    const real = buildScheduleJobInput(
+      makeSchedule({ jobType: "outbound_cadence", payload: { dryRun: false, limit: 3 } })
+    );
+    expect(real.payload).toMatchObject({ dryRun: false, limit: 3 });
+  });
+
   it("buildScheduleJobInput converte batch para o payload correto", () => {
     const input = buildScheduleJobInput(
       makeSchedule({

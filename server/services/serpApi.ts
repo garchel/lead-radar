@@ -1,6 +1,7 @@
 import { getSerpApiConfig } from "../config";
 import { getDb } from "../store/schema";
 import crypto from "crypto";
+import { classifySitePresence, presenceLabel } from "./presenceService";
 
 // ------------------------------------------------------------------
 // SerpAPI Google Maps — busca real sem alucinação
@@ -514,14 +515,17 @@ function mapSerpPlaceToBusiness(place: any, fallbackCategory: string, fallbackCi
   const rating: number | undefined = typeof place.rating === "number" ? place.rating : undefined;
   const reviewsCount: number | undefined = typeof place.reviews === "number" ? place.reviews : undefined;
   const website: string | undefined = (place.website || place.link || place.url || "").trim() || undefined;
-  const websiteStatus: "none" | "social_only" | "has_website" = website ? "has_website" : "none";
+  // Ter perfil no iFood/Instagram não é ter site: classifica pela URL real.
+  const websiteStatus = classifySitePresence(website);
+  const websiteLabel = presenceLabel(website);
   const lat: number | undefined = place.gps_coordinates?.latitude ?? place.latitude;
   const lng: number | undefined = place.gps_coordinates?.longitude ?? place.longitude;
   const googlePlaceId: string | undefined = place.place_id || place.place_id_search || undefined;
 
-  // heurística de oportunidade: sem site + boa nota = alto
+  // heurística de oportunidade: sem site próprio + boa nota = alto
   let opportunityScore = 65;
   if (websiteStatus === "none") opportunityScore += 20;
+  else if (websiteStatus === "marketplace_only") opportunityScore += 10;
   if (rating && rating >= 4.5) opportunityScore += 10;
   if (reviewsCount && reviewsCount >= 50) opportunityScore += 5;
   opportunityScore = Math.min(95, opportunityScore);
@@ -548,7 +552,13 @@ function mapSerpPlaceToBusiness(place: any, fallbackCategory: string, fallbackCi
     opportunityLevel,
     estimatedValue: "R$ 1.800 - R$ 3.500",
     keyInsights: [
-      websiteStatus === "none" ? "Sem site próprio — perde buscas no Google" : "Presença digital pode ser melhorada com landing page dedicada",
+      websiteStatus === "none"
+        ? "Sem site próprio — perde buscas no Google"
+        : websiteStatus === "marketplace_only"
+          ? `Só está no ${websiteLabel || "marketplace"} — sem site próprio para receber buscas`
+          : websiteStatus === "social_only"
+            ? `Só tem ${websiteLabel || "rede social"} — nenhum site que o cliente controle`
+            : "Presença digital pode ser melhorada com landing page dedicada",
       rating ? `Boa reputação (${rating}★) — prova social forte para conversão` : "Reputação a construir com página profissional",
       "Landing page com WhatsApp direto aumenta captação local",
     ],
@@ -732,4 +742,151 @@ export async function searchSerpApiMaps(input: {
     lastSerpApiMeta
   );
   return mapped;
+}
+
+/* ------------------------------------------------------------------ */
+/*  SerpAPI Google Images / Web — identidade visual do lead            */
+/* ------------------------------------------------------------------ */
+
+export interface SerpApiImage {
+  title: string;
+  /** Imagem em resolução original (referência — não copiamos o arquivo). */
+  imageUrl: string;
+  /** Miniatura (gstatic) — menor e mais confiável para análise visual. */
+  thumbnailUrl?: string;
+  /** Página de origem (perfil, site, matéria). */
+  sourceUrl?: string;
+  width?: number;
+  height?: number;
+}
+
+export interface SerpApiWebResult {
+  title: string;
+  link: string;
+  snippet?: string;
+}
+
+/**
+ * Executa uma chamada SerpAPI com resolução de chave, checagem de cota,
+ * rotação automática em 429 e contabilização apenas em sucesso.
+ */
+async function serpApiRequest(params: URLSearchParams, retried = false): Promise<any> {
+  const cfg = getSerpApiConfig();
+  let effectiveKey = getEffectiveApiKey();
+  if (!effectiveKey) {
+    throw new SerpApiQuotaError(
+      "Nenhuma chave SerpAPI cadastrada. Adicione uma chave em Gerenciar chaves ou defina SERPAPI_API_KEY no .env."
+    );
+  }
+
+  let guard = canConsume();
+  if (!guard.allowed) {
+    const active = getActiveKeyRow();
+    const next = findAvailableKeyExcluding(active?.id || null);
+    if (!next) throw new SerpApiQuotaError(guard.reason!);
+    activateSerpApiKey(next.id);
+    effectiveKey = getEffectiveApiKey();
+    guard = canConsume();
+    if (!guard.allowed) throw new SerpApiQuotaError(guard.reason!);
+  }
+
+  const requestParams = new URLSearchParams(params);
+  requestParams.set("api_key", effectiveKey!);
+  const url = `https://serpapi.com/search?${requestParams.toString()}`;
+
+  let res: Response;
+  try {
+    res = await fetch(url, { signal: AbortSignal.timeout(Number(process.env.SERPAPI_TIMEOUT_MS || 20000)) });
+  } catch (err: any) {
+    throw new Error(`Falha de rede ao consultar SerpAPI: ${err?.message || err}`);
+  }
+
+  const data: any = await res.json().catch(() => ({}));
+  const message: string = data?.error || `HTTP ${res.status}`;
+
+  if (!res.ok || data?.error) {
+    if (res.status === 429 || /quota|rate limit|throughput|exceeded/i.test(message)) {
+      if (!retried) {
+        const active = getActiveKeyRow();
+        const next = findAvailableKeyExcluding(active?.id || null);
+        if (next) {
+          activateSerpApiKey(next.id);
+          return serpApiRequest(params, true);
+        }
+      }
+      throw new SerpApiQuotaError(
+        `SerpAPI cota excedida (${message}). Limite: ${cfg.searchesPerMonth}/mês, ${cfg.throughputPerHour}/hora. ` +
+          "Renova mensal no 1º do próximo mês e horário em 1h. Troque de chave em Gerenciar chaves."
+      );
+    }
+    throw new Error(`SerpAPI erro (${res.status}): ${message}`);
+  }
+
+  recordSuccess();
+  return data;
+}
+
+/**
+ * Busca imagens públicas no Google Imagens (engine `google_images`).
+ * Cada chamada consome 1 busca da cota SerpAPI.
+ */
+export async function searchSerpApiImages(input: {
+  query: string;
+  limit?: number;
+  safeSearch?: boolean;
+}): Promise<SerpApiImage[]> {
+  const limit = Math.max(1, Math.min(Math.floor(input.limit ?? 12), 30));
+  const params = new URLSearchParams({
+    engine: "google_images",
+    q: input.query,
+    hl: "pt",
+    gl: "br",
+    ijn: "0",
+  });
+  if (input.safeSearch !== false) params.set("safe", "active");
+
+  const data = await serpApiRequest(params);
+  const results: any[] = Array.isArray(data?.images_results) ? data.images_results : [];
+
+  return results
+    .slice(0, limit)
+    .map((item: any) => ({
+      title: String(item?.title || "").trim(),
+      imageUrl: String(item?.original || item?.thumbnail || "").trim(),
+      thumbnailUrl: item?.thumbnail ? String(item.thumbnail).trim() : undefined,
+      sourceUrl: item?.link ? String(item.link).trim() : undefined,
+      width: Number(item?.original_width) || undefined,
+      height: Number(item?.original_height) || undefined,
+    }))
+    .filter((image) => /^https?:\/\//i.test(image.imageUrl));
+}
+
+/**
+ * Busca resultados orgânicos do Google (engine `google`).
+ * Usado para localizar perfis públicos de Instagram/Facebook do lead.
+ */
+export async function searchSerpApiWeb(input: {
+  query: string;
+  limit?: number;
+}): Promise<SerpApiWebResult[]> {
+  const limit = Math.max(1, Math.min(Math.floor(input.limit ?? 10), 20));
+  const params = new URLSearchParams({
+    engine: "google",
+    q: input.query,
+    hl: "pt",
+    gl: "br",
+    num: String(limit),
+  });
+
+  const data = await serpApiRequest(params);
+  const results: any[] = Array.isArray(data?.organic_results) ? data.organic_results : [];
+
+  return results
+    .slice(0, limit)
+    .map((item: any) => ({
+      title: String(item?.title || "").trim(),
+      link: String(item?.link || "").trim(),
+      snippet: item?.snippet ? String(item.snippet).trim() : undefined,
+    }))
+    .filter((item) => /^https?:\/\//i.test(item.link));
 }

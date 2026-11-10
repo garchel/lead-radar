@@ -18,7 +18,7 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
   const [viewMode, setViewMode] = useState<'table' | 'cards' | 'raw'>('table');
   const [raw, setRaw] = useState<any>(serpApiRaw || null);
   const [meta, setMeta] = useState<any>(serpApiMeta || null);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'none' | 'social_only' | 'has_website'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'none' | 'social_only' | 'marketplace_only' | 'has_website'>('all');
   const [onlyNew, setOnlyNew] = useState(false);
   const [cityFilter, setCityFilter] = useState('');
   const [stateFilter, setStateFilter] = useState('all');
@@ -140,6 +140,7 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
               <option value="all">Todos ({leads.length}) • Ouro+Prata+Com site</option>
               <option value="none">Ouro — Sem site ({stats.semSite})</option>
               <option value="social_only">Prata — Só Instagram ({leads.filter((l)=>l.websiteStatus==='social_only').length})</option>
+              <option value="marketplace_only">Bronze — Só marketplace ({leads.filter((l)=>l.websiteStatus==='marketplace_only').length})</option>
               <option value="has_website">Com site ({stats.comSite})</option>
             </select>
           </div>
@@ -295,8 +296,8 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
                     <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">{lead.category || 'Categoria não informada'}</div>
                     <h4 className="font-bold text-slate-900 text-sm leading-tight truncate">{lead.name}</h4>
                   </div>
-                  <span className={`shrink-0 px-2 py-0.5 rounded-full text-[11px] font-bold border ${lead.websiteStatus === 'none' ? 'bg-amber-50 text-amber-700 border-amber-200' : lead.websiteStatus === 'has_website' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600'}`}>
-                    {lead.websiteStatus === 'none' ? 'Sem site' : lead.websiteStatus === 'has_website' ? 'Com site' : 'Social'}
+                  <span className={`shrink-0 px-2 py-0.5 rounded-full text-[11px] font-bold border ${lead.websiteStatus === 'none' ? 'bg-amber-50 text-amber-700 border-amber-200' : lead.websiteStatus === 'has_website' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : lead.websiteStatus === 'marketplace_only' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-slate-100 text-slate-600'}`}>
+                    {lead.websiteStatus === 'none' ? 'Sem site' : lead.websiteStatus === 'has_website' ? 'Com site' : lead.websiteStatus === 'marketplace_only' ? 'Marketplace' : 'Social'}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1 flex items-center gap-1"><MapPin className="w-3 h-3" /> {lead.address} • {lead.city} ({lead.state || 'UF'})</p>

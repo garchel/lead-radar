@@ -6,7 +6,115 @@ export type PipelineStatus =
   | "closed"
   | "declined";
 
-export type WebsiteStatus = "none" | "social_only" | "has_website";
+export type WebsiteStatus = "none" | "social_only" | "marketplace_only" | "has_website";
+
+/* ------------------------------------------------------------------ */
+/*  Auditoria técnica do site do lead                                  */
+/* ------------------------------------------------------------------ */
+
+export type SiteAuditSeverity = "critical" | "warning" | "info";
+
+export type SiteAuditIssueCode =
+  | "unreachable"
+  | "no_https"
+  | "https_invalid"
+  | "no_viewport"
+  | "slow_response"
+  | "heavy_page"
+  | "no_title"
+  | "no_description"
+  | "no_og_image"
+  | "no_whatsapp_cta"
+  | "no_contact_cta"
+  | "broken_form"
+  | "outdated_copyright"
+  | "placeholder_content"
+  | "no_h1"
+  | "missing_image_alt"
+  | "old_platform"
+  | "audit_blocked";
+
+export interface SiteAuditIssue {
+  code: SiteAuditIssueCode;
+  severity: SiteAuditSeverity;
+  /** Título curto, escrito para o dono do negócio (não é termo técnico). */
+  title: string;
+  /** O que isso custa em clientes/dinheiro. */
+  detail: string;
+  /** O que o LeadRadar vende para resolver. */
+  fix: string;
+}
+
+export interface SiteAudit {
+  url: string;
+  auditedAt: string;
+  /** false quando o site não respondeu (site fora do ar / domínio expirado). */
+  reachable: boolean;
+  httpStatus?: number;
+  https: boolean;
+  responseTimeMs: number;
+  sizeKb: number;
+  /** Tecnologias detectadas (wordpress, elementor, wix...). */
+  tech: string[];
+  issues: SiteAuditIssue[];
+  /** Saúde técnica do site: 100 = impecável, 0 = desastre. */
+  healthScore: number;
+  /** Oportunidade comercial: 100 = site tão ruim que vende sozinho. */
+  painScore: number;
+  /** Frase de gancho pronta para abrir a conversa. */
+  headline: string;
+  /** Até 3 defeitos em linguagem de dono de negócio. */
+  bullets: string[];
+}
+
+export interface LeadPriority {
+  score: number;
+  level: "alta" | "media" | "baixa";
+  reasons: string[];
+}
+
+/* ------------------------------------------------------------------ */
+/*  Identidade visual do lead (pesquisa em perfis públicos)            */
+/* ------------------------------------------------------------------ */
+
+export type BrandColorRole = "primary" | "secondary" | "accent" | "background" | "text";
+
+export interface BrandColor {
+  hex: string;
+  name?: string;
+  role?: BrandColorRole;
+}
+
+export interface BrandLogo {
+  /** URL pública da imagem candidata a logo (não copiamos o arquivo). */
+  url?: string;
+  description?: string;
+  /** 0–1: quão confiante a IA está de que é o logo do negócio. */
+  confidence?: number;
+}
+
+export interface BrandSnapshot {
+  version: number;
+  createdAt: string;
+  /** Origem da coleta. */
+  source: "serpapi" | "manual";
+  query: string;
+  /** Perfis encontrados nas imagens/resultados públicos. */
+  profiles: { instagram?: string; facebook?: string };
+  palette: BrandColor[];
+  /** Tom visual em 3–6 adjetivos (ex.: rústico, acolhedor, minimalista). */
+  tone: string[];
+  typography?: { display?: string; body?: string; notes?: string };
+  logo?: BrandLogo;
+  /** Referências visuais (URLs públicas) com descrição do que mostram. */
+  imagery: Array<{ url: string; description?: string }>;
+  /** Resumo em 1 parágrafo para entrar no prompt de design. */
+  summary: string;
+  /** 0–1: confiança geral do snapshot. */
+  confidence: number;
+  /** Explica falhas parciais (sem imagens, perfil privado etc.). */
+  notes?: string;
+}
 
 export interface StoredLead {
   id: string;
@@ -45,35 +153,14 @@ export interface StoredLead {
   nextContactAt?: string;
   contactAttempts?: number;
   doNotContact?: boolean;
-}
-
-export type LandingPageStage =
-  | "rascunho"
-  | "copy"
-  | "design"
-  | "deploy"
-  | "publicado";
-
-export type LandingPageStatus =
-  | "aguardando_aprovacao"
-  | "em_producao"
-  | "aprovada"
-  | "publicada"
-  | "rejeitada";
-
-export interface LandingPage {
-  id: string;
-  leadId: string;
-  businessName: string;
-  slug: string;
-  stage: LandingPageStage;
-  status: LandingPageStatus;
-  html?: string;
-  url?: string;
-  concept?: any;
-  jobId?: string;
-  createdAt: string;
-  updatedAt: string;
+  /** Resultado da última auditoria técnica do site (WhatsApp/MCP). */
+  siteAudit?: SiteAudit;
+  /** Identidade visual captada em perfis públicos (Instagram/Facebook/Google). */
+  brandSnapshot?: BrandSnapshot;
+  /** Prioridade comercial calculada a partir dos sinais de dor. */
+  priorityScore?: number;
+  priorityLevel?: "alta" | "media" | "baixa";
+  priorityReasons?: string[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -87,7 +174,7 @@ export interface LandingPage {
  * - `follow_up_reminder`: varre os recontatos autorizados (prazo vencido) e
  *   enfileira um job informativo; o envio real exige aprovação humana.
  */
-export type ScheduleJobType = "mcp_autopilot" | "batch_prospecting" | "follow_up_reminder";
+export type ScheduleJobType = "mcp_autopilot" | "batch_prospecting" | "follow_up_reminder" | "outbound_cadence";
 
 export type InteractionType = "initial_contact" | "follow_up" | "manual_note";
 export type InteractionDeliveryStatus = "pending" | "sent" | "failed";
@@ -201,12 +288,18 @@ export interface Project {
   devNotes?: string;
   reviewNotes?: string;
   deployUrl?: string;
-  /** Repositório GitHub criado pelo/para o agente de IA de código (etapa desenvolvimento). Ex.: https://github.com/org/repo. */
+  /** Repositório GitHub do projeto. Com o repo único, aponta para o `lead-radar`. Ex.: https://github.com/org/repo. */
   githubRepoUrl?: string;
   /** Nome do dono/org do repositório (extraído de githubRepoUrl). */
   repoOwner?: string;
-  /** Nome do repositório (extraído de githubRepoUrl). Ex.: "site-clinica-odonto-plus". */
+  /** Nome do repositório (extraído de githubRepoUrl). Ex.: "lead-radar". */
   repoName?: string;
+  /**
+   * Pasta da LP dentro do repositório único, no padrão
+   * `sites/<nicho>/<slug>` (ex.: `sites/dentista/clinica-sorriso`).
+   * Ausente = o dev kit sugere um caminho a partir da categoria do lead.
+   */
+  sitePath?: string;
   /** URL temporária / GitHub Pages de preview antes do deploy final (etapa desenvolvimento → revisão). */
   previewUrl?: string;
   /** Situação atual da etapa desenvolvimento perante o agente de IA. */

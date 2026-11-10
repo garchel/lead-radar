@@ -1,6 +1,6 @@
 # ASSETS_PROMPT — E&S Manutenções Residências
 
-> LP: `sites/es-manutencoes/` · Design system: **Harvest** (`design/harvest.md` — cream `#fff8f1`, laranja `#fa5d00`, sombras quentes)
+> LP: `sites/reformas/es-manutencoes/` · Design system: **Harvest** (`design/harvest.md` — cream `#fff8f1`, laranja `#fa5d00`, sombras quentes)
 > Efeitos: **01** reveal-hover (antes/depois) + **03** loop-ambient (hero) + **05** count-up (stats).
 > Regra: preferir SEMPRE fotos reais do E&S; I.A. só para o que não dá para fotografar.
 

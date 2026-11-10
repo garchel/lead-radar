@@ -133,6 +133,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({ onClose, onAddLead }
               <option value="">Selecione uma opção</option>
               <option value="none">Sem site</option>
               <option value="social_only">Apenas redes sociais</option>
+              <option value="marketplace_only">Apenas marketplace (iFood, Mercado Livre...)</option>
               <option value="has_website">Possui site</option>
             </select>
           </div>

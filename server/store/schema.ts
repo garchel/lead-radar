@@ -59,22 +59,6 @@ function migrateSchema(db: Database.Database) {
       updated_at    TEXT
     );
 
-    CREATE TABLE IF NOT EXISTS landing_pages (
-      id            TEXT PRIMARY KEY,
-      lead_id       TEXT NOT NULL,
-      business_name TEXT NOT NULL,
-      slug          TEXT NOT NULL,
-      stage         TEXT DEFAULT 'rascunho',
-      status        TEXT DEFAULT 'aguardando_aprovacao',
-      html          TEXT,
-      url           TEXT,
-      concept       TEXT,
-      job_id        TEXT,
-      created_at    TEXT,
-      updated_at    TEXT,
-      FOREIGN KEY (lead_id) REFERENCES leads(id)
-    );
-
     CREATE TABLE IF NOT EXISTS jobs (
       id            TEXT PRIMARY KEY,
       type          TEXT NOT NULL,
@@ -176,7 +160,6 @@ function migrateSchema(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_leads_normalized ON leads(normalized_name, normalized_city, state);
     CREATE INDEX IF NOT EXISTS idx_leads_normalized_phone ON leads(normalized_phone);
     CREATE INDEX IF NOT EXISTS idx_leads_updated_at ON leads(updated_at);
-    CREATE INDEX IF NOT EXISTS idx_landing_pages_lead ON landing_pages(lead_id);
     CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
     CREATE INDEX IF NOT EXISTS idx_jobs_type ON jobs(type);
     CREATE INDEX IF NOT EXISTS idx_communications_lead ON communications(lead_id);
@@ -295,12 +278,29 @@ function migrateSchema(db: Database.Database) {
     next_contact_at: "TEXT",
     contact_attempts: "INTEGER DEFAULT 0",
     do_not_contact: "INTEGER DEFAULT 0",
+    site_audit_json: "TEXT",
+    brand_snapshot_json: "TEXT",
+    priority_score: "INTEGER DEFAULT 0",
+    priority_level: "TEXT",
+    priority_reasons: "TEXT",
   };
   for (const [name, definition] of Object.entries(columnsToAdd)) {
     if (!existingColumns.has(name)) {
       db.exec(`ALTER TABLE leads ADD COLUMN ${name} ${definition}`);
     }
   }
+
+  // Additive migration: comunicação guarda o id da mensagem no WhatsApp para
+  // reconhecer edições (o gateway reenvia a mensagem editada com novo id).
+  const commCols = db.prepare("PRAGMA table_info(communications)").all() as any[];
+  const existingCommCols = new Set(commCols.map((c: any) => c.name));
+  if (!existingCommCols.has("external_id")) db.exec("ALTER TABLE communications ADD COLUMN external_id TEXT");
+
+  // Additive migration: auditoria de site, priorização comercial e o "gancho"
+  // usado na abordagem (permite medir qual defeito gera mais resposta).
+  const commCols2 = db.prepare("PRAGMA table_info(communications)").all() as any[];
+  const existingCommCols2 = new Set(commCols2.map((c: any) => c.name));
+  if (!existingCommCols2.has("hook")) db.exec("ALTER TABLE communications ADD COLUMN hook TEXT");
 
   // Additive migrations for databases created before the archived project model.
   const projectCols = db.prepare("PRAGMA table_info(projects)").all() as any[];
@@ -315,6 +315,7 @@ function migrateSchema(db: Database.Database) {
     github_repo_url: "TEXT",
     repo_owner: "TEXT",
     repo_name: "TEXT",
+    site_path: "TEXT",
     preview_url: "TEXT",
     dev_status: "TEXT",
     dev_message: "TEXT",
@@ -362,25 +363,6 @@ export function importFromJson(jsonPath?: string) {
         ...lead,
         keyInsightsJson: JSON.stringify(lead.keyInsights || []),
         reviewsCount: lead.reviewsCount ?? 0,
-      });
-      count++;
-    }
-  }
-
-  if (Array.isArray(data.landingPages)) {
-    const insert = db.prepare(`
-      INSERT OR REPLACE INTO landing_pages
-        (id, lead_id, business_name, slug, stage, status, html, url, concept, job_id, created_at, updated_at)
-      VALUES
-        (@id, @leadId, @businessName, @slug, @stage, @status, @html, @url, @conceptJson, @jobId, @createdAt, @updatedAt)
-    `);
-    for (const lp of data.landingPages) {
-      insert.run({
-        ...lp,
-        leadId: lp.leadId,
-        businessName: lp.businessName,
-        conceptJson: JSON.stringify(lp.concept || {}),
-        jobId: lp.jobId || null,
       });
       count++;
     }

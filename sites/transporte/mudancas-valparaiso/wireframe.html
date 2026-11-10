@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wireframe — Mudanças Valparaíso (aprovação do cliente)</title>
+  <style>
+    /* Wireframe de aprovação — fundo BRANCO (a LP é tema claro por padrão,
+       fonte escura). Zero estética final aqui: copy real + blocos pontilhados. */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #141412; line-height: 1.45; }
+    .wf { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+    .wf-banner { border: 2px solid #141412; padding: 16px 20px; margin-bottom: 28px; }
+    .wf-banner b { display: block; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
+    .wf-banner span { font-size: 13px; }
+    .wf-section { border-top: 2px solid #141412; padding: 24px 0; }
+    .wf-section > .k { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; opacity: .6; margin-bottom: 10px; }
+    .wf-section h1 { font-size: 34px; line-height: 1.1; margin: 8px 0; }
+    .wf-section h2 { font-size: 24px; margin: 8px 0; }
+    .wf-section p { font-size: 15px; max-width: 60ch; margin: 8px 0; }
+    .wf-cta { display: inline-block; border: 2px solid #141412; border-radius: 10px; padding: 10px 22px; margin: 10px 12px 0 0; font-weight: bold; font-size: 14px; }
+    .wf-cta.primary { background: #141412; color: #fff; }
+    .wf-asset { border: 2px dashed #888; border-radius: 8px; padding: 26px 18px; margin: 14px 0; text-align: center; font-size: 14px; font-weight: bold; color: #444; background: repeating-linear-gradient(45deg, #fff, #fff 12px, #f4f4f4 12px, #f4f4f4 24px); }
+    .wf-tag { display: inline-block; font-size: 11px; font-weight: bold; letter-spacing: .08em; border: 1px solid #888; border-radius: 999px; padding: 2px 10px; margin: 6px 6px 0 0; text-transform: uppercase; color: #444; }
+    .wf-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; }
+    .wf-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .wf-grid, .wf-grid3 { grid-template-columns: 1fr; } }
+    .wf-note { font-size: 13px; background: #f4f4f4; border-left: 4px solid #141412; padding: 10px 14px; margin: 12px 0; }
+    .wf-hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 18px; align-items: start; }
+    @media (max-width: 640px) { .wf-hero { grid-template-columns: 1fr; } }
+    .wf-hairline { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; border-top: 1px solid #999; border-bottom: 1px solid #999; padding: 14px 0; margin: 10px 0; }
+    .wf-hairline div { text-align: center; }
+    .wf-hairline b { font-size: 22px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="wf">
+    <div class="wf-banner">
+      <b>Wireframe de aprovação — Mudanças Valparaíso</b>
+      <span>Cliente revisa <b>copy e estrutura</b>. Ajustes voltam para este wireframe, não para o código.
+      Fluxo de design: skill taste v2 (dials 7/5/3, paleta cobalto + creme). Nenhum asset final aqui.</span>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">1 · Navegação</div>
+      <p><b>Mudanças Valparaíso</b> · Serviços · Como funciona · Depoimentos · Atendimento · [CTA: Chamar no WhatsApp]</p>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">2 · Hero (split: texto à esquerda, foto à direita)</div>
+      <div class="wf-hero">
+        <div>
+          <h1>Sua mudança, sem dor de cabeça.</h1>
+          <p>Equipe própria, caminhão fechado e cuidado do começo ao fim. Orçamento pelo WhatsApp em minutos.</p>
+          <span class="wf-cta primary">Chamar no WhatsApp</span><span class="wf-cta">Ver serviços</span>
+        </div>
+        <div class="wf-asset">[FOTO — caminhão / equipe carregando móveis · duotone cobalto]</div>
+      </div>
+      <span class="wf-tag">[EFEITO — mask-reveal na entrada]</span>
+      <div class="wf-hairline">
+        <div><b>4,8</b> nota no Google</div>
+        <div><b>25</b> avaliações</div>
+        <div><b>6</b> dias por semana (seg a sáb)</div>
+      </div>
+      <span class="wf-tag">[EFEITO — count-up nos números]</span>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">3 · Serviços (bento assimétrico: 1 grande + 2 menores)</div>
+      <h2>O que a gente carrega</h2>
+      <div class="wf-grid">
+        <div class="wf-asset">[FOTO — mudança residencial: caixas e sofá no caminhão]</div>
+        <div class="wf-asset">[BLOCO TINT — Comerciais e escritórios]</div>
+      </div>
+      <div class="wf-asset">[BLOCO PATTERN — Itens especiais: piano, cofre, quadros, aquário]</div>
+      <div class="wf-note">Cada serviço com 1 linha de descrição e link "Pedir orçamento" (mesma intenção do CTA principal, contexto diferente).</div>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">4 · Como funciona (3 verbos, sem "Etapa 1/2/3")</div>
+      <div class="wf-grid3">
+        <div class="wf-asset">Chame no WhatsApp</div>
+        <div class="wf-asset">Receba o orçamento</div>
+        <div class="wf-asset">A gente muda você</div>
+      </div>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">5 · Depoimentos</div>
+      <h2>Quem mudou, indica</h2>
+      <div class="wf-grid">
+        <div class="wf-asset">[QUOTE ilustrativa — moradora, mudança residencial]</div>
+        <div class="wf-asset">[QUOTE ilustrativa — comerciante, mudança de loja]</div>
+      </div>
+      <div class="wf-note">Quotes ilustrativas para aprovar layout; serão trocadas por avaliações reais com autorização por escrito (LGPD).</div>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">6 · Atendimento (marquee de cidades)</div>
+      <h2>Onde a gente atende</h2>
+      <div class="wf-asset">[MARQUEE — Valparaíso · Novo Gama · Cidade Ocidental · Águas Lindas · Formosa · Brasília...]</div>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">7 · CTA final + formulário (bloco cobalto)</div>
+      <h2>Pronto para marcar sua mudança?</h2>
+      <p>Campos: nome · seu WhatsApp · tipo de mudança (lista) · quando (texto) → abre o WhatsApp com tudo preenchido.</p>
+      <div class="wf-asset">[FORM — nome / whatsapp / tipo / quando / botão Enviar pelo WhatsApp]</div>
+    </div>
+
+    <div class="wf-section">
+      <div class="k">8 · Rodapé</div>
+      <div class="wf-note">Endereço (R. Vinte e Dois, Qd. 08 - Casa 14, Jd. Novo Oriente, Valparaíso de Goiás/GO), telefone (61) 99502-8647, horário Seg a sáb (a confirmar), nota LGPD. Sem version footer.</div>
+      <div class="wf-asset">[BOTÃO FLUTUANTE — WhatsApp fixo no canto]</div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# WhatsMiau build local (fonte oficial: github.com/verbeux-ai/whatsmiau)
+# Patch aplicado: bind em 0.0.0.0 (ver .whatsmiau-src/main.go) para o proxy
+# do Docker Desktop no Windows alcançar o listener.
+FROM golang:1.26-alpine AS builder
+
+WORKDIR /app
+RUN apk add --no-cache build-base sqlite-dev gcc musl-dev git
+
+COPY .whatsmiau-src/go.mod .whatsmiau-src/go.sum ./
+RUN go mod download
+
+COPY .whatsmiau-src/ .
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o whatsmiau main.go
+
+FROM alpine:latest
+RUN apk update && apk add --no-cache ffmpeg mailcap ca-certificates
+WORKDIR /app
+COPY --from=builder /app/whatsmiau /app/whatsmiau
+COPY docker-entrypoint.whatsmiau.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh && mkdir -p /app/data && chmod 777 -R /app/data
+EXPOSE 8081
+ENTRYPOINT ["/entrypoint.sh"]

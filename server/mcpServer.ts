@@ -11,6 +11,7 @@ import { buildLeadDossier } from "./dossier/dossier";
 import { StoredLead, PipelineStatus } from "./store/types";
 import { enrichLead } from "./enrichment";
 import { dispatchLeadContact, recordInteractionOutcome } from "./services/interactionService";
+import { rankLeads } from "./services/leadScoringService";
 import { searchBusinesses, analyzeLead } from "./services/prospectingService";
 import { syncLeadProject, updateProject } from "./projects/service";
 import { getProjects, getProjectById } from "./store/db";
@@ -23,6 +24,9 @@ import {
   submitProjectCode,
   approveProjectCode,
 } from "./projects/devKit";
+import { registerWhatsappTools } from "./mcpWhatsappTools";
+import { registerGrowthTools } from "./mcpGrowthTools";
+import { getIncomingInbox } from "./store/db";
 
 
 // Shared Categories
@@ -58,7 +62,7 @@ export function createLeadRadarMcpServer() {
       location: z.string().min(1).describe("Nome obrigatório da cidade alvo (ex: 'Campinas')"),
       state: z.string().regex(/^[A-Za-z]{2}$/).describe("UF obrigatória (ex: 'SP', 'RJ')"),
       category: z.string().min(1).describe("Categoria obrigatória de negócio"),
-      presenceFilter: z.enum(["all", "gold", "silver"]).describe("Filtro digital obrigatório: 'gold' (sem site), 'silver' (apenas instagram) ou 'all'"),
+      presenceFilter: z.enum(["all", "gold", "silver", "bronze"]).describe("Filtro digital obrigatório: 'gold' (sem site), 'silver' (apenas instagram), 'bronze' (apenas marketplace, ex. iFood) ou 'all'"),
     },
     async ({ location, state, category, presenceFilter }) => {
       try {
@@ -66,6 +70,7 @@ export function createLeadRadarMcpServer() {
         let leads = businesses;
         if (presenceFilter === "gold") leads = leads.filter((b: any) => b.websiteStatus === "none");
         if (presenceFilter === "silver") leads = leads.filter((b: any) => b.websiteStatus === "social_only");
+        if (presenceFilter === "bronze") leads = leads.filter((b: any) => b.websiteStatus === "marketplace_only");
         return {
           content: [
             {
@@ -301,7 +306,7 @@ export function createLeadRadarMcpServer() {
       cnpj: z.string().optional().describe("CNPJ"),
       googlePlaceId: z.string().optional().describe("ID estável do Google Places"),
       websiteUrl: z.string().url().optional().describe("URL do site"),
-      websiteStatus: z.enum(["none", "social_only", "has_website"]).optional().describe("Presença digital"),
+      websiteStatus: z.enum(["none", "social_only", "marketplace_only", "has_website"]).optional().describe("Presença digital"),
       notes: z.string().optional().describe("Observações"),
     },
     async ({ id, name, category, city, state, phone, email, cnpj, googlePlaceId, websiteUrl, websiteStatus, notes }) => {
@@ -336,9 +341,13 @@ export function createLeadRadarMcpServer() {
     "Lista os leads armazenados no banco compartilhado.",
     {
       status: z.string().optional().describe("Filtro opcional por status (prospect|contacted|negotiating|closed|declined)"),
+      sort: z.enum(["recent", "priority"]).optional().describe("Ordenação: 'recent' (padrão) ou 'priority' (quem está com mais dor)"),
     },
-    async ({ status }) => {
-      const leads = status ? getLeads().filter((l) => l.pipelineStatus === status) : getLeads();
+    async ({ status, sort }) => {
+      let leads = status ? getLeads().filter((l) => l.pipelineStatus === status) : getLeads();
+      if (sort === "priority") {
+        leads = rankLeads(leads).map(({ priority, ...lead }) => ({ ...lead, priority } as any));
+      }
       return {
         content: [{ type: "text", text: JSON.stringify({ success: true, count: leads.length, leads }, null, 2) }],
       };
@@ -385,7 +394,7 @@ export function createLeadRadarMcpServer() {
   // TOOL 6.2: update_project
   server.tool(
     "update_project",
-    "Atualiza um projeto do Kanban: move a etapa (briefing→copywriting→design→wireframe→desenvolvimento→revisao→deploy), grava briefing do cliente (texto livre ou campos estruturados), copy, notas de design, URL do wireframe, notas de dev/revisão, status, prioridade e URL de deploy. É o caminho do agente para alimentar o projeto com o briefing colado pelo cliente no chat.",
+    "Atualiza um projeto do Kanban: move a etapa (briefing→copywriting→design→wireframe→desenvolvimento→revisao→deploy), grava briefing do cliente (texto livre ou campos estruturados), copy, notas de design, URL do wireframe, notas de dev/revisão, status, prioridade, URL de deploy e a pasta da LP no repo único (sitePath). É o caminho do agente para alimentar o projeto com o briefing colado pelo cliente no chat.",
     {
       projectId: z.string().describe("ID do projeto"),
       stage: z.enum(["briefing", "copywriting", "design", "wireframe", "desenvolvimento", "revisao", "deploy"]).optional().describe("Nova etapa do projeto"),
@@ -399,6 +408,7 @@ export function createLeadRadarMcpServer() {
       devNotes: z.string().optional().describe("Notas de desenvolvimento"),
       reviewNotes: z.string().optional().describe("Notas de revisão do cliente"),
       deployUrl: z.string().optional().describe("URL final publicada"),
+      sitePath: z.string().optional().describe("Pasta da LP no repo único, padrão sites/<nicho>/<slug> (ex.: sites/dentista/clinica-sorriso)"),
       dueDate: z.string().optional().describe("Prazo (data ISO ou texto)"),
     },
     async (input) => {
@@ -479,7 +489,7 @@ export function createLeadRadarMcpServer() {
   // TOOL 12: get_project_dev_kit
   server.tool(
     "get_project_dev_kit",
-    "Entrega o 'kit de dados' do projeto (lead + briefing/Typeform + copy + design + conceito de IA + repositório) e o prompt pronto para implementar a Landing Page do zero no GitHub. Use para obter todas as informações necessárias a codar o site.",
+    "Entrega o 'kit de dados' do projeto (lead + briefing/Typeform + copy + design + conceito de IA + pasta no repo único) e o prompt pronto para implementar a Landing Page do zero em `sites/<nicho>/<slug>/` dentro do repositório único. Use para obter todas as informações necessárias a codar o site.",
     { projectId: z.string().describe("ID do projeto") },
     async ({ projectId }) => {
       try {
@@ -499,6 +509,8 @@ export function createLeadRadarMcpServer() {
                     stage: kit.project.stage,
                     devStatus: kit.project.devStatus || "aguardando_agente",
                     repo: kit.repo,
+                    sitePath: kit.sitePath,
+                    niche: kit.niche,
                     previewUrl: kit.project.previewUrl || null,
                   },
                   lead: kit.lead
@@ -519,6 +531,7 @@ export function createLeadRadarMcpServer() {
                   designNotes: kit.project.designNotes || "",
                   devNotes: kit.project.devNotes || "",
                   landingPageConcept: kit.landingPageConcept || null,
+                  brandSnapshot: kit.brandSnapshot ?? null,
                   prompt,
                 },
                 null,
@@ -536,16 +549,17 @@ export function createLeadRadarMcpServer() {
   // TOOL 13: submit_project_code
   server.tool(
     "submit_project_code",
-    "Confirma ao LeadRadar que o agente de IA entregou o código da Landing Page no repositório GitHub, opcionalmente com a URL de preview. Marca o projeto como 'codigo_entregue' aguardando a revisão/aprovação humana.",
+    "Confirma ao LeadRadar que o agente de IA entregou o código da Landing Page no repositório único (pasta `sites/<nicho>/<slug>/`), opcionalmente com a URL de preview. Marca o projeto como 'codigo_entregue' aguardando a revisão/aprovação humana.",
     {
       projectId: z.string().describe("ID do projeto"),
-      repoUrl: z.string().optional().describe("URL do repositório GitHub (ex.: https://github.com/org/repo)"),
+      repoUrl: z.string().optional().describe("URL do repositório (ex.: https://github.com/org/lead-radar)"),
+      sitePath: z.string().optional().describe("Pasta da LP no repo único (ex.: sites/dentista/clinica-sorriso)"),
       previewUrl: z.string().optional().describe("URL temporária / GitHub Pages do preview"),
       message: z.string().optional().describe("Mensagem resumo de entrega (também usada para notificação)"),
     },
-    async ({ projectId, repoUrl, previewUrl, message }) => {
+    async ({ projectId, repoUrl, sitePath, previewUrl, message }) => {
       try {
-        const project = submitProjectCode(projectId, { repoUrl, previewUrl, message });
+        const project = submitProjectCode(projectId, { repoUrl, sitePath, previewUrl, message });
         return {
           content: [
             {
@@ -556,6 +570,7 @@ export function createLeadRadarMcpServer() {
                   projectId,
                   devStatus: project.devStatus,
                   repo: project.githubRepoUrl ?? null,
+                  sitePath: project.sitePath ?? null,
                   previewUrl: project.previewUrl ?? null,
                   message: project.devMessage ?? null,
                   note: "Código registrado. Um humano ainda precisa aprovar antes de avançar para revisão/deploy.",
@@ -684,15 +699,16 @@ export function createLeadRadarMcpServer() {
     {
       name: z.string().describe("Nome identificador do agendamento"),
       cron: z.string().describe("Expressão cron (5 ou 6 partes, ex: '0 9 * * 1-5')"),
-      jobType: z.enum(["mcp_autopilot", "batch_prospecting", "follow_up_reminder"]).describe("Tipo de job a disparar (follow_up_reminder apenas lista recontatos autorizados; não envia)"),
+      jobType: z.enum(["mcp_autopilot", "batch_prospecting", "follow_up_reminder", "outbound_cadence"]).describe("Tipo de job a disparar (follow_up_reminder apenas lista recontatos autorizados; outbound_cadence roda a cadência D+3/D+7 — em simulação, a menos que dryRun:false seja enviado)"),
       location: z.string().optional().describe("Cidade alvo (autopilot)"),
       state: z.string().optional().describe("Sigla da UF"),
       category: z.string().optional().describe("Categoria de negócio (autopilot)"),
       locations: z.array(z.string()).optional().describe("Cidades (batch_prospecting)"),
       categories: z.array(z.string()).optional().describe("Categorias (batch_prospecting)"),
       maxLeads: z.number().optional().describe("Limite de leads por execução"),
+      dryRun: z.boolean().optional().describe("outbound_cadence: true (padrão) simula; false envia de verdade"),
     },
-    async ({ name, cron, jobType, location, state, category, locations, categories, maxLeads }) => {
+    async ({ name, cron, jobType, location, state, category, locations, categories, maxLeads, dryRun }) => {
       try {
         new CronPattern(cron);
       } catch {
@@ -702,6 +718,8 @@ export function createLeadRadarMcpServer() {
       let payload;
       if (jobType === "follow_up_reminder") {
         payload = {};
+      } else if (jobType === "outbound_cadence") {
+        payload = { dryRun: dryRun !== false, limit: Number.isInteger(maxLeads) && (maxLeads as number) > 0 ? maxLeads : 10 };
       } else {
         if (!state || !/^[A-Za-z]{2}$/.test(state)) {
           return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "UF é obrigatória e deve ter 2 letras." }, null, 2) }] };
@@ -944,6 +962,14 @@ export function createLeadRadarMcpServer() {
     }
   );
 
+  // Superfície de WhatsApp: leitura de conversas, resposta a mensagens
+  // recebidas, status/troca de backend e operação do gateway (QR/webhook).
+  registerWhatsappTools(server);
+
+  // Superfície de crescimento: auditoria de site, priorização por dor,
+  // métricas de funil e cadência D3/D7.
+  registerGrowthTools(server);
+
   // RESOURCE 1: leads://categories
   server.resource(
     "categories",
@@ -1005,6 +1031,24 @@ export function createLeadRadarMcpServer() {
     }
   );
 
+  // RESOURCE 4: leads://inbox — mensagens recebidas aguardando resposta
+  server.resource(
+    "inbox",
+    "leads://inbox",
+    async (uri) => {
+      const messages = getIncomingInbox({ limit: 50 });
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            text: JSON.stringify({ count: messages.length, messages }, null, 2),
+            mimeType: "application/json",
+          },
+        ],
+      };
+    }
+  );
+
   // PROMPT 1: autopilot_prospecting
   server.prompt(
     "autopilot_prospecting",
@@ -1026,6 +1070,28 @@ export function createLeadRadarMcpServer() {
   );
 
   return server;
+}
+
+/**
+ * Catálogo da.superfície MCP extraído do próprio servidor — fonte única da
+ * verdade, para que /api/mcp/info nunca desatualize em relação às tools
+ * realmente registradas.
+ */
+export function getMcpCatalog(): {
+  tools: Array<{ name: string; description: string }>;
+  resources: string[];
+  prompts: string[];
+} {
+  const instance = createLeadRadarMcpServer() as any;
+  const tools = Object.entries(instance._registeredTools || {}).map(([name, tool]: [string, any]) => ({
+    name,
+    description: tool?.description || "",
+  }));
+  return {
+    tools,
+    resources: Object.keys(instance._registeredResources || {}),
+    prompts: Object.keys(instance._registeredPrompts || {}),
+  };
 }
 
 // Setup Express SSE MCP Transport
@@ -1050,6 +1116,7 @@ export function registerMcpRoutes(app: Express) {
     const host = req.headers.host || "localhost:3000";
     const protocol = req.headers["x-forwarded-proto"] || "http";
     const baseUrl = `${protocol}://${host}`;
+    const catalog = getMcpCatalog();
 
     res.json({
       name: "LeadRadar AI MCP Server",
@@ -1061,27 +1128,10 @@ export function registerMcpRoutes(app: Express) {
         messages: `${baseUrl}/api/mcp/messages`,
         info: `${baseUrl}/api/mcp/info`,
       },
-      tools: [
-        { name: "search_leads", description: "Mapeia empresas locais e avalia falta de Landing Page (Filtro Ouro/Prata)." },
-        { name: "analyze_lead", description: "Diagnóstico completo de vendas por IA para o prospect." },
-        { name: "generate_whatsapp_pitch", description: "Gera mensagem pronta de WhatsApp com link de contato direto." },
-        { name: "update_crm_status", description: "Atualiza estagio no Funil de Vendas do Mini-CRM (persiste no banco)." },
-        { name: "create_lead", description: "Cria/atualiza um lead no banco compartilhado." },
-        { name: "list_leads", description: "Lista os leads armazenados no banco." },
-        { name: "enrich_lead", description: "Enriquece um lead com dados reais (Google Places, CNPJ, e-mail)." },
-        { name: "send_contact", description: "Envia mensagem de contato ao lead e aplica a política anti-duplicidade." },
-        { name: "record_interaction_outcome", description: "Registra a resposta da empresa e calcula a próxima janela de contato." },
-        { name: "list_due_followups", description: "Lista os recontatos cujo prazo já chegou." },
-        { name: "schedule_prospecting", description: "Agenda prospecção periódica via cron (autopilot, batch ou follow_up_reminder)." },
-        { name: "export_dossier", description: "Gera o Dossiê Executivo HTML de um lead a partir da análise persistida." },
-        { name: "sync_typeform_briefing", description: "Importa respostas do formulário de briefing do Typeform nos projetos." },
-        { name: "get_project_dev_kit", description: "Entrega o kit de dados + prompt do projeto para o agente de IA de código." },
-        { name: "submit_project_code", description: "Agente informa que o código foi entregue (repo + preview) — aguarda aprovação humana." },
-        { name: "approve_project_code", description: "Guarda-limite humano: aprova o código entregue pelo agente." },
-
-      ],
-      resources: ["leads://categories", "leads://pipeline", "leads://queue_status"],
-      prompts: ["autopilot_prospecting"],
+      tools: catalog.tools,
+      toolCount: catalog.tools.length,
+      resources: catalog.resources,
+      prompts: catalog.prompts,
       connectionGuide: {
         hermesAgent: {
           description: "Configuração para Hermes Agent (Nous Research / Hermes Framework)",

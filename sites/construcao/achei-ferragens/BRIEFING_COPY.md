@@ -1,6 +1,6 @@
 # BRIEFING + COPY — Achei Ferragens
 
-> LP: `sites/achei-ferragens/` · Lead do CRM (score 100, sem site, 4.5★ / 123 avaliações)
+> LP: `sites/construcao/achei-ferragens/` · Lead do CRM (score 100, sem site, 4.5★ / 123 avaliações)
 > **Briefing IMAGINADO pelo agente** (autorizado pelo Vitor) — itens marcados com ⚠️ precisam de
 > confirmação com o cliente antes do deploy. Nada aqui foi respondido pelo cliente ainda.
 

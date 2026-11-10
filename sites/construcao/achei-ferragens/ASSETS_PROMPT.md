@@ -1,6 +1,6 @@
 # ASSETS_PROMPT — Achei Ferragens (v2 slot-aware)
 
-> LP: `sites/achei-ferragens/` · Design: **Caldera** (`design/caldera.md` —
+> LP: `sites/construcao/achei-ferragens/` · Design: **Caldera** (`design/caldera.md` —
 > Pumice `#e2e2df`, Limestone `#f7f6f2`, Ember `#fc5000`, Sulfur `#f5f28e`, Plasma `#524ae9`, Obsidian `#070607`)
 > Efeitos: **03** loop-ambient (hero) + **05** count-up (stats).
 > Regra: foto/vídeo REAL da loja sempre ganha de IA. IA só p/ o que não dá p/ fotografar.

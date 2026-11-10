@@ -396,172 +396,24 @@ O painel deve exibir:
 - jobs concluídos;
 - jobs falhos;
 - logs detalhados;
-- Landing Pages geradas;
 - indicador **Tempo real**.
 
-## 11. Testar criação de Landing Page
+## 11. Testar o fluxo de site do zero (Kanban de Projetos)
 
-### 11.1 Criar um lead de teste
+O fluxo legado de template fixo (`/api/landing-pages`, job `landing_page_creation`)
+foi removido em set/2026. O fluxo atual é o **Kanban de Projetos** (7 etapas:
+briefing → copywriting → design → wireframe → desenvolvimento → revisao → deploy),
+com o site codado do zero por um agente de IA a partir do kit de dados:
 
-```powershell
-$leadBody = @{
-  id = "manual-test-lead-001"
-  name = "Clínica Teste Campinas"
-  category = "Clínica de Estética"
-  city = "Campinas"
-  state = "SP"
-  phone = "(19) 99999-8888"
-  rating = 4.9
-  reviewsCount = 42
-  websiteStatus = "none"
-  pipelineStatus = "prospect"
-} | ConvertTo-Json
-
-Invoke-RestMethod `
-  -Uri http://localhost:3000/api/leads `
-  -Method Post `
-  -ContentType "application/json" `
-  -Body $leadBody
-```
-
-### 11.2 Criar a Landing Page
-
-```powershell
-$lpBody = @{
-  leadId = "manual-test-lead-001"
-  concept = @{
-    heroHeadline = "Transforme sua beleza com atendimento especializado"
-    heroSubheadline = "Agende seu horário diretamente pelo WhatsApp"
-    callToAction = "Agendar agora"
-    recommendedSections = @("Serviços", "Depoimentos", "Contato")
-    keySellingPoints = @("Atendimento rápido", "Equipe especializada")
-  }
-} | ConvertTo-Json -Depth 5
-
-$lp = Invoke-RestMethod `
-  -Uri http://localhost:3000/api/landing-pages `
-  -Method Post `
-  -ContentType "application/json" `
-  -Body $lpBody
-
-$lp.landingPage
-```
-
-Estado esperado:
-
-```text
-status: aguardando_aprovacao
-stage: rascunho
-```
-
-### 11.3 Confirmar o guardrail de aprovação
-
-Tente publicar antes da aprovação:
-
-```powershell
-Invoke-RestMethod `
-  -Uri http://localhost:3000/api/landing-pages/ID_DA_LP/deploy `
-  -Method Post
-```
-
-A chamada deve falhar informando que a Landing Page ainda não foi aprovada.
-
-### 11.4 Aprovar a Landing Page
-
-```powershell
-$approved = Invoke-RestMethod `
-  -Uri http://localhost:3000/api/landing-pages/ID_DA_LP/approve `
-  -Method Post
-
-$approved.landingPage
-```
-
-Estado esperado:
-
-```text
-status: aprovada
-stage: deploy
-```
-
-### 11.5 Publicar localmente
-
-```powershell
-$deployed = Invoke-RestMethod `
-  -Uri http://localhost:3000/api/landing-pages/ID_DA_LP/deploy `
-  -Method Post
-
-$deployed.landingPage
-```
-
-Sem `NETLIFY_AUTH_TOKEN`, o sistema usa o deploy local. Abra a URL retornada, normalmente:
-
-```text
-http://localhost:3000/landing-pages/slug-da-empresa
-```
-
-Estado esperado:
-
-```text
-status: publicada
-stage: publicado
-```
-
-### 11.6 Testar rejeição
-
-Crie outra Landing Page e execute:
-
-```powershell
-Invoke-RestMethod `
-  -Uri http://localhost:3000/api/landing-pages/OUTRA_LP_ID/reject `
-  -Method Post
-```
-
-O estado esperado é:
-
-```text
-status: rejeitada
-```
-
-## 12. Testar o job de criação de Landing Page
-
-Esse teste valida fila, monitoramento e criação de LP simultaneamente:
-
-```powershell
-$jobBody = @{
-  type = "landing_page_creation"
-  title = "Criar LP Clínica Teste"
-  payload = @{
-    leadId = "manual-test-lead-001"
-    autoDeploy = $false
-    concept = @{
-      heroHeadline = "Clínica Teste Campinas"
-      callToAction = "Falar no WhatsApp"
-    }
-  }
-} | ConvertTo-Json -Depth 5
-
-$job = Invoke-RestMethod `
-  -Uri http://localhost:3000/api/jobs `
-  -Method Post `
-  -ContentType "application/json" `
-  -Body $jobBody
-
-$job.job
-```
-
-Consulte o job até chegar a `completed`:
-
-```powershell
-Invoke-RestMethod http://localhost:3000/api/jobs/SEU_JOB_ID
-```
-
-Depois consulte as Landing Pages:
-
-```powershell
-Invoke-RestMethod http://localhost:3000/api/landing-pages
-```
-
-A LP deve existir em `aguardando_aprovacao`, aguardando a ação humana.
+1. Mova um lead para `em_desenvolvimento` (aba **CRM**) — um projeto é criado
+   no Kanban automaticamente.
+2. Abra o projeto na aba **Projetos**: avance as etapas, grave copy/design,
+   registre a URL do wireframe na etapa **wireframe**.
+3. Com o cliente aprovando o wireframe, baixe o **termo de aprovação (PDF)**
+   na aba Wireframe:
+   `GET /api/projects/:id/wireframe-approval.pdf`.
+4. Na etapa **desenvolvimento**, use o painel "Agente de IA de código"
+   (kit de dados + prompt) ou a tool MCP `get_project_dev_kit`.
 
 ## 13. Testar agendamentos
 

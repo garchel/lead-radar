@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Server } from "node:http";
-import { upsertLead, getLeads } from "../server/store/db";
+import { upsertLead, getLeads, getCommunicationsByLead } from "../server/store/db";
 import { buildStableLeadId } from "../server/services/leadIdentity";
 // Importa o app Express real (server.ts exporta antes do listen)
 import { app } from "../server";
@@ -91,8 +91,88 @@ describe("POST /api/whatsapp/webhook (Evolution API)", () => {
     expect(lead!.lastResponseAt).toBeTruthy();
   });
 
-  it("recusa move o lead para declined", async () => {
-    seedLead("+55 11 99999-0003");
+  it("registra a mensagem recebida com direction inbound", async () => {
+    seedLead("+55 11 99999-0009");
+    await fetch(`${baseUrl}/api/whatsapp/webhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload("Oi, quero saber mais sobre o serviço", "5511999990009")),
+    });
+    await new Promise((r) => setTimeout(r, 150));
+    const lead = getLeads().find((l) => (l.phone || "").replace(/\D/g, "").endsWith("999990009"));
+    const comms = getCommunicationsByLead(lead!.id);
+    expect(
+      comms.some((c) => c.direction === "inbound" && (c.message || "").includes("[RECEBIDA]"))
+    ).toBe(true);
+  });
+
+  it("cria lead a partir de número desconhecido e registra a mensagem recebida", async () => {
+    const phone = "5511988880007";
+    await fetch(`${baseUrl}/api/whatsapp/webhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event: "messages.upsert",
+        instance: "leadradar",
+        data: {
+          key: { remoteJid: `${phone}@s.whatsapp.net`, fromMe: false },
+          pushName: "Contato Novo",
+          message: { conversation: "Olá, vi o site de vocês" },
+        },
+      }),
+    });
+    await new Promise((r) => setTimeout(r, 150));
+
+    const lead = getLeads().find((l) => (l.phone || "").replace(/\D/g, "") === phone);
+    expect(lead).toBeDefined();
+    expect(lead!.name).toBe("Contato Novo");
+    const comms = getCommunicationsByLead(lead!.id);
+    expect(comms.some((c) => c.direction === "inbound" && (c.message || "").includes("vi o site"))).toBe(true);
+  });
+
+  it("edição de mensagem atualiza o registro em vez de duplicar a conversa", async () => {
+    const phone = "5511988880006";
+    const messageId = "MSG-ID-EDICAO-1";
+    await fetch(`${baseUrl}/api/whatsapp/webhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event: "messages.upsert",
+        instance: "leadradar",
+        data: {
+          key: { remoteJid: `${phone}@s.whatsapp.net`, fromMe: false, id: messageId },
+          pushName: "Contato Edita",
+          message: { conversation: "Mensagem original" },
+        },
+      }),
+    });
+    await new Promise((r) => setTimeout(r, 150));
+
+    // o gateway reenvia a edição com novo id e o id original em contextInfo.stanzaId
+    await fetch(`${baseUrl}/api/whatsapp/webhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event: "messages.upsert",
+        instance: "leadradar",
+        data: {
+          key: { remoteJid: `${phone}@s.whatsapp.net`, fromMe: false, id: "MSG-ID-EDICAO-2" },
+          pushName: "Contato Edita",
+          messageType: "editedMessage",
+          message: { conversation: "Mensagem corrigida" },
+          contextInfo: { stanzaId: messageId },
+        },
+      }),
+    });
+    await new Promise((r) => setTimeout(r, 150));
+
+    const lead = getLeads().find((l) => (l.phone || "").replace(/\D/g, "") === phone);
+    const comms = getCommunicationsByLead(lead!.id).filter((c) => c.direction === "inbound");
+    expect(comms.length).toBe(1);
+    expect(comms[0].message).toContain("Mensagem corrigida");
+  });
+
+  it("recusa move o lead para declined", async () => {    seedLead("+55 11 99999-0003");
     await fetch(`${baseUrl}/api/whatsapp/webhook`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -101,6 +181,19 @@ describe("POST /api/whatsapp/webhook (Evolution API)", () => {
     await new Promise((r) => setTimeout(r, 150));
     const lead = getLeads().find((l) => (l.phone || "").replace(/\D/g, "").endsWith("999990003"));
     expect(lead!.pipelineStatus).toBe("declined");
+    expect(lead!.doNotContact).toBe(true);
+  });
+
+  it("pedido curto de opt-out (\"pare\") bloqueia recontato", async () => {
+    seedLead("+55 11 99999-0005");
+    await fetch(`${baseUrl}/api/whatsapp/webhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload("Pare", "5511999990005")),
+    });
+    await new Promise((r) => setTimeout(r, 150));
+    const lead = getLeads().find((l) => (l.phone || "").replace(/\D/g, "").endsWith("999990005"));
+    expect(lead!.doNotContact).toBe(true);
   });
 
   it("verificação de webhook da Meta responde hub.challenge", async () => {
@@ -154,16 +247,35 @@ describe("POST /api/whatsapp/webhook (Evolution API)", () => {
   });
 
   it("GET /api/whatsapp/status reflete backends disponíveis", async () => {
+    // server.ts importa "dotenv/config": o .env do dev é carregado no import.
+    // Por isso limpamos o que NÃO queremos disponível neste cenário.
+    delete process.env.EVOLUTION_API_URL;
     process.env.META_WHATSAPP_TOKEN = "tok";
     process.env.META_PHONE_NUMBER_ID = "123";
+    process.env.WHATSMIAU_API_URL = "http://localhost:8081";
+    process.env.WHATSMIAU_API_KEY = "miau-test-key";
+    process.env.WHATSMIAU_INSTANCE = "crm";
     const res = await fetch(`${baseUrl}/api/whatsapp/status`);
     const json = await res.json();
     delete process.env.META_WHATSAPP_TOKEN;
     delete process.env.META_PHONE_NUMBER_ID;
+    delete process.env.WHATSMIAU_API_URL;
+    delete process.env.WHATSMIAU_API_KEY;
+    delete process.env.WHATSMIAU_INSTANCE;
     expect(json.success).toBe(true);
     expect(json.available.meta).toBe(true);
     expect(json.available.evolution).toBe(false);
+    expect(json.available.whatsmiau).toBe(true);
     expect(json.savedChoice).toBeTruthy();
+  });
+
+  it("GET /api/whatsapp/health reporta gateway não configurado sem quebrar", async () => {
+    const res = await fetch(`${baseUrl}/api/whatsapp/health`);
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.success).toBe(true);
+    expect(json.configured).toBe(false);
+    expect(json.ok).toBe(false);
   });
 
   it("rejeita POST com assinatura Meta inválida quando META_APP_SECRET está definido", async () => {

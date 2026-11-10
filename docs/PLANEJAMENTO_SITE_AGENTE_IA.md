@@ -18,8 +18,9 @@ genérico e pouco customizado.
 **Decisão:** remover essa funcionalidade de "template que gera o HTML". Em vez
 disso, o app deve **preparar/organizar as informações** sobre o cliente e
 entregá-las para um **agente de IA de código** (Gemini / agente Hermes) que
-**cria o produto do zero no GitHub** (cria o repositório, trabalha nele e faz
-push/commit). O app não deve "codar sozinho"; ele alimenta o agente e acompanha.
+**cria o produto do zero no repositório único** (cria a pasta do projeto, trabalha
+nela e faz push/commit). O app não deve "codar sozinho"; ele alimenta o agente e
+acompanha.
 
 ---
 
@@ -92,12 +93,21 @@ houver anotações específicas.
 
 ---
 
-## 4. Ciclo de vida do repositório GitHub
+## 4. Repositório único e organização por nicho
 
-- Um **repo novo por projeto/cliente**, criado quando a etapa **desenvolvimento**
-  começa.
-- Se o projeto for **reaberto/retomado**, o agente **reusa o mesmo repositório**
-  (continua trabalhando em cima do que já existe), em vez de criar um novo.
+**Decisão (outubro/2026):** um **único repositório** — o próprio `lead-radar` —
+para todas as landing pages. Não se cria mais um repositório por cliente.
+
+- As LPs ficam em `sites/<nicho>/<slug>/` (ex.: `sites/medico/`,
+  `sites/dentista/`, `sites/advogado/`), cada uma com `index.html`, `assets/`,
+  `BRIEFING_COPY.md` e `ASSETS_PROMPT.md`.
+- `sites/efeitos/` é biblioteca compartilhada e fica **fora** das pastas de nicho.
+- Quando a etapa **desenvolvimento** começa, o agente cria a pasta do projeto
+  dentro do nicho — nunca um repositório novo.
+- Se o projeto for **reaberto/retomado**, o agente reusa a mesma pasta
+  (`Project.sitePath`), em vez de duplicar.
+- O vínculo continua registrado no projeto (`githubRepoUrl`, `repoOwner`,
+  `repoName`) e agora também em `sitePath` (caminho relativo da pasta).
 
 ---
 
@@ -147,8 +157,8 @@ antes do deploy final.
 - [x] **Papel das telas** — definido (seção 2).
 - [x] **Forma de entrega ao agente** — prompt otimizado (manual) **e** tool MCP
       (agente Hermes) — *implementado*.
-- [x] **Ciclo de vida do repo** — novo por projeto/cliente; reusa o mesmo ao
-      reabrir/retomar.
+- [x] **Ciclo de vida do repo** — **um único repo** (`lead-radar`) com pastas
+      por nicho (`sites/<nicho>/<slug>/`); reusa a mesma pasta ao reabrir/retomar.
 - [x] **Como o app detecta término + aprovação** — humano dá a palavra final;
       agente notifica a cada iteração via **Discord/Telegram** (seção 5).
 - [x] **Preview antes do deploy** — URL temporária / GitHub Pages para validação
@@ -158,28 +168,34 @@ antes do deploy final.
 - [x] **Relação prompt × tool MCP** — compartilham o mesmo "kit de dados" do
       projeto (`buildProjectDevPrompt` e tool `get_project_dev_kit` usam `buildProjectDevKit`) — *implementado*.
 - [x] **Tool(s) MCP novas** — `get_project_dev_kit`, `submit_project_code` e `approve_project_code` — *implementado*.
-- [x] **Vínculo projeto ↔ repositório** — `githubRepoUrl`/`repoOwner`/`repoName` persistidos no projeto — *implementado* (reuso ao retomar pelo mesmo campo).
-- [ ] **O que será removido do código** do fluxo de template fixo (`generateLandingPageHtml`) — *ainda não removido*; o fluxo novo coexiste.
+- [x] **Vínculo projeto ↔ repositório** — `githubRepoUrl`/`repoOwner`/`repoName`/`sitePath` persistidos no projeto — *implementado* (reuso ao retomar pelo mesmo caminho).
+- [x] **O que foi removido do código** do fluxo de template fixo (`generateLandingPageHtml`, tabela `landing_pages`, tools `*_landing_page`, job/settings de autopilot de LP, seção de LPs do monitoramento) — *removido em set/2026*; o fluxo novo (Kanban de 7 etapas, site codado do zero pelo agente) é o único. Mantidos como referência de insumo: `landingPageConcept` (conceito de IA no dev kit) e `LandingPagePrototype` (prévia visual no modal de análise).
 - [ ] **Canal de notificação definitivo** — Discord ou Telegram? (config exata +
       credenciais).
 - [ ] **Autenticação do GitHub** (quem fornece o token — ver seção 7).
 
 ---
 
-## 10. Estado da implementação (agosto/2026)
+## 10. Estado da implementação (set/2026)
 
-Parte planejada já implementada e testada, mantendo o fluxo legado coexistindo:
+Fluxo novo (Kanban de 7 etapas, site codado do zero pelo agente) é o único;
+o fluxo legado de template fixo foi removido (ver §8):
 
 **Backend**
 - **"Kit de dados" + prompt** (`server/projects/devKit.ts`):
   - `buildProjectDevKit(projectId)` monta lead + briefing/Typeform + copy + design
-    + conceito de IA + repositório (§3.1).
-  - `buildProjectDevPrompt(projectId)` gera o **prompt manual** pronto para colar.
+    + conceito de IA + identidade visual (`brandSnapshot`) + repositório (§3.1).
+  - `buildProjectDevPrompt(projectId)` gera o **prompt manual** pronto para colar,
+    já com a paleta/tom/logo captados em perfis públicos quando existirem.
   - `parseRepoUrl` interpreta URLs https/ssh do GitHub.
   - `setProjectDevRepo`, `submitProjectCode`, `updateProjectDevMessage`,
     `approveProjectCode`, `resetProjectDev`.
+- **Identidade visual do lead** (`server/services/brandResearchService.ts`):
+  SerpAPI (Google Imagens + perfis) → Gemini vision → `Lead.brandSnapshot`.
+  Disparo manual via `POST /api/leads/:id/brand-research` e tool MCP
+  `research_lead_brand`; guarda só dados derivados + URLs de origem.
 - **Persistência** — novos campos em `Project`: `githubRepoUrl`, `repoOwner`,
-  `repoName`, `previewUrl`, `devStatus`, `devMessage` (schema + migrations + store).
+  `repoName`, `sitePath`, `previewUrl`, `devStatus`, `devMessage` (schema + migrations + store).
 - **REST** (`server/routes/projectRoutes.ts`): `GET /dev-kit`, `POST /dev-repo`,
   `/submit-code`, `/dev-message`, `/dev-approve`, `/dev-reset`.
 - **Tools MCP** (`server/mcpServer.ts`): `get_project_dev_kit`,
@@ -187,13 +203,13 @@ Parte planejada já implementada e testada, mantendo o fluxo legado coexistindo:
 
 **Frontend**
 - Painel "Agente de IA de código" na etapa **desenvolvimento** do modal de
-  projeto: gerar/copiar prompt, salvar repositório, registrar entrega, aprovar
-  código e abrir preview.
+  projeto: gerar/copiar prompt, salvar repositório único + pasta (`sitePath`),
+  registrar entrega, aprovar código e abrir preview.
 
 **Testes**: `tests/devKit.test.ts` (parse de repo URL + kit + prompt + entrega/aprovação).
 
-**Pendências (ainda em aberto)** — ver §8: remoção efetiva do gerador de template
-fixo, canal de notificação (Discord/Telegram) e autenticação GitHub.
+**Pendências (ainda em aberto)** — ver §8: canal de notificação (Discord/Telegram)
+e autenticação GitHub.
 
 ---
 

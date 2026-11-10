@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Copy, ExternalLink, Bot, GitBranch, X, Save, CheckCircle2, Trash2, Rocket, Globe, RefreshCw, ClipboardList, PenLine, Palette, Code2, SearchCheck, Check, Plus, FileText, UserRound, Briefcase, Target, TrendingUp, CalendarDays, MessageSquare, ChevronDown, Layers } from 'lucide-react';
 import { BusinessLead, Project, ProjectBriefingField, ProjectDevStatus, ProjectPriority, ProjectStage, ProjectStatus, ProjectTask, ProjectType } from '../types';
+import { ProjectAssetsPanel } from './ProjectAssetsPanel';
 
 interface ProjectModalProps {
   mode: 'create' | 'edit';
@@ -321,6 +322,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   const [reviewNotes, setReviewNotes] = useState('');
   const [deployUrl, setDeployUrl] = useState('');
   const [githubRepo, setGithubRepo] = useState('');
+  const [sitePath, setSitePath] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
   const [devStatusField, setDevStatusField] = useState<ProjectDevStatus | ''>('');
   const [devMessageField, setDevMessageField] = useState('');
@@ -356,6 +358,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
       setReviewNotes(project.reviewNotes || '');
       setDeployUrl(project.deployUrl || '');
       setGithubRepo(project.githubRepoUrl || '');
+      setSitePath(project.sitePath || '');
       setPreviewUrl(project.previewUrl || '');
       setDevStatusField(project.devStatus || '');
       setDevMessageField(project.devMessage || '');
@@ -688,6 +691,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
         setReviewNotes(p.reviewNotes || '');
         setDeployUrl(p.deployUrl || '');
         setGithubRepo(p.githubRepoUrl || '');
+        setSitePath(p.sitePath || '');
         setPreviewUrl(p.previewUrl || '');
         setDevStatusField(p.devStatus || '');
         setDevMessageField(p.devMessage || '');
@@ -755,13 +759,14 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
       const data = await requestJson(`/api/projects/${project.id}/dev-repo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl: githubRepo }),
+        body: JSON.stringify({ repoUrl: githubRepo, sitePath }),
       });
       const p = data.project as Project;
       onSaved(p);
       setGithubRepo(p.githubRepoUrl || '');
+      setSitePath(p.sitePath || '');
       setDevStatusField(p.devStatus || '');
-      setDevActionMsg('Repositório registrado.');
+      setDevActionMsg('Repositório e pasta registrados.');
     } catch (err: any) {
       setPromptError(err?.message || 'Falha ao salvar repositório.');
     }
@@ -775,11 +780,12 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
       const data = await requestJson(`/api/projects/${project.id}/submit-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl: githubRepo, previewUrl, message: devMessageField }),
+        body: JSON.stringify({ repoUrl: githubRepo, sitePath, previewUrl, message: devMessageField }),
       });
       const p = data.project as Project;
       onSaved(p);
       setGithubRepo(p.githubRepoUrl || '');
+      setSitePath(p.sitePath || '');
       setPreviewUrl(p.previewUrl || '');
       setDevStatusField(p.devStatus || '');
       setDevMessageField(p.devMessage || '');
@@ -821,7 +827,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-8 flex flex-col max-h-[90vh]"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl my-8 flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -932,6 +938,12 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             <>
               {/* Configurações permanentes no topo */}
               {renderConfigSection(false)}
+
+              {/* Assets identificados (marca) + adicionados (arquivos da LP) */}
+              <ProjectAssetsPanel
+                projectId={project.id}
+                refreshKey={`${sitePath}|${project.updatedAt}`}
+              />
 
               {/* Stepper de etapas — progresso e navegação */}
               <div className="border-b border-slate-200 pb-3 mb-6">
@@ -1065,6 +1077,8 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                       <strong>preto ou branco</strong> (o oposto da cor da fonte do guia de design), textos reais
                       posicionados e componentes/assets em <strong>blocos de linha pontilhada</strong>.
                       O Vitor envia ao cliente, que revisa copy/estrutura <strong>antes de codar</strong>.
+                      Quando o cliente der o OK, baixe o <strong>termo de aprovação (PDF)</strong> abaixo
+                      como registro do que foi aprovado.
                     </p>
                   </div>
                   <div>
@@ -1097,14 +1111,25 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                       )}
                     </div>
                     {wireframeUrl.trim() && (
-                      <a
-                        href={wireframeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] text-orange-700 hover:text-orange-800 font-semibold mt-1.5"
-                      >
-                        <ExternalLink className="w-3 h-3" /> Abrir wireframe
-                      </a>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <a
+                          href={wireframeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-orange-700 hover:text-orange-800 font-semibold"
+                        >
+                          <ExternalLink className="w-3 h-3" /> Abrir wireframe
+                        </a>
+                        <a
+                          href={`/api/projects/${project?.id}/wireframe-approval.pdf`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-slate-600 hover:text-slate-800 font-semibold"
+                          title="Baixar o termo de aprovação (snapshot do que o cliente aprovou) em PDF"
+                        >
+                          <FileText className="w-3 h-3" /> Termo de aprovação (PDF)
+                        </a>
+                      </div>
                     )}
                   </div>
                   {renderStageChecklist('wireframe')}
@@ -1162,18 +1187,25 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                       />
                     )}
 
+                    <div className="mt-2">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                        Repositório único (todas as LPs)
+                      </label>
+                      <input value={githubRepo} onChange={(e) => setGithubRepo(e.target.value)} className={inputClass} placeholder="https://github.com/garchel/lead-radar" />
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                       <div>
                         <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
-                          Repositório GitHub
+                          Pasta da LP (nicho/slug)
                         </label>
-                        <input value={githubRepo} onChange={(e) => setGithubRepo(e.target.value)} className={inputClass} placeholder="https://github.com/org/repo" />
+                        <input value={sitePath} onChange={(e) => setSitePath(e.target.value)} className={inputClass} placeholder="sites/dentista/clinica-sorriso" />
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                           URL de preview (antes do deploy)
                         </label>
-                        <input value={previewUrl} onChange={(e) => setPreviewUrl(e.target.value)} className={inputClass} placeholder="https://org.github.io/repo/" />
+                        <input value={previewUrl} onChange={(e) => setPreviewUrl(e.target.value)} className={inputClass} placeholder="https://org.github.io/lead-radar/" />
                       </div>
                     </div>
 

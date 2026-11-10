@@ -6,17 +6,14 @@ import {
   getAllJobs,
   getLeadById,
   getLeads,
-  getLandingPageById,
-  getLandingPages,
   getPipelineSummary,
   recordCommunication,
   replaceJobs,
   updateLeadAnalysis,
   upsertJob,
-  upsertLandingPage,
   upsertLead,
 } from "../server/store/db";
-import type { LandingPage, StoredLead } from "../server/store/types";
+import type { StoredLead } from "../server/store/types";
 
 const lead: StoredLead = {
   id: "lead-base",
@@ -74,24 +71,6 @@ describe("store / SQLite (fonte da verdade compartilhada)", () => {
     expect(s.byStatus.closed).toBeGreaterThanOrEqual(1);
     expect(s.byStatus.em_desenvolvimento).toBeGreaterThanOrEqual(1);
     expect(s.totalLeads).toBeGreaterThanOrEqual(4);
-  });
-
-  it("gerencia Landing Pages", () => {
-    upsertLead(lead);
-    const lp: LandingPage = {
-      id: "lp-1",
-      leadId: "lead-base",
-      businessName: "Empresa Teste",
-      slug: "empresa-teste",
-      stage: "rascunho",
-      status: "aguardando_aprovacao",
-      html: "<html/>",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    upsertLandingPage(lp);
-    expect(getLandingPageById("lp-1")!.status).toBe("aguardando_aprovacao");
-    expect(getLandingPages().length).toBeGreaterThanOrEqual(1);
   });
 
   it("registra e lista comunicações por lead", () => {

@@ -17,6 +17,7 @@ const hasCoordinates = (lead: BusinessLead): lead is BusinessLead & { lat: numbe
 const websiteLabel = (status: BusinessLead['websiteStatus']) => {
   if (status === 'none') return 'Sem website informado';
   if (status === 'social_only') return 'Apenas presença social informada';
+  if (status === 'marketplace_only') return 'Apenas marketplace (sem site próprio)';
   return 'Website informado';
 };
 

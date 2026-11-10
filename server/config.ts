@@ -18,7 +18,6 @@ export function getGeminiModel(): string {
 /**
  * Configuração do agendador de prospecção periódica.
  * - `enabled`: liga/desliga o agendador (default ligado; desligue com `LEADRADAR_SCHEDULER=off`).
- * - `maxLandingPagesPerDay`: guardrail de autonomia (máx. de LPs criadas/dia) — default 5.
  * - `maxLeadsPerRun`: limite de leads processados por execução do autopilot.
  */
 /**

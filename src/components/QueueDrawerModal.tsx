@@ -172,7 +172,7 @@ export const QueueDrawerModal: React.FC<QueueDrawerModalProps> = ({
     const requiredFields = ['id', 'name', 'category', 'address', 'city', 'state', 'websiteStatus'];
     const invalidIndex = job.result.leads.findIndex((lead: any) =>
       requiredFields.some((field) => typeof lead[field] !== 'string' || !lead[field].trim()) ||
-      !['none', 'social_only', 'has_website'].includes(lead.websiteStatus)
+      !['none', 'social_only', 'marketplace_only', 'has_website'].includes(lead.websiteStatus)
     );
     if (invalidIndex >= 0) {
       setError(`O lead ${invalidIndex + 1} do job não possui todos os dados obrigatórios. Nenhum lead foi importado.`);

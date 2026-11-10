@@ -16,9 +16,11 @@ export interface BusinessLead {
   city: string;
   state?: string;
   phone?: string;
+  email?: string;
+  cnpj?: string;
   rating?: number;
   reviewsCount?: number;
-  websiteStatus: 'none' | 'social_only' | 'has_website';
+  websiteStatus: 'none' | 'social_only' | 'marketplace_only' | 'has_website';
   websiteUrl?: string;
   googlePlaceId?: string;
   instagramHandle?: string;
@@ -43,6 +45,38 @@ export interface BusinessLead {
   doNotContact?: boolean;
   isAlreadySaved?: boolean;
   existingLeadId?: string;
+  /** Identidade visual captada em perfis/imagens públicas. */
+  brandSnapshot?: BrandSnapshot;
+}
+
+export type BrandColorRole = 'primary' | 'secondary' | 'accent' | 'background' | 'text';
+
+export interface BrandColor {
+  hex: string;
+  name?: string;
+  role?: BrandColorRole;
+}
+
+export interface BrandLogo {
+  url?: string;
+  description?: string;
+  confidence?: number;
+}
+
+export interface BrandSnapshot {
+  version: number;
+  createdAt: string;
+  source: 'serpapi' | 'manual';
+  query: string;
+  profiles: { instagram?: string; facebook?: string };
+  palette: BrandColor[];
+  tone: string[];
+  typography?: { display?: string; body?: string; notes?: string };
+  logo?: BrandLogo;
+  imagery: Array<{ url: string; description?: string }>;
+  summary: string;
+  confidence: number;
+  notes?: string;
 }
 
 export interface LeadAnalysisResult {
@@ -87,7 +121,7 @@ export interface SearchFilters {
   location: string;
   category: string;
   filterNoWebsiteOnly: boolean;
-  presenceFilter?: 'all' | 'gold' | 'silver' | 'has_website';
+  presenceFilter?: 'all' | 'gold' | 'silver' | 'bronze' | 'has_website';
   minRating: number;
   minReviews: number;
   sortBy: 'score' | 'rating' | 'reviews' | 'name';
@@ -164,6 +198,8 @@ export interface Project {
   githubRepoUrl?: string;
   repoOwner?: string;
   repoName?: string;
+  /** Pasta da LP no repositório único: `sites/<nicho>/<slug>`. */
+  sitePath?: string;
   previewUrl?: string;
   devStatus?: ProjectDevStatus;
   devMessage?: string;
@@ -176,4 +212,85 @@ export interface Project {
   leadName?: string;
   leadCity?: string;
   leadCategory?: string;
+}
+
+export type ProjectAssetType = 'image' | 'video' | 'document' | 'other';
+
+/** Arquivo de asset encontrado na pasta da LP (`sites/<nicho>/<slug>/`). */
+export interface ProjectAssetFile {
+  name: string;
+  path: string;
+  url: string;
+  size: number;
+  type: ProjectAssetType;
+  mime: string;
+  updatedAt: string;
+}
+
+/** Resposta de `GET /api/projects/:id/assets`. */
+export interface ProjectAssets {
+  projectId: string;
+  sitePath: string;
+  siteExists: boolean;
+  files: ProjectAssetFile[];
+  brand?: BrandSnapshot;
+  links: {
+    wireframeUrl?: string;
+    previewUrl?: string;
+    deployUrl?: string;
+    githubRepoUrl?: string;
+  };
+}
+
+export type ActionItemKind =
+  | 'code_review'
+  | 'project_overdue'
+  | 'follow_ups_due'
+  | 'outbox_failed'
+  | 'outbox_unconfirmed';
+
+/** Item de "próximas ações" agregado no topo do app. */
+export interface ActionItem {
+  id: string;
+  kind: ActionItemKind;
+  severity: 'high' | 'medium';
+  title: string;
+  detail: string;
+  count: number;
+  /** Aba para onde a ação navega (id do activeTab). */
+  tab: 'projects' | 'crm' | 'growth';
+  /** Quando definido, a navegação abre o modal deste projeto. */
+  projectId?: string;
+}
+
+/** Resposta de `GET /api/action-items`. */
+export interface ActionItemsResponse {
+  success: true;
+  items: ActionItem[];
+  total: number;
+  generatedAt: string;
+  outbox: {
+    failed: Array<{
+      communicationId: string;
+      leadId: string;
+      leadName: string;
+      phone?: string;
+      channel: string;
+      hook?: string;
+      message: string;
+      createdAt: string;
+      ageHours: number;
+    }>;
+    unconfirmed: Array<{
+      communicationId: string;
+      leadId: string;
+      leadName: string;
+      phone?: string;
+      channel: string;
+      hook?: string;
+      message: string;
+      createdAt: string;
+      ageHours: number;
+    }>;
+  };
 }

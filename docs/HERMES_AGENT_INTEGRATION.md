@@ -13,14 +13,15 @@ O **Hermes Agent** utiliza o protocolo **Model Context Protocol (MCP)** via tran
 3. **`generate_whatsapp_pitch`**: Cria a abordagem persuasiva e o link direto `wa.me/` com mensagem pré-formatada.
 4. **`update_crm_status`**: Atualiza a fase do lead no Pipeline do Mini-CRM (`novo`, `contatado`, `proposta_enviada`, `em_negociacao`, `em_desenvolvimento`, `finalizado`, `recusado`) — **persistido no banco compartilhado**.
 5. **Dados reais e automação**: `create_lead`, `list_leads`, `enrich_lead` (Google Places/CNPJ/e-mail), `send_contact` (WhatsApp/e-mail).
-6. **Landing Pages**: `create_landing_page`, `list_landing_pages`, `get_landing_page`, `approve_landing_page` (guarda-limite humano), `deploy_landing_page` (Netlify/local).
-7. **`schedule_prospecting`**: agenda prospecção **periódica** via cron — dispara Jobs de autopilot/batch recorrentes com limite de LPs/dia; `follow_up_reminder` (diário) enfileira os **recontatos autorizados**, sem envio automático.
+6. **Projetos do Kanban (site do zero, sem template):** `list_projects`, `update_project` (etapas briefing → copywriting → design → wireframe → desenvolvimento → revisao → deploy), `get_project_dev_kit` (kit + prompt p/ agente codar no repo único, em `sites/<nicho>/<slug>/`), `submit_project_code`, `approve_project_code` (guarda-limite humano).
+7. **`schedule_prospecting`**: agenda prospecção **periódica** via cron — dispara Jobs de autopilot/batch recorrentes; `follow_up_reminder` (diário) enfileira os **recontatos autorizados**, sem envio automático.
 8. **`export_dossier`**: gera o Dossiê Executivo HTML do lead.
 9. **`record_interaction_outcome` / `list_due_followups`**: registram a resposta da empresa e listam os recontatos cujo prazo já venceu.
 10. **`sync_typeform_briefing`**: importa as respostas do formulário de briefing do Typeform (Responses API) e grava no projeto correspondente.
-11. **Construção do site via agente**: `get_project_dev_kit` (recebe o "kit de dados" + prompt para **codar a página do zero no GitHub**), `submit_project_code` (informa entrega do código com preview) e `approve_project_code` (guarda-limite humano).
+11. **Construção do site via agente**: `get_project_dev_kit` (recebe o "kit de dados" + prompt para **codar a página do zero em `sites/<nicho>/<slug>/` no repo único**), `submit_project_code` (informa entrega do código com preview) e `approve_project_code` (guarda-limite humano).
+12. **WhatsApp de verdade (conversa com o número):** `list_communications` e `list_inbound_messages` (lê as conversas), `send_whatsapp_message` (envia/responde), `whatsapp_status` e `set_whatsapp_provider` (backend ativo), `whatsapp_instance_status`, `whatsapp_request_qr` e `whatsapp_set_webhook` (operação do gateway: pareamento e inbound).
 
-*(No total, **18 ferramentas** (as 4 de prospecção + 14 de automação/monitoramento).)*
+*(No total, **33 ferramentas** e **4 recursos** — o catálogo exato e sempre atualizado está em `GET /api/mcp/info`.)*
 
 ---
 
@@ -46,17 +47,29 @@ Crie ou edite o arquivo `hermes_mcp_config.json` no ambiente do seu **Hermes Age
 
 ## 💻 3. Comandos de Execução no Hermes Agent
 
-### Comando 1: Prospecção de Oportunidades "Ouro"
+### Comando 1: Registrar e testar a conexão
 ```bash
-hermes agent --mcp-config ./hermes_mcp_config.json \
-  --prompt "Mapeie 5 clínicas de estética na cidade de Campinas (SP) sem site (filtro Ouro). Analise cada uma e gere os links de abordagem via WhatsApp."
+hermes mcp add leadradar-ai --url http://localhost:3000/api/mcp/sse
+hermes mcp test leadradar-ai
+```
+O `hermes mcp test` deve responder `✓ Connected` e listar **33 tools**.
+
+### Comando 2: Prospecção de Oportunidades "Ouro"
+```bash
+hermes chat -q "Mapeie 5 clínicas de estética na cidade de Campinas (SP) sem site (filtro Ouro). Analise cada uma e gere os links de abordagem via WhatsApp." --oneshot
 ```
 
-### Comando 2: Ciclo de Automação do Funil (Autopilot)
+### Comando 3: Ciclo de Automação do Funil (Autopilot)
 ```bash
-hermes agent --mcp-config ./hermes_mcp_config.json \
-  --prompt "Invoque o prompt pré-definido autopilot_prospecting para a categoria 'Dentista / Clínica Odontológica' em Curitiba (PR). Atualize os leads para 'contatado' e exiba o resumo do pipeline."
+hermes chat -q "Invoque o prompt pré-definido autopilot_prospecting para a categoria 'Dentista / Clínica Odontológica' em Curitiba (PR). Atualize os leads para 'contatado' e exiba o resumo do pipeline." --oneshot
 ```
+
+### Comando 4: Conversar com os leads pelo WhatsApp
+```bash
+hermes chat -q "Liste as mensagens recebidas que aguardam resposta, leia o histórico do lead mais recente e responda com a proposta da landing page." --oneshot
+```
+
+> Em versões antigas do Hermes o comando era `hermes agent --mcp-config ./hermes_mcp_config.json --prompt "..."`; a CLI atual usa `hermes mcp add` + `hermes chat`.
 
 ---
 
@@ -64,7 +77,7 @@ hermes agent --mcp-config ./hermes_mcp_config.json \
 
 ```
 [Hermes Agent] ➔ Conectando ao MCP Server em /api/mcp/sse...
-[MCP Server] ➔ Conexão estabelecida! 15 ferramentas e 3 recursos disponíveis.
+[MCP Server] ➔ Conexão estabelecida! 33 ferramentas e 4 recursos disponíveis.
 
 [Hermes Agent] ➔ Executando search_leads(location="Sorocaba", state="SP", presenceFilter="gold")
 [MCP Server] ➔ 4 leads Ouro mapeados com notas > 4.7 no Google Maps.

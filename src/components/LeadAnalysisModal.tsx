@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Copy, Check, MessageCircle, Mail, PhoneCall, Layout, ShieldAlert, ArrowRight, DollarSign, Download, ExternalLink, RefreshCw, Instagram, Printer, FileText } from 'lucide-react';
-import { BusinessLead, LeadAnalysisResult } from '../types';
+import { X, Sparkles, Copy, Check, MessageCircle, Mail, PhoneCall, Layout, ShieldAlert, ArrowRight, DollarSign, Download, ExternalLink, RefreshCw, Instagram, Printer, FileText, Palette, Search, Image as ImageIcon } from 'lucide-react';
+import { BrandSnapshot, BusinessLead, LeadAnalysisResult } from '../types';
 import { LandingPagePrototype } from './LandingPagePrototype';
 import { printLeadDossier } from '../utils/exportUtils';
 
@@ -22,6 +22,61 @@ export const LeadAnalysisModal: React.FC<LeadAnalysisModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'whatsapp' | 'email' | 'call' | 'preview'>('whatsapp');
   const [copiedScript, setCopiedScript] = useState<string | null>(null);
+  const [brandSnapshot, setBrandSnapshot] = useState<BrandSnapshot | null>(lead?.brandSnapshot ?? null);
+  const [brandLoading, setBrandLoading] = useState<boolean>(false);
+  const [brandError, setBrandError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setBrandSnapshot(lead?.brandSnapshot ?? null);
+    setBrandError(null);
+  }, [lead?.id, lead?.brandSnapshot?.createdAt]);
+
+  // O lead no estado do App pode estar defasado (o snapshot é gravado no
+  // servidor). Ao abrir um lead já salvo, busca a versão mais recente.
+  useEffect(() => {
+    if (!lead || !isSaved) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(`/api/leads/${lead.id}`);
+        const data = await response.json().catch(() => ({}));
+        const fetched = data?.lead?.brandSnapshot as BrandSnapshot | undefined;
+        if (!cancelled && fetched) {
+          setBrandSnapshot((current) => {
+            if (!current) return fetched;
+            return new Date(fetched.createdAt) > new Date(current.createdAt) ? fetched : current;
+          });
+        }
+      } catch {
+        /* mantém o snapshot que já veio no lead */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [lead?.id, isSaved]);
+
+  const handleResearchBrand = async (force: boolean) => {
+    if (!lead || brandLoading) return;
+    setBrandLoading(true);
+    setBrandError(null);
+    try {
+      const response = await fetch(`/api/leads/${lead.id}/brand-research`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.success === false) {
+        throw new Error(data?.error || `A pesquisa falhou (HTTP ${response.status}).`);
+      }
+      setBrandSnapshot(data.snapshot);
+    } catch (err: any) {
+      setBrandError(err?.message || 'Falha ao pesquisar a identidade visual do lead.');
+    } finally {
+      setBrandLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!lead) return;
@@ -169,6 +224,152 @@ export const LeadAnalysisModal: React.FC<LeadAnalysisModalProps> = ({
                   </div>
                   <ShieldAlert className="w-8 h-8 text-amber-500/30" />
                 </div>
+              </div>
+
+              {/* Identidade visual do lead (pesquisa em perfis públicos) */}
+              <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm flex items-center space-x-2">
+                      <Palette className="w-4 h-4 text-pink-600" />
+                      <span>Identidade Visual do Lead</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Tons, imagens e logo que o negócio já usa — entram automaticamente no dev kit da landing page.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleResearchBrand(Boolean(brandSnapshot))}
+                    disabled={brandLoading || !isSaved}
+                    className="bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center space-x-1.5 shadow-sm transition-all"
+                    title={!isSaved ? 'Salve o lead no CRM primeiro' : 'Consome 1–2 buscas SerpAPI + 1 chamada Gemini vision'}
+                  >
+                    {brandLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                    <span>{brandLoading ? 'Pesquisando...' : brandSnapshot ? 'Refazer pesquisa' : 'Pesquisar identidade'}</span>
+                  </button>
+                </div>
+
+                {brandError && (
+                  <p role="alert" className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-2.5">
+                    {brandError}
+                  </p>
+                )}
+
+                {brandSnapshot ? (
+                  <div className="space-y-4">
+                    {brandSnapshot.palette.length > 0 && (
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Paleta</span>
+                        <div className="flex flex-wrap gap-2">
+                          {brandSnapshot.palette.map((color, i) => (
+                            <div key={`${color.hex}-${i}`} className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5">
+                              <span
+                                className="w-6 h-6 rounded-md border border-slate-300 shadow-2xs shrink-0"
+                                style={{ backgroundColor: color.hex }}
+                              />
+                              <span className="text-[11px] font-mono font-semibold text-slate-700">{color.hex}</span>
+                              {color.role && <span className="text-[10px] text-slate-500">{color.role}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {brandSnapshot.tone.length > 0 && (
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Tom visual</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {brandSnapshot.tone.map((word) => (
+                            <span key={word} className="text-[11px] bg-pink-50 text-pink-700 border border-pink-200 rounded-full px-2.5 py-1 font-medium">
+                              {word}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
+                        <span className="font-bold text-slate-500 uppercase tracking-wider block text-[10px]">Logo</span>
+                        {brandSnapshot.logo ? (
+                          <>
+                            <p className="text-slate-700 font-medium">{brandSnapshot.logo.description || 'Logo identificado nas imagens.'}</p>
+                            <p className="text-slate-500">Confiança: {Math.round((brandSnapshot.logo.confidence ?? 0) * 100)}%</p>
+                          </>
+                        ) : (
+                          <p className="text-slate-500">Nenhum logo legível identificado.</p>
+                        )}
+                      </div>
+                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
+                        <span className="font-bold text-slate-500 uppercase tracking-wider block text-[10px]">Tipografia observada</span>
+                        {brandSnapshot.typography?.display || brandSnapshot.typography?.body ? (
+                          <p className="text-slate-700 font-medium">
+                            {[brandSnapshot.typography?.display, brandSnapshot.typography?.body].filter(Boolean).join(' / ')}
+                          </p>
+                        ) : (
+                          <p className="text-slate-500">Sem referência clara de fonte.</p>
+                        )}
+                        {brandSnapshot.typography?.notes && <p className="text-slate-500">{brandSnapshot.typography.notes}</p>}
+                      </div>
+                    </div>
+
+                    <div className={`border rounded-lg p-3 space-y-1 ${brandSnapshot.confidence < 0.25 ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Resumo para o design</span>
+                      <p className="text-xs text-slate-700 leading-relaxed">{brandSnapshot.summary}</p>
+                      {brandSnapshot.notes && <p className={`text-[11px] ${brandSnapshot.confidence < 0.25 ? 'text-amber-800' : 'text-amber-700'}`}>{brandSnapshot.notes}</p>}
+                    </div>
+
+                    {(brandSnapshot.profiles.instagram || brandSnapshot.profiles.facebook) && (
+                      <div className="flex flex-wrap gap-3 text-[11px]">
+                        {brandSnapshot.profiles.instagram && (
+                          <a href={brandSnapshot.profiles.instagram} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-1 text-pink-600 hover:underline font-semibold">
+                            <Instagram className="w-3.5 h-3.5" />
+                            <span>Instagram</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                        {brandSnapshot.profiles.facebook && (
+                          <a href={brandSnapshot.profiles.facebook} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-1 text-blue-600 hover:underline font-semibold">
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>Facebook</span>
+                          </a>
+                        )}
+                      </div>
+                    )}
+
+                    {brandSnapshot.imagery.length > 0 && (
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Referências visuais</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {brandSnapshot.imagery.map((item, i) => (
+                            <a
+                              key={`${item.url}-${i}`}
+                              href={item.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-start space-x-2 bg-slate-50 border border-slate-200 rounded-lg p-2 hover:bg-slate-100 transition-colors"
+                            >
+                              <ImageIcon className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+                              <span className="text-[11px] text-slate-600 leading-snug">{item.description || 'Referência visual'}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                      <span>
+                        Confiança geral: {Math.round(brandSnapshot.confidence * 100)}% · {brandSnapshot.imagery.length} referência(s)
+                      </span>
+                      <span>Pesquisado em {new Date(brandSnapshot.createdAt).toLocaleDateString('pt-BR')}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    Ainda não pesquisado. A busca usa imagens e perfis públicos (Google/Instagram/Facebook) para captar a paleta,
+                    o tom e o logo que o negócio já usa.
+                  </p>
+                )}
               </div>
 
               {/* Diagnóstico de Oportunidade */}

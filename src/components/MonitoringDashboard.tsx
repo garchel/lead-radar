@@ -8,10 +8,7 @@ import {
   Layers,
   Rocket,
   ExternalLink,
-  ThumbsUp,
-  ThumbsDown,
   RefreshCw,
-  LayoutTemplate,
 } from 'lucide-react';
 import { ScheduleManager } from './ScheduleManager';
 
@@ -25,15 +22,6 @@ interface JobView {
   logs?: { timestamp: string; message: string; level: string }[];
   result?: any;
   error?: string;
-}
-
-interface LandingPageView {
-  id: string;
-  businessName: string;
-  status: string;
-  stage: string;
-  url?: string | null;
-  slug: string;
 }
 
 interface Metrics {
@@ -53,44 +41,25 @@ const STATUS_STYLES: Record<string, string> = {
   cancelled: 'bg-slate-100 text-slate-500 border-slate-200',
 };
 
-const LP_STATUS_STYLES: Record<string, string> = {
-  aguardando_aprovacao: 'bg-amber-50 text-amber-700 border-amber-200',
-  em_producao: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  aprovada: 'bg-sky-50 text-sky-700 border-sky-200',
-  publicada: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  rejeitada: 'bg-rose-50 text-rose-700 border-rose-200',
-};
-
 export const MonitoringDashboard: React.FC = () => {
   const [jobs, setJobs] = useState<JobView[]>([]);
   const [metrics, setMetrics] = useState<Metrics>({ total: 0, pending: 0, processing: 0, completed: 0, failed: 0, cancelled: 0 });
-  const [landingPages, setLandingPages] = useState<LandingPageView[]>([]);
   const [connected, setConnected] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [jobsResponse, lpResponse] = await Promise.all([
-        fetch('/api/jobs'),
-        fetch('/api/landing-pages'),
-      ]);
-      const [jobsRes, lpRes] = await Promise.all([
-        jobsResponse.json().catch(() => ({})),
-        lpResponse.json().catch(() => ({})),
-      ]);
+      const jobsResponse = await fetch('/api/jobs');
+      const jobsRes = await jobsResponse.json().catch(() => ({}));
       if (!jobsResponse.ok || !jobsRes?.success) {
         throw new Error(jobsRes?.error || `Falha ao consultar jobs (HTTP ${jobsResponse.status}).`);
       }
-      if (!lpResponse.ok || !lpRes?.success) {
-        throw new Error(lpRes?.error || `Falha ao consultar landing pages (HTTP ${lpResponse.status}).`);
-      }
-      if (!Array.isArray(jobsRes.jobs) || !jobsRes.metrics || !Array.isArray(lpRes.landingPages)) {
+      if (!Array.isArray(jobsRes.jobs) || !jobsRes.metrics) {
         throw new Error('A API de monitoramento retornou dados inválidos.');
       }
       setJobs(jobsRes.jobs);
       setMetrics(jobsRes.metrics);
-      setLandingPages(lpRes.landingPages);
       setError(null);
     } catch (err: any) {
       setError(`Falha ao carregar o monitoramento: ${err?.message || 'erro desconhecido'}`);
@@ -108,7 +77,7 @@ export const MonitoringDashboard: React.FC = () => {
     es.onmessage = (evt) => {
       try {
         const data = JSON.parse(evt.data);
-        if (data?.event === 'jobs' || data?.event === 'landing_pages') {
+        if (data?.event === 'jobs') {
           fetchData();
         }
       } catch {
@@ -117,20 +86,6 @@ export const MonitoringDashboard: React.FC = () => {
     };
     return () => es.close();
   }, [fetchData]);
-
-  const runLpAction = async (id: string, action: 'approve' | 'reject' | 'deploy') => {
-    setError(null);
-    try {
-      const response = await fetch(`/api/landing-pages/${id}/${action}`, { method: 'POST' });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data?.success) {
-        throw new Error(data?.error || `Falha ao executar ${action} (HTTP ${response.status}).`);
-      }
-      await fetchData();
-    } catch (err: any) {
-      setError(`Falha ao executar ${action}: ${err?.message || 'erro desconhecido'}`);
-    }
-  };
 
   const kpiCards = [
     { label: 'Total de Jobs', value: metrics.total, icon: Layers, color: 'text-slate-700 bg-slate-100' },
@@ -155,7 +110,7 @@ export const MonitoringDashboard: React.FC = () => {
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900">Monitoramento de Operação</h1>
-            <p className="text-sm text-slate-500">Acompanhe jobs de prospecção e criação de landing pages em tempo real.</p>
+            <p className="text-sm text-slate-500">Acompanhe jobs de prospecção e enriquecimento em tempo real.</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
@@ -242,64 +197,6 @@ export const MonitoringDashboard: React.FC = () => {
       </div>
 
       <ScheduleManager />
-
-
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="font-bold text-slate-900 flex items-center space-x-2">
-            <LayoutTemplate className="w-4 h-4 text-indigo-600" />
-            <span>Landing Pages</span>
-          </h2>
-          <span className="text-xs text-slate-500">{landingPages.length} geradas</span>
-        </div>
-        {landingPages.length === 0 ? (
-          <div className="p-10 text-center text-sm text-slate-500">Nenhuma landing page gerada ainda.</div>
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {landingPages.map((lp) => (
-              <li key={lp.id} className="px-5 py-4 flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-semibold text-slate-800 text-sm truncate">{lp.businessName}</span>
-                    <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ${LP_STATUS_STYLES[lp.status] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>{lp.status}</span>
-                    <span className="text-[10px] text-slate-400 font-mono">estágio: {lp.stage}</span>
-                  </div>
-                  {lp.url && (
-                    <a href={lp.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center space-x-1 text-xs text-indigo-600 hover:text-indigo-800">
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>{lp.url}</span>
-                    </a>
-                  )}
-                </div>
-                <div className="flex items-center space-x-2">
-                  {lp.status === 'aguardando_aprovacao' && (
-                    <>
-                      <button onClick={() => runLpAction(lp.id, 'approve')} className="flex items-center space-x-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg transition-all">
-                        <ThumbsUp className="w-3.5 h-3.5" />
-                        <span>Aprovar</span>
-                      </button>
-                      <button onClick={() => runLpAction(lp.id, 'reject')} className="flex items-center space-x-1 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg transition-all">
-                        <ThumbsDown className="w-3.5 h-3.5" />
-                        <span>Rejeitar</span>
-                      </button>
-                    </>
-                  )}
-                  {lp.status === 'aprovada' && (
-                    <button onClick={() => runLpAction(lp.id, 'deploy')} className="flex items-center space-x-1 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-2.5 py-1.5 rounded-lg transition-all">
-                      <Rocket className="w-3.5 h-3.5" />
-                      <span>Publicar</span>
-                    </button>
-                  )}
-                  <a href={`/landing-pages/${lp.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1 text-xs font-medium text-slate-600 hover:text-indigo-600 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-300 transition-all">
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Prévia</span>
-                  </a>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
     </div>
   );
 };

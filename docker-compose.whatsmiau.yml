@@ -1,0 +1,82 @@
+# WhatsMiau — gateway WhatsApp (fork mantido da Evolution API) para o LeadRadar
+# Fonte: https://github.com/verbeux-ai/whatsmiau (build local do master)
+#
+# Nomes de env REAIS desta versão (diferentes da Evolution!):
+#   API_KEY      (não AUTHENTICATION_API_KEY) — header de auth é "apikey"
+#   PORT         default 8081 no código (ignoramos: deixamos 8080 interno)
+#   REDIS_URL    no formato host:porta (sem schema)
+#   DB_URL       no formato DSN do Postgres
+#
+# Patch da imagem: bind em 0.0.0.0 + entrypoint que cria /app/data
+# (volume Docker vazio sobrescreve o dir da imagem na 1ª subida).
+#
+# Uso: docker compose -f docker-compose.whatsmiau.yml up -d --build
+# API: http://127.0.0.1:8081/v1/...   header: apikey: leadradar-whatsmiau-key
+
+services:
+  whatsmiau-db:
+    image: postgres:16-alpine
+    container_name: leadradar-whatsmiau-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: whatsmiau
+      POSTGRES_PASSWORD: whatsmiau_local_dev
+      POSTGRES_DB: whatsmiau
+    volumes:
+      - whatsmiau_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U whatsmiau"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  whatsmiau-redis:
+    image: redis:7-alpine
+    container_name: leadradar-whatsmiau-redis
+    restart: unless-stopped
+    volumes:
+      - whatsmiau_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  whatsmiau-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.whatsmiau
+    container_name: leadradar-whatsmiau-api
+    restart: unless-stopped
+    depends_on:
+      whatsmiau-db:
+        condition: service_healthy
+      whatsmiau-redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8081:8080"
+    environment:
+      # Auth — nome REAL da env nesta versão é API_KEY (header continua "apikey")
+      API_KEY: leadradar-whatsmiau-key
+
+      # Porta interna (o Echo faz bind [::] :8080; publicamos via 127.0.0.1)
+      PORT: "8080"
+
+      # Persistência — DB_URL no formato DSN
+      DIALECT_DB: postgres
+      DB_URL: postgres://whatsmiau:whatsmiau_local_dev@whatsmiau-db:5432/whatsmiau?sslmode=disable
+
+      # Redis no formato host:porta (sem schema — bug do exemplo oficial)
+      REDIS_URL: whatsmiau-redis:6379
+
+      CONFIG_SESSION_PHONE_CLIENT: leadradar
+      CONFIG_SESSION_PHONE_NAME: Chrome
+
+      LOG_LEVEL: WARN
+    volumes:
+      - whatsmiau_data:/app/data
+
+volumes:
+  whatsmiau_pgdata:
+  whatsmiau_redis:
+  whatsmiau_data:

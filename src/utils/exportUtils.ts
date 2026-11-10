@@ -29,7 +29,13 @@ export function exportLeadsToCSV(leads: BusinessLead[], filename = 'leads-prospe
     `"${(l.instagramHandle || '').replace(/"/g, '""')}"`,
     l.rating || '',
     l.reviewsCount || 0,
-    l.websiteStatus === 'none' ? 'Sem Site' : l.websiteStatus === 'social_only' ? 'Apenas Redes Sociais' : 'Com Site',
+    l.websiteStatus === 'none'
+      ? 'Sem Site'
+      : l.websiteStatus === 'social_only'
+        ? 'Apenas Redes Sociais'
+        : l.websiteStatus === 'marketplace_only'
+          ? 'Apenas Marketplace'
+          : 'Com Site',
     l.opportunityScore || 0,
     l.opportunityLevel === 'high' ? 'Alta' : l.opportunityLevel === 'medium' ? 'Média' : 'Baixa',
     `"${(l.estimatedValue || '').replace(/"/g, '""')}"`
@@ -108,7 +114,7 @@ export function printLeadDossier(lead: BusinessLead, analysis?: LeadAnalysisResu
           <div style="font-size: 18px; font-weight: bold; color: #0f172a;">⭐ ${lead.rating ?? 'Não informada'} / 5.0</div>
           <div style="font-size: 13px; color: #64748b;">${lead.reviewsCount ?? 'Não informada'} avaliações informadas do Google</div>
           <div style="margin-top: 10px; font-size: 12px; font-weight: bold; color: ${lead.websiteStatus === 'none' ? '#dc2626' : '#d97706'};">
-            Status Atual: ${lead.websiteStatus === 'none' ? '❌ Sem nenhuma página/site no Google' : lead.websiteStatus === 'social_only' ? '⚠️ Apenas rede social (sem controle de conversão)' : lead.websiteStatus === 'has_website' ? '✅ Site identificado' : 'Não informado'}
+            Status Atual: ${lead.websiteStatus === 'none' ? '❌ Sem nenhuma página/site no Google' : lead.websiteStatus === 'social_only' ? '⚠️ Apenas rede social (sem controle de conversão)' : lead.websiteStatus === 'marketplace_only' ? '⚠️ Apenas perfil em marketplace (sem site próprio)' : lead.websiteStatus === 'has_website' ? '✅ Site identificado' : 'Não informado'}
           </div>
         </div>
 

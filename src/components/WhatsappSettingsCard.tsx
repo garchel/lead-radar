@@ -2,30 +2,47 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { MessageCircle, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
 
 interface WhatsappStatus {
-  savedChoice: 'auto' | 'evolution' | 'meta' | 'legacy';
+  savedChoice: 'auto' | 'evolution' | 'whatsmiau' | 'meta' | 'legacy';
   activeProvider: string | null;
   reason: string;
-  available: { evolution: boolean; meta: boolean; legacy: boolean };
+  available: { evolution: boolean; whatsmiau: boolean; meta: boolean; legacy: boolean };
+}
+
+interface WhatsappHealth {
+  configured: boolean;
+  ok: boolean;
+  instance?: string;
+  state?: string;
+  latencyMs?: number;
+  error?: string;
 }
 
 const OPTIONS: Array<{ value: WhatsappStatus['savedChoice']; label: string; desc: string }> = [
-  { value: 'auto', label: 'Automático', desc: 'Usa o primeiro backend configurado (Evolution → Meta → legado)' },
+  { value: 'auto', label: 'Automático', desc: 'Usa o primeiro backend configurado (Evolution → WhatsMiau → Meta → legado)' },
   { value: 'evolution', label: 'Evolution API', desc: 'Self-hosted e gratuito (WhatsApp Web não-oficial)' },
+  { value: 'whatsmiau', label: 'WhatsMiau', desc: 'Fork mantido da Evolution — mais estável (self-hosted)' },
   { value: 'meta', label: 'Meta Cloud API', desc: 'Oficial da Meta — 1.000 conversas/mês grátis' },
   { value: 'legacy', label: 'Webhook genérico', desc: 'Z-API, n8n ou outro endpoint compatível' },
 ];
 
 export const WhatsappSettingsCard: React.FC = () => {
   const [status, setStatus] = useState<WhatsappStatus | null>(null);
+  const [health, setHealth] = useState<WhatsappHealth | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/whatsapp/status');
+      const [res, healthRes] = await Promise.all([
+        fetch('/api/whatsapp/status'),
+        fetch('/api/whatsapp/health').catch(() => null),
+      ]);
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.success) throw new Error(json?.error || `HTTP ${res.status}`);
       setStatus(json);
+      if (healthRes?.ok) {
+        setHealth(await healthRes.json().catch(() => null));
+      }
       setError('');
     } catch (err: any) {
       setError(`Erro ao carregar status do WhatsApp: ${err?.message || 'falha desconhecida'}`);
@@ -87,11 +104,29 @@ export const WhatsappSettingsCard: React.FC = () => {
         </div>
       )}
 
+      {health?.configured && (
+        <div className="px-5 py-2 text-[11px] border-b border-slate-100 flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full ${health.ok ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+          {health.ok ? (
+            <span className="text-emerald-700">
+              Gateway conectado ({health.instance} · {health.state}
+              {typeof health.latencyMs === 'number' ? ` · ${health.latencyMs}ms` : ''})
+            </span>
+          ) : (
+            <span className="text-rose-700">
+              Gateway indisponível{health.state ? ` (${health.state})` : ''}
+              {health.error ? ` — ${health.error}` : ' — verifique se o container está rodando'}
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
         {OPTIONS.map((opt) => {
           const configured =
             opt.value === 'auto' ||
             (opt.value === 'evolution' && status?.available.evolution) ||
+            (opt.value === 'whatsmiau' && status?.available.whatsmiau) ||
             (opt.value === 'meta' && status?.available.meta) ||
             (opt.value === 'legacy' && status?.available.legacy);
           const selected = status?.savedChoice === opt.value;
@@ -124,7 +159,7 @@ export const WhatsappSettingsCard: React.FC = () => {
 
       <p className="px-5 pb-4 text-[11px] text-slate-400">
         A escolha fica salva no banco e vale imediatamente (sem reiniciar). As credenciais de cada backend
-        continuam no arquivo .env — veja docs/EVOLUTION-API.md.
+        continuam no arquivo .env — veja docs/WHATSMIAU.md ou docs/EVOLUTION-API.md.
       </p>
     </div>
   );
