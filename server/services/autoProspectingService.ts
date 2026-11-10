@@ -283,23 +283,43 @@ async function runOneSearch(
   };
 }
 
-function firstName(fullName: string): string {
-  return String(fullName || "").trim().split(/\s+/)[0] || "";
+/**
+ * Nome do NEGÓCIO, não de pessoa: o Google Maps devolve tudo em CAIXA ALTA
+ * ("VAMOS SORRIR - NOSSA SRA DO SOCORRO"). Saudar pelo primeiro token gerava
+ * "Oi, VAMOS!" / "Oi, Clínica!" — por isso aqui só normalizamos a caixa e
+ * cortamos nomes absurdamente longos.
+ */
+export function displayBusinessName(name: string, maxLength = 48): string {
+  const small = new Set(["de", "da", "do", "das", "dos", "e", "em", "no", "na", "nos", "nas"]);
+  const cleaned = String(name || "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return "a empresa";
+  const titled = cleaned
+    .toLowerCase()
+    .split(" ")
+    .map((word, index) => {
+      if (index > 0 && small.has(word)) return word;
+      // preserva palavras curtas em caixa normal ("Barbearia do Zé", "Zé & Cia")
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+  return titled.length > maxLength ? `${titled.slice(0, maxLength).trim()}…` : titled;
 }
 
 /** Mensagem de D0: usa o pitch da análise quando existe; senão monta um curto. */
 export function buildProspectMessage(lead: StoredLead): string {
   const pitch = String(lead.analysis?.customPitchWhatsApp || "").trim();
   if (pitch) return pitch;
-  const who = firstName(lead.name);
+  const biz = displayBusinessName(lead.name);
   const social = lead.rating
-    ? ` Vi que vocês têm ${lead.rating}★ no Google`
-    : " Achei o perfil de vocês no Google Maps";
+    ? `Vi a ${biz} com ${String(lead.rating).replace(".", ",")}★ no Google`
+    : `Achei a ${biz} no Google Maps`;
   const gap =
     lead.websiteStatus === "none"
-      ? "e ainda sem um site próprio"
-      : "e com presença só em rede social/marketplace";
-  return `Oi, ${who}! Aqui é da Vértice Páginas Web.${social} ${gap} — dá pra resolver com uma página simples, com botão direto pro WhatsApp. Quer que eu te mostre como ficaria?`;
+      ? "e reparei que ainda não tem um site próprio"
+      : "e vi que a presença de vocês está só em rede social/marketplace";
+  return `Olá! Aqui é da Vértice Páginas Web. ${social} ${gap} — dá pra resolver com uma página simples, com botão direto pro WhatsApp. Quer que eu te mostre como ficaria?`;
 }
 
 function countNewContactsToday(now = new Date()): number {
@@ -396,12 +416,16 @@ export async function autopilotTick(now = new Date(), opts?: { force?: boolean }
     // mesmo sem busca, ainda pode ter D0 pendente para mandar
     const prospect = await prospectBestLead(settings, state, now);
     if (prospect.attempted) {
-      if (prospect.sent) state.prospectedToday += 1;
-      state.lastSummary = prospect.sent
-        ? `D0 enviado para ${prospect.leadName}`
-        : `D0 não enviado (${prospect.reason})`;
+      if (prospect.sent) {
+        state.prospectedToday += 1;
+        // só registra no resumo quando saiu de verdade — senão o log do servidor
+        // repetiria "D0 bloqueado" a cada minuto
+        state.lastSummary = `D0 enviado para ${prospect.leadName}`;
+        saveAutopilotState(state);
+        return { ran: true, reason: gate.reason, prospect, summary: state.lastSummary };
+      }
       saveAutopilotState(state);
-      return { ran: true, reason: gate.reason, prospect, summary: state.lastSummary };
+      return { ran: true, reason: prospect.reason || gate.reason, prospect };
     }
     saveAutopilotState(state);
     return { ran: false, reason: gate.reason };

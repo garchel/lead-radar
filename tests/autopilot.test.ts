@@ -37,6 +37,7 @@ import {
   autopilotTick,
   buildProspectMessage,
   disarmAutopilot,
+  displayBusinessName,
   getAutopilotSettings,
   getAutopilotStatus,
   resetAutopilotDay,
@@ -145,6 +146,22 @@ describe("autopilot de coleta", () => {
     expect(dispatchMock).toHaveBeenCalledTimes(1);
     const status = getAutopilotStatus();
     expect(status.settings.dailyNewCap).toBe(1);
+  });
+
+  it("nome do negócio em CAIXA ALTA não vira saudação de pessoa", () => {
+    expect(displayBusinessName("VAMOS SORRIR - NOSSA SRA DO SOCORRO")).toBe("Vamos Sorrir - Nossa Sra do Socorro");
+    expect(displayBusinessName("Barbearia do Zé")).toBe("Barbearia do Zé");
+
+    const msg = buildProspectMessage({
+      name: "CLINICA ODONTO VIDA",
+      websiteStatus: "none",
+      rating: 4.8,
+      analysis: undefined,
+    } as any);
+    expect(msg).not.toMatch(/Oi, CLINICA/);
+    expect(msg).not.toContain("Oi, Clinica");
+    expect(msg).toContain("Clinica Odonto Vida");
+    expect(msg).toContain("4,8★");
   });
 
   it("mensagem de D0 personalizada usa o pitch da análise quando existe", () => {
