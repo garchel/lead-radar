@@ -1,6 +1,6 @@
 import { getDb, importFromJson } from './schema';
 import { eventHub } from '../events/eventHub';
-import { StoredLead, Schedule, LeadInteraction, InteractionOutcome, Project, PipelineStatus, City, BusinessCategory, SiteAudit, LeadPriority, WebsiteStatus, BrandSnapshot } from './types';
+import { StoredLead, Schedule, LeadInteraction, InteractionOutcome, Project, PipelineStatus, City, BusinessCategory, SiteAudit, LeadPriority, WebsiteStatus, BrandSnapshot, ClientProfile } from './types';
 import { getLeadIdentityCandidates, normalizeText, normalizePhone } from '../services/leadIdentity';
 import type { Job } from '../jobs/queueManager';
 import path from 'path';
@@ -61,6 +61,7 @@ function rowToLead(row: any): StoredLead {
     doNotContact: Boolean(row.do_not_contact),
     siteAudit: row.site_audit_json ? JSON.parse(row.site_audit_json) : undefined,
     brandSnapshot: row.brand_snapshot_json ? JSON.parse(row.brand_snapshot_json) : undefined,
+    clientProfile: row.client_profile_json ? JSON.parse(row.client_profile_json) : undefined,
     priorityScore: row.priority_score ?? undefined,
     priorityLevel: row.priority_level || undefined,
     priorityReasons: row.priority_reasons ? JSON.parse(row.priority_reasons) : undefined,
@@ -102,6 +103,7 @@ function leadToRow(lead: StoredLead): any {
     do_not_contact: lead.doNotContact ? 1 : 0,
     site_audit_json: lead.siteAudit ? JSON.stringify(lead.siteAudit) : null,
     brand_snapshot_json: lead.brandSnapshot ? JSON.stringify(lead.brandSnapshot) : null,
+    client_profile_json: lead.clientProfile ? JSON.stringify(lead.clientProfile) : null,
     priority_score: lead.priorityScore ?? null,
     priority_level: lead.priorityLevel || null,
     priority_reasons: lead.priorityReasons ? JSON.stringify(lead.priorityReasons) : null,
@@ -295,14 +297,14 @@ export function upsertLead(
       opportunity_score, opportunity_level, estimated_value, key_insights, pipeline_status, notes,
       analysis, normalized_name, normalized_city, normalized_phone, last_contact_at, last_response_at,
       last_contact_outcome, next_contact_at, contact_attempts, do_not_contact, saved_at, updated_at,
-      brand_snapshot_json
+      brand_snapshot_json, client_profile_json
     ) VALUES (
       @id, @name, @category, @address, @neighborhood, @city, @state, @phone, @email, @cnpj, @google_place_id,
       @rating, @reviews_count, @website_status, @website_url, @instagram_handle, @lat, @lng,
       @opportunity_score, @opportunity_level, @estimated_value, @key_insights, @pipeline_status, @notes,
       @analysis, @normalized_name, @normalized_city, @normalized_phone, @last_contact_at, @last_response_at,
       @last_contact_outcome, @next_contact_at, @contact_attempts, @do_not_contact, @saved_at, @updated_at,
-      @brand_snapshot_json
+      @brand_snapshot_json, @client_profile_json
     )`).run(data);
   }
 
@@ -588,6 +590,18 @@ export function updateLeadAnalysis(leadId: string, analysis: any) {
 }
 
 /** Persiste a identidade visual captada em perfis públicos (ou null para limpar). */
+/** Grava (ou limpa) a ficha do cliente usada na primeira versão do site. */
+export function setLeadClientProfile(leadId: string, profile: ClientProfile | null) {
+  getDb()
+    .prepare('UPDATE leads SET client_profile_json = @profile, updated_at = @updated_at WHERE id = @id')
+    .run({
+      id: leadId,
+      profile: profile ? JSON.stringify(profile) : null,
+      updated_at: new Date().toISOString(),
+    });
+  eventHub.emit('leads', { id: leadId });
+}
+
 export function setLeadBrandSnapshot(leadId: string, snapshot: BrandSnapshot | null) {
   getDb()
     .prepare('UPDATE leads SET brand_snapshot_json = @snapshot, updated_at = @updated_at WHERE id = @id')

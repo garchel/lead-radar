@@ -9,6 +9,7 @@ import { handleAckEvent, recordInboundIfNew, reconcileLeadMessages } from "../se
 import { detectOptOut } from "../services/optOutService";
 import { fetchGatewayInstanceState, getGatewayConfig } from "../services/whatsappGateway";
 import { getHumanizeStatus } from "../services/humanizeService";
+import { buildClientProfile } from "../services/clientProfileService";
 import { eventHub } from "../events/eventHub";
 
 /**
@@ -473,6 +474,28 @@ export function registerWhatsAppWebhook(app: Express) {
       } catch {
         /* best-effort */
       }
+    }
+
+    // Interesse/prévia = hora de montar a ficha do cliente (fatos + marca) que
+    // vira a base da primeira versão do site. Roda em segundo plano: o webhook
+    // já respondeu e a coleta (SerpAPI + Gemini) leva dezenas de segundos.
+    if (intent === "interesse" || intent === "preco") {
+      void buildClientProfile(lead.id)
+        .then((result) => {
+          console.log(
+            `[whatsapp] Ficha do cliente ${result.cached ? "já existia" : "gerada"}: ${lead.name} → ${result.profile.files?.markdown || result.markdownPath}`
+          );
+          if (!result.cached) {
+            eventHub.emit("client_profile_ready", {
+              leadId: lead.id,
+              name: lead.name,
+              markdown: result.profile.files?.markdown || null,
+              confidence: result.profile.confidence,
+              gaps: result.profile.gaps.length,
+            });
+          }
+        })
+        .catch((e: any) => console.warn(`[whatsapp] Ficha do cliente falhou para ${lead.id}: ${e?.message}`));
     }
 
     eventHub.emit("whatsapp_inbound", {

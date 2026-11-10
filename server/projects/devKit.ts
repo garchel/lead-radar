@@ -1,6 +1,7 @@
 import { getProjectById, getLeadById } from "../store/db";
-import { BrandSnapshot, Project, ProjectBriefingField, ProjectType, StoredLead } from "../store/types";
+import { BrandSnapshot, ClientProfile, Project, ProjectBriefingField, ProjectType, StoredLead } from "../store/types";
 import { formatBrandSnapshotForPrompt } from "../services/brandResearchService";
+import { formatClientProfileForPrompt } from "../services/clientProfileService";
 import { updateProject } from "./service";
 
 /* ------------------------------------------------------------------ */
@@ -164,6 +165,8 @@ export function buildProjectDevKit(projectId: string): {
   niche: string;
   /** Identidade visual captada em perfis públicos, quando houver. */
   brandSnapshot?: BrandSnapshot;
+  /** Ficha do cliente (fatos + marca) gerada no interesse — base do conteúdo. */
+  clientProfile?: ClientProfile;
 } {
   const project = getProjectById(projectId);
   if (!project) throw new Error("Projeto não encontrado.");
@@ -185,6 +188,7 @@ export function buildProjectDevKit(projectId: string): {
     sitePath,
     niche: sitePath.split("/")[1] || "outros",
     brandSnapshot: lead?.brandSnapshot,
+    clientProfile: lead?.clientProfile,
   };
 }
 
@@ -234,6 +238,10 @@ export function buildProjectDevPrompt(projectId: string): string {
     formatBrandSnapshotForPrompt(kit.brandSnapshot) ||
     "  (nenhuma pesquisa de identidade visual realizada — use o briefing/design e a paleta do conceito)";
 
+  const clientProfile =
+    formatClientProfileForPrompt(kit.clientProfile) ||
+    "  (ficha do cliente ainda não gerada — peça client_profile para o lead antes de escrever o conteúdo)";
+
   return `Você é um desenvolvedor front-end sênior. Implemente do zero um site funcional e profissional para o negócio abaixo, **no repositório único \`lead-radar\`**, dentro da pasta \`${sitePath}/\`. NÃO crie repositório novo e NÃO use template pronto: construa HTML/CSS/JS (ou o stack que julgar melhor) realmente sob medida para este cliente.
 
 # ONDE ENTREGAR (obrigatório)
@@ -273,6 +281,9 @@ Se houver uma URL acima, siga a estrutura/seções e o posicionamento de textos 
 
 # CONCEITO DA ANÁLISE DE IA (referência — adapte se os campos acima divergirem)
 ${concept}
+
+# FICHA DO CLIENTE (fatos coletados — conteúdo do site)
+${clientProfile}
 
 # IDENTIDADE VISUAL DO LEAD (pesquisa em imagens/perfis públicos)
 ${brand}

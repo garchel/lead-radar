@@ -9,6 +9,7 @@ import { planCadence, runCadence } from "./services/cadenceService";
 import { analyzeLead } from "./services/prospectingService";
 import { effectiveWebsiteStatus, hasOwnWebsite } from "./services/presenceService";
 import { researchLeadBrand } from "./services/brandResearchService";
+import { buildClientProfile, renderClientProfileMarkdown } from "./services/clientProfileService";
 
 /**
  * Superfície MCP de crescimento (as 4 alavancas extraídas do estudo de caso):
@@ -243,6 +244,39 @@ export function registerGrowthTools(server: McpServer) {
         });
       } catch (e: any) {
         return fail(e?.message || "Falha ao pesquisar a identidade visual do lead.");
+      }
+    }
+  );
+
+  /* ---------------------------------------------------------------- */
+  /* 6. client_profile                                                */
+  /* ---------------------------------------------------------------- */
+  server.tool(
+    "client_profile",
+    "Monta (ou devolve) a FICHA DO CLIENTE em Markdown: identificação, endereço, conselho de classe (CRM/CRO/CREFITO) quando for da saúde, anos de experiência, formação, serviços/tratamentos, horário, convênios, provas sociais e identidade visual. Fontes: site do cliente + resultados do Google (incluindo o snippet da bio do Instagram) — nada é inventado, o que falta vai em 'gaps'. É a base da primeira versão do site. Consome até 3 buscas SerpAPI + 1 chamada Gemini; fica salva no lead e em data/clientes/<slug>.md.",
+    {
+      leadId: z.string().describe("ID do lead"),
+      force: z.boolean().optional().describe("Refaz a ficha mesmo que já exista. Default: false (reaproveita a salva, sem gastar cota)."),
+      maxSearches: z.number().int().min(1).max(4).optional().describe("Máximo de buscas no Google (default: 3)"),
+      includeBrand: z.boolean().optional().describe("Rodar a pesquisa visual quando ainda não houver snapshot de marca. Default: true"),
+    },
+    async ({ leadId, force, maxSearches, includeBrand }) => {
+      try {
+        const result = await buildClientProfile(leadId, { force, maxSearches, includeBrand });
+        return ok({
+          cached: result.cached,
+          searchesUsed: result.searchesUsed,
+          leadId: result.lead.id,
+          leadName: result.lead.name,
+          markdownPath: result.profile.files?.markdown || result.markdownPath,
+          siteCopy: result.profile.files?.siteCopy || null,
+          confidence: result.profile.confidence,
+          gaps: result.profile.gaps,
+          profile: result.profile,
+          markdown: renderClientProfileMarkdown(result.profile),
+        });
+      } catch (e: any) {
+        return fail(e?.message || "Falha ao montar a ficha do cliente.");
       }
     }
   );

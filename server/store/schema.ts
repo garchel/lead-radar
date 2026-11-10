@@ -280,6 +280,7 @@ function migrateSchema(db: Database.Database) {
     do_not_contact: "INTEGER DEFAULT 0",
     site_audit_json: "TEXT",
     brand_snapshot_json: "TEXT",
+    client_profile_json: "TEXT",
     priority_score: "INTEGER DEFAULT 0",
     priority_level: "TEXT",
     priority_reasons: "TEXT",

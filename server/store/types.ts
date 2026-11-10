@@ -116,6 +116,52 @@ export interface BrandSnapshot {
   notes?: string;
 }
 
+export interface ClientProfile {
+  version: number;
+  createdAt: string;
+  leadId: string;
+  /** Identificação do negócio (cadastro + fontes públicas). */
+  identity: {
+    name: string;
+    category?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    phone?: string;
+    instagram?: string;
+    website?: string;
+  };
+  /** Conselho de classe (médicos, dentistas, fisioterapeutas, nutricionistas...). */
+  professional?: {
+    name?: string;
+    council?: string;
+    number?: string;
+    state?: string;
+    source?: string;
+  };
+  experience?: {
+    since?: string;
+    years?: number;
+    education?: string[];
+    certifications?: string[];
+  };
+  services?: string[];
+  hours?: string;
+  insurancePlans?: string[];
+  differentials?: string[];
+  socialProof?: { rating?: number; reviewsCount?: number; quotes?: string[] };
+  brand?: BrandSnapshot;
+  /** Resumo em 1 parágrafo para o prompt da primeira versão do site. */
+  summary: string;
+  /** O que não foi encontrado — vai como pergunta para o cliente. */
+  gaps: string[];
+  sources: Array<{ url: string; kind: "google" | "instagram" | "site" | "cadastro"; title?: string }>;
+  /** 0–1: confiança geral da ficha. */
+  confidence: number;
+  /** Arquivos gerados (relativos ao repo raiz). */
+  files?: { markdown: string; siteCopy?: string };
+}
+
 export interface StoredLead {
   id: string;
   name: string;
@@ -157,6 +203,8 @@ export interface StoredLead {
   siteAudit?: SiteAudit;
   /** Identidade visual captada em perfis públicos (Instagram/Facebook/Google). */
   brandSnapshot?: BrandSnapshot;
+  /** Ficha do cliente (fatos + marca) usada na primeira versão do site. */
+  clientProfile?: ClientProfile;
   /** Prioridade comercial calculada a partir dos sinais de dor. */
   priorityScore?: number;
   priorityLevel?: "alta" | "media" | "baixa";

@@ -15,6 +15,12 @@ import { StoredLead } from "../store/types";
 import { dispatchLeadContact, recordInteractionOutcome } from "../services/interactionService";
 import { rankLeads } from "../services/leadScoringService";
 import { researchLeadBrand } from "../services/brandResearchService";
+import {
+  buildClientProfile,
+  getClientProfileMarkdown,
+  isClientProfileBuilding,
+  renderClientProfileMarkdown,
+} from "../services/clientProfileService";
 import { SerpApiQuotaError } from "../services/serpApi";
 import { syncLeadProject } from "../projects/service";
 
@@ -152,6 +158,50 @@ export function registerLeadRoutes(app: Express) {
   // List follow-ups whose cooldown has expired.
   app.get("/api/follow-ups/due", (req: Request, res: Response) => {
     res.json({ success: true, followUps: getDueFollowUps() });
+  });
+
+  // Ficha do cliente (fatos + marca) — base da primeira versão do site.
+  // Gerada automaticamente quando o lead demonstra interesse no WhatsApp; estes
+  // endpoints permitem gerar/consultar na mão.
+  app.get("/api/leads/:id/client-profile", (req: Request, res: Response) => {
+    const lead = getLeadById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
+    const stored = getClientProfileMarkdown(lead.id);
+    if (!stored) {
+      return res.json({
+        success: true,
+        exists: false,
+        building: isClientProfileBuilding(lead.id),
+        hint: "POST no mesmo endpoint para gerar a ficha.",
+      });
+    }
+    return res.json({ success: true, exists: true, profile: stored.profile, markdown: stored.markdown });
+  });
+
+  app.post("/api/leads/:id/client-profile", async (req: Request, res: Response) => {
+    const lead = getLeadById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
+    try {
+      const result = await buildClientProfile(lead.id, {
+        force: req.body?.force === true,
+        maxSearches: req.body?.maxSearches,
+        includeBrand: req.body?.includeBrand,
+      });
+      return res.json({
+        success: true,
+        cached: result.cached,
+        searchesUsed: result.searchesUsed,
+        profile: result.profile,
+        markdown: renderClientProfileMarkdown(result.profile),
+        markdownPath: result.markdownPath,
+      });
+    } catch (err: any) {
+      const quota = err instanceof SerpApiQuotaError;
+      return res.status(quota ? 429 : 502).json({
+        success: false,
+        error: err?.message || "Falha ao montar a ficha do cliente.",
+      });
+    }
   });
 
   // Pesquisa a identidade visual do lead em imagens/perfis públicos.
