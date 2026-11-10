@@ -1,6 +1,6 @@
 import { Express, Request, Response } from "express";
 import crypto from "node:crypto";
-import { getLeads, getLeadById, updateCommunicationMessage, createInteraction, updateLeadResponse, updateLeadStatusByPhone, setDoNotContactByPhone, getSetting, setSetting, upsertLead } from "../store/db";
+import { getLeads, getLeadById, updateCommunicationMessage, createInteraction, updateLeadResponse, updateLeadStatusByPhone, setDoNotContactByPhone, setCommunicationIntent, getSetting, setSetting, upsertLead } from "../store/db";
 import { getDb } from "../store/schema";
 import { getAutomationSettings } from "./automationRoutes";
 import { normalizePhone, buildStableLeadId } from "../services/leadIdentity";
@@ -10,6 +10,12 @@ import { detectOptOut } from "../services/optOutService";
 import { fetchGatewayInstanceState, getGatewayConfig } from "../services/whatsappGateway";
 import { getHumanizeStatus } from "../services/humanizeService";
 import { buildClientProfile } from "../services/clientProfileService";
+import {
+  AI_MIN_CONFIDENCE,
+  classifyByRules,
+  classifyWithAI,
+  type IntentDecision,
+} from "../services/intentService";
 import { eventHub } from "../events/eventHub";
 
 /**
@@ -29,39 +35,6 @@ import { eventHub } from "../events/eventHub";
  *     key: { remoteJid: "5511999998888@s.whatsapp.net", fromMe: false },
  *     pushName?: "...", message: { conversation?: "texto", extendedTextMessage?: { text } } } }
  */
-
-const INTENT_RULES: Array<{ intent: string; status?: "negotiating" | "declined" | "contacted"; patterns: RegExp[] }> = [
-  // RECUSA primeiro: "não tenho interesse" contém "tenho interesse",
-  // e seria capturado pela regra positiva se viesse depois.
-  {
-    intent: "recusa",
-    status: "declined",
-    patterns: [/n[aã]o tenho interesse|desculp[ae],? mas n[aã]o|n[aã]o quero|remover meu n[uú]mero|parar de mandar/i],
-  },
-  {
-    intent: "interesse",
-    status: "negotiating",
-    patterns: [/quero(?! saber)|tenho interesse|me interessa|bora|vamos fechar|como funciona|mais informa/i],
-  },
-  {
-    intent: "preco",
-    status: "negotiating",
-    patterns: [/quanto custa|qual o valor|pre[çc]o|or[çc]amento|investimento/i],
-  },
-  {
-    intent: "ocupado",
-    patterns: [/agora n[aã]o|depois|estou ocupad|sem tempo|retorno depois/i],
-  },
-];
-
-function classifyIntent(text: string): { intent: string; status?: "negotiating" | "declined" | "contacted" } {
-  for (const rule of INTENT_RULES) {
-    if (rule.patterns.some((p) => p.test(text))) {
-      return { intent: rule.intent, status: rule.status };
-    }
-  }
-  return { intent: "outro", status: undefined };
-}
 
 /** Extrai a primeira mensagem de texto de um payload Evolution. */
 function extractInbound(req: Request): {
@@ -394,8 +367,14 @@ export function registerWhatsAppWebhook(app: Express) {
       }
     }
 
-    let { intent, status } = classifyIntent(inbound.text);
-    if (auto && !auto.whatsappAutoIntent) { intent = "outro"; status = undefined; }
+    // 1ª passada: regex (rápido e determinístico). Frase ambígua cai em `outro`
+    // e a IA decide em segundo plano, depois do ACK.
+    const autoIntentEnabled = auto ? auto.whatsappAutoIntent !== false : true;
+    const rulesDecision: IntentDecision = autoIntentEnabled
+      ? classifyByRules(inbound.text)
+      : { intent: "outro", source: "none", confidence: 0 };
+    let intent: string = rulesDecision.intent;
+    let status = rulesDecision.status;
     const pipelineEnabled = auto ? auto.whatsappAutoPipeline : true;
     const followUpEnabled = auto ? auto.whatsappAutoFollowUp : true;
 
@@ -441,6 +420,19 @@ export function registerWhatsAppWebhook(app: Express) {
     const recorded = recordInboundIfNew({ lead, text: inbound.text, externalId: inbound.messageId });
     // Webhook reentregue: a mensagem já existe — não duplica interação/pipeline.
     if (!recorded.created) return;
+
+    // Auditoria: guarda a intenção classificada e de onde ela veio.
+    if (rulesDecision.intent !== "outro" && recorded.communicationId) {
+      try {
+        setCommunicationIntent(recorded.communicationId, {
+          intent: rulesDecision.intent,
+          source: "regex",
+          confidence: rulesDecision.confidence,
+        });
+      } catch {
+        /* auditoria best-effort */
+      }
+    }
 
     // marca resposta no lead (zera "frieza")
     try {
@@ -498,10 +490,89 @@ export function registerWhatsAppWebhook(app: Express) {
         .catch((e: any) => console.warn(`[whatsapp] Ficha do cliente falhou para ${lead.id}: ${e?.message}`));
     }
 
+    // 2ª passada (só quando o regex não entendeu): a IA classifica frases curtas
+    // que são a resposta mais comum na prática — "pode mandar", "manda sim",
+    // "claro". Roda depois do ACK; se falhar, nada muda (fica `outro`).
+    if (autoIntentEnabled && rulesDecision.intent === "outro") {
+      void classifyWithAI({ text: inbound.text, businessName: lead.name })
+        .then((ai) => {
+          if (!ai || ai.intent === "outro" || ai.intent === "recusa") return; // recusa/opt-out só por regex
+          if (ai.confidence < AI_MIN_CONFIDENCE) {
+            console.log(`[whatsapp] IA sugeriu ${ai.intent} (${ai.confidence}) abaixo do limite — ignorado.`);
+            return;
+          }
+
+          if (recorded.communicationId) {
+            try {
+              setCommunicationIntent(recorded.communicationId, {
+                intent: ai.intent,
+                source: "ia",
+                confidence: ai.confidence,
+              });
+            } catch {
+              /* auditoria best-effort */
+            }
+          }
+
+          if (ai.status && pipelineEnabled) {
+            try {
+              updateLeadStatusByPhone(normalized, ai.status);
+            } catch {
+              /* best-effort */
+            }
+          }
+
+          if (followUpEnabled) {
+            try {
+              createInteraction({
+                leadId: lead.id,
+                type: "follow_up",
+                channel: "whatsapp",
+                deliveryStatus: "pending",
+                outcome: "positive",
+                occurredAt: new Date().toISOString(),
+                notes: `[Auto/IA] Lead respondeu com ${ai.intent === "preco" ? "pergunta de preço" : "interesse"}: "${inbound.text.slice(0, 120)}". Enviar proposta/prévia.`,
+                nextContactAt: new Date().toISOString(),
+              });
+            } catch {
+              /* best-effort */
+            }
+          }
+
+          // Mesmo gatilho da regra: interesse = hora de montar a ficha.
+          void buildClientProfile(lead.id)
+            .then((result) => {
+              if (result.cached) return;
+              eventHub.emit("client_profile_ready", {
+                leadId: lead.id,
+                name: lead.name,
+                markdown: result.profile.files?.markdown || null,
+                confidence: result.profile.confidence,
+                gaps: result.profile.gaps.length,
+              });
+            })
+            .catch((e: any) => console.warn(`[whatsapp] Ficha (IA) falhou para ${lead.id}: ${e?.message}`));
+
+          eventHub.emit("whatsapp_inbound", {
+            leadId: lead.id,
+            name: lead.name,
+            intent: ai.intent,
+            intentSource: "ia",
+            confidence: ai.confidence,
+            movedTo: ai.status || null,
+            optedOut: false,
+            text: inbound.text.slice(0, 200),
+          });
+        })
+        .catch((e: any) => console.warn(`[whatsapp] Classificação por IA falhou: ${e?.message}`));
+    }
+
     eventHub.emit("whatsapp_inbound", {
       leadId: lead.id,
       name: lead.name,
       intent,
+      intentSource: rulesDecision.source,
+      confidence: rulesDecision.confidence || undefined,
       movedTo: status || null,
       optedOut,
       text: inbound.text.slice(0, 200),

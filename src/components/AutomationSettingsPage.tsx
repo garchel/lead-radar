@@ -26,6 +26,7 @@ interface AutomationSettings {
   whatsappAutoIntent: boolean;
   whatsappAutoPipeline: boolean;
   whatsappAutoFollowUp: boolean;
+  intentAi: boolean;
   autopilotAutoEnrich: boolean;
   autopilotAnalyzeTopN: number;
   autopilotSendPitches: boolean;
@@ -214,12 +215,22 @@ export const AutomationSettingsPage: React.FC = () => {
           </div>
           <Toggle checked={settings.whatsappAutoPipeline} onChange={(v) => void update({ whatsappAutoPipeline: v })} />
         </div>
-        <div className="flex items-center justify-between py-2">
+        <div className="flex items-center justify-between py-2 border-b border-slate-100">
           <div>
             <div className="text-sm font-semibold text-slate-800">Criar follow-up automático</div>
             <div className="text-xs text-slate-500">Interesse/preço cria interação pendente com próximo contato agora.</div>
           </div>
           <Toggle checked={settings.whatsappAutoFollowUp} onChange={(v) => void update({ whatsappAutoFollowUp: v })} />
+        </div>
+        <div className="flex items-center justify-between py-2">
+          <div>
+            <div className="text-sm font-semibold text-slate-800">IA para respostas ambíguas</div>
+            <div className="text-xs text-slate-500">
+              Quando nenhuma palavra-chave casa ("manda", "claro", "beleza"), o Gemini decide se é interesse ou preço.
+              Recusa e descadastro (LGPD) continuam só por palavra-chave — a IA nunca marca opt-out.
+            </div>
+          </div>
+          <Toggle checked={settings.intentAi} onChange={(v) => void update({ intentAi: v })} />
         </div>
       </div>
 

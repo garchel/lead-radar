@@ -303,6 +303,12 @@ function migrateSchema(db: Database.Database) {
   const existingCommCols2 = new Set(commCols2.map((c: any) => c.name));
   if (!existingCommCols2.has("hook")) db.exec("ALTER TABLE communications ADD COLUMN hook TEXT");
 
+  // Intenção classificada na mensagem recebida + de onde veio (regex | ia) —
+  // permite auditar por que o pipeline moveu (ou por que não moveu).
+  if (!existingCommCols2.has("intent")) db.exec("ALTER TABLE communications ADD COLUMN intent TEXT");
+  if (!existingCommCols2.has("intent_source")) db.exec("ALTER TABLE communications ADD COLUMN intent_source TEXT");
+  if (!existingCommCols2.has("intent_confidence")) db.exec("ALTER TABLE communications ADD COLUMN intent_confidence REAL");
+
   // Additive migrations for databases created before the archived project model.
   const projectCols = db.prepare("PRAGMA table_info(projects)").all() as any[];
   const existingProjectColumns = new Set(projectCols.map((column: any) => column.name));

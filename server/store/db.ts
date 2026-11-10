@@ -669,6 +669,12 @@ export interface Communication {
   externalId?: string;
   /** Gancho comercial usado na abordagem (código do defeito, "sem_site", "generico"...). */
   hook?: string;
+  /** Intenção classificada (inbound): interesse | preco | recusa | ocupado | outro. */
+  intent?: string;
+  /** De onde veio a classificação: regra (regex) ou IA. */
+  intentSource?: "regex" | "ia";
+  /** 0–1: confiança da classificação. */
+  intentConfidence?: number;
   createdAt: string;
 }
 
@@ -772,6 +778,9 @@ function rowToCommunication(row: any): Communication {
     sentAt: row.sent_at || undefined,
     externalId: row.external_id || undefined,
     hook: row.hook || undefined,
+    intent: row.intent || undefined,
+    intentSource: (row.intent_source as "regex" | "ia" | null) || undefined,
+    intentConfidence: row.intent_confidence ?? undefined,
     createdAt: row.created_at,
   };
 }
@@ -791,6 +800,23 @@ export function getCommunicationById(id: string): Communication | undefined {
   return row ? rowToCommunication(row) : undefined;
 }
 
+/** Grava a intenção classificada na comunicação recebida (auditoria). */
+export function setCommunicationIntent(
+  communicationId: string,
+  decision: { intent: string; source: "regex" | "ia"; confidence: number }
+): void {
+  if (!communicationId) return;
+  getDb()
+    .prepare("UPDATE communications SET intent = @intent, intent_source = @source, intent_confidence = @confidence WHERE id = @id")
+    .run({
+      id: communicationId,
+      intent: decision.intent,
+      source: decision.source,
+      confidence: decision.confidence,
+    });
+  eventHub.emit('communications', { id: communicationId });
+}
+
 function rowToCommunicationWithLead(row: any): CommunicationWithLead {
   return {
     id: row.id,
@@ -804,6 +830,9 @@ function rowToCommunicationWithLead(row: any): CommunicationWithLead {
     sentAt: row.sent_at || undefined,
     externalId: row.external_id || undefined,
     hook: row.hook || undefined,
+    intent: row.intent || undefined,
+    intentSource: (row.intent_source as "regex" | "ia" | null) || undefined,
+    intentConfidence: row.intent_confidence ?? undefined,
     createdAt: row.created_at,
     leadName: row.lead_name || undefined,
     leadPhone: row.lead_phone || undefined,
