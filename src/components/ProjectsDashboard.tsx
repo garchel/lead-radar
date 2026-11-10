@@ -11,13 +11,25 @@ import {
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Rocket, Plus, CalendarClock, Flag, CheckCircle2, Link2, Copy, Check, Code2, Bot, BadgeCheck } from 'lucide-react';
+import { Rocket, Plus, CalendarClock, Flag, CheckCircle2, Link2, Copy, Check, Code2, Bot, BadgeCheck, ChevronDown, ChevronRight, PanelLeftOpen, PanelLeftClose } from 'lucide-react';
 import { BusinessLead, Project, ProjectStage } from '../types';
 import { ProjectModal } from './ProjectModal';
+
+const STAGES_STORAGE_KEY = 'leadradar.projects.stages.collapsed.v1';
+
+function readCollapsedStages(): string[] {
+  try {
+    const raw = localStorage.getItem(STAGES_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 const STAGES: { id: ProjectStage; title: string; color: string }[] = [
   { id: 'briefing', title: 'Briefing', color: 'border-slate-200 bg-slate-100 text-slate-700' },
@@ -101,27 +113,60 @@ interface ProjectColumnProps {
   title: string;
   color: string;
   count: number;
+  collapsed: boolean;
+  onToggle: () => void;
   children: React.ReactNode;
 }
 
-const ProjectColumn: React.FC<ProjectColumnProps> = ({ id, title, color, count, children }) => {
+/**
+ * Etapa do kanban de projetos: bloco de largura total (empilhado) com os cards
+ * em grid e cabeçalho em accordeon — mesmo padrão do Dashboard de Leads.
+ * Recolhida continua sendo alvo de drop.
+ */
+const ProjectColumn: React.FC<ProjectColumnProps> = ({ id, title, color, count, collapsed, onToggle, children }) => {
   const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
-    <div
+    <section
       ref={setNodeRef}
-      className={`bg-slate-50 border rounded-2xl p-3 flex flex-col space-y-3 min-h-125 transition-colors ${
+      aria-label={`Etapa ${title}`}
+      className={`w-full bg-slate-50 border rounded-2xl transition-colors ${
         isOver ? 'border-violet-400 ring-2 ring-violet-100' : 'border-slate-200'
       }`}
     >
-      <div className={`p-2.5 rounded-xl border font-bold text-xs flex items-center justify-between ${color}`}>
-        <span>{title}</span>
-        <span className="px-2 py-0.5 rounded-full bg-white text-slate-800 text-[10px] font-bold border border-slate-200">
-          {count}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={!collapsed}
+        title={collapsed ? `Expandir ${title}` : `Recolher ${title}`}
+        className={`w-full p-3 rounded-2xl font-bold text-sm flex items-center justify-between gap-3 cursor-pointer hover:brightness-[0.98] ${color} ${
+          collapsed ? '' : 'rounded-b-none'
+        }`}
+      >
+        <span className="flex items-center gap-2 min-w-0">
+          {collapsed ? <ChevronRight className="w-4 h-4 shrink-0" /> : <ChevronDown className="w-4 h-4 shrink-0" />}
+          <span className="truncate">{title}</span>
+          <span className="px-2 py-0.5 rounded-full bg-white/80 text-slate-800 text-[11px] font-bold border border-white/60 shrink-0">
+            {count}
+          </span>
         </span>
-      </div>
-      {children}
-    </div>
+        <span className="text-[10px] font-semibold opacity-70 shrink-0">{collapsed ? 'expandir' : 'recolher'}</span>
+      </button>
+
+      {!collapsed && (
+        <div className="p-3">
+          {count === 0 ? (
+            <p className="text-[11px] text-slate-400 text-center py-6 border border-dashed border-slate-300 rounded-xl">
+              arraste um projeto para cá
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {children}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
   );
 };
 
@@ -282,6 +327,7 @@ interface ProjectsDashboardProps {
 }
 
 export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({ focusProjectId, onFocused }) => {
+  const [collapsedStages, setCollapsedStages] = useState<string[]>(() => readCollapsedStages());
   const [projects, setProjects] = useState<Project[]>([]);
   const [leads, setLeads] = useState<BusinessLead[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -402,6 +448,21 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({ focusProje
     }
   };
 
+  const persistCollapsed = (next: string[]) => {
+    setCollapsedStages(next);
+    try {
+      localStorage.setItem(STAGES_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* modo privado: só não persiste */
+    }
+  };
+
+  const toggleStage = (id: string) => {
+    persistCollapsed(
+      collapsedStages.includes(id) ? collapsedStages.filter((item) => item !== id) : [...collapsedStages, id]
+    );
+  };
+
   const handleDeleted = (id: string) => {
     setProjects((prev) => prev.filter((p) => p.id !== id));
   };
@@ -472,19 +533,41 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({ focusProje
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDrop}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-4">
-            {columns.map((col) => {
-              const columnIds = col.projects.map((p) => p.id);
-              return (
-                <ProjectColumn
-                  key={col.id}
-                  id={col.id}
-                  title={col.title}
-                  color={col.color}
-                  count={col.projects.length}
-                >
-                  <SortableContext items={columnIds} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-3 flex-1">
+          <div className="space-y-3">
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => persistCollapsed([])}
+                disabled={collapsedStages.length === 0}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+              >
+                <PanelLeftOpen className="w-3.5 h-3.5" /> Expandir todas
+              </button>
+              <button
+                type="button"
+                onClick={() => persistCollapsed(columns.map((col) => col.id))}
+                disabled={collapsedStages.length === columns.length}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+              >
+                <PanelLeftClose className="w-3.5 h-3.5" /> Recolher todas
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {columns.map((col) => {
+                const columnIds = col.projects.map((p) => p.id);
+                const isCollapsed = collapsedStages.includes(col.id);
+                return (
+                  <ProjectColumn
+                    key={col.id}
+                    id={col.id}
+                    title={col.title}
+                    color={col.color}
+                    count={col.projects.length}
+                    collapsed={isCollapsed}
+                    onToggle={() => toggleStage(col.id)}
+                  >
+                    <SortableContext items={columnIds} strategy={rectSortingStrategy}>
                       {col.projects.map((project) => (
                         <SortableProjectCard
                           key={project.id}
@@ -494,11 +577,11 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({ focusProje
                           onCopyBriefingLink={handleCopyBriefingLink}
                         />
                       ))}
-                    </div>
-                  </SortableContext>
-                </ProjectColumn>
-              );
-            })}
+                    </SortableContext>
+                  </ProjectColumn>
+                );
+              })}
+            </div>
           </div>
         </DndContext>
       )}

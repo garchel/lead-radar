@@ -679,7 +679,6 @@ export default function App() {
               onUpdateNotes={handleUpdateNotes}
               onRecordOutcome={handleRecordOutcome}
               onRemoveLead={handleRemoveLead}
-              onAnalyze={(l) => setAnalyzingLead(l)}
             />
           </>
         )}

@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { BusinessLead, InteractionOutcome } from '../types';
-import { FolderKanban, Download, Edit3, Sparkles, Trash2, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { FolderKanban, Download, Edit3, Trash2, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { computePipelineValue } from '../utils/pipelineValue';
 
 interface CrmPipelineProps {
@@ -25,7 +25,6 @@ interface CrmPipelineProps {
   onUpdateNotes: (id: string, notes: string) => void;
   onRecordOutcome: (id: string, outcome: Exclude<InteractionOutcome, 'pending'>) => void;
   onRemoveLead: (id: string) => void;
-  onAnalyze: (lead: BusinessLead) => void;
 }
 
 const PIPELINE_COLUMNS: { id: BusinessLead['pipelineStatus']; title: string; color: string }[] = [
@@ -42,7 +41,6 @@ interface SortableLeadCardProps {
   onUpdateNotes: (id: string, notes: string) => void;
   onRecordOutcome: (id: string, outcome: Exclude<InteractionOutcome, 'pending'>) => void;
   onRemoveLead: (id: string) => void;
-  onAnalyze: (lead: BusinessLead) => void;
 }
 
 interface PipelineColumnProps {
@@ -118,7 +116,6 @@ const SortableLeadCard: React.FC<SortableLeadCardProps> = ({
   onUpdateNotes,
   onRecordOutcome,
   onRemoveLead,
-  onAnalyze,
 }) => {
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [tempNotes, setTempNotes] = useState<string>('');
@@ -146,9 +143,17 @@ const SortableLeadCard: React.FC<SortableLeadCardProps> = ({
       {...listeners}
       className="bg-white border border-slate-200 hover:border-indigo-300 p-4 rounded-xl space-y-3 shadow-sm text-xs transition-all cursor-grab active:cursor-grabbing"
     >
-      <div>
-        <div className="font-bold text-slate-900 line-clamp-1">{lead.name}</div>
-        <div className="text-slate-500 text-[11px] font-medium">{lead.category} • {lead.city}</div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="font-bold text-slate-900 line-clamp-1">{lead.name}</div>
+          <div className="text-slate-500 text-[11px] font-medium truncate">{lead.category} • {lead.city}</div>
+        </div>
+        <span
+          title="Score de oportunidade"
+          className={`shrink-0 px-2 py-0.5 rounded-md border text-[11px] font-bold tabular-nums ${scoreBadge(lead.opportunityScore)}`}
+        >
+          {typeof lead.opportunityScore === 'number' ? lead.opportunityScore : '—'}
+        </span>
       </div>
 
       <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 font-semibold text-indigo-700 flex items-center justify-between">
@@ -235,15 +240,7 @@ const SortableLeadCard: React.FC<SortableLeadCardProps> = ({
         )}
       </div>
 
-      <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-        <button
-          onClick={() => onAnalyze(lead)}
-          className="text-indigo-600 font-bold flex items-center space-x-1 hover:underline text-[11px]"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Roteiro Pitch</span>
-        </button>
-
+      <div className="pt-2 border-t border-slate-100 flex items-center justify-end">
         <button
           onClick={() => onRemoveLead(lead.id)}
           className="text-slate-400 hover:text-red-500 transition-colors p-1"
@@ -257,6 +254,15 @@ const SortableLeadCard: React.FC<SortableLeadCardProps> = ({
 };
 
 const COLLAPSED_STORAGE_KEY = 'leadradar.crm.stages.collapsed.v1';
+
+/** Cor do badge de score (mesma régua do Banco de Dados). */
+const scoreBadge = (score?: number) => {
+  if (typeof score !== 'number') return 'bg-slate-100 text-slate-500 border-slate-200';
+  if (score >= 85) return 'bg-emerald-600 text-white border-emerald-600';
+  if (score >= 70) return 'bg-indigo-600 text-white border-indigo-600';
+  if (score >= 60) return 'bg-amber-500 text-white border-amber-500';
+  return 'bg-slate-200 text-slate-700 border-slate-300';
+};
 
 function readCollapsedStages(): string[] {
   try {
@@ -274,7 +280,6 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
   onUpdateNotes,
   onRecordOutcome,
   onRemoveLead,
-  onAnalyze,
 }) => {
   // Quais etapas estão recolhidas — persistido para sobreviver a recarregar a página.
   const [collapsedStages, setCollapsedStages] = useState<string[]>(() => readCollapsedStages());
@@ -493,7 +498,6 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
                           onUpdateNotes={onUpdateNotes}
                           onRecordOutcome={onRecordOutcome}
                           onRemoveLead={onRemoveLead}
-                          onAnalyze={onAnalyze}
                         />
                       ))}
                     </SortableContext>
