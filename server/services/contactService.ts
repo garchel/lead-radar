@@ -110,6 +110,36 @@ export function normalizeToE164(phone: string): string {
   return digits.length === 10 || digits.length === 11 ? `55${digits}` : digits;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Higiene de encoding                                                */
+/*                                                                     */
+/*  Texto que chega por API/MCP/paste pode vir fora de UTF-8. Dois     */
+/*  casos distintos:                                                    */
+/*   a) bytes inválidos (ex.: cp1252) → o Node troca por U+FFFD e o     */
+/*      acento se perde PARA SEMPRE: não dá para consertar, então a     */
+/*      mensagem é recusada em vez de sair cheia de "�".                */
+/*   b) mojibake clássico (UTF-8 lido como latin1: "OlÃ¡") → dá para    */
+/*      reverter e a mensagem sai certa.                                */
+/* ------------------------------------------------------------------ */
+
+/** Marcadores de mojibake pt-BR — nunca aparecem em texto legítimo. */
+const MOJIBAKE_RE = /(?:Ã[\u0080-\u00BF]|Â[\u0080-\u00BF]|â€[\u0080-\u00BF\u2122\u009C\u009D]?)/;
+
+/** true quando o texto tem caracteres perdidos na decodificação (U+FFFD). */
+export function hasLostCharacters(text: string): boolean {
+  return typeof text === "string" && text.includes("\uFFFD");
+}
+
+/** Reverte mojibake latin1→UTF-8 somente quando o resultado é comprovadamente melhor. */
+export function repairMojibake(text: string): { text: string; repaired: boolean } {
+  if (!text || !MOJIBAKE_RE.test(text)) return { text, repaired: false };
+  const candidate = Buffer.from(text, "latin1").toString("utf8");
+  if (!candidate || candidate.includes("\uFFFD") || MOJIBAKE_RE.test(candidate)) {
+    return { text, repaired: false };
+  }
+  return { text: candidate, repaired: true };
+}
+
 // Timeout para chamadas às APIs de WhatsApp — evita job travado em endpoint lento
 const WHATSAPP_FETCH_TIMEOUT_MS = Number(process.env.WHATSAPP_FETCH_TIMEOUT_MS || 15000);
 
@@ -228,9 +258,25 @@ async function deliverWhatsApp(
   hook?: string,
   purpose: SendPurpose = "prospect"
 ): Promise<ContactResult> {
+  // Texto com bytes perdidos (U+FFFD): melhor recusar do que mandar "�" ao cliente.
+  if (hasLostCharacters(message)) {
+    const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message, hook });
+    return {
+      channel: "whatsapp",
+      status: "failed",
+      communicationId: id,
+      to,
+      detail:
+        "Texto com caracteres inválidos (encoding quebrado — contém \"�\"): nada foi enviado. " +
+        "Reenvie a mensagem em UTF-8.",
+    };
+  }
+  const encoding = repairMojibake(message);
+  const text = encoding.text;
+
   const { provider, reason } = resolveWhatsappProvider();
   if (!provider) {
-    const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message, hook });
+    const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message: text, hook });
     return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: reason };
   }
 
@@ -238,12 +284,12 @@ async function deliverWhatsApp(
     const paced = await runPaced({
       leadId,
       purpose,
-      message,
-      task: () => sendThroughProvider(provider, to, message),
+      message: text,
+      task: () => sendThroughProvider(provider, to, text),
     });
 
     if (paced.blocked) {
-      const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message, hook });
+      const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message: text, hook });
       return {
         channel: "whatsapp",
         status: "failed",
@@ -261,7 +307,7 @@ async function deliverWhatsApp(
       channel: "whatsapp",
       status: "sent",
       toAddress: to,
-      message,
+      message: text,
       hook,
       externalId: outcome.externalId,
       sentAt: new Date().toISOString(),
@@ -270,9 +316,10 @@ async function deliverWhatsApp(
       paced.typingMs && paced.typingMs > 0
         ? ` — simulação de digitação ${(paced.typingMs / 1000).toFixed(1)}s`
         : "";
-    return { channel: "whatsapp", status: "sent", communicationId: id, to, detail: `${outcome.detail}${typing}` };
+    const fixed = encoding.repaired ? " — encoding corrigido (latin1→UTF-8)" : "";
+    return { channel: "whatsapp", status: "sent", communicationId: id, to, detail: `${outcome.detail}${typing}${fixed}` };
   } catch (e: any) {
-    const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message, hook });
+    const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message: text, hook });
     return {
       channel: "whatsapp",
       status: "failed",

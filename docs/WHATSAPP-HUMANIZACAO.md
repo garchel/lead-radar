@@ -66,6 +66,32 @@ com `limit: 10` roda por volta de 13 minutos no job (é o preço de não parecer
 robô). Um envio manual clicado na UI pode levar até ~2 minutos para retornar —
 o botão fica em "enviando" durante a pausa + digitação.
 
+## Higiene de encoding (acentos chegando como "�")
+
+`deliverWhatsApp()` valida o texto antes de qualquer envio:
+
+| Situação | O que acontece |
+|---|---|
+| Texto com `U+FFFD` (`�`) — bytes inválidos, acento já perdido | **Recusado**: comunicação fica `failed` com "Texto com caracteres inválidos (encoding quebrado…)", nada sai |
+| Mojibake latin1→UTF-8 (`OlÃ¡`, `aÃ§Ã£o`) | **Corrigido na hora** (`repairMojibake`) e o detalhe registra "encoding corrigido (latin1→UTF-8)" |
+| Texto normal em pt-BR | Passa intacto (o detector só casa `Ã`/`Â`/`â€` seguidos de char de controle — "AÇÃO" não casa) |
+
+Causa mais comum em teste manual: `curl -d '{"message":"Olá"}'` no **Windows**. O `curl.exe`
+é programa nativo e recebe o argv convertido para a codepage ANSI (cp1252): "á" vira 1 byte
+`0xE1`, que não é UTF-8 válido → o Node troca por `�` e o acento morre de vez.
+Para mandar acento por HTTP no Windows, grave o corpo em UTF-8 e use arquivo:
+
+```bash
+curl --data-binary @payload.json -H "Content-Type: application/json; charset=utf-8" ...
+```
+
+O app em si é UTF-8 ponta a ponta (`JSON.stringify` + `fetch`); o problema é só do cliente.
+Para conferir o que ficou gravado:
+
+```bash
+node -e "const D=require('better-sqlite3');const db=new D('data/leadradar.db',{readonly:true});console.log(db.prepare('SELECT message FROM communications ORDER BY created_at DESC LIMIT 1').get())"
+```
+
 ## Verificação
 
 ```bash

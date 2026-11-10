@@ -15,7 +15,7 @@ import {
 } from "../server/services/humanizeService";
 import { recordCommunication, setSetting, upsertLead } from "../server/store/db";
 import { getDb } from "../server/store/schema";
-import { sendWhatsApp } from "../server/services/contactService";
+import { hasLostCharacters, repairMojibake, sendWhatsApp } from "../server/services/contactService";
 
 // Nov/2026: 07 = sábado, 08 = domingo, 09 = segunda, 10 = terça.
 const at = (day: number, hour: number, minute = 0) => new Date(2026, 10, day, hour, minute, 0, 0);
@@ -336,5 +336,40 @@ describe("humanizeService — envio real (integração com contactService)", () 
     const second = await runPaced({ purpose: "reply", message: "b", task: async () => "2" });
     expect(second.sent).toBe(true);
     expect(Date.now() - startedAt).toBeGreaterThanOrEqual(900); // esperou ~1s da pausa
+  });
+
+  /* ---------------------------------------------------------------- */
+  /* Encoding: bytes cp1252 chegam como U+FFFD (perdido) ou como       */
+  /* mojibake "OlÃ¡" (recuperável).                                     */
+  /* ---------------------------------------------------------------- */
+
+  it("recusa mensagem com caracteres perdidos em vez de mandar \"�\"", async () => {
+    const cp1252 = Buffer.from([0x4f, 0x6c, 0xe1]).toString("utf8"); // "Olá" em cp1252
+    expect(hasLostCharacters(cp1252)).toBe(true);
+
+    const result = await sendWhatsApp(stored, `Oi! ${cp1252}, tudo bem?`, undefined, "reply");
+
+    expect(result.status).toBe("failed");
+    expect(result.detail).toContain("encoding");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("conserta mojibake latin1→UTF-8 antes de enviar", async () => {
+    const mojibake = Buffer.from("Olá, ação e coração!", "utf8").toString("latin1");
+    expect(mojibake).toContain("Ã");
+    expect(repairMojibake(mojibake).text).toBe("Olá, ação e coração!");
+
+    const result = await sendWhatsApp(stored, mojibake, undefined, "reply");
+
+    expect(result.status).toBe("sent");
+    expect(result.detail).toContain("encoding corrigido");
+    const sentBody = JSON.parse((fetch as any).mock.calls[0][1].body);
+    // provider legado (webhook genérico) usa { token, to, message }
+    expect(sentBody.message).toBe("Olá, ação e coração!");
+  });
+
+  it("não mexe em texto legítimo em português", () => {
+    const legit = "Olá! AÇÃO, coração, endereço e orçamento — João";
+    expect(repairMojibake(legit)).toEqual({ text: legit, repaired: false });
   });
 });
