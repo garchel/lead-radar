@@ -12,7 +12,7 @@ import {
   findDuplicateMatch,
 } from "../store/db";
 import { StoredLead } from "../store/types";
-import { dispatchLeadContact, recordInteractionOutcome } from "../services/interactionService";
+import { dispatchLeadContact, dispatchLeadReply, recordInteractionOutcome } from "../services/interactionService";
 import { rankLeads } from "../services/leadScoringService";
 import { researchLeadBrand } from "../services/brandResearchService";
 import {
@@ -158,6 +158,37 @@ export function registerLeadRoutes(app: Express) {
   // List follow-ups whose cooldown has expired.
   app.get("/api/follow-ups/due", (req: Request, res: Response) => {
     res.json({ success: true, followUps: getDueFollowUps() });
+  });
+
+  // Responde uma conversa ABERTA (o lead falou por último). Diferente de
+  // /contact: não aplica a janela de recontato — responder quem escreveu não é
+  // spam. Continua passando pela humanização (janela, digitação, pausa, tetos)
+  // e pelo opt-out LGPD.
+  app.post("/api/leads/:id/reply", async (req: Request, res: Response) => {
+    const lead = getLeadById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
+
+    const message = String(req.body?.message || "").trim();
+    if (!message) {
+      return res.status(400).json({ success: false, error: "Informe `message` com o texto da resposta." });
+    }
+
+    try {
+      const result = await dispatchLeadReply(lead, {
+        channel: req.body?.channel === "email" ? "email" : "whatsapp",
+        message,
+        hook: req.body?.hook,
+      });
+      if (result.blocked) {
+        return res.status(409).json({ success: false, error: result.detail, ...result });
+      }
+      if (result.status !== "sent") {
+        return res.status(502).json({ success: false, error: result.detail, ...result });
+      }
+      return res.json({ success: true, ...result });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || "Falha ao responder o lead." });
+    }
   });
 
   // Ficha do cliente (fatos + marca) — base da primeira versão do site.
