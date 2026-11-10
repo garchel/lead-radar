@@ -189,7 +189,12 @@ const Distributions: React.FC<{ stats: Stats }> = ({ stats }) => {
   );
 };
 
-export const DatabaseDashboard: React.FC = () => {
+interface DatabaseDashboardProps {
+  /** Leva para o funil (Dashboard de Leads) — inventário ≠ ação. */
+  onOpenPipeline?: () => void;
+}
+
+export const DatabaseDashboard: React.FC<DatabaseDashboardProps> = ({ onOpenPipeline }) => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [meta, setMeta] = useState<FiltersMeta>({ cities: [], categories: [] });
   const [leads, setLeads] = useState<LeadRow[]>([]);
@@ -295,16 +300,27 @@ export const DatabaseDashboard: React.FC = () => {
             <Database className="w-6 h-6 text-indigo-600" /> Banco de Dados
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            O que existe hoje no banco: quantos leads, como estão classificados e quem está pronto para abordagem.
+            Inventário do banco: o que existe e como está classificado. Para agir sobre um lead, use o <strong>Dashboard de Leads</strong>.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => { void loadStats(); void loadLeads(); void loadMeta(); }}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Atualizar
-        </button>
+        <div className="flex items-center gap-2">
+          {onOpenPipeline && (
+            <button
+              type="button"
+              onClick={onOpenPipeline}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700"
+            >
+              Abrir o funil →
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => { void loadStats(); void loadLeads(); void loadMeta(); }}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Atualizar
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -506,7 +522,18 @@ export const DatabaseDashboard: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="mt-2 text-[10px] text-slate-400">ID: {lead.id}</div>
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <span className="text-[10px] text-slate-400">ID: {lead.id}</span>
+                          {onOpenPipeline && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); onOpenPipeline(); }}
+                              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800"
+                            >
+                              abrir no funil →
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )}

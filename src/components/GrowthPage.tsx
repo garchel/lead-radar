@@ -57,26 +57,6 @@ interface OutboundMetrics {
   funnel: Array<{ step: string; count: number; rate: number }>;
 }
 
-interface CadenceCandidate {
-  leadId: string;
-  name: string;
-  phone?: string;
-  step: number;
-  angle: string;
-  dueAt: string;
-  message: string;
-}
-
-interface CadencePlan {
-  enabled: boolean;
-  cap: number;
-  usedToday: number;
-  remaining: number;
-  count: number;
-  candidates: CadenceCandidate[];
-  skipped: number;
-}
-
 const HOOK_LABELS: Record<string, string> = {
   sem_site: 'Sem site próprio',
   marketplace: 'Só marketplace (iFood etc.)',
@@ -102,14 +82,11 @@ const levelStyle = (level: string) =>
 
 const fmtPct = (value: number) => `${value.toFixed(1)}%`;
 
-export const GrowthPage: React.FC = () => {
+export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> = ({ onNavigate }) => {
   const [leads, setLeads] = useState<PriorityReasonLead[]>([]);
   const [metrics, setMetrics] = useState<OutboundMetrics | null>(null);
-  const [plan, setPlan] = useState<CadencePlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyLead, setBusyLead] = useState<string | null>(null);
-  const [confirmRun, setConfirmRun] = useState(false);
-  const [running, setRunning] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -119,21 +96,15 @@ export const GrowthPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [leadsRes, metricsRes, planRes] = await Promise.all([
+      const [leadsRes, metricsRes] = await Promise.all([
         fetch('/api/leads-priority?limit=12'),
         fetch(`/api/metrics/outbound?since=${encodeURIComponent(since)}`),
-        fetch('/api/cadence/plan'),
       ]);
-      const [leadsData, metricsData, planData] = await Promise.all([
-        leadsRes.json(),
-        metricsRes.json(),
-        planRes.json(),
-      ]);
+      const [leadsData, metricsData] = await Promise.all([leadsRes.json(), metricsRes.json()]);
       if (leadsData?.success) setLeads(leadsData.leads || []);
       if (metricsData?.success) setMetrics(metricsData.metrics);
-      if (planData?.success) setPlan(planData);
-      if (!metricsData?.success || !planData?.success) {
-        setError(metricsData?.error || planData?.error || 'Falha ao carregar dados de crescimento.');
+      if (!metricsData?.success) {
+        setError(metricsData?.error || 'Falha ao carregar dados de crescimento.');
       }
     } catch (e: any) {
       setError(e?.message || 'Falha ao carregar dados de crescimento.');
@@ -160,37 +131,6 @@ export const GrowthPage: React.FC = () => {
       setMsg(e?.message || 'Falha ao auditar o site.');
     } finally {
       setBusyLead(null);
-    }
-  };
-
-  const runCadence = async (dryRun: boolean) => {
-    if (!plan) return;
-    setRunning(true);
-    setMsg(null);
-    try {
-      const res = await fetch('/api/cadence/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dryRun,
-          leadIds: plan.candidates.map((item) => item.leadId),
-        }),
-      });
-      const data = await res.json();
-      if (!data?.success) throw new Error(data?.error || 'Falha ao executar a cadência.');
-      if (data.blockedReason === 'cadence_disabled') {
-        setMsg('Cadência desligada em Automação — nada foi enviado.');
-      } else if (dryRun) {
-        setMsg(`Simulação: ${data.planned ?? 0} mensagem(ns) pronta(s), nenhum envio real.`);
-      } else {
-        setMsg(`Cadência: ${data.sent?.length ?? 0} enviada(s), ${data.failed?.length ?? 0} falha(s).`);
-      }
-      setConfirmRun(false);
-      await load();
-    } catch (e: any) {
-      setMsg(e?.message || 'Falha ao executar a cadência.');
-    } finally {
-      setRunning(false);
     }
   };
 
@@ -377,62 +317,22 @@ export const GrowthPage: React.FC = () => {
         </div>
       </section>
 
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div>
-            <h3 className="text-sm font-semibold text-white">Cadência D+3 / D+7</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              {plan?.enabled ? 'Ligada' : 'Desligada em Automação'} · {plan?.usedToday ?? 0}/{plan?.cap ?? 0} usadas hoje ·{' '}
-              {plan?.remaining ?? 0} restantes
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => void runCadence(true)}
-              disabled={running || !plan?.enabled}
-              className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200"
-            >
-              Simular
-            </button>
-            {confirmRun ? (
-              <button
-                onClick={() => void runCadence(false)}
-                disabled={running || !plan?.candidates.length}
-                className="text-xs px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white flex items-center gap-1.5"
-              >
-                {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                Confirmar envio
-              </button>
-            ) : (
-              <button
-                onClick={() => setConfirmRun(true)}
-                disabled={running || !plan?.enabled || !plan?.candidates.length}
-                className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white flex items-center gap-1.5"
-              >
-                <Send className="w-3.5 h-3.5" /> Enviar cadência
-              </button>
-            )}
-          </div>
+      <section className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-white">Follow-ups (recontato e cadência)</h3>
+          <p className="text-xs text-slate-500 mt-1">
+            Recontatos autorizados e a cadência D+3/D+7 saíram daqui: envio de mensagem agora mora só em <strong className="text-slate-300">Follow-ups</strong>.
+          </p>
         </div>
-
-        <div className="space-y-2">
-          {(plan?.candidates || []).slice(0, 6).map((candidate) => (
-            <div key={`${candidate.leadId}-${candidate.step}`} className="border border-slate-800 rounded-lg p-3">
-              <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-                <span className="text-slate-200 font-medium">{candidate.name}</span>
-                <span>D+{candidate.step} · {candidate.angle}</span>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">{candidate.message}</p>
-            </div>
-          ))}
-          {(plan?.candidates || []).length === 0 && (
-            <p className="text-xs text-slate-500">
-              {plan?.skipped
-                ? `${plan.skipped} lead(s) aguardando o próximo passo (D+3/D+7) ou bloqueados por cooldown.`
-                : 'Nenhum lead elegível para follow-up agora.'}
-            </p>
-          )}
-        </div>
+        {onNavigate && (
+          <button
+            type="button"
+            onClick={() => onNavigate('followups')}
+            className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200"
+          >
+            Abrir follow-ups
+          </button>
+        )}
       </section>
     </div>
   );

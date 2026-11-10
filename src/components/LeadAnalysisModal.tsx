@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, Copy, Check, MessageCircle, Mail, PhoneCall, Layout, ShieldAlert, ArrowRight, DollarSign, Download, ExternalLink, RefreshCw, Instagram, Printer, FileText, Palette, Search, Image as ImageIcon } from 'lucide-react';
 import { BrandSnapshot, BusinessLead, LeadAnalysisResult } from '../types';
-import { LandingPagePrototype } from './LandingPagePrototype';
+import { LandingPrototypeModal } from './LandingPrototypeModal';
 import { printLeadDossier } from '../utils/exportUtils';
 
 interface LeadAnalysisModalProps {
@@ -25,6 +25,7 @@ export const LeadAnalysisModal: React.FC<LeadAnalysisModalProps> = ({
   const [brandSnapshot, setBrandSnapshot] = useState<BrandSnapshot | null>(lead?.brandSnapshot ?? null);
   const [brandLoading, setBrandLoading] = useState<boolean>(false);
   const [brandError, setBrandError] = useState<string | null>(null);
+  const [showPrototype, setShowPrototype] = useState(false);
 
   useEffect(() => {
     setBrandSnapshot(lead?.brandSnapshot ?? null);
@@ -490,9 +491,18 @@ export const LeadAnalysisModal: React.FC<LeadAnalysisModalProps> = ({
                     )}
                   </div>
                 ) : (
-                  /* Concept Landing Page Preview Section */
-                  <div className="pt-2">
-                    <LandingPagePrototype lead={lead} analysis={analysis} />
+                  /* Protótipo abre em tela cheia (é uma página inteira, não um bloco) */
+                  <div className="pt-6 text-center space-y-3">
+                    <p className="text-xs text-slate-500 max-w-md mx-auto">
+                      O protótipo é uma prévia navegável do site que seria apresentado ao cliente — abre em tela cheia para caber desktop e celular.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowPrototype(true)}
+                      className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white text-xs font-bold px-4 py-2 rounded-xl"
+                    >
+                      <Layout className="w-4 h-4" /> Abrir protótipo em tela cheia
+                    </button>
                   </div>
                 )}
               </div>
@@ -506,6 +516,10 @@ export const LeadAnalysisModal: React.FC<LeadAnalysisModalProps> = ({
             <div className="py-12 text-center text-slate-500">Aguardando resposta da análise.</div>
           )}
         </div>
+
+        {showPrototype && (
+          <LandingPrototypeModal lead={lead} analysis={analysis} onClose={() => setShowPrototype(false)} />
+        )}
 
         {/* Modal Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">

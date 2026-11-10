@@ -11,6 +11,8 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { ScheduleManager } from './ScheduleManager';
+import { BatchJobForm } from './BatchJobForm';
+import { Power, Plus, Trash2, Ban, X } from 'lucide-react';
 
 interface JobView {
   id: string;
@@ -47,6 +49,62 @@ export const MonitoringDashboard: React.FC = () => {
   const [connected, setConnected] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
+  const [showNewJob, setShowNewJob] = useState(false);
+  const [schedulerEnabled, setSchedulerEnabled] = useState<boolean | null>(null);
+  const [savingScheduler, setSavingScheduler] = useState(false);
+
+  // O agendador global mora aqui (é ele quem liga a lista de agendamentos abaixo).
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/automation/settings');
+        const data = await res.json();
+        if (data?.success) setSchedulerEnabled(Boolean(data.settings?.schedulerEnabled));
+      } catch { /* mostra como desconhecido */ }
+    })();
+  }, []);
+
+  const toggleScheduler = async () => {
+    if (schedulerEnabled === null) return;
+    setSavingScheduler(true);
+    try {
+      const next = !schedulerEnabled;
+      const res = await fetch('/api/automation/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedulerEnabled: next }),
+      });
+      const data = await res.json();
+      if (!data?.success) throw new Error(data?.error || 'Falha ao salvar');
+      setSchedulerEnabled(Boolean(data.settings?.schedulerEnabled));
+    } catch (e: any) {
+      setError(e?.message || 'Falha ao salvar o agendador.');
+    } finally {
+      setSavingScheduler(false);
+    }
+  };
+
+  const cancelJob = async (id: string) => {
+    try {
+      const res = await fetch(`/api/jobs/${id}/cancel`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || 'Falha ao cancelar');
+      await fetchData();
+    } catch (e: any) {
+      setError(e?.message || 'Falha ao cancelar o job.');
+    }
+  };
+
+  const clearCompleted = async () => {
+    try {
+      const res = await fetch('/api/jobs/completed', { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || 'Falha ao limpar');
+      await fetchData();
+    } catch (e: any) {
+      setError(e?.message || 'Falha ao limpar concluídos.');
+    }
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -109,8 +167,8 @@ export const MonitoringDashboard: React.FC = () => {
             <Activity className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900">Monitoramento de Operação</h1>
-            <p className="text-sm text-slate-500">Acompanhe jobs de prospecção e enriquecimento em tempo real.</p>
+            <h1 className="text-xl font-bold text-slate-900">Fila &amp; Agendamentos</h1>
+            <p className="text-sm text-slate-500">Tudo que roda em segundo plano: tarefas em lote, progresso e a agenda de prospecção.</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
@@ -118,6 +176,20 @@ export const MonitoringDashboard: React.FC = () => {
             <span className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
             <span>{connected ? 'Tempo real' : 'Offline'}</span>
           </span>
+          <button
+            type="button"
+            onClick={() => void toggleScheduler()}
+            disabled={savingScheduler || schedulerEnabled === null}
+            className={`flex items-center space-x-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border transition-all ${
+              schedulerEnabled
+                ? 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100'
+                : 'text-slate-600 bg-white border-slate-200 hover:bg-slate-50'
+            } disabled:opacity-50`}
+            title="Liga/desliga todos os agendamentos abaixo"
+          >
+            <Power className="w-3.5 h-3.5" />
+            <span>{schedulerEnabled === null ? 'Agendador…' : schedulerEnabled ? 'Agendador ligado' : 'Agendador desligado'}</span>
+          </button>
           <button onClick={fetchData} className="flex items-center space-x-1.5 text-sm font-medium text-slate-600 hover:text-indigo-600 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-300 transition-all">
             <RefreshCw className="w-4 h-4" />
             <span>Atualizar</span>
@@ -137,13 +209,31 @@ export const MonitoringDashboard: React.FC = () => {
         ))}
       </div>
 
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => setShowNewJob((v) => !v)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700"
+        >
+          {showNewJob ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />} {showNewJob ? 'Fechar' : 'Nova tarefa em lote'}
+        </button>
+        {showNewJob && <BatchJobForm onCreated={() => void fetchData()} />}
+      </div>
+
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
           <h2 className="font-bold text-slate-900 flex items-center space-x-2">
             <Layers className="w-4 h-4 text-indigo-600" />
             <span>Jobs na Fila</span>
           </h2>
-          <span className="text-xs text-slate-500">{jobs.length} no histórico</span>
+          <div className="flex items-center gap-3">
+            {metrics.completed > 0 && (
+              <button type="button" onClick={() => void clearCompleted()} className="text-xs font-semibold text-slate-500 hover:text-rose-600 inline-flex items-center gap-1">
+                <Trash2 className="w-3 h-3" /> Limpar concluídos
+              </button>
+            )}
+            <span className="text-xs text-slate-500">{jobs.length} no histórico</span>
+          </div>
         </div>
         {jobs.length === 0 ? (
           <div className="p-10 text-center text-sm text-slate-500">
@@ -172,6 +262,11 @@ export const MonitoringDashboard: React.FC = () => {
                     <button onClick={() => setExpanded((p) => ({ ...p, [job.id]: !p[job.id] }))} className="text-xs font-medium text-indigo-600 hover:text-indigo-800 px-2 py-1">
                       {expanded[job.id] ? 'Ocultar' : 'Detalhes'}
                     </button>
+                    {(job.status === 'pending' || job.status === 'processing') && (
+                      <button onClick={() => void cancelJob(job.id)} className="text-xs font-medium text-rose-600 hover:text-rose-800 px-2 py-1 inline-flex items-center gap-1" title="Cancelar este job">
+                        <Ban className="w-3 h-3" /> Cancelar
+                      </button>
+                    )}
                   </div>
                 </div>
                 {expanded[job.id] && (

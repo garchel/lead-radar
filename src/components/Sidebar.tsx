@@ -1,14 +1,19 @@
 import React from 'react';
-import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Layers, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings, Bot, TrendingUp } from 'lucide-react';
+import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings, Bot, TrendingUp, Users, KeyRound, ClipboardList } from 'lucide-react';
+
+/** Abas do app — a navegação segue a etapa do funil, não a idade da feature. */
+export type AppTab =
+  | 'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents'
+  | 'companies' | 'cities' | 'categories' | 'automation' | 'database'
+  | 'followups' | 'channels';
 
 interface SidebarProps {
-  activeTab: 'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation' | 'database';
-  setActiveTab: (tab: 'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation' | 'database') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   savedCount: number;
   projectCount: number;
   onOpenAddModal: () => void;
   onOpenMcpModal: () => void;
-  onOpenQueueModal: () => void;
   hasGeminiKey: boolean;
   hasMapsKey: boolean;
 }
@@ -20,11 +25,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   projectCount,
   onOpenAddModal,
   onOpenMcpModal,
-  onOpenQueueModal,
   hasGeminiKey,
   hasMapsKey
 }) => {
-  const navBtn = (tab: SidebarProps['activeTab'], active: boolean) =>
+  const navBtn = (tab: AppTab, active: boolean) =>
     `w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
       active
         ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
@@ -78,14 +82,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="flex-1 text-left">Categorias</span>
           </button>
 
-          <button id="nav-companies-btn" onClick={() => setActiveTab('companies')} className={navBtn('companies', activeTab === 'companies')}>
-            <Building2 className="w-4 h-4 shrink-0" />
-            <span>Empresas Encontradas</span>
-          </button>
+        </nav>
+      </div>
 
+      {/* 2 — Dados: o que já existe no banco */}
+      <div className="px-3 pt-6">
+        {sectionTitle(<Database className="w-3.5 h-3.5" />, 'Dados')}
+        <nav className="space-y-1">
           <button id="nav-database-btn" onClick={() => setActiveTab('database')} className={navBtn('database', activeTab === 'database')}>
             <Database className="w-4 h-4 shrink-0" />
-            <span>Banco de Dados</span>
+            <span className="flex-1 text-left">Banco de Dados</span>
+          </button>
+
+          <button id="nav-companies-btn" onClick={() => setActiveTab('companies')} className={navBtn('companies', activeTab === 'companies')}>
+            <Building2 className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Resultado da Busca</span>
           </button>
         </nav>
       </div>
@@ -104,16 +115,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </button>
 
-          <button id="nav-guide-btn" onClick={() => setActiveTab('guide')} className={navBtn('guide', activeTab === 'guide')}>
-            <BookOpen className="w-4 h-4 shrink-0" />
-            <span>Estratégia & Pitch</span>
+          <button id="nav-followups-btn" onClick={() => setActiveTab('followups')} className={navBtn('followups', activeTab === 'followups')}>
+            <Users className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Follow-ups</span>
           </button>
+        </nav>
+      </div>
 
-          <button id="nav-growth-btn" onClick={() => setActiveTab('growth')} className={navBtn('growth', activeTab === 'growth')}>
-            <TrendingUp className="w-4 h-4 shrink-0" />
-            <span className="flex-1 text-left">Crescimento</span>
-          </button>
-
+      {/* 4 — Entregar: projetos → agentes */}
+      <div className="px-3 pt-6">
+        {sectionTitle(<Rocket className="w-3.5 h-3.5" />, 'Entregar')}
+        <nav className="space-y-1">
           <button id="nav-projects-btn" onClick={() => setActiveTab('projects')} className={`relative ${navBtn('projects', activeTab === 'projects')}`}>
             <Rocket className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Projetos</span>
@@ -131,18 +143,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
       </div>
 
-      {/* 3 — Automação & dados */}
+      {/* 5 — Inteligência: método e métricas */}
       <div className="px-3 pt-6">
-        {sectionTitle(<Settings className="w-3.5 h-3.5" />, 'Automação & Dados')}
+        {sectionTitle(<TrendingUp className="w-3.5 h-3.5" />, 'Inteligência')}
+        <nav className="space-y-1">
+          <button id="nav-guide-btn" onClick={() => setActiveTab('guide')} className={navBtn('guide', activeTab === 'guide')}>
+            <BookOpen className="w-4 h-4 shrink-0" />
+            <span>Estratégia &amp; Pitch</span>
+          </button>
+
+          <button id="nav-growth-btn" onClick={() => setActiveTab('growth')} className={navBtn('growth', activeTab === 'growth')}>
+            <TrendingUp className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Crescimento</span>
+          </button>
+        </nav>
+      </div>
+
+      {/* 6 — Operação: o que roda sozinho e o que conecta */}
+      <div className="px-3 pt-6">
+        {sectionTitle(<Activity className="w-3.5 h-3.5" />, 'Operação')}
         <div className="space-y-1">
+          <button id="monitoring-dashboard-btn" onClick={() => setActiveTab('monitoring')} className={navBtn('monitoring', activeTab === 'monitoring')}>
+            <ClipboardList className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Fila &amp; Agendamentos</span>
+          </button>
+
           <button id="nav-automation-btn" onClick={() => setActiveTab('automation')} className={navBtn('automation', activeTab === 'automation')}>
             <Settings className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Automação</span>
           </button>
 
-          <button id="monitoring-dashboard-btn" onClick={() => setActiveTab('monitoring')} className={navBtn('monitoring', activeTab === 'monitoring')}>
-            <Activity className="w-4 h-4 shrink-0" />
-            <span className="flex-1 text-left">Monitoramento</span>
+          <button id="nav-channels-btn" onClick={() => setActiveTab('channels')} className={navBtn('channels', activeTab === 'channels')}>
+            <KeyRound className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Canais &amp; APIs</span>
           </button>
         </div>
       </div>
@@ -150,26 +183,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Ações rápidas */}
       <div className="px-3 pt-6 pb-6">
         <div className="space-y-2">
-          <button
-            id="async-queue-btn"
-            onClick={onOpenQueueModal}
-            className="w-full flex items-center space-x-2.5 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/50 text-sm font-semibold px-3 py-2.5 rounded-lg transition-all shadow-xs"
-            title="Fila de Processamento Assíncrono com Workers em Segundo Plano"
-          >
-            <Layers className="w-4 h-4 text-indigo-400 shrink-0" />
-            <span className="flex-1 text-left font-sans text-xs">Fila Assíncrona</span>
-          </button>
-
-          <button
-            id="mcp-server-btn"
-            onClick={onOpenMcpModal}
-            className="w-full flex items-center space-x-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 text-sm font-semibold px-3 py-2.5 rounded-lg transition-all shadow-xs"
-            title="Conectar Agentes de IA via protocolo MCP (Model Context Protocol)"
-          >
-            <Cpu className="w-4 h-4 text-emerald-400 animate-pulse shrink-0" />
-            <span className="flex-1 text-left font-mono text-xs">MCP Server</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
-          </button>
 
           <button
             id="add-manual-lead-btn"

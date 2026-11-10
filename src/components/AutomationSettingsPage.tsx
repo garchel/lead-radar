@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Power, Database, RefreshCw, MessageCircle, Bot, FileText, HardDrive, AlertTriangle, Save, Radar, Play, Zap } from 'lucide-react';
+import { Settings, Database, RefreshCw, MessageCircle, Bot, FileText, HardDrive, AlertTriangle, Save, Radar, Play, Zap } from 'lucide-react';
 
 interface HumanizeSettings {
   enabled: boolean;
@@ -321,17 +321,12 @@ export const AutomationSettingsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Agendamento */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-        <h2 className="font-bold text-slate-900 flex items-center gap-2"><Power className="w-4 h-4 text-indigo-600" /> Agendamento e Fila</h2>
-        <div className="flex items-center justify-between py-2 border-b border-slate-100">
-          <div>
-            <div className="text-sm font-semibold text-slate-800">Agendador global</div>
-            <div className="text-xs text-slate-500">Controla todos os cron jobs (prospecção, follow-ups). Desligar pausa tudo sem apagar agendamentos.</div>
-          </div>
-          <Toggle checked={settings.schedulerEnabled} onChange={(v) => void update({ schedulerEnabled: v })} />
+      {/* O agendador mora na página que ele controla */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="text-xs text-slate-600">
+          <strong className="text-slate-800">Agendador global</strong> e agendamentos individuais agora ficam em{' '}
+          <strong>Operação → Fila &amp; Agendamentos</strong> (é lá que se vê o que ele liga e desliga).
         </div>
-        <div className="text-xs text-slate-400">Dica: agendamentos individuais continuam em Monitoramento → Agendamentos, com toggle próprio por item.</div>
       </div>
 
       {/* Backup */}

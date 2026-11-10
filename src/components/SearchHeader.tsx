@@ -87,6 +87,8 @@ interface SearchHeaderProps {
   resultsCount: number;
   noWebsiteCount: number;
   onExportCSV?: () => void;
+  /** Leva para Canais & APIs (configuração de chaves não mora mais aqui). */
+  onOpenChannels?: () => void;
 }
 
 export const SearchHeader: React.FC<SearchHeaderProps> = ({
@@ -99,6 +101,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
   resultsCount,
   noWebsiteCount,
   onExportCSV,
+  onOpenChannels,
 }) => {
   const [isCityFocused, setIsCityFocused] = useState(false);
   const [usage, setUsage] = useState<SerpApiUsage | null>(null);
@@ -311,10 +314,10 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
               </p>
               <button
                 type="button"
-                onClick={() => setIsKeyManagerOpen(true)}
+                onClick={() => (onOpenChannels ? onOpenChannels() : setIsKeyManagerOpen(true))}
                 className="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border border-indigo-200 bg-white font-semibold px-2.5 py-1 rounded-lg text-xs transition-colors"
               >
-                <Key className="w-3.5 h-3.5" /> Gerenciar chaves SerpAPI
+                <Key className="w-3.5 h-3.5" /> {onOpenChannels ? 'Canais & APIs (chaves)' : 'Gerenciar chaves SerpAPI'}
               </button>
             </div>
 
@@ -325,7 +328,10 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                     <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
                     <div>
                       <p className="font-bold">SerpAPI não configurada</p>
-                      <p>Defina <code className="bg-white px-1 rounded border">SERPAPI_API_KEY</code> no .env para usar o provedor real. Enquanto isso, use Gemini.</p>
+                      <p>
+                        Cadastre a chave em <strong>Canais &amp; APIs</strong> (ou defina{' '}
+                        <code className="bg-white px-1 rounded border">SERPAPI_API_KEY</code> no .env). Enquanto isso, use Gemini.
+                      </p>
                     </div>
                   </div>
                 ) : (

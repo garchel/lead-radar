@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar, type AppTab } from './components/Sidebar';
 import { SearchHeader } from './components/SearchHeader';
 import { BusinessCard } from './components/BusinessCard';
 import { LeadAnalysisModal } from './components/LeadAnalysisModal';
@@ -7,8 +7,8 @@ import { CrmPipeline } from './components/CrmPipeline';
 import { StrategyGuide } from './components/StrategyGuide';
 import { AddLeadModal } from './components/AddLeadModal';
 import { McpStatusModal } from './components/McpStatusModal';
-import { WhatsappSettingsCard } from './components/WhatsappSettingsCard';
-import { QueueDrawerModal } from './components/QueueDrawerModal';
+import { FollowUpsPage } from './components/FollowUpsPage';
+import { ChannelsPage } from './components/ChannelsPage';
 import { MonitoringDashboard } from './components/MonitoringDashboard';
 import { DuplicateMergeModal } from './components/DuplicateMergeModal';
 import { FollowUpQueue } from './components/FollowUpQueue';
@@ -59,7 +59,7 @@ interface DuplicateCandidate {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation' | 'database'>('search');
+  const [activeTab, setActiveTab] = useState<AppTab>('search');
   const [focusProjectId, setFocusProjectId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   // Filtro de VISUALIZAÇÃO por presença digital (não afeta a busca — a busca sempre traz tudo)
@@ -102,7 +102,6 @@ export default function App() {
   const [analyzingLead, setAnalyzingLead] = useState<BusinessLead | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isMcpModalOpen, setIsMcpModalOpen] = useState<boolean>(false);
-  const [isQueueModalOpen, setIsQueueModalOpen] = useState<boolean>(false);
   const [duplicateCandidate, setDuplicateCandidate] = useState<DuplicateCandidate | null>(null);
   const [pendingStatusChange, setPendingStatusChange] = useState<{ leadId: string; leadName: string; targetStatus: string } | null>(null);
   const [pendingProjectType, setPendingProjectType] = useState<{ leadId: string; leadName: string } | null>(null);
@@ -137,27 +136,6 @@ export default function App() {
       throw err;
     }
   };
-
-  const handleImportLeadsFromQueue = async (newLeads: BusinessLead[]) => {
-    setErrorMessage(null);
-    const persisted: BusinessLead[] = [];
-    for (const [index, lead] of newLeads.entries()) {
-      try {
-        const saved = await saveLeadToApi(lead);
-        if (!saved) continue;
-        persisted.push(saved);
-      } catch (err: any) {
-        throw new Error(`Falha ao importar o lead ${index + 1} (${lead.name}): ${err?.message || 'erro desconhecido'}`);
-      }
-    }
-    setLeads((prev) => [...persisted, ...prev]);
-    setSavedLeads((prev) => {
-      const existingIds = new Set(prev.map((l) => l.id));
-      const uniqueNew = persisted.filter((l) => !existingIds.has(l.id));
-      return [...uniqueNew, ...prev];
-    });
-  };
-
 
   // Load leads persisted by the backend/agent on mount + live updates via SSE
   useEffect(() => {
@@ -491,7 +469,6 @@ export default function App() {
         projectCount={projectCount}
         onOpenAddModal={() => setIsAddModalOpen(true)}
         onOpenMcpModal={() => setIsMcpModalOpen(true)}
-        onOpenQueueModal={() => setIsQueueModalOpen(true)}
         hasGeminiKey={hasGeminiKey}
         hasMapsKey={hasMapsKey}
       />
@@ -523,9 +500,11 @@ export default function App() {
 
       {/* Main Container Body */}
       <main className="flex-1">
-        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4">
-          <NextActionsBar onNavigate={setActiveTab} onOpenProject={setFocusProjectId} />
-        </div>
+        {!['automation', 'channels', 'database', 'cities', 'categories', 'guide', 'monitoring'].includes(activeTab) && (
+          <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4">
+            <NextActionsBar onNavigate={setActiveTab} onOpenProject={setFocusProjectId} />
+          </div>
+        )}
         {activeTab === 'search' && (
           <div className="space-y-6">
             {/* Search Header Controls */}
@@ -539,6 +518,7 @@ export default function App() {
               resultsCount={leads.length}
               noWebsiteCount={noWebsiteCount}
               onExportCSV={() => exportLeadsToCSV(leads)}
+              onOpenChannels={() => setActiveTab('channels')}
             />
 
             {/* Banner para nova página de visualização */}
@@ -687,14 +667,24 @@ export default function App() {
 
         {activeTab === 'growth' && (
           <Suspense fallback={<div className="p-8 text-sm text-slate-500">Carregando crescimento…</div>}>
-            <GrowthPage />
+            <GrowthPage onNavigate={setActiveTab} />
           </Suspense>
         )}
 
         {activeTab === 'crm' && (
           <>
-            <WhatsappSettingsCard />
-            <FollowUpQueue />
+            <div className="px-4 sm:px-6 lg:px-8 pt-4">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <span>Funil de vendas — o que fazer com cada lead.</span>
+                <button type="button" onClick={() => setActiveTab('database')} className="font-semibold text-indigo-600 hover:text-indigo-800">
+                  ver inventário no Banco de Dados →
+                </button>
+                <span className="text-slate-300">|</span>
+                <button type="button" onClick={() => setActiveTab('followups')} className="font-semibold text-indigo-600 hover:text-indigo-800">
+                  follow-ups e recontatos →
+                </button>
+              </div>
+            </div>
             <CrmPipeline
               savedLeads={savedLeads}
               onUpdateStatus={handleUpdateStatus}
@@ -721,7 +711,9 @@ export default function App() {
         {activeTab === 'categories' && <CategoriesDashboard />}
 
         {activeTab === 'automation' && <AutomationSettingsPage />}
-        {activeTab === 'database' && <DatabaseDashboard />}
+        {activeTab === 'database' && <DatabaseDashboard onOpenPipeline={() => setActiveTab('crm')} />}
+        {activeTab === 'followups' && <FollowUpsPage />}
+        {activeTab === 'channels' && <ChannelsPage onOpenAutomation={() => setActiveTab('automation')} />}
 
         {activeTab === 'companies' && (
           <SerpApiResultsPage
@@ -758,13 +750,6 @@ export default function App() {
       <McpStatusModal
         isOpen={isMcpModalOpen}
         onClose={() => setIsMcpModalOpen(false)}
-      />
-
-      {/* Async Queue Drawer Modal */}
-      <QueueDrawerModal
-        isOpen={isQueueModalOpen}
-        onClose={() => setIsQueueModalOpen(false)}
-        onImportLeads={handleImportLeadsFromQueue}
       />
 
       {/* Duplicate merge confirmation */}
