@@ -186,6 +186,14 @@ export default function App() {
     void loadFromApi();
     void loadProjectCount();
 
+    // Autopilot: abrir o app "arma" a coleta automática por algumas horas.
+    // Silencioso de propósito — se falhar, o CRM continua funcionando normalmente.
+    void fetch('/api/autopilot/arm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: 'app-open' }),
+    }).catch(() => undefined);
+
     const es = new EventSource('/api/events');
     es.onmessage = (evt) => {
       try {

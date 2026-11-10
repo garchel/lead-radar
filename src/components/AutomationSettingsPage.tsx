@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Power, Database, RefreshCw, MessageCircle, Bot, FileText, HardDrive, AlertTriangle, Save } from 'lucide-react';
+import { Settings, Power, Database, RefreshCw, MessageCircle, Bot, FileText, HardDrive, AlertTriangle, Save, Radar, Play, Zap } from 'lucide-react';
 
 interface HumanizeSettings {
   enabled: boolean;
@@ -15,6 +15,38 @@ interface HumanizeSettings {
   pauseMaxSeconds: number;
   dailyTotalCap: number;
   dailyNewCap: number;
+}
+
+interface AutopilotSettings {
+  enabled: boolean;
+  autoProspect: boolean;
+  minScore: number;
+  dailyNewCap: number;
+  minPopulation: number;
+  maxPopulation: number;
+  uf: string | null;
+  skipWithWebsite: boolean;
+}
+
+interface AutopilotStatus {
+  settings: AutopilotSettings;
+  state: { armedUntil: string | null; lastSummary: string | null; collectedToday: number; searchedToday: number; prospectedToday: number; lastError: string | null };
+  armed: boolean;
+  budget: {
+    configured: boolean;
+    monthlyQuota: number;
+    remainingThisMonth: number;
+    daysLeftInCycle: number;
+    dailyBudget: number;
+    usedToday: number;
+    remainingToday: number;
+    intervalMinutes: number;
+    windowStartHour: number;
+    windowEndHour: number;
+    windowOpen: boolean;
+    nextRunAt: string | null;
+  };
+  candidatesReady: number;
 }
 
 interface AutomationSettings {
@@ -79,6 +111,7 @@ const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void; dange
 export const AutomationSettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<AutomationSettings | null>(null);
   const [humanizeStatus, setHumanizeStatus] = useState<HumanizeStatus | null>(null);
+  const [auto, setAuto] = useState<AutopilotStatus | null>(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -92,13 +125,52 @@ export const AutomationSettingsPage: React.FC = () => {
     }
   };
 
+  const loadAutopilot = async () => {
+    try {
+      const r = await fetch('/api/autopilot/status');
+      const d = await r.json();
+      if (d?.success) setAuto(d as AutopilotStatus);
+    } catch { /* painel informativo */ }
+  };
+
   const load = async () => {
     const r = await fetch('/api/automation/settings');
     const d = await r.json();
     if (d?.success) setSettings(d.settings);
     void loadStatus();
+    void loadAutopilot();
   };
   useEffect(() => { void load(); }, []);
+
+  const updateAutopilot = async (patch: Partial<AutopilotSettings>) => {
+    setSaving(true);
+    setMsg(null);
+    try {
+      const r = await fetch('/api/autopilot/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) });
+      const d = await r.json();
+      if (!d?.success) throw new Error(d?.error || 'Falha ao salvar');
+      setMsg('Salvo');
+      void loadAutopilot();
+      setTimeout(() => setMsg(null), 2000);
+    } catch (e: any) {
+      setMsg(e?.message || 'Erro ao salvar');
+      void loadAutopilot();
+    } finally { setSaving(false); }
+  };
+
+  const runAutopilotNow = async () => {
+    setSaving(true);
+    setMsg(null);
+    try {
+      const r = await fetch('/api/autopilot/run-now', { method: 'POST' });
+      const d = await r.json();
+      setMsg(d?.success ? (d.summary || 'Busca executada') : (d?.error || d?.reason || 'Não rodou'));
+      void loadAutopilot();
+      setTimeout(() => setMsg(null), 6000);
+    } catch (e: any) {
+      setMsg(e?.message || 'Erro na busca');
+    } finally { setSaving(false); }
+  };
 
   const update = async (patch: Partial<AutomationSettings>) => {
     if (!settings) return;
@@ -150,6 +222,103 @@ export const AutomationSettingsPage: React.FC = () => {
         </div>
         {saving && <span className="text-xs font-bold text-indigo-600 flex items-center gap-1"><RefreshCw className="w-3 h-3 animate-spin" /> Salvando...</span>}
         {msg && <span className="text-xs font-bold text-emerald-600">{msg}</span>}
+      </div>
+
+      {/* Autopilot de coleta */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-bold text-slate-900 flex items-center gap-2"><Radar className="w-4 h-4 text-orange-600" /> Autopilot de coleta (SerpAPI)</h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Divide a cota mensal pelos dias restantes do ciclo e faz as buscas espaçadas dentro da janela. Depois prospecta os melhores leads encontrados.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void runAutopilotNow()}
+            disabled={saving || !auto?.budget?.configured}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-orange-600 text-white hover:bg-orange-700 disabled:bg-slate-300"
+          >
+            <Play className="w-3 h-3" /> Buscar agora
+          </button>
+        </div>
+
+        {auto && (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <div className="text-[10px] font-bold uppercase text-slate-400">Orçamento hoje</div>
+                <div className="text-lg font-bold text-slate-900">{auto.budget.usedToday}/{auto.budget.dailyBudget}</div>
+                <div className="text-[10px] text-slate-500">buscas usadas</div>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <div className="text-[10px] font-bold uppercase text-slate-400">Cota do ciclo</div>
+                <div className="text-lg font-bold text-slate-900">{auto.budget.remainingThisMonth}</div>
+                <div className="text-[10px] text-slate-500">de {auto.budget.monthlyQuota} · {auto.budget.daysLeftInCycle} dia(s)</div>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <div className="text-[10px] font-bold uppercase text-slate-400">Intervalo</div>
+                <div className="text-lg font-bold text-slate-900">{auto.budget.intervalMinutes} min</div>
+                <div className="text-[10px] text-slate-500">{auto.budget.windowOpen ? 'janela aberta' : 'janela fechada'}</div>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <div className="text-[10px] font-bold uppercase text-slate-400">Hoje</div>
+                <div className="text-lg font-bold text-slate-900">{auto.state.collectedToday}</div>
+                <div className="text-[10px] text-slate-500">leads · {auto.state.prospectedToday} D0</div>
+              </div>
+            </div>
+
+            <div className="text-xs text-slate-500 flex flex-wrap gap-x-4 gap-y-1">
+              <span>{auto.armed ? `✅ armado (${auto.state.armedUntil ? new Date(auto.state.armedUntil).toLocaleString('pt-BR') : '-'})` : '⏸️ não armado — abra o app para armar'}</span>
+              <span>{auto.budget.nextRunAt ? `próxima busca: ${new Date(auto.budget.nextRunAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : 'sem próxima busca'}</span>
+              <span>{auto.candidatesReady} lead(s) prontos para D0</span>
+              {auto.state.lastSummary && <span className="text-slate-400">último: {auto.state.lastSummary}</span>}
+              {auto.state.lastError && <span className="text-amber-600">erro: {auto.state.lastError}</span>}
+            </div>
+
+            <div className="flex items-center justify-between py-2 border-t border-b border-slate-100">
+              <div>
+                <div className="text-sm font-semibold text-slate-800">Coleta automática</div>
+                <div className="text-xs text-slate-500">Enquanto o app estiver aberto (armado por 8h), faz uma busca espaçada por vez.</div>
+              </div>
+              <Toggle checked={auto.settings.enabled} onChange={(v) => void updateAutopilot({ enabled: v })} />
+            </div>
+
+            <div className="flex items-center justify-between py-2 border-b border-slate-100">
+              <div>
+                <div className="text-sm font-semibold text-slate-800">Prospectar os melhores</div>
+                <div className="text-xs text-slate-500">Manda D0 no WhatsApp para o lead de maior score (respeita a humanização e o teto de contatos novos).</div>
+              </div>
+              <Toggle checked={auto.settings.autoProspect} onChange={(v) => void updateAutopilot({ autoProspect: v })} />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="text-xs font-bold text-slate-600 flex items-center gap-2">
+                Score mínimo
+                <input type="number" min={0} max={100} value={auto.settings.minScore}
+                  onChange={(e) => void updateAutopilot({ minScore: Math.max(0, Math.min(100, Math.floor(Number(e.target.value) || 0))) })}
+                  className="w-16 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-normal" />
+              </label>
+              <label className="text-xs font-bold text-slate-600 flex items-center gap-2">
+                D0 por dia
+                <input type="number" min={0} max={30} value={auto.settings.dailyNewCap}
+                  onChange={(e) => void updateAutopilot({ dailyNewCap: Math.max(0, Math.min(30, Math.floor(Number(e.target.value) || 0))) })}
+                  className="w-16 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-normal" />
+              </label>
+              <label className="text-xs font-bold text-slate-600 flex items-center gap-2">
+                Janela
+                <input type="number" min={0} max={23} value={auto.budget.windowStartHour}
+                  onChange={(e) => void fetch('/api/autopilot/window', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ startHour: Number(e.target.value), endHour: auto.budget.windowEndHour }) }).then(() => void loadAutopilot())}
+                  className="w-14 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-normal" />
+                <Zap className="w-3 h-3 text-slate-400" />
+                <input type="number" min={0} max={23} value={auto.budget.windowEndHour}
+                  onChange={(e) => void fetch('/api/autopilot/window', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ startHour: auto.budget.windowStartHour, endHour: Number(e.target.value) }) }).then(() => void loadAutopilot())}
+                  className="w-14 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-normal" />
+                <span className="font-normal text-slate-400">h</span>
+              </label>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Agendamento */}

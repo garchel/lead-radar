@@ -17,6 +17,7 @@ import { registerAutomationRoutes } from "./server/routes/automationRoutes";
 import { registerGrowthRoutes } from "./server/routes/growthRoutes";
 import { registerOutboxRoutes } from "./server/routes/outboxRoutes";
 import { registerActionItemsRoutes } from "./server/routes/actionItemsRoutes";
+import { registerAutopilotRoutes } from "./server/routes/autopilotRoutes";
 import { scheduleBackups } from "./server/backup/backupService";
 import { scheduler, ensureDefaultFollowUpSchedule } from "./server/scheduler/scheduler";
 import { startTypeformPolling } from "./server/typeform/polling";
@@ -75,6 +76,7 @@ registerAutomationRoutes(app);
 registerGrowthRoutes(app);
 registerOutboxRoutes(app);
 registerActionItemsRoutes(app);
+registerAutopilotRoutes(app);
 
 app.get("/api/health", (_req, res) => {
   let hasSerpApiKey = Boolean((process.env.SERPAPI_API_KEY || "").trim());
@@ -431,6 +433,30 @@ async function startServer() {
     else console.log("Agendador desativado (LEADRADAR_SCHEDULER=off).");
     startTypeformPolling();
     scheduleBackups();
+  }
+
+  // Autopilot de coleta: um pulso por minuto. Cada pulso roda no máximo UMA
+  // busca (respeitando o orçamento do dia) e UM D0 — nunca rajada. Só age
+  // quando o app "armou" (POST /api/autopilot/arm) e o setting está ligado.
+  if (process.env.NODE_ENV !== "test") {
+    try {
+      const { autopilotTick } = await import("./server/services/autoProspectingService");
+      let ticking = false;
+      setInterval(async () => {
+        if (ticking) return; // nunca empilha pulsos (busca + envio podem demorar)
+        ticking = true;
+        try {
+          const result = await autopilotTick();
+          if (result.ran && result.summary) console.log(`[autopilot] ${result.summary}`);
+        } catch (e: any) {
+          console.warn("[autopilot] pulso falhou:", e?.message || e);
+        } finally {
+          ticking = false;
+        }
+      }, 60_000).unref?.();
+    } catch (e: any) {
+      console.warn("[autopilot] não iniciado:", e?.message || e);
+    }
   }
 
   const shutdown = async () => {
