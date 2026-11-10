@@ -11,12 +11,13 @@ import {
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { BusinessLead, InteractionOutcome } from '../types';
 import { FolderKanban, Download, Edit3, Sparkles, Trash2, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { computePipelineValue } from '../utils/pipelineValue';
 
 interface CrmPipelineProps {
   savedLeads: BusinessLead[];
@@ -52,6 +53,8 @@ interface PipelineColumnProps {
   collapsed: boolean;
   onToggle: () => void;
   children: React.ReactNode;
+  /** Ações abaixo do grid (ex.: "mostrar mais"). */
+  footer?: React.ReactNode;
 }
 
 /**
@@ -60,64 +63,52 @@ interface PipelineColumnProps {
  * Recolhida ela continua sendo alvo de drop — dá para mover um card para uma
  * etapa fechada.
  */
-const PipelineColumn: React.FC<PipelineColumnProps> = ({ id, title, color, count, collapsed, onToggle, children }) => {
+const PipelineColumn: React.FC<PipelineColumnProps> = ({ id, title, color, count, collapsed, onToggle, children, footer }) => {
   const { setNodeRef, isOver } = useDroppable({ id });
-
-  // Recolhida: a coluna inteira é o botão de expandir (alvo grande, cor da etapa).
-  if (collapsed) {
-    return (
-      <section
-        ref={setNodeRef}
-        aria-label={`Etapa ${title}`}
-        className={`shrink-0 w-[78px] transition-all duration-200 ${isOver ? 'ring-2 ring-indigo-300 rounded-2xl' : ''}`}
-      >
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={false}
-          title={`Expandir ${title} (${count})`}
-          className={`w-full min-h-[220px] flex flex-col items-center gap-2 py-3 rounded-2xl border font-bold cursor-pointer transition-transform hover:scale-[1.02] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${color}`}
-        >
-          <ChevronRight className="w-4 h-4" />
-          <span className="px-1.5 py-0.5 rounded-full bg-white text-slate-800 text-[10px] font-bold border border-slate-200">
-            {count}
-          </span>
-          <span className="[writing-mode:vertical-rl] rotate-180 text-[11px] tracking-wide">
-            {title}
-          </span>
-          <span className="mt-auto text-[9px] uppercase tracking-wider opacity-70">abrir</span>
-        </button>
-      </section>
-    );
-  }
 
   return (
     <section
       ref={setNodeRef}
       aria-label={`Etapa ${title}`}
-      className={`shrink-0 w-[330px] bg-slate-50 border rounded-2xl flex flex-col transition-all duration-200 ${
+      className={`w-full bg-slate-50 border rounded-2xl transition-colors ${
         isOver ? 'border-indigo-400 ring-2 ring-indigo-100' : 'border-slate-200'
       }`}
     >
       <button
         type="button"
         onClick={onToggle}
-        aria-expanded
-        title={`Recolher ${title}`}
-        className={`w-full p-2.5 rounded-t-2xl border-b font-bold text-xs flex items-center justify-between gap-2 cursor-pointer hover:brightness-[0.98] ${color}`}
+        aria-expanded={!collapsed}
+        title={collapsed ? `Expandir ${title}` : `Recolher ${title}`}
+        className={`w-full p-3 rounded-2xl font-bold text-sm flex items-center justify-between gap-3 cursor-pointer hover:brightness-[0.98] ${color} ${
+          collapsed ? '' : 'rounded-b-none'
+        }`}
       >
-        <span className="truncate">{title}</span>
-        <span className="flex items-center gap-1.5 shrink-0">
-          <span className="px-2 py-0.5 rounded-full bg-white text-slate-800 text-[10px] font-bold border border-slate-200">
+        <span className="flex items-center gap-2 min-w-0">
+          {collapsed ? <ChevronRight className="w-4 h-4 shrink-0" /> : <ChevronDown className="w-4 h-4 shrink-0" />}
+          <span className="truncate">{title}</span>
+          <span className="px-2 py-0.5 rounded-full bg-white/80 text-slate-800 text-[11px] font-bold border border-white/60 shrink-0">
             {count}
           </span>
-          <ChevronDown className="w-3.5 h-3.5" />
+        </span>
+        <span className="text-[10px] font-semibold opacity-70 shrink-0">
+          {collapsed ? 'expandir' : 'recolher'}
         </span>
       </button>
 
-      <div className="p-2.5 flex-1 min-h-[160px] max-h-[68vh] overflow-y-auto overscroll-contain">
-        {children}
-      </div>
+      {!collapsed && (
+        <div className="p-3">
+          {count === 0 ? (
+            <p className="text-[11px] text-slate-400 text-center py-6 border border-dashed border-slate-300 rounded-xl">
+              arraste um lead para cá
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {children}
+            </div>
+          )}
+          {footer}
+        </div>
+      )}
     </section>
   );
 };
@@ -287,6 +278,9 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
 }) => {
   // Quais etapas estão recolhidas — persistido para sobreviver a recarregar a página.
   const [collapsedStages, setCollapsedStages] = useState<string[]>(() => readCollapsedStages());
+  // Quantos cards já aparecem por etapa (evita 51 cards de uma vez).
+  const [visibleCount, setVisibleCount] = useState<Record<string, number>>({});
+  const CARDS_PER_PAGE = 8;
 
   const persistCollapsed = (next: string[]) => {
     setCollapsedStages(next);
@@ -319,16 +313,7 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
   const closedCount = savedLeads.filter(l => l.pipelineStatus === 'closed').length;
   const negotiatingCount = savedLeads.filter(l => l.pipelineStatus === 'negotiating').length;
 
-  const totalPipelineValue = savedLeads.reduce((acc, lead) => {
-    if (!lead.estimatedValue) return acc;
-    const numbers = lead.estimatedValue.match(/\\d[\\d.]*/g) || [];
-    const values = numbers
-      .map((value) => Number(value.replace(/\\./g, '')))
-      .filter((value) => Number.isFinite(value));
-    if (values.length === 0) return acc;
-    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
-    return acc + average;
-  }, 0);
+  const totalPipelineValue = computePipelineValue(savedLeads);
 
   const exportCSV = () => {
     const headers = ['Nome', 'Categoria', 'Cidade', 'Telefone', 'Status', 'Valor Estimado', 'Notas'];
@@ -342,7 +327,7 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
       `"${l.notes || ''}"`,
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\\n');
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -431,7 +416,7 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs text-slate-500">
-                Etapas lado a lado — clique no cabeçalho da etapa para recolher ou expandir. O estado fica salvo.
+                Cada etapa é um bloco com os leads em grid — clique no cabeçalho para recolher ou expandir. O estado fica salvo.
               </p>
               <div className="flex items-center gap-2 shrink-0">
                 <button
@@ -453,11 +438,14 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
               </div>
             </div>
 
-            <div className="flex items-start gap-3 overflow-x-auto pb-3 scroll-smooth">
+            <div className="space-y-3">
               {PIPELINE_COLUMNS.map(col => {
                 const columnLeads = savedLeads.filter(l => l.pipelineStatus === col.id);
-                const columnLeadIds = columnLeads.map(l => l.id);
+                const limit = visibleCount[col.id] ?? CARDS_PER_PAGE;
+                const visibleLeads = columnLeads.slice(0, limit);
+                const visibleIds = visibleLeads.map(l => l.id);
                 const isCollapsed = collapsedStages.includes(col.id);
+                const hidden = columnLeads.length - visibleLeads.length;
 
                 return (
                   <PipelineColumn
@@ -468,28 +456,49 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
                     count={columnLeads.length}
                     collapsed={isCollapsed}
                     onToggle={() => toggleStage(col.id)}
+                    footer={hidden > 0 ? (
+                      <div className="flex flex-wrap items-center justify-center gap-2 pt-4">
+                        <button
+                          type="button"
+                          onClick={() => setVisibleCount(prev => ({ ...prev, [col.id]: limit + CARDS_PER_PAGE * 2 }))}
+                          className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+                        >
+                          Mostrar mais ({Math.min(hidden, CARDS_PER_PAGE * 2)})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVisibleCount(prev => ({ ...prev, [col.id]: columnLeads.length }))}
+                          className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-slate-500 hover:text-indigo-700"
+                        >
+                          Mostrar todos ({columnLeads.length})
+                        </button>
+                      </div>
+                    ) : columnLeads.length > CARDS_PER_PAGE ? (
+                      <div className="flex justify-center pt-3">
+                        <button
+                          type="button"
+                          onClick={() => setVisibleCount(prev => ({ ...prev, [col.id]: CARDS_PER_PAGE }))}
+                          className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-slate-500 hover:text-indigo-700"
+                        >
+                          Mostrar menos
+                        </button>
+                      </div>
+                    ) : undefined}
                   >
                     <SortableContext
-                      items={columnLeadIds}
-                      strategy={verticalListSortingStrategy}
+                      items={visibleIds}
+                      strategy={rectSortingStrategy}
                     >
-                      <div className="space-y-3">
-                        {columnLeads.map(lead => (
-                          <SortableLeadCard
-                            key={lead.id}
-                            lead={lead}
-                            onUpdateNotes={onUpdateNotes}
-                            onRecordOutcome={onRecordOutcome}
-                            onRemoveLead={onRemoveLead}
-                            onAnalyze={onAnalyze}
-                          />
-                        ))}
-                        {columnLeads.length === 0 && (
-                          <p className="text-[11px] text-slate-400 text-center py-6 border border-dashed border-slate-300 rounded-xl">
-                            arraste um lead para cá
-                          </p>
-                        )}
-                      </div>
+                      {visibleLeads.map(lead => (
+                        <SortableLeadCard
+                          key={lead.id}
+                          lead={lead}
+                          onUpdateNotes={onUpdateNotes}
+                          onRecordOutcome={onRecordOutcome}
+                          onRemoveLead={onRemoveLead}
+                          onAnalyze={onAnalyze}
+                        />
+                      ))}
                     </SortableContext>
                   </PipelineColumn>
                 );
