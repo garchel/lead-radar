@@ -20,6 +20,7 @@ import { SerpApiResultsPage } from './components/SerpApiResultsPage';
 import { CitiesQueueDashboard } from './components/CitiesQueueDashboard';
 import { CategoriesDashboard } from './components/CategoriesDashboard';
 import { AutomationSettingsPage } from './components/AutomationSettingsPage';
+import { DatabaseDashboard } from './components/DatabaseDashboard';
 import { NextActionsBar } from './components/NextActionsBar';
 
 const MapView = lazy(() => import('./components/MapView').then((m) => ({ default: m.MapView })));
@@ -58,7 +59,7 @@ interface DuplicateCandidate {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation' | 'database'>('search');
   const [focusProjectId, setFocusProjectId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   // Filtro de VISUALIZAÇÃO por presença digital (não afeta a busca — a busca sempre traz tudo)
@@ -720,6 +721,7 @@ export default function App() {
         {activeTab === 'categories' && <CategoriesDashboard />}
 
         {activeTab === 'automation' && <AutomationSettingsPage />}
+        {activeTab === 'database' && <DatabaseDashboard />}
 
         {activeTab === 'companies' && (
           <SerpApiResultsPage

@@ -18,6 +18,7 @@ import { registerGrowthRoutes } from "./server/routes/growthRoutes";
 import { registerOutboxRoutes } from "./server/routes/outboxRoutes";
 import { registerActionItemsRoutes } from "./server/routes/actionItemsRoutes";
 import { registerAutopilotRoutes } from "./server/routes/autopilotRoutes";
+import { registerDatabaseRoutes } from "./server/routes/databaseRoutes";
 import { scheduleBackups } from "./server/backup/backupService";
 import { scheduler, ensureDefaultFollowUpSchedule } from "./server/scheduler/scheduler";
 import { startTypeformPolling } from "./server/typeform/polling";
@@ -77,6 +78,7 @@ registerGrowthRoutes(app);
 registerOutboxRoutes(app);
 registerActionItemsRoutes(app);
 registerAutopilotRoutes(app);
+registerDatabaseRoutes(app);
 
 app.get("/api/health", (_req, res) => {
   let hasSerpApiKey = Boolean((process.env.SERPAPI_API_KEY || "").trim());
@@ -407,6 +409,20 @@ async function startServer() {
     }
   } catch (e: any) {
     console.warn("[boot] Falha no backfill de presença digital:", e?.message || e);
+  }
+
+  // Higiene de localização: "São Paulo, SP" / "Brasília/" quebram a rotação de
+  // cidades e os agrupamentos do painel do banco. Versionado como o backfill.
+  try {
+    const { getSetting, setSetting } = await import("./server/store/db");
+    const { normalizeLeadLocations, DATA_HYGIENE_VERSION } = await import("./server/services/dataHygiene");
+    if (getSetting("data_hygiene_version") !== DATA_HYGIENE_VERSION) {
+      const { updated } = normalizeLeadLocations();
+      setSetting("data_hygiene_version", DATA_HYGIENE_VERSION);
+      console.log(`[boot] Higiene de dados (v${DATA_HYGIENE_VERSION}): ${updated} lead(s) com cidade/UF corrigidos.`);
+    }
+  } catch (e: any) {
+    console.warn("[boot] Falha na higiene de dados:", e?.message || e);
   }
 
   // Agenda padrão de recontatos autorizados (visível na UI mesmo com o

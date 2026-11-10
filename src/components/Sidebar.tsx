@@ -2,8 +2,8 @@ import React from 'react';
 import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Layers, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings, Bot, TrendingUp } from 'lucide-react';
 
 interface SidebarProps {
-  activeTab: 'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation';
-  setActiveTab: (tab: 'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation') => void;
+  activeTab: 'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation' | 'database';
+  setActiveTab: (tab: 'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents' | 'companies' | 'cities' | 'categories' | 'automation' | 'database') => void;
   savedCount: number;
   projectCount: number;
   onOpenAddModal: () => void;
@@ -81,6 +81,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button id="nav-companies-btn" onClick={() => setActiveTab('companies')} className={navBtn('companies', activeTab === 'companies')}>
             <Building2 className="w-4 h-4 shrink-0" />
             <span>Empresas Encontradas</span>
+          </button>
+
+          <button id="nav-database-btn" onClick={() => setActiveTab('database')} className={navBtn('database', activeTab === 'database')}>
+            <Database className="w-4 h-4 shrink-0" />
+            <span>Banco de Dados</span>
           </button>
         </nav>
       </div>
