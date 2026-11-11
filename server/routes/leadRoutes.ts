@@ -22,6 +22,7 @@ import {
   renderClientProfileMarkdown,
 } from "../services/clientProfileService";
 import { SerpApiQuotaError } from "../services/serpApi";
+import { validateLeadsWhatsApp, getWhatsAppValidationSummary } from "../services/whatsappValidationService";
 import { syncLeadProject } from "../projects/service";
 
 export function registerLeadRoutes(app: Express) {
@@ -156,6 +157,30 @@ export function registerLeadRoutes(app: Express) {
   });
 
   // List follow-ups whose cooldown has expired.
+  /** Quanto do banco já foi validado no WhatsApp (alimenta o card em Canais). */
+  app.get("/api/leads/whatsapp/summary", (_req: Request, res: Response) => {
+    try {
+      res.json({ success: true, summary: getWhatsAppValidationSummary() });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error?.message || "Falha ao resumir a validação." });
+    }
+  });
+
+  /** Valida números no WhatsApp (não envia mensagem, não gasta cota de busca). */
+  app.post("/api/leads/whatsapp/validate", async (req: Request, res: Response) => {
+    try {
+      const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter((id: unknown) => typeof id === "string") : undefined;
+      const limit = Number.isFinite(Number(req.body?.limit)) ? Number(req.body.limit) : undefined;
+      const summary = await validateLeadsWhatsApp(ids, { limit });
+      if (summary.error && summary.checked === 0) {
+        return res.status(502).json({ success: false, error: summary.error });
+      }
+      res.json({ success: true, ...summary, totals: getWhatsAppValidationSummary() });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error?.message || "Falha ao validar números." });
+    }
+  });
+
   app.get("/api/follow-ups/due", (req: Request, res: Response) => {
     res.json({ success: true, followUps: getDueFollowUps() });
   });

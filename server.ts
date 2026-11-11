@@ -450,6 +450,12 @@ async function startServer() {
   // cidades e os agrupamentos do painel do banco. Versionado como o backfill.
   try {
     const { getSetting, setSetting } = await import("./server/store/db");
+    const { rescoreLeadsIfNeeded } = await import("./server/services/leadScoreBackfill");
+    try {
+      rescoreLeadsIfNeeded();
+    } catch (err: any) {
+      console.warn(`[score] falha ao recalibrar: ${err?.message || err}`);
+    }
     const { normalizeLeadLocations, DATA_HYGIENE_VERSION } = await import("./server/services/dataHygiene");
     if (getSetting("data_hygiene_version") !== DATA_HYGIENE_VERSION) {
       const { updated } = normalizeLeadLocations();

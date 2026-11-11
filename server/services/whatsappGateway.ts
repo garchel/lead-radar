@@ -185,6 +185,47 @@ export async function updateGatewayWebhook(
   return data?.webhook ?? data ?? null;
 }
 
+export interface WhatsAppNumberCheck {
+  /** Só dígitos, como o gateway devolveu. */
+  number: string;
+  exists: boolean;
+  jid?: string;
+}
+
+/**
+ * Pergunta ao WhatsApp se os números existem (endpoint /chat/whatsappNumbers).
+ *
+ * Isso não gasta cota de busca nem envia mensagem: é consulta de existência.
+ * Vale a pena porque o Google Maps devolve muito telefone fixo e número morto —
+ * abordar esses é envio perdido (12 falhas medidas no banco antes disso).
+ */
+export async function checkNumbersOnWhatsApp(
+  numbers: string[],
+  instance?: string
+): Promise<WhatsAppNumberCheck[]> {
+  const cleaned = Array.from(
+    new Set(
+      numbers
+        .map((value) => String(value || "").replace(/\D/g, ""))
+        .filter((value) => value.length >= 10 && value.length <= 13)
+    )
+  );
+  if (cleaned.length === 0) return [];
+
+  const id = instanceOrDefault(instance);
+  const data = await gatewayRequest<any>(`/v1/chat/whatsappNumbers/${encodeURIComponent(id)}`, {
+    method: "POST",
+    body: { numbers: cleaned },
+  });
+
+  const rows = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+  return rows.map((row: any) => ({
+    number: String(row?.number ?? row?.jid?.split?.("@")?.[0] ?? "").replace(/\D/g, ""),
+    exists: Boolean(row?.exists ?? row?.onWhatsApp ?? row?.isWhatsApp),
+    jid: row?.jid ? String(row.jid) : undefined,
+  }));
+}
+
 /** Eventos do gateway que o LeadRadar sabe consumir. */
 export const SUPPORTED_WEBHOOK_EVENTS = [
   "MESSAGES_UPSERT",

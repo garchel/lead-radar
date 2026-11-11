@@ -5,6 +5,7 @@ import { searchSerpApiMaps, SerpApiQuotaError, listSerpApiKeys, getLastSerpApiRa
 import { getLeads, getCities, getCityByCode, getBusinessCategories, estimateTicket, type MarketTier } from "../store/db";
 import { normalizePhone, normalizeText } from "./leadIdentity";
 import { qaPitch } from "./pitchQaService";
+import { computeLeadScore } from "./leadQuality";
 
 /* ------------------------------------------------------------------ */
 /*  Shared, real business search + AI analysis used by the queue,      */
@@ -393,7 +394,7 @@ Cada item do array deve ter as seguintes propriedades:
     if (businesses.length === 0) {
       throw new Error("Gemini não retornou empresas reais para os filtros informados. Tente ampliar a região/categoria ou use SerpAPI para resultados reais do Google Maps.");
     }
-    const withTickets = attachSuggestedTickets(businesses);
+    const withTickets = attachSuggestedTickets(businesses, input.category);
     const marked = markAlreadySaved(withTickets);
     return { source: "gemini", businesses: marked };
   } catch (err: any) {
@@ -412,63 +413,72 @@ Cada item do array deve ter as seguintes propriedades:
 }
 
 /**
- * Scoring combinado: score base (site/nota) + propensão da categoria +
- * tier da cidade + contato disponível. Retorna 0–100 e o nível.
+ * Score combinado do lead (0-100).
+ *
+ * Implementação única em `leadQuality.computeLeadScore`: média ponderada de
+ * presença digital, avaliações, nota, propensão do nicho, tier da cidade e
+ * telefone. Antes daqui somavam-se bônus até bater o teto 100, o que deixava
+ * 92% do banco em 90-100 e não ordenava nada.
  */
-export function computeCombinedScore(b: any, opts?: { categoryPropensity?: number; marketTier?: string }): { score: number; level: "high" | "medium" | "low" } {
-  let score = typeof b.opportunityScore === "number" ? b.opportunityScore : 60;
-
-  // Propensão da categoria (−20 a +10)
-  const prop = opts?.categoryPropensity;
-  if (typeof prop === "number") {
-    if (prop >= 80) score += 10;
-    else if (prop >= 60) score += 5;
-    else if (prop < 25) score -= 20;
-    else if (prop < 40) score -= 15;
-  }
-
-  // Tier da cidade (−8 a +8)
-  const tier = opts?.marketTier || b.marketTier;
-  if (tier === "A") score += 8;
-  else if (tier === "B") score += 4;
-  else if (tier === "D") score -= 8;
-
-  // Contato direto disponível (+5 se tem telefone)
-  if (b.phone && String(b.phone).trim()) score += 5;
-
-  // Sem site continua sendo o sinal mais forte (já embutido no base,
-  // mas social_only ganha meio degrau)
-  if (b.websiteStatus === "social_only" || b.websiteStatus === "marketplace_only") score += 3;
-
-  score = Math.max(0, Math.min(100, Math.round(score)));
-  return { score, level: score > 80 ? "high" : score >= 60 ? "medium" : "low" };
+export function computeCombinedScore(
+  b: any,
+  opts?: { categoryPropensity?: number; marketTier?: string }
+): { score: number; level: "high" | "medium" | "low" } {
+  const result = computeLeadScore({
+    websiteStatus: b.websiteStatus,
+    rating: b.rating,
+    reviewsCount: b.reviewsCount,
+    phone: b.phone,
+    whatsappStatus: b.whatsappStatus,
+    categoryPropensity: opts?.categoryPropensity,
+    marketTier: opts?.marketTier ?? b.marketTier,
+  });
+  return { score: result.score, level: result.level };
 }
 
 /**
  * Ticket sugerido = ticket base da categoria × multiplicador do tier da cidade.
  * Match de cidade por nome normalizado + UF na base IBGE.
  */
-function attachSuggestedTickets(businesses: any[]): any[] {
+function attachSuggestedTickets(businesses: any[], searchCategory?: string): any[] {
   try {
     const categories = getBusinessCategories({ activeOnly: true });
     const catByName = new Map(categories.map((c) => [c.name.toLowerCase(), c]));
 
     return businesses.map((b: any) => {
-      const cat = catByName.get((b.category || "").trim().toLowerCase());
+      // O nicho BUSCADO é sempre um dos 19 cadastrados; o rótulo do Google
+      // ("Escritório da empresa") quase nunca casa — por isso a busca é dupla.
+      const niche = (searchCategory || b.searchCategory || "").trim();
+      const cat =
+        catByName.get(niche.toLowerCase()) ||
+        catByName.get((b.category || "").trim().toLowerCase());
       let city;
       try {
         city = getCityByIbgeByName(b.city, b.state);
       } catch {
         city = undefined;
       }
+      const detail = computeLeadScore({
+        websiteStatus: b.websiteStatus,
+        rating: b.rating,
+        reviewsCount: b.reviewsCount,
+        phone: b.phone,
+        whatsappStatus: b.whatsappStatus,
+        categoryPropensity: cat?.propensity,
+        marketTier: city?.marketTier,
+      });
+      const base = {
+        ...b,
+        searchCategory: niche || b.searchCategory,
+        opportunityScore: detail.score,
+        opportunityLevel: detail.level,
+        scoreReasons: detail.reasons,
+      };
       if (cat && city) {
         const ticket = estimateTicket(cat.baseTicket, city.marketTier as MarketTier);
-        const combined = computeCombinedScore(b, { categoryPropensity: cat.propensity, marketTier: city.marketTier });
-        return { ...b, suggestedTicket: ticket, marketTier: city.marketTier, opportunityScore: combined.score, opportunityLevel: combined.level };
+        return { ...base, suggestedTicket: ticket, marketTier: city.marketTier };
       }
-      // sem match de categoria/cidade: aplica só o que der
-      const partial = computeCombinedScore(b, {});
-      return { ...b, opportunityScore: partial.score, opportunityLevel: partial.level };
+      return base;
     });
   } catch {
     return businesses;
@@ -549,7 +559,7 @@ async function searchViaSerpApi(input: SearchInput): Promise<SearchResult> {
   if (input.filterNoWebsiteOnly) {
     validated = validated.filter((b: any) => b.websiteStatus === "none" || b.websiteStatus === "social_only" || b.websiteStatus === "marketplace_only");
   }
-  const withTickets = attachSuggestedTickets(validated);
+  const withTickets = attachSuggestedTickets(validated, input.category);
   const marked = markAlreadySaved(withTickets);
   const { raw, meta } = getLastSerpApiRaw();
   const cached = wasLastSearchCached();

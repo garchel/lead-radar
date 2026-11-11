@@ -284,6 +284,10 @@ function migrateSchema(db: Database.Database) {
     priority_score: "INTEGER DEFAULT 0",
     priority_level: "TEXT",
     priority_reasons: "TEXT",
+    // Qualificação: nicho buscado, número validado no WhatsApp e quando.
+    search_category: "TEXT",
+    whatsapp_status: "TEXT DEFAULT 'unknown'",
+    whatsapp_checked_at: "TEXT",
   };
   for (const [name, definition] of Object.entries(columnsToAdd)) {
     if (!existingColumns.has(name)) {

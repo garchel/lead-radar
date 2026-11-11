@@ -62,6 +62,9 @@ function rowToLead(row: any): StoredLead {
     siteAudit: row.site_audit_json ? JSON.parse(row.site_audit_json) : undefined,
     brandSnapshot: row.brand_snapshot_json ? JSON.parse(row.brand_snapshot_json) : undefined,
     clientProfile: row.client_profile_json ? JSON.parse(row.client_profile_json) : undefined,
+    searchCategory: row.search_category || undefined,
+    whatsappStatus: row.whatsapp_status || 'unknown',
+    whatsappCheckedAt: row.whatsapp_checked_at || undefined,
     priorityScore: row.priority_score ?? undefined,
     priorityLevel: row.priority_level || undefined,
     priorityReasons: row.priority_reasons ? JSON.parse(row.priority_reasons) : undefined,
@@ -104,6 +107,9 @@ function leadToRow(lead: StoredLead): any {
     site_audit_json: lead.siteAudit ? JSON.stringify(lead.siteAudit) : null,
     brand_snapshot_json: lead.brandSnapshot ? JSON.stringify(lead.brandSnapshot) : null,
     client_profile_json: lead.clientProfile ? JSON.stringify(lead.clientProfile) : null,
+    search_category: lead.searchCategory || null,
+    whatsapp_status: lead.whatsappStatus || 'unknown',
+    whatsapp_checked_at: lead.whatsappCheckedAt || null,
     priority_score: lead.priorityScore ?? null,
     priority_level: lead.priorityLevel || null,
     priority_reasons: lead.priorityReasons ? JSON.stringify(lead.priorityReasons) : null,
@@ -303,14 +309,14 @@ export function upsertLead(
       opportunity_score, opportunity_level, estimated_value, key_insights, pipeline_status, notes,
       analysis, normalized_name, normalized_city, normalized_phone, last_contact_at, last_response_at,
       last_contact_outcome, next_contact_at, contact_attempts, do_not_contact, saved_at, updated_at,
-      brand_snapshot_json, client_profile_json
+      brand_snapshot_json, client_profile_json, search_category, whatsapp_status, whatsapp_checked_at
     ) VALUES (
       @id, @name, @category, @address, @neighborhood, @city, @state, @phone, @email, @cnpj, @google_place_id,
       @rating, @reviews_count, @website_status, @website_url, @instagram_handle, @lat, @lng,
       @opportunity_score, @opportunity_level, @estimated_value, @key_insights, @pipeline_status, @notes,
       @analysis, @normalized_name, @normalized_city, @normalized_phone, @last_contact_at, @last_response_at,
       @last_contact_outcome, @next_contact_at, @contact_attempts, @do_not_contact, @saved_at, @updated_at,
-      @brand_snapshot_json, @client_profile_json
+      @brand_snapshot_json, @client_profile_json, @search_category, @whatsapp_status, @whatsapp_checked_at
     )`).run(data);
   }
 
@@ -1275,6 +1281,18 @@ export function pickNextCities(n: number, filter?: { uf?: string; minPopulation?
     )
     .all({ ...params, n: Math.max(1, Math.floor(n)) }) as any[];
   return rows.map(rowToCity);
+}
+
+/** Quantas tentativas de envio falharam para este lead (para parar de insistir). */
+export function countFailedCommunications(leadId: string): number {
+  try {
+    const row = getDb()
+      .prepare("SELECT COUNT(*) AS total FROM communications WHERE lead_id = ? AND status = 'failed'")
+      .get(leadId) as any;
+    return Number(row?.total || 0);
+  } catch {
+    return 0;
+  }
 }
 
 /** Marca que uma cidade acabou de entrar numa busca de prospecção. */

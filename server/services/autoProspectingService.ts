@@ -1,6 +1,7 @@
 import { getSetting, setSetting } from "../store/db";
 import {
   ensureCitiesLoaded,
+  countFailedCommunications,
   getBusinessCategories,
   getLeadById,
   getLeads,
@@ -14,6 +15,8 @@ import { searchBusinesses } from "./prospectingService";
 import { getSerpApiUsage } from "./serpApi";
 import { canRunSearch, getBudgetPlan, registerSearch } from "./quotaBudgetService";
 import { dispatchLeadContact } from "./interactionService";
+import { passesQualityGate, isReachableOnWhatsApp, classifyPhone } from "./leadQuality";
+import { validateLeadsWhatsApp } from "./whatsappValidationService";
 
 /**
  * Coleta automática de leads com cota controlada.
@@ -48,6 +51,12 @@ export interface AutopilotSettings {
   uf: string | null;
   /** Não salva lead que já tem site próprio. */
   skipWithWebsite: boolean;
+  /** Nota mínima no Google para entrar no banco (default 4,0). */
+  minRating: number;
+  /** Barra negócio sem nenhuma avaliação (costuma estar inativo). */
+  requireAnyReview: boolean;
+  /** Exige número validado no WhatsApp antes do D0 (default false: celular basta). */
+  requireWhatsApp: boolean;
 }
 
 export interface AutopilotState {
@@ -72,6 +81,9 @@ const DEFAULT_SETTINGS: AutopilotSettings = {
   maxPopulation: 200000,
   uf: null,
   skipWithWebsite: true,
+  minRating: 4,
+  requireAnyReview: true,
+  requireWhatsApp: false,
 };
 
 function localDayKey(date = new Date()): string {
@@ -95,6 +107,9 @@ export function getAutopilotSettings(): AutopilotSettings {
       maxPopulation: Math.max(0, Number(parsed.maxPopulation ?? DEFAULT_SETTINGS.maxPopulation)),
       uf: parsed.uf ? String(parsed.uf).toUpperCase().slice(0, 2) : null,
       skipWithWebsite: parsed.skipWithWebsite ?? DEFAULT_SETTINGS.skipWithWebsite,
+      minRating: Math.max(0, Math.min(5, Number(parsed.minRating ?? DEFAULT_SETTINGS.minRating))),
+      requireAnyReview: parsed.requireAnyReview ?? DEFAULT_SETTINGS.requireAnyReview,
+      requireWhatsApp: parsed.requireWhatsApp ?? DEFAULT_SETTINGS.requireWhatsApp,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };
@@ -200,6 +215,8 @@ type SearchOutcome = {
   category: string;
   found: number;
   saved: number;
+  /** Quantos foram barrados pelo portão de qualidade. */
+  rejected: number;
   consumedQuota: boolean;
 };
 
@@ -241,9 +258,20 @@ async function runOneSearch(
   const consumedQuota = usageAfter > usageBefore;
 
   let saved = 0;
+  let rejeitados = 0;
+  const novosIds: string[] = [];
   for (const biz of result.businesses as any[]) {
-    if (settings.skipWithWebsite && biz.websiteStatus === "has_website") continue;
-    if (!biz?.name || !biz?.city || !biz?.state) continue;
+    // Portão de entrada: só rejeita com EVIDÊNCIA (site próprio, zero avaliação,
+    // nota abaixo do mínimo). Dado ausente passa — no Maps isso é comum.
+    const gate = passesQualityGate(biz, {
+      skipWithWebsite: settings.skipWithWebsite,
+      minRating: settings.minRating,
+      requireAnyReview: settings.requireAnyReview,
+    });
+    if (!gate.ok) {
+      rejeitados += 1;
+      continue;
+    }
     const lead: StoredLead = {
       id: buildStableLeadId(biz),
       name: biz.name,
@@ -267,9 +295,21 @@ async function runOneSearch(
       keyInsights: biz.keyInsights,
       pipelineStatus: "prospect",
       savedAt: new Date().toISOString(),
+      searchCategory: category.name,
     };
     upsertLead(lead, { preserveInteraction: true });
+    novosIds.push(lead.id);
     saved += 1;
+  }
+
+  // Valida no WhatsApp o que acabou de entrar (consulta de existência, sem
+  // enviar nada e sem gastar cota). Falha de gateway não derruba o pulso.
+  if (novosIds.length > 0) {
+    try {
+      await validateLeadsWhatsApp(novosIds, { limit: 40 });
+    } catch {
+      /* validação é acessório: o pulso segue */
+    }
   }
   markCitySearched(city.ibgeCode);
 
@@ -279,6 +319,7 @@ async function runOneSearch(
     category: category.name,
     found: result.businesses.length,
     saved,
+    rejected: rejeitados,
     consumedQuota,
   };
 }
@@ -358,16 +399,23 @@ export async function prospectBestLead(
   }
 
   const candidates = getLeads()
-    .filter(
-      (lead) =>
-        lead.pipelineStatus === "prospect" &&
-        !lead.doNotContact &&
-        !lead.lastContactAt &&
-        (lead.contactAttempts || 0) === 0 &&
-        Boolean(lead.phone) &&
-        (lead.opportunityScore || 0) >= settings.minScore &&
-        (!settings.skipWithWebsite || lead.websiteStatus !== "has_website")
-    )
+    .filter((lead) => {
+      if (lead.pipelineStatus !== "prospect") return false;
+      if (lead.doNotContact) return false;
+      if (lead.lastContactAt) return false;
+      if ((lead.contactAttempts || 0) !== 0) return false;
+      if (!lead.phone) return false;
+      if ((lead.opportunityScore || 0) < settings.minScore) return false;
+      if (settings.skipWithWebsite && lead.websiteStatus === "has_website") return false;
+
+      // Não gastar D0 em número que não existe no WhatsApp: fixo não aborda,
+      // número marcado como "no" nunca, e quem já falhou 2 vezes sai da fila.
+      const reachable = isReachableOnWhatsApp(lead, { requireValidated: settings.requireWhatsApp });
+      if (!reachable.ok) return false;
+      if (countFailedCommunications(lead.id) >= 2) return false;
+
+      return true;
+    })
     .sort((a, b) => (b.opportunityScore || 0) - (a.opportunityScore || 0));
 
   const lead = candidates[0];
@@ -449,7 +497,9 @@ export async function autopilotTick(now = new Date(), opts?: { force?: boolean }
   const prospect = await prospectBestLead(settings, state, now);
   if (prospect.sent) state.prospectedToday += 1;
 
-  state.lastSummary = `${search.city}/${search.uf} · ${search.category}: ${search.saved} lead(s) salvo(s)${
+  state.lastSummary = `${search.city}/${search.uf} · ${search.category}: ${search.saved} salvo(s)${
+    search.rejected > 0 ? ` (${search.rejected} fora do padrão)` : ""
+  }${
     prospect.sent ? ` · D0 → ${prospect.leadName}` : ""
   }`;
   saveAutopilotState(state);

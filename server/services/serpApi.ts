@@ -2,6 +2,7 @@ import { getSerpApiConfig } from "../config";
 import { getDb } from "../store/schema";
 import crypto from "crypto";
 import { classifySitePresence, presenceLabel } from "./presenceService";
+import { computeLeadScore } from "./leadQuality";
 
 // ------------------------------------------------------------------
 // SerpAPI Google Maps — busca real sem alucinação
@@ -596,19 +597,20 @@ function mapSerpPlaceToBusiness(place: any, fallbackCategory: string, fallbackCi
   const lng: number | undefined = place.gps_coordinates?.longitude ?? place.longitude;
   const googlePlaceId: string | undefined = place.place_id || place.place_id_search || undefined;
 
-  // heurística de oportunidade: sem site próprio + boa nota = alto
-  let opportunityScore = 65;
-  if (websiteStatus === "none") opportunityScore += 20;
-  else if (websiteStatus === "marketplace_only") opportunityScore += 10;
-  if (rating && rating >= 4.5) opportunityScore += 10;
-  if (reviewsCount && reviewsCount >= 50) opportunityScore += 5;
-  opportunityScore = Math.min(95, opportunityScore);
-  const opportunityLevel: "high" | "medium" | "low" = opportunityScore > 80 ? "high" : opportunityScore >= 60 ? "medium" : "low";
+  // Score pela média ponderada (presença, avaliações, nota, propensão, tier,
+  // telefone). A versão antiga somava bônus até o teto e dava 95 em quase tudo;
+  // aqui o número se espalha. Propensão/tier entram depois, em attachSuggestedTickets.
+  const scored = computeLeadScore({ websiteStatus, rating, reviewsCount, phone });
+  const opportunityScore = scored.score;
+  const opportunityLevel: "high" | "medium" | "low" = scored.level;
 
   return {
     id: `serp-${place.place_id || place.data_id || `biz-${idx}-${Date.now()}`}`,
     name: title,
     category: (place.type || place.category || fallbackCategory || "").trim() || fallbackCategory,
+    // o nicho PESQUISADO (sempre um dos 19) — o `category` acima vem do Google
+    // e vira rótulo solto ("Escritório da empresa"), inútil para medir conversão
+    searchCategory: (fallbackCategory || "").trim() || undefined,
     address,
     neighborhood: (place.neighborhood || "").trim() || undefined,
     city,

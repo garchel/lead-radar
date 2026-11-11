@@ -205,6 +205,12 @@ export interface StoredLead {
   brandSnapshot?: BrandSnapshot;
   /** Ficha do cliente (fatos + marca) usada na primeira versão do site. */
   clientProfile?: ClientProfile;
+  /** Nicho que a busca usou (ex.: "Psicologia") — diferente do rótulo do Google. */
+  searchCategory?: string;
+  /** O número existe no WhatsApp? 'unknown' até validar pelo gateway. */
+  whatsappStatus?: "yes" | "no" | "unknown";
+  /** Quando o número foi checado no WhatsApp. */
+  whatsappCheckedAt?: string;
   /** Prioridade comercial calculada a partir dos sinais de dor. */
   priorityScore?: number;
   priorityLevel?: "alta" | "media" | "baixa";

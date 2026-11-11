@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { KeyRound, MessageCircle, Server, RefreshCw, ExternalLink, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { SerpApiKeyManager } from './SerpApiKeyManager';
 import { WhatsappSettingsCard } from './WhatsappSettingsCard';
+import { LeadQualityCard } from './LeadQualityCard';
 import { McpStatusModal } from './McpStatusModal';
 
 /**
@@ -170,6 +171,8 @@ export const ChannelsPage: React.FC<{ onOpenAutomation?: () => void }> = ({ onOp
           </button>
         )}
       </section>
+
+      <LeadQualityCard />
 
       {/* WhatsApp */}
       <section className="space-y-2">
