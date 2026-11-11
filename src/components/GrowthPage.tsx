@@ -154,9 +154,9 @@ export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> =
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-indigo-400" /> Crescimento
-          </h2>
+          </h1>
           <p className="text-sm text-slate-400 mt-1">
             Onde está o dinheiro: leads com mais dor, funil dos últimos 30 dias e o que a cadência
             enviaria hoje.

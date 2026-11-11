@@ -24,7 +24,7 @@ import { scheduler, ensureDefaultFollowUpSchedule } from "./server/scheduler/sch
 import { startTypeformPolling } from "./server/typeform/polling";
 import { getSchedulerConfig, getSerpApiConfig, getProspectingProvider } from "./server/config";
 import { analyzeLead, searchBusinesses } from "./server/services/prospectingService";
-import { getSerpApiUsage, listSerpApiKeys, addSerpApiKey, deleteSerpApiKey, activateSerpApiKey, updateSerpApiKey, getLastSerpApiRaw } from "./server/services/serpApi";
+import { getSerpApiUsage, listSerpApiKeys, addSerpApiKey, deleteSerpApiKey, activateSerpApiKey, updateSerpApiKey, getLastSerpApiRaw, selectKeyForSearch } from "./server/services/serpApi";
 import { rateLimit } from "./server/middleware/rateLimit";
 
 const app = express();
@@ -149,8 +149,17 @@ app.get("/api/prospecting/providers", (_req, res) => {
 // SerpAPI keys — gerenciar múltiplas chaves (free 250/mês cada)
 app.get("/api/serpapi/keys", (_req, res) => {
   try {
+    // Qual chave a próxima busca vai usar: a UI mostra isso em vez de deixar o
+    // usuário adivinhar qual das chaves está realmente em uso.
+    const next = (() => {
+      try {
+        return selectKeyForSearch();
+      } catch {
+        return null;
+      }
+    })();
     const keys = listSerpApiKeys();
-    res.json({ success: true, keys });
+    res.json({ success: true, keys, nextKeyId: next?.id ?? null });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err?.message || "Falha ao listar chaves." });
   }

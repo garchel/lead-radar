@@ -1,5 +1,9 @@
 # Auditoria de UI/UX — o que está ruim e como melhorar
 
+> **Status: Onda 1 aplicada + parte da Onda 2.** Feito: contraste (99 pontos em telas claras + 11 no Crescimento), piso de fonte 10→11px (88 pontos), alvos de 32px nos controles citados, `sticky thead` (Cidades e Banco), 13 toggles com `role="switch"`/`aria-label`, cópias mortas corrigidas, contagem sem duplicar, **Fila de Cidades com paginação de 50 + seleção e ação em lote** (endpoint `PATCH /api/cities`, página de 26.680px → 3.033px), **filtros do Banco em 2 linhas**, **Follow-ups sem títulos duplicados** e **menu "⋯" no card do CRM**.
+>
+> Pendente: acordeões por tema na Automação, distribuições do Banco em accordion, indicar "chave em uso" nos Canais, `h1` por página e o padrão único de loading/erro/vazio (Onda 3).
+
 **Como auditei:** medição no DOM real (1440×950, app rodando) + leitura do código de cada componente. Sem "achismo": cada achado abaixo tem número ou trecho de código. Contrastes calculados com a fórmula WCAG (AA = 4,5:1 para texto normal).
 
 ## Resumo executivo (o que mais dói)

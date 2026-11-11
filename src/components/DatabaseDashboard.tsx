@@ -204,6 +204,7 @@ export const DatabaseDashboard: React.FC<DatabaseDashboardProps> = ({ onOpenPipe
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
   // filtros
   const [q, setQ] = useState('');
@@ -559,7 +560,22 @@ export const DatabaseDashboard: React.FC<DatabaseDashboardProps> = ({ onOpenPipe
         </div>
       </div>
 
-      {stats && <Distributions stats={stats} />}
+      {stats && (
+        <section className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowAnalysis((v) => !v)}
+            aria-expanded={showAnalysis}
+            className="w-full flex items-center gap-2 px-5 py-4 text-left hover:bg-slate-50"
+          >
+            <Layers className="w-4 h-4 text-indigo-600" />
+            <span className="flex-1 font-bold text-slate-900 text-sm">Análise do banco (pipeline, presença, score, cidades)</span>
+            <span className="text-[11px] font-semibold text-slate-500">{showAnalysis ? 'recolher' : 'ver análise'}</span>
+            <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showAnalysis ? '' : '-rotate-90'}`} />
+          </button>
+          {showAnalysis && <div className="px-4 pb-4"><Distributions stats={stats} /></div>}
+        </section>
+      )}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Database, RefreshCw, MessageCircle, Bot, FileText, HardDrive, AlertTriangle, Save, Radar, Play, Zap } from 'lucide-react';
+import { Settings, Database, RefreshCw, MessageCircle, Bot, FileText, HardDrive, AlertTriangle, Save, Radar, Play, Zap, ChevronDown } from 'lucide-react';
 
 interface HumanizeSettings {
   enabled: boolean;
@@ -99,6 +99,47 @@ const NumField: React.FC<{
   </label>
 );
 
+const AUTOMATION_SECTIONS_KEY = 'leadradar.automation.sections.collapsed.v1';
+
+/** Na primeira visita os blocos de infra vêm recolhidos: a página tinha 2.485px. */
+const DEFAULT_COLLAPSED_SECTIONS = ['backup', 'typeform', 'mcp'];
+
+function readCollapsedSections(): string[] {
+  try {
+    const raw = localStorage.getItem(AUTOMATION_SECTIONS_KEY);
+    if (!raw) return DEFAULT_COLLAPSED_SECTIONS;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : DEFAULT_COLLAPSED_SECTIONS;
+  } catch {
+    return DEFAULT_COLLAPSED_SECTIONS;
+  }
+}
+
+/** Bloco de configuração em accordeon: a página tinha 2.485px de rolagem. */
+const SettingsCard: React.FC<{
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}> = ({ id, title, icon, open, onToggle, children }) => (
+  <section id={`setting-${id}`} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className="w-full flex items-center gap-2 px-5 py-4 text-left hover:bg-slate-50 cursor-pointer"
+    >
+      {icon}
+      <span className="flex-1 font-bold text-slate-900 text-sm">{title}</span>
+      <span className="text-[11px] font-semibold text-slate-500">{open ? 'recolher' : 'expandir'}</span>
+      <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${open ? '' : '-rotate-90'}`} />
+    </button>
+    {open && <div className="px-5 pb-5 space-y-4">{children}</div>}
+  </section>
+);
+
 const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void; danger?: boolean; label: string }> = ({ checked, onChange, danger, label }) => (
   <button
     type="button"
@@ -117,8 +158,21 @@ export const AutomationSettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<AutomationSettings | null>(null);
   const [humanizeStatus, setHumanizeStatus] = useState<HumanizeStatus | null>(null);
   const [auto, setAuto] = useState<AutopilotStatus | null>(null);
+  const [collapsedSections, setCollapsedSections] = useState<string[]>(() => readCollapsedSections());
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  const toggleSection = (id: string) => {
+    const next = collapsedSections.includes(id)
+      ? collapsedSections.filter((item) => item !== id)
+      : [...collapsedSections, id];
+    setCollapsedSections(next);
+    try {
+      localStorage.setItem(AUTOMATION_SECTIONS_KEY, JSON.stringify(next));
+    } catch {
+      /* modo privado */
+    }
+  };
 
   const loadStatus = async () => {
     try {
@@ -229,11 +283,15 @@ export const AutomationSettingsPage: React.FC = () => {
         {msg && <span className="text-xs font-bold text-emerald-600">{msg}</span>}
       </div>
 
-      {/* Autopilot de coleta */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+      <SettingsCard
+        id="coleta"
+        title="Coleta de leads (SerpAPI)"
+        icon={<Radar className="w-4 h-4 text-orange-600" />}
+        open={!collapsedSections.includes('coleta')}
+        onToggle={() => toggleSection('coleta')}
+      >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-bold text-slate-900 flex items-center gap-2"><Radar className="w-4 h-4 text-orange-600" /> Autopilot de coleta (SerpAPI)</h2>
             <p className="text-xs text-slate-500 mt-1">
               Divide a cota mensal pelos dias restantes do ciclo e faz as buscas espaçadas dentro da janela. Depois prospecta os melhores leads encontrados.
             </p>
@@ -327,19 +385,15 @@ export const AutomationSettingsPage: React.FC = () => {
             </div>
           </>
         )}
-      </div>
+      </SettingsCard>
 
-      {/* O agendador mora na página que ele controla */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-        <div className="text-xs text-slate-600">
-          <strong className="text-slate-800">Agendador global</strong> e agendamentos individuais agora ficam em{' '}
-          <strong>Operação → Fila &amp; Agendamentos</strong> (é lá que se vê o que ele liga e desliga).
-        </div>
-      </div>
-
-      {/* Backup */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-        <h2 className="font-bold text-slate-900 flex items-center gap-2"><HardDrive className="w-4 h-4 text-sky-600" /> Backup</h2>
+      <SettingsCard
+        id="backup"
+        title="Backup do banco"
+        icon={<HardDrive className="w-4 h-4 text-sky-600" />}
+        open={!collapsedSections.includes('backup')}
+        onToggle={() => toggleSection('backup')}
+      >
         <div className="flex items-center justify-between py-2 border-b border-slate-100">
           <div>
             <div className="text-sm font-semibold text-slate-800">Backup automático</div>
@@ -352,11 +406,15 @@ export const AutomationSettingsPage: React.FC = () => {
           <input type="number" min={1} max={168} value={settings.backupIntervalHours} onChange={(e) => void update({ backupIntervalHours: Math.max(1, Math.floor(Number(e.target.value) || 24)) })} className="w-20 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
           <span className="text-xs text-slate-500">Requer reinício</span>
         </div>
-      </div>
+      </SettingsCard>
 
-      {/* Typeform */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-        <h2 className="font-bold text-slate-900 flex items-center gap-2"><FileText className="w-4 h-4 text-violet-600" /> Typeform (briefings)</h2>
+      <SettingsCard
+        id="typeform"
+        title="Typeform (briefings)"
+        icon={<FileText className="w-4 h-4 text-violet-600" />}
+        open={!collapsedSections.includes('typeform')}
+        onToggle={() => toggleSection('typeform')}
+      >
         <div className="flex items-center justify-between py-2 border-b border-slate-100">
           <div>
             <div className="text-sm font-semibold text-slate-800">Polling automático</div>
@@ -368,11 +426,15 @@ export const AutomationSettingsPage: React.FC = () => {
           <label className="text-xs font-bold text-slate-600">Intervalo (min)</label>
           <input type="number" min={1} max={60} value={settings.typeformIntervalMin} onChange={(e) => void update({ typeformIntervalMin: Math.max(1, Math.floor(Number(e.target.value) || 5)) })} className="w-20 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
         </div>
-      </div>
+      </SettingsCard>
 
-      {/* WhatsApp */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-        <h2 className="font-bold text-slate-900 flex items-center gap-2"><MessageCircle className="w-4 h-4 text-emerald-600" /> WhatsApp (webhook)</h2>
+      <SettingsCard
+        id="whatsapp"
+        title="WhatsApp (webhook e intenção)"
+        icon={<MessageCircle className="w-4 h-4 text-emerald-600" />}
+        open={!collapsedSections.includes('whatsapp')}
+        onToggle={() => toggleSection('whatsapp')}
+      >
         <div className="flex items-center justify-between py-2 border-b border-slate-100">
           <div>
             <div className="text-sm font-semibold text-slate-800">Classificar intenção automaticamente</div>
@@ -404,11 +466,15 @@ export const AutomationSettingsPage: React.FC = () => {
           </div>
           <Toggle checked={settings.intentAi} onChange={(v) => void update({ intentAi: v })} label="Classificação de intenção com IA" />
         </div>
-      </div>
+      </SettingsCard>
 
-      {/* Autopilot */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-        <h2 className="font-bold text-slate-900 flex items-center gap-2"><Bot className="w-4 h-4 text-amber-600" /> Autopilot (MCP)</h2>
+      <SettingsCard
+        id="mcp"
+        title="Autopilot (MCP)"
+        icon={<Bot className="w-4 h-4 text-amber-600" />}
+        open={!collapsedSections.includes('mcp')}
+        onToggle={() => toggleSection('mcp')}
+      >
         <div className="flex items-center justify-between py-2 border-b border-slate-100">
           <div>
             <div className="text-sm font-semibold text-slate-800">Enriquecer leads automaticamente</div>
@@ -433,11 +499,15 @@ export const AutomationSettingsPage: React.FC = () => {
           </div>
           <Toggle checked={settings.autopilotSendPitches} onChange={(v) => void update({ autopilotSendPitches: v })} danger label="Enviar pitches no autopilot" />
         </div>
-      </div>
+      </SettingsCard>
 
-      {/* Cadência de outbound */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-        <h2 className="font-bold text-slate-900 flex items-center gap-2"><RefreshCw className="w-4 h-4 text-indigo-600" /> Cadência de outbound (D+3 / D+7)</h2>
+      <SettingsCard
+        id="cadencia"
+        title="Cadência de outbound (D+3 / D+7)"
+        icon={<RefreshCw className="w-4 h-4 text-indigo-600" />}
+        open={!collapsedSections.includes('cadencia')}
+        onToggle={() => toggleSection('cadencia')}
+      >
         <div className="flex items-center justify-between py-2 border-b border-slate-100">
           <div>
             <div className="text-sm font-semibold text-slate-800">Permitir recontato automático</div>
@@ -450,11 +520,15 @@ export const AutomationSettingsPage: React.FC = () => {
           <input type="number" min={0} max={200} value={settings.cadenceDailyCap} onChange={(e) => void update({ cadenceDailyCap: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} className="w-20 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
           <span className="text-xs text-slate-500">0 bloqueia envios reais (simulação continua liberada)</span>
         </div>
-      </div>
+      </SettingsCard>
 
-      {/* Humanização do WhatsApp */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-        <h2 className="font-bold text-slate-900 flex items-center gap-2"><MessageCircle className="w-4 h-4 text-emerald-600" /> Humanização do WhatsApp (anti-ban)</h2>
+      <SettingsCard
+        id="humanize"
+        title="Humanização do WhatsApp (anti-ban)"
+        icon={<MessageCircle className="w-4 h-4 text-emerald-600" />}
+        open={!collapsedSections.includes('humanize')}
+        onToggle={() => toggleSection('humanize')}
+      >
         <div className="flex items-center justify-between py-2 border-b border-slate-100">
           <div>
             <div className="text-sm font-semibold text-slate-800">Simular comportamento humano</div>
@@ -540,7 +614,7 @@ export const AutomationSettingsPage: React.FC = () => {
             {humanizeStatus.nextSendAt && <span>Próximo envio: <b>{new Date(humanizeStatus.nextSendAt).toLocaleTimeString('pt-BR')}</b></span>}
           </div>
         )}
-      </div>
+      </SettingsCard>
 
       <div className="flex items-center gap-2 text-xs text-slate-500">
         <Database className="w-3 h-3" /> Configurações salvas em <code className="bg-white px-1 rounded border">app_settings</code> e aplicadas em tempo real quando possível.

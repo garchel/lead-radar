@@ -28,6 +28,10 @@ interface SerpApiKeyRow {
   daysLeftInCycle: number;
 }
 
+interface NextKeyInfo {
+  nextKeyId: string | null;
+}
+
 const fmtDate = (iso?: string | null) => {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -41,6 +45,7 @@ export const ChannelsPage: React.FC<{ onOpenAutomation?: () => void }> = ({ onOp
   const [showKeyManager, setShowKeyManager] = useState(false);
   const [showMcp, setShowMcp] = useState(false);
   const [mcpOnline, setMcpOnline] = useState<boolean | null>(null);
+  const [nextKeyId, setNextKeyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,6 +53,7 @@ export const ChannelsPage: React.FC<{ onOpenAutomation?: () => void }> = ({ onOp
     try {
       const res = await fetch('/api/serpapi/keys');
       const data = await res.json();
+      setNextKeyId(typeof data?.nextKeyId === 'string' ? data.nextKeyId : null);
       if (Array.isArray(data?.keys)) setKeys(data.keys);
       else if (Array.isArray(data)) setKeys(data);
       else if (!data?.success) throw new Error(data?.error || 'Falha ao listar as chaves SerpAPI.');
@@ -137,6 +143,12 @@ export const ChannelsPage: React.FC<{ onOpenAutomation?: () => void }> = ({ onOp
                   <span className="font-mono text-slate-600">{key.maskedKey}</span>
                   {key.label && <span className="text-slate-500 truncate">· {key.label}</span>}
                   {key.isActive && <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px]">ATIVA</span>}
+                  {nextKeyId === key.id && (
+                    <span title="A rotação escolhe esta chave na próxima busca" className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-[11px]">EM USO</span>
+                  )}
+                  {key.dailyRemaining <= 0 && (
+                    <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-bold text-[11px]">cota do dia esgotada</span>
+                  )}
                 </div>
                 <div className="text-slate-600 tabular-nums">
                   hoje <strong>{key.usedToday}/{key.dailyBudget}</strong>
