@@ -21,7 +21,7 @@ import { CitiesQueueDashboard } from './components/CitiesQueueDashboard';
 import { CategoriesDashboard } from './components/CategoriesDashboard';
 import { AutomationSettingsPage } from './components/AutomationSettingsPage';
 import { DatabaseDashboard } from './components/DatabaseDashboard';
-import { NextActionsBar } from './components/NextActionsBar';
+import { OverviewDashboard } from './components/OverviewDashboard';
 
 const MapView = lazy(() => import('./components/MapView').then((m) => ({ default: m.MapView })));
 const GrowthPage = lazy(() => import('./components/GrowthPage').then((m) => ({ default: m.GrowthPage })));
@@ -59,7 +59,7 @@ interface DuplicateCandidate {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<AppTab>('search');
+  const [activeTab, setActiveTab] = useState<AppTab>('overview');
   const [focusProjectId, setFocusProjectId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   // Filtro de VISUALIZAÇÃO por presença digital (não afeta a busca — a busca sempre traz tudo)
@@ -500,10 +500,8 @@ export default function App() {
 
       {/* Main Container Body */}
       <main className="flex-1">
-        {!['automation', 'channels', 'database', 'cities', 'categories', 'guide', 'monitoring'].includes(activeTab) && (
-          <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4">
-            <NextActionsBar onNavigate={setActiveTab} onOpenProject={setFocusProjectId} />
-          </div>
+        {activeTab === 'overview' && (
+          <OverviewDashboard onNavigate={setActiveTab} onOpenProject={setFocusProjectId} />
         )}
         {activeTab === 'search' && (
           <div className="space-y-6">

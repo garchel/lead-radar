@@ -3,6 +3,7 @@ import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Radar, Activit
 
 /** Abas do app — a navegação segue a etapa do funil, não a idade da feature. */
 export type AppTab =
+  | 'overview'
   | 'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents'
   | 'companies' | 'cities' | 'categories' | 'automation' | 'database'
   | 'followups' | 'channels';
@@ -117,6 +118,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Visão geral: fica fora dos grupos porque olha todas as etapas */}
+      <div className="px-3 pt-3">
+        <button
+          id="nav-overview-btn"
+          onClick={() => setActiveTab('overview')}
+          className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+            activeTab === 'overview'
+              ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
+              : 'text-slate-300 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Activity className="w-4 h-4 shrink-0" />
+          <span className="flex-1 text-left">Visão geral</span>
+        </button>
       </div>
 
       {/* Grupos (roláveis, sem barra visível) */}
