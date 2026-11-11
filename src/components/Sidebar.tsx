@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings, Bot, TrendingUp, Users, KeyRound, ClipboardList, ChevronDown } from 'lucide-react';
+import { Target, Search, FolderKanban, BookOpen, Cpu, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings, Bot, TrendingUp, Users, KeyRound, ClipboardList, ChevronDown } from 'lucide-react';
 import { PwaInstallButton } from './PwaStatus';
 
 /** Abas do app — a navegação segue a etapa do funil, não a idade da feature. */
@@ -41,7 +41,6 @@ interface SidebarProps {
   setActiveTab: (tab: AppTab) => void;
   savedCount: number;
   projectCount: number;
-  onOpenAddModal: () => void;
   onOpenMcpModal: () => void;
   hasGeminiKey: boolean;
   hasMapsKey: boolean;
@@ -52,7 +51,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setActiveTab,
   savedCount,
   projectCount,
-  onOpenAddModal,
   onOpenMcpModal,
   hasGeminiKey,
   hasMapsKey
@@ -290,14 +288,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           LeadFinder v{__APP_VERSION__}
         </p>
 
-        <button
-          id="add-manual-lead-btn"
-          onClick={onOpenAddModal}
-          className="w-full flex items-center space-x-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-3 py-2.5 rounded-lg transition-all shadow-sm shadow-indigo-600/30 active:scale-95"
-        >
-          <PlusCircle className="w-4 h-4 shrink-0" />
-          <span className="flex-1 text-left">Adicionar Lead</span>
-        </button>
       </div>
     </aside>
   );

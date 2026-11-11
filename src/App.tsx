@@ -467,7 +467,6 @@ export default function App() {
         setActiveTab={setActiveTab}
         savedCount={savedLeads.length}
         projectCount={projectCount}
-        onOpenAddModal={() => setIsAddModalOpen(true)}
         onOpenMcpModal={() => setIsMcpModalOpen(true)}
         hasGeminiKey={hasGeminiKey}
         hasMapsKey={hasMapsKey}
@@ -696,7 +695,7 @@ export default function App() {
         {activeTab === 'categories' && <CategoriesDashboard />}
 
         {activeTab === 'automation' && <AutomationSettingsPage />}
-        {activeTab === 'database' && <DatabaseDashboard onOpenPipeline={() => setActiveTab('crm')} />}
+        {activeTab === 'database' && <DatabaseDashboard onOpenPipeline={() => setActiveTab('crm')} onAddLead={() => setIsAddModalOpen(true)} />}
         {activeTab === 'followups' && <FollowUpsPage />}
         {activeTab === 'channels' && <ChannelsPage onOpenAutomation={() => setActiveTab('automation')} />}
 

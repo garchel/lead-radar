@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Database, Search, RefreshCw, Phone, PhoneOff, Globe, Star, ChevronDown, ChevronRight,
-  Filter, X, ArrowUpDown, MapPin, Layers, Target, TrendingUp, AlertTriangle,
+  Filter, X, ArrowUpDown, MapPin, Layers, Target, TrendingUp, AlertTriangle, UserPlus,
 } from 'lucide-react';
 
 /**
@@ -192,9 +192,11 @@ const Distributions: React.FC<{ stats: Stats }> = ({ stats }) => {
 interface DatabaseDashboardProps {
   /** Leva para o funil (Dashboard de Leads) — inventário ≠ ação. */
   onOpenPipeline?: () => void;
+  /** Cadastro manual: mora aqui, onde os leads vivem (antes ficava na sidebar). */
+  onAddLead?: () => void;
 }
 
-export const DatabaseDashboard: React.FC<DatabaseDashboardProps> = ({ onOpenPipeline }) => {
+export const DatabaseDashboard: React.FC<DatabaseDashboardProps> = ({ onOpenPipeline, onAddLead }) => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [meta, setMeta] = useState<FiltersMeta>({ cities: [], categories: [] });
   const [leads, setLeads] = useState<LeadRow[]>([]);
@@ -305,11 +307,20 @@ export const DatabaseDashboard: React.FC<DatabaseDashboardProps> = ({ onOpenPipe
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {onAddLead && (
+            <button
+              type="button"
+              onClick={onAddLead}
+              className="inline-flex items-center gap-1.5 px-3 py-2 min-h-8 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+            >
+              <UserPlus className="w-3.5 h-3.5" /> Adicionar lead
+            </button>
+          )}
           {onOpenPipeline && (
             <button
               type="button"
               onClick={onOpenPipeline}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700"
+              className="inline-flex items-center gap-1.5 px-3 py-2 min-h-8 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700"
             >
               Abrir o funil →
             </button>
