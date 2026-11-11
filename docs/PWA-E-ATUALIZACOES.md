@@ -50,6 +50,33 @@ Alternativa sem `schtasks`: `Win+R` → `shell:startup` → coloque nessa pasta 
 > segundo servidor (o `.cmd` só abre o navegador). Arquivos `.cmd`/`.vbs` precisam de
 > CRLF — está garantido no `.gitattributes`.
 
+### Ícone que liga o app (o jeito recomendado no PC)
+
+Em vez do atalho que o Chrome cria (que só abre a URL e falha com o servidor parado),
+use o atalho do próprio projeto: **`scripts/abrir-leadfinder.vbs`**. Ele faz, nesta ordem:
+
+1. porta 3000 livre? sobe o servidor escondido (gera o build antes, se faltar);
+2. espera `/api/health` responder (até 45 s; se não responder, avisa numa janela);
+3. abre a janela do app — o **app instalado** se existir (procura o id em
+   `Chrome\User Data\<perfil>\Web Applications`), senão `chrome --app=…`
+   (janela sem abas nem barra de endereço).
+
+Para criar o atalho na área de trabalho e no menu Iniciar, com o ícone do app:
+
+```cmd
+cscript //nologo scripts\criar-atalhos.vbs
+```
+
+Resultado medido nesta máquina: `LeadFinder.lnk` na área de trabalho
+(`C:\Users\paulo\OneDrive\Desktop` — o Windows redireciona para o OneDrive) e no
+menu Iniciar; alvo `wscript.exe`, argumentos com o caminho do `.vbs`, ícone
+`public\icons\leadfinder.ico`. Clique a frio (servidor parado) → servidor sobe,
+`/api/health` 200 e processo `chrome.exe --app=http://localhost:3000` aberto.
+
+> Fechar a janela **não** derruba o servidor (ele fica em segundo plano, pronto para o
+> próximo clique). Para encerrar de vez: Gerenciador de Tarefas → `node.exe`, ou
+> `taskkill /IM node.exe /F` (mata outros node também, cuidado).
+
 ### Três modos, não confunda
 
 | Comando | Para quê | Tem service worker? | Precisa ficar aberto? |
