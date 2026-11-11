@@ -10,6 +10,20 @@ export type AppTab =
 /** Grupos recolhidos ficam salvos no navegador. */
 const GROUPS_STORAGE_KEY = 'leadradar.sidebar.groups.collapsed.v1';
 
+/**
+ * Um tom por seção: o cabeçalho inteiro (barra, ícone, texto e filete) muda de
+ * cor, então dá para ver de relance onde começa cada bloco da navegação.
+ * Classes literais de propósito — o Tailwind só gera o que encontra no código.
+ */
+const GROUP_TONES: Record<string, { label: string; icon: string; bar: string; divider: string }> = {
+  capturar: { label: 'text-sky-300', icon: 'text-sky-400', bar: 'bg-sky-400', divider: 'border-sky-500/20' },
+  dados: { label: 'text-emerald-300', icon: 'text-emerald-400', bar: 'bg-emerald-400', divider: 'border-emerald-500/20' },
+  converter: { label: 'text-indigo-300', icon: 'text-indigo-400', bar: 'bg-indigo-400', divider: 'border-indigo-500/20' },
+  entregar: { label: 'text-violet-300', icon: 'text-violet-400', bar: 'bg-violet-400', divider: 'border-violet-500/20' },
+  inteligencia: { label: 'text-amber-300', icon: 'text-amber-400', bar: 'bg-amber-400', divider: 'border-amber-500/20' },
+  operacao: { label: 'text-rose-300', icon: 'text-rose-400', bar: 'bg-rose-400', divider: 'border-rose-500/20' },
+};
+
 function readCollapsedGroups(): string[] {
   try {
     const raw = localStorage.getItem(GROUPS_STORAGE_KEY);
@@ -65,15 +79,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   /** Grupo da navegação como acordeão — a lateral não tem barra de rolagem. */
   const group = (id: string, icon: React.ReactNode, label: string, children: React.ReactNode) => {
     const open = !collapsedGroups.includes(id);
+    const tone = GROUP_TONES[id] ?? GROUP_TONES.capturar;
     return (
-      <div className="px-3 pt-3">
+      <div className={`px-3 pt-3 border-t ${tone.divider}`}>
         <button
           type="button"
           onClick={() => toggleGroup(id)}
           aria-expanded={open}
-          className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] uppercase tracking-widest font-bold text-slate-500 hover:text-slate-300 hover:bg-slate-800/60 transition-colors"
+          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] uppercase tracking-widest font-bold ${tone.label} hover:bg-slate-800/60 transition-colors`}
         >
-          {icon}
+          <span className={`w-0.5 h-3.5 rounded-full shrink-0 ${tone.bar}`} aria-hidden="true" />
+          <span className={`shrink-0 ${tone.icon}`}>{icon}</span>
           <span className="flex-1 text-left">{label}</span>
           <ChevronDown className={`w-3 h-3 transition-transform ${open ? '' : '-rotate-90'}`} />
         </button>
@@ -104,7 +120,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Grupos (roláveis, sem barra visível) */}
-      <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+      <div className="[&>div:first-child]:border-t-0 flex-1 min-h-0 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
 
       {/* 1 — Capturar: busca → fila → categorias → empresas */}
       {group(

@@ -18,6 +18,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { BusinessLead, InteractionOutcome } from '../types';
 import { FolderKanban, Download, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { computePipelineValue } from '../utils/pipelineValue';
+import { StageOverview } from './StageOverview';
 
 interface CrmPipelineProps {
   savedLeads: BusinessLead[];
@@ -27,13 +28,13 @@ interface CrmPipelineProps {
   onRemoveLead: (id: string) => void;
 }
 
-const PIPELINE_COLUMNS: { id: BusinessLead['pipelineStatus']; title: string; color: string }[] = [
-  { id: 'prospect', title: 'Novos Prospects', color: 'border-slate-200 bg-slate-100 text-slate-700' },
-  { id: 'contacted', title: 'Contato Feito', color: 'border-blue-200 bg-blue-50 text-blue-700' },
-  { id: 'negotiating', title: 'Em Negociação', color: 'border-amber-200 bg-amber-50 text-amber-800' },
-  { id: 'em_desenvolvimento', title: 'Em Desenvolvimento', color: 'border-violet-200 bg-violet-50 text-violet-700' },
-  { id: 'closed', title: 'Finalizado', color: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
-  { id: 'declined', title: 'Perdido', color: 'border-red-200 bg-red-50 text-red-700' },
+const PIPELINE_COLUMNS: { id: BusinessLead['pipelineStatus']; title: string; color: string; bar: string }[] = [
+  { id: 'prospect', title: 'Novos Prospects', color: 'border-slate-200 bg-slate-100 text-slate-700', bar: 'bg-slate-400' },
+  { id: 'contacted', title: 'Contato Feito', color: 'border-blue-200 bg-blue-50 text-blue-700', bar: 'bg-blue-500' },
+  { id: 'negotiating', title: 'Em Negociação', color: 'border-amber-200 bg-amber-50 text-amber-800', bar: 'bg-amber-500' },
+  { id: 'em_desenvolvimento', title: 'Em Desenvolvimento', color: 'border-violet-200 bg-violet-50 text-violet-700', bar: 'bg-violet-500' },
+  { id: 'closed', title: 'Finalizado', color: 'border-emerald-200 bg-emerald-50 text-emerald-800', bar: 'bg-emerald-500' },
+  { id: 'declined', title: 'Perdido', color: 'border-red-200 bg-red-50 text-red-700', bar: 'bg-red-500' },
 ];
 
 interface SortableLeadCardProps {
@@ -67,6 +68,7 @@ const PipelineColumn: React.FC<PipelineColumnProps> = ({ id, title, color, count
   return (
     <section
       ref={setNodeRef}
+      id={`stage-${id}`}
       aria-label={`Etapa ${title}`}
       className={`w-full bg-slate-50 border rounded-2xl transition-colors ${
         isOver ? 'border-indigo-400 ring-2 ring-indigo-100' : 'border-slate-200'
@@ -435,6 +437,24 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
           onDragEnd={handleDragEnd}
         >
           <div className="space-y-3">
+            <StageOverview
+              unit="leads"
+              items={PIPELINE_COLUMNS.map((col) => ({
+                id: col.id,
+                label: col.title,
+                color: col.color,
+                bar: col.bar,
+                count: savedLeads.filter((l) => l.pipelineStatus === col.id).length,
+              }))}
+              onSelect={(id) => {
+                if (collapsedStages.includes(id)) toggleStage(id);
+                requestAnimationFrame(() =>
+                  document.getElementById(`stage-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                );
+              }}
+              emptyHint="Nenhum lead no pipeline ainda — capture pela Busca de Região."
+            />
+
             <div className="flex items-center justify-end gap-2">
               <div className="flex items-center gap-2 shrink-0">
                 <button

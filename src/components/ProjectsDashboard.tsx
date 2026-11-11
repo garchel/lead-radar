@@ -18,6 +18,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Rocket, Plus, CalendarClock, Flag, CheckCircle2, Link2, Copy, Check, Code2, Bot, BadgeCheck, ChevronDown, ChevronRight, PanelLeftOpen, PanelLeftClose } from 'lucide-react';
 import { BusinessLead, Project, ProjectStage } from '../types';
 import { ProjectModal } from './ProjectModal';
+import { StageOverview } from './StageOverview';
 
 const STAGES_STORAGE_KEY = 'leadradar.projects.stages.collapsed.v1';
 
@@ -31,14 +32,14 @@ function readCollapsedStages(): string[] {
   }
 }
 
-const STAGES: { id: ProjectStage; title: string; color: string }[] = [
-  { id: 'briefing', title: 'Briefing', color: 'border-slate-200 bg-slate-100 text-slate-700' },
-  { id: 'copywriting', title: 'Copywriting', color: 'border-sky-200 bg-sky-50 text-sky-700' },
-  { id: 'design', title: 'Design', color: 'border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700' },
-  { id: 'wireframe', title: 'Wireframe', color: 'border-orange-200 bg-orange-50 text-orange-700' },
-  { id: 'desenvolvimento', title: 'Desenvolvimento', color: 'border-indigo-200 bg-indigo-50 text-indigo-700' },
-  { id: 'revisao', title: 'Revisão', color: 'border-amber-200 bg-amber-50 text-amber-800' },
-  { id: 'deploy', title: 'Deploy', color: 'border-teal-200 bg-teal-50 text-teal-700' },
+const STAGES: { id: ProjectStage; title: string; color: string; bar: string }[] = [
+  { id: 'briefing', title: 'Briefing', color: 'border-slate-200 bg-slate-100 text-slate-700', bar: 'bg-slate-400' },
+  { id: 'copywriting', title: 'Copywriting', color: 'border-sky-200 bg-sky-50 text-sky-700', bar: 'bg-sky-500' },
+  { id: 'design', title: 'Design', color: 'border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700', bar: 'bg-fuchsia-500' },
+  { id: 'wireframe', title: 'Wireframe', color: 'border-orange-200 bg-orange-50 text-orange-700', bar: 'bg-orange-500' },
+  { id: 'desenvolvimento', title: 'Desenvolvimento', color: 'border-indigo-200 bg-indigo-50 text-indigo-700', bar: 'bg-indigo-500' },
+  { id: 'revisao', title: 'Revisão', color: 'border-amber-200 bg-amber-50 text-amber-800', bar: 'bg-amber-500' },
+  { id: 'deploy', title: 'Deploy', color: 'border-teal-200 bg-teal-50 text-teal-700', bar: 'bg-teal-500' },
 ];
 
 const CONCLUDED_COLUMN = '__concluido__';
@@ -129,6 +130,7 @@ const ProjectColumn: React.FC<ProjectColumnProps> = ({ id, title, color, count, 
   return (
     <section
       ref={setNodeRef}
+      id={`stage-${id}`}
       aria-label={`Etapa ${title}`}
       className={`w-full bg-slate-50 border rounded-2xl transition-colors ${
         isOver ? 'border-violet-400 ring-2 ring-violet-100' : 'border-slate-200'
@@ -473,8 +475,8 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({ focusProje
   const inProgress = visibleProjects.filter((p) => p.status === 'em_andamento').length;
 
   const columns = [
-    ...STAGES.map((s) => ({ id: s.id, title: s.title, color: s.color, projects: visibleProjects.filter((p) => p.status !== 'concluido' && p.stage === s.id) })),
-    { id: CONCLUDED_COLUMN, title: CONCLUDED_META.title, color: CONCLUDED_META.color, projects: visibleProjects.filter((p) => p.status === 'concluido') },
+    ...STAGES.map((s) => ({ id: s.id, title: s.title, color: s.color, bar: s.bar, projects: visibleProjects.filter((p) => p.status !== 'concluido' && p.stage === s.id) })),
+    { id: CONCLUDED_COLUMN, title: CONCLUDED_META.title, color: CONCLUDED_META.color, bar: 'bg-emerald-500', projects: visibleProjects.filter((p) => p.status === 'concluido') },
   ];
 
   return (
@@ -534,6 +536,23 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({ focusProje
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDrop}>
           <div className="space-y-3">
+            <StageOverview
+              unit="projetos"
+              items={columns.map((col) => ({
+                id: col.id,
+                label: col.title,
+                color: col.color,
+                bar: col.bar,
+                count: col.projects.length,
+              }))}
+              onSelect={(id) => {
+                if (collapsedStages.includes(id)) persistCollapsed(collapsedStages.filter((item) => item !== id));
+                requestAnimationFrame(() =>
+                  document.getElementById(`stage-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                );
+              }}
+            />
+
             <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
