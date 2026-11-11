@@ -24,6 +24,7 @@ import { scheduler, ensureDefaultFollowUpSchedule } from "./server/scheduler/sch
 import { startTypeformPolling } from "./server/typeform/polling";
 import { getSchedulerConfig, getSerpApiConfig, getProspectingProvider } from "./server/config";
 import { analyzeLead, searchBusinesses } from "./server/services/prospectingService";
+import { getDailyOverview } from "./server/services/overviewService";
 import { getSerpApiUsage, listSerpApiKeys, addSerpApiKey, deleteSerpApiKey, activateSerpApiKey, updateSerpApiKey, getLastSerpApiRaw, selectKeyForSearch } from "./server/services/serpApi";
 import { rateLimit } from "./server/middleware/rateLimit";
 
@@ -147,6 +148,15 @@ app.get("/api/prospecting/providers", (_req, res) => {
 });
 
 // SerpAPI keys — gerenciar múltiplas chaves (free 250/mês cada)
+/** Números do dia corrente para a Visão geral em modo "Hoje". */
+app.get("/api/overview/daily", (_req, res) => {
+  try {
+    res.json({ success: true, daily: getDailyOverview() });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || "Falha ao calcular o resumo do dia." });
+  }
+});
+
 app.get("/api/serpapi/keys", (_req, res) => {
   try {
     // Qual chave a próxima busca vai usar: a UI mostra isso em vez de deixar o

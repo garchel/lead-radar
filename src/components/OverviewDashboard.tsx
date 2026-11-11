@@ -2,16 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
-  Building2,
-  Clock,
   Database,
   FolderKanban,
-  KeyRound,
   MessageCircle,
   PhoneCall,
   Radio,
   RefreshCw,
-  Rocket,
   Target,
   TrendingUp,
   Users,
@@ -22,7 +18,8 @@ import type { AppTab } from './Sidebar';
 
 /**
  * Visão geral: a primeira coisa que se olha ao abrir o app.
- * Só números que pedem decisão — o detalhe mora nas páginas de origem.
+ * Dois escopos: "Tudo" (retrato do banco e do funil agora) e "Hoje"
+ * (só o que aconteceu desde a meia-noite — `/api/overview/daily`).
  */
 
 interface OverviewDashboardProps {
@@ -45,6 +42,16 @@ interface OutboundMetrics {
   delivery?: { sent?: number; delivered?: number; read?: number; failed?: number; pending?: number; unconfirmed?: number };
 }
 
+interface DailyOverview {
+  dayLabel?: string;
+  leads?: { created?: number; readyForD0?: number; withPhone?: number; contacted?: number };
+  outbound?: { contacted?: number; sent?: number; replies?: number; replyRate?: number; meetings?: number };
+  delivery?: { sent?: number; delivered?: number; read?: number; failed?: number; unconfirmed?: number; inbound?: number };
+  projects?: { created?: number; moved?: number; concluded?: number };
+  followUps?: { dueToday?: number };
+  collection?: { searches?: number };
+}
+
 interface ProjectRow {
   id: string;
   status?: string;
@@ -64,6 +71,9 @@ interface WhatsappHealth { ok?: boolean; provider?: string; state?: string; conf
 interface CadencePlan { enabled?: boolean; count?: number; cap?: number; usedToday?: number; remaining?: number }
 interface CitiesStats { total?: number; alreadySearched?: number; notSearched?: number }
 interface FollowUpRow { leadId?: string; name?: string; dueAt?: string }
+
+type Scope = 'all' | 'today';
+const SCOPE_KEY = 'leadradar.overview.scope.v1';
 
 const PIPELINE_ORDER: { key: string; label: string; color: string; bar: string }[] = [
   { key: 'prospect', label: 'Novos prospects', color: 'border-slate-200 bg-slate-100 text-slate-700', bar: 'bg-slate-400' },
@@ -89,6 +99,14 @@ const num = (value: unknown, fallback = 0) => (typeof value === 'number' && Numb
 
 /** "1 resposta" / "3 respostas" — evita o plural automático errado nos KPIs. */
 const plural = (value: number, one: string, many: string) => `${value} ${value === 1 ? one : many}`;
+
+function readScope(): Scope {
+  try {
+    return localStorage.getItem(SCOPE_KEY) === 'today' ? 'today' : 'all';
+  } catch {
+    return 'all';
+  }
+}
 
 const KpiCard: React.FC<{
   label: string;
@@ -139,6 +157,7 @@ const MiniStat: React.FC<{ label: string; value: string; tone?: 'default' | 'goo
 };
 
 export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate, onOpenProject }) => {
+  const [scope, setScope] = useState<Scope>(() => readScope());
   const [dbStats, setDbStats] = useState<DatabaseStats | null>(null);
   const [outbound, setOutbound] = useState<OutboundMetrics | null>(null);
   const [projects, setProjects] = useState<ProjectRow[]>([]);
@@ -147,6 +166,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
   const [cadence, setCadence] = useState<CadencePlan | null>(null);
   const [cities, setCities] = useState<CitiesStats | null>(null);
   const [followUps, setFollowUps] = useState<FollowUpRow[]>([]);
+  const [daily, setDaily] = useState<DailyOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
@@ -155,13 +175,12 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
     const get = async (url: string) => {
       try {
         const res = await fetch(url);
-        const data = await res.json().catch(() => ({}));
-        return data;
+        return await res.json().catch(() => ({}));
       } catch {
         return null;
       }
     };
-    const [db, out, proj, auto, wa, cad, city, fu] = await Promise.all([
+    const [db, out, proj, auto, wa, cad, city, fu, day] = await Promise.all([
       get('/api/database/stats'),
       get('/api/metrics/outbound'),
       get('/api/projects'),
@@ -170,6 +189,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
       get('/api/cadence/plan'),
       get('/api/cities/stats'),
       get('/api/follow-ups/due'),
+      get('/api/overview/daily'),
     ]);
 
     if (db?.success) setDbStats(db as DatabaseStats);
@@ -180,6 +200,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
     if (cad?.success) setCadence(cad as CadencePlan);
     if (city?.success) setCities(city as CitiesStats);
     if (fu?.success) setFollowUps((fu.followUps as FollowUpRow[]) || []);
+    if (day?.success) setDaily(day.daily as DailyOverview);
 
     setUpdatedAt(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
     setLoading(false);
@@ -191,6 +212,16 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
     return () => window.clearInterval(interval);
   }, [load]);
 
+  const changeScope = (next: Scope) => {
+    setScope(next);
+    try {
+      localStorage.setItem(SCOPE_KEY, next);
+    } catch {
+      /* modo privado */
+    }
+  };
+
+  const isToday = scope === 'today';
   const totals = dbStats?.totals || {};
   const pipelineByKey = new Map((dbStats?.pipeline || []).map((row) => [row.key, row.total]));
   const pipelineItems = PIPELINE_ORDER.map((stage) => ({
@@ -214,8 +245,17 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
   }));
 
   const delivery = outbound?.delivery || {};
-  const failed = num(delivery.failed);
-  const replyRate = num(outbound?.replyRate);
+  const dayLeads = daily?.leads || {};
+  const dayOutbound = daily?.outbound || {};
+  const dayDelivery = daily?.delivery || {};
+  const dayProjects = daily?.projects || {};
+  const dayCollection = daily?.collection || {};
+  const dayFollowUps = num(daily?.followUps?.dueToday);
+
+  const failedAll = num(delivery.failed);
+  const failedToday = num(dayDelivery.failed);
+  const failed = isToday ? failedToday : failedAll;
+  const replyRate = isToday ? num(dayOutbound.replyRate) : num(outbound?.replyRate);
   const budget = autopilot?.budget || {};
   const autoState = autopilot?.state || {};
   const waOpen = whatsapp?.state === 'open' && whatsapp?.ok !== false;
@@ -228,11 +268,37 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
             <Activity className="w-6 h-6 text-indigo-600" /> Visão geral
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Como estão a coleta, o contato e a entrega — sem precisar abrir cada página.
+            {isToday
+              ? `O que aconteceu em ${daily?.dayLabel || 'hoje'} — da captura ao envio.`
+              : 'Como estão a coleta, o contato e a entrega — sem precisar abrir cada página.'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {updatedAt && <span className="text-[11px] text-slate-500">atualizado às {updatedAt}</span>}
+
+          <div role="group" aria-label="Período da visão geral" className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5">
+            <button
+              type="button"
+              onClick={() => changeScope('all')}
+              aria-pressed={!isToday}
+              className={`px-3 py-1.5 min-h-8 rounded-md text-xs font-bold transition-colors ${
+                !isToday ? 'bg-indigo-600 text-white' : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              Tudo
+            </button>
+            <button
+              type="button"
+              onClick={() => changeScope('today')}
+              aria-pressed={isToday}
+              className={`px-3 py-1.5 min-h-8 rounded-md text-xs font-bold transition-colors ${
+                isToday ? 'bg-indigo-600 text-white' : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              Hoje
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={() => void load()}
@@ -243,52 +309,103 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
         </div>
       </div>
 
-      {/* KPIs que resumem o estado do funil */}
+      {/* KPIs — o escopo "Hoje" troca os seis números */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-        <KpiCard
-          label="Leads no banco"
-          value={String(num(totals.total))}
-          hint={`${plural(num(totals.hoje), 'novo hoje', 'novos hoje')} · ${num(totals.ultimos7)} em 7 dias`}
-          icon={<Database className="w-4 h-4" />}
-          onClick={() => onNavigate('database')}
-        />
-        <KpiCard
-          label="Prontos p/ D0"
-          value={String(num(totals.prontosParaD0))}
-          hint={`${num(totals.semSite)} sem site · ${num(totals.comFone)} com telefone`}
-          icon={<Target className="w-4 h-4" />}
-          onClick={() => onNavigate('crm')}
-        />
-        <KpiCard
-          label="Abordados"
-          value={String(num(outbound?.contacted))}
-          hint={`${plural(num(outbound?.sent), 'envio', 'envios')} · ${plural(num(outbound?.replies), 'resposta', 'respostas')}`}
-          icon={<MessageCircle className="w-4 h-4" />}
-          onClick={() => onNavigate('followups')}
-        />
-        <KpiCard
-          label="Taxa de resposta"
-          value={`${replyRate}%`}
-          hint={`${plural(num(outbound?.meetings), 'reunião', 'reuniões')} no funil`}
-          tone={replyRate >= 20 ? 'good' : replyRate > 0 ? 'warn' : 'default'}
-          icon={<TrendingUp className="w-4 h-4" />}
-          onClick={() => onNavigate('growth')}
-        />
-        <KpiCard
-          label="Projetos ativos"
-          value={String(visibleProjects.length)}
-          hint={`${plural(projects.filter((p) => p.status === 'concluido').length, 'concluído', 'concluídos')}`}
-          icon={<FolderKanban className="w-4 h-4" />}
-          onClick={() => onNavigate('projects')}
-        />
-        <KpiCard
-          label="Envios falhados"
-          value={String(failed)}
-          hint={failed > 0 ? 'precisa de reenvio manual' : 'nenhuma falha'}
-          tone={failed > 0 ? 'bad' : 'good'}
-          icon={<AlertTriangle className="w-4 h-4" />}
-          onClick={() => onNavigate('followups')}
-        />
+        {isToday ? (
+          <>
+            <KpiCard
+              label="Leads hoje"
+              value={String(num(dayLeads.created))}
+              hint={`${num(dayLeads.readyForD0)} prontos p/ D0`}
+              icon={<Database className="w-4 h-4" />}
+              onClick={() => onNavigate('database')}
+            />
+            <KpiCard
+              label="Prontos p/ D0"
+              value={String(num(dayLeads.readyForD0))}
+              hint={`${num(dayLeads.withPhone)} com telefone`}
+              icon={<Target className="w-4 h-4" />}
+              onClick={() => onNavigate('crm')}
+            />
+            <KpiCard
+              label="Abordados hoje"
+              value={String(num(dayOutbound.contacted ?? dayLeads.contacted))}
+              hint={`${plural(num(dayOutbound.sent), 'envio', 'envios')} no dia`}
+              icon={<MessageCircle className="w-4 h-4" />}
+              onClick={() => onNavigate('followups')}
+            />
+            <KpiCard
+              label="Respostas hoje"
+              value={String(num(dayOutbound.replies))}
+              hint={`taxa de ${num(dayOutbound.replyRate)}% no dia`}
+              tone={num(dayOutbound.replies) > 0 ? 'good' : 'default'}
+              icon={<TrendingUp className="w-4 h-4" />}
+              onClick={() => onNavigate('growth')}
+            />
+            <KpiCard
+              label="Projetos movidos"
+              value={String(num(dayProjects.moved) + num(dayProjects.created))}
+              hint={`${plural(num(dayProjects.concluded), 'concluído', 'concluídos')} hoje`}
+              icon={<FolderKanban className="w-4 h-4" />}
+              onClick={() => onNavigate('projects')}
+            />
+            <KpiCard
+              label="Falhas hoje"
+              value={String(failedToday)}
+              hint={failedToday > 0 ? 'precisa de reenvio manual' : 'nenhuma falha'}
+              tone={failedToday > 0 ? 'bad' : 'good'}
+              icon={<AlertTriangle className="w-4 h-4" />}
+              onClick={() => onNavigate('followups')}
+            />
+          </>
+        ) : (
+          <>
+            <KpiCard
+              label="Leads no banco"
+              value={String(num(totals.total))}
+              hint={`${plural(num(totals.hoje), 'novo hoje', 'novos hoje')} · ${num(totals.ultimos7)} em 7 dias`}
+              icon={<Database className="w-4 h-4" />}
+              onClick={() => onNavigate('database')}
+            />
+            <KpiCard
+              label="Prontos p/ D0"
+              value={String(num(totals.prontosParaD0))}
+              hint={`${num(totals.semSite)} sem site · ${num(totals.comFone)} com telefone`}
+              icon={<Target className="w-4 h-4" />}
+              onClick={() => onNavigate('crm')}
+            />
+            <KpiCard
+              label="Abordados"
+              value={String(num(outbound?.contacted))}
+              hint={`${plural(num(outbound?.sent), 'envio', 'envios')} · ${plural(num(outbound?.replies), 'resposta', 'respostas')}`}
+              icon={<MessageCircle className="w-4 h-4" />}
+              onClick={() => onNavigate('followups')}
+            />
+            <KpiCard
+              label="Taxa de resposta"
+              value={`${replyRate}%`}
+              hint={`${plural(num(outbound?.meetings), 'reunião', 'reuniões')} no funil`}
+              tone={replyRate >= 20 ? 'good' : replyRate > 0 ? 'warn' : 'default'}
+              icon={<TrendingUp className="w-4 h-4" />}
+              onClick={() => onNavigate('growth')}
+            />
+            <KpiCard
+              label="Projetos ativos"
+              value={String(visibleProjects.length)}
+              hint={`${plural(projects.filter((p) => p.status === 'concluido').length, 'concluído', 'concluídos')}`}
+              icon={<FolderKanban className="w-4 h-4" />}
+              onClick={() => onNavigate('projects')}
+            />
+            <KpiCard
+              label="Envios falhados"
+              value={String(failedAll)}
+              hint={failedAll > 0 ? 'precisa de reenvio manual' : 'nenhuma falha'}
+              tone={failedAll > 0 ? 'bad' : 'good'}
+              icon={<AlertTriangle className="w-4 h-4" />}
+              onClick={() => onNavigate('followups')}
+            />
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
@@ -296,19 +413,47 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
         <div className="xl:col-span-2 space-y-4">
           <NextActionsPanel onNavigate={onNavigate} onOpenProject={onOpenProject} />
 
-          <StageOverview
-            unit="leads"
-            items={pipelineItems}
-            onSelect={() => onNavigate('crm')}
-            emptyHint="Banco vazio — comece pela Busca de Região."
-          />
+          {isToday ? (
+            <section className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+              <h2 className="text-sm font-bold text-slate-900">Movimentação do dia</h2>
+              <p className="text-[11px] text-slate-600 mt-0.5">
+                Só o que mudou desde a meia-noite — o retrato acumulado fica em <strong>Tudo</strong>.
+              </p>
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                <div className="divide-y divide-slate-100">
+                  <MiniStat label="Leads capturados" value={String(num(dayLeads.created))} tone={num(dayLeads.created) > 0 ? 'good' : 'default'} />
+                  <MiniStat label="Com telefone" value={String(num(dayLeads.withPhone))} />
+                  <MiniStat label="Prontos para D0" value={String(num(dayLeads.readyForD0))} />
+                  <MiniStat label="Abordados" value={String(num(dayOutbound.contacted))} />
+                  <MiniStat label="Mensagens enviadas" value={String(num(dayDelivery.sent))} />
+                  <MiniStat label="Respostas recebidas" value={String(num(dayDelivery.inbound))} tone={num(dayDelivery.inbound) > 0 ? 'good' : 'default'} />
+                </div>
+                <div className="divide-y divide-slate-100">
+                  <MiniStat label="Entregues / lidas" value={`${num(dayDelivery.delivered)} / ${num(dayDelivery.read)}`} />
+                  <MiniStat label="Falhas de envio" value={String(num(dayDelivery.failed))} tone={num(dayDelivery.failed) > 0 ? 'bad' : 'good'} />
+                  <MiniStat label="Buscas na SerpAPI" value={String(num(dayCollection.searches))} />
+                  <MiniStat label="Projetos criados / movidos" value={`${num(dayProjects.created)} / ${num(dayProjects.moved)}`} />
+                  <MiniStat label="Recontatos vencendo hoje" value={String(dayFollowUps)} tone={dayFollowUps > 0 ? 'warn' : 'default'} />
+                </div>
+              </div>
+            </section>
+          ) : (
+            <>
+              <StageOverview
+                unit="leads"
+                items={pipelineItems}
+                onSelect={() => onNavigate('crm')}
+                emptyHint="Banco vazio — comece pela Busca de Região."
+              />
 
-          <StageOverview
-            unit="projetos"
-            items={projectItems}
-            onSelect={() => onNavigate('projects')}
-            emptyHint="Nenhum projeto criado ainda."
-          />
+              <StageOverview
+                unit="projetos"
+                items={projectItems}
+                onSelect={() => onNavigate('projects')}
+                emptyHint="Nenhum projeto criado ainda."
+              />
+            </>
+          )}
         </div>
 
         {/* Coluna lateral: os três motores */}
@@ -328,12 +473,22 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
                 value={autopilot?.settings?.enabled ? (autopilot?.armed ? 'ligado e armado' : 'ligado, desarmado') : 'desligado'}
                 tone={autopilot?.settings?.enabled ? (autopilot?.armed ? 'good' : 'warn') : 'bad'}
               />
-              <MiniStat label="Cota do mês" value={`${num(budget.remainingThisMonth)} de ${num(budget.monthlyQuota)} restantes`} />
-              <MiniStat label="Hoje" value={`${num(budget.usedToday)}/${num(budget.dailyBudget)} buscas · ${num(autoState.collectedToday)} leads`} />
-              <MiniStat label="Ritmo" value={`1 busca a cada ~${num(budget.intervalMinutes)} min`} />
-              <MiniStat label="Cidades na fila" value={`${num(cities?.alreadySearched)} buscadas de ${num(cities?.total)}`} />
+              {isToday ? (
+                <>
+                  <MiniStat label="Buscas hoje" value={`${num(budget.usedToday)}/${num(budget.dailyBudget)}`} />
+                  <MiniStat label="Leads capturados hoje" value={String(num(dayLeads.created))} tone={num(dayLeads.created) > 0 ? 'good' : 'default'} />
+                  <MiniStat label="Cota do mês" value={`${num(budget.remainingThisMonth)} de ${num(budget.monthlyQuota)} restantes`} />
+                </>
+              ) : (
+                <>
+                  <MiniStat label="Cota do mês" value={`${num(budget.remainingThisMonth)} de ${num(budget.monthlyQuota)} restantes`} />
+                  <MiniStat label="Hoje" value={`${num(budget.usedToday)}/${num(budget.dailyBudget)} buscas · ${num(autoState.collectedToday)} leads`} />
+                  <MiniStat label="Ritmo" value={`1 busca a cada ~${num(budget.intervalMinutes)} min`} />
+                  <MiniStat label="Cidades na fila" value={`${num(cities?.alreadySearched)} buscadas de ${num(cities?.total)}`} />
+                </>
+              )}
             </div>
-            {autoState.lastSummary && (
+            {autoState.lastSummary && !isToday && (
               <p className="mt-2 text-[11px] text-slate-600 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1.5">
                 Último pulso: {autoState.lastSummary}
               </p>
@@ -357,8 +512,11 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
             <div className="mt-2 divide-y divide-slate-100">
               <MiniStat label="Conexão" value={waOpen ? 'conectado' : whatsapp?.configured ? 'desconectado' : 'não configurado'} tone={waOpen ? 'good' : 'bad'} />
               <MiniStat label="Provedor" value={whatsapp?.provider || '—'} />
-              <MiniStat label="Enviados" value={String(num(delivery.sent ?? outbound?.sent))} />
-              <MiniStat label="Falhados" value={String(failed)} tone={failed > 0 ? 'bad' : 'good'} />
+              <MiniStat
+                label={isToday ? 'Enviados hoje' : 'Enviados'}
+                value={String(num(isToday ? dayDelivery.sent : delivery.sent ?? outbound?.sent))}
+              />
+              <MiniStat label={isToday ? 'Falhados hoje' : 'Falhados'} value={String(failed)} tone={failed > 0 ? 'bad' : 'good'} />
               <MiniStat label="Sem confirmação" value={String(num(delivery.unconfirmed))} tone={num(delivery.unconfirmed) > 0 ? 'warn' : 'default'} />
             </div>
           </section>
@@ -373,7 +531,11 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
               </button>
             </div>
             <div className="mt-2 divide-y divide-slate-100">
-              <MiniStat label="Recontatos autorizados vencidos" value={String(followUps.length)} tone={followUps.length > 0 ? 'warn' : 'good'} />
+              <MiniStat
+                label={isToday ? 'Recontatos vencendo hoje' : 'Recontatos autorizados vencidos'}
+                value={String(isToday ? dayFollowUps : followUps.length)}
+                tone={(isToday ? dayFollowUps : followUps.length) > 0 ? 'warn' : 'good'}
+              />
               <MiniStat label="Na cadência agora" value={String(num(cadence?.count))} />
               <MiniStat label="Teto do dia" value={`${num(cadence?.usedToday)}/${num(cadence?.cap)}`} />
               <MiniStat label="Opt-out" value={String(num(totals.optOut))} tone={num(totals.optOut) > 0 ? 'warn' : 'default'} />
@@ -385,29 +547,6 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
             >
               <Users className="w-3.5 h-3.5" /> Ver pipeline
             </button>
-          </section>
-
-          <section className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Rocket className="w-4 h-4 text-violet-600" /> Atalhos
-            </h2>
-            <div className="mt-2 grid grid-cols-2 gap-1.5">
-              {[
-                { tab: 'search' as AppTab, label: 'Busca de Região', icon: <Target className="w-3.5 h-3.5" /> },
-                { tab: 'cities' as AppTab, label: 'Fila de Cidades', icon: <Building2 className="w-3.5 h-3.5" /> },
-                { tab: 'monitoring' as AppTab, label: 'Fila & Agendamentos', icon: <Clock className="w-3.5 h-3.5" /> },
-                { tab: 'channels' as AppTab, label: 'Canais & APIs', icon: <KeyRound className="w-3.5 h-3.5" /> },
-              ].map((item) => (
-                <button
-                  key={item.tab}
-                  type="button"
-                  onClick={() => onNavigate(item.tab)}
-                  className="inline-flex items-center gap-1.5 px-2 py-2 min-h-8 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-700 hover:bg-slate-50"
-                >
-                  {item.icon} <span className="truncate">{item.label}</span>
-                </button>
-              ))}
-            </div>
           </section>
         </div>
       </div>

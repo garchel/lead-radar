@@ -118,12 +118,15 @@ describe("orçamento da cota SerpAPI", () => {
   it("para de rodar quando o orçamento do dia acabou", () => {
     const now = new Date();
     now.setHours(9, 0, 0, 0);
-    const budget = getBudgetPlan(now).dailyBudget;
+    const budgetPlan = getBudgetPlan(now);
+    const budget = budgetPlan.dailyBudget;
+    // As buscas são carimbadas 2h antes de `now`: assim o intervalo entre buscas
+    // já passou e a única regra que pode barrar é a do orçamento do dia.
+    const base = now.getTime() - 2 * 60 * 60 * 1000;
     for (let i = 0; i < budget; i += 1) {
-      registerSearch(true, new Date(now.getTime() + i * 1000));
+      registerSearch(true, new Date(base + i * 1000));
     }
-    // ainda é o mesmo dia e a janela está aberta: o que bloqueia é o orçamento
-    const later = new Date(now.getTime() + budget * 1000 + 3600000);
+    const later = new Date(now.getTime());
     const blocked = canRunSearch(later);
     expect(blocked.allowed).toBe(false);
     expect(blocked.reason).toMatch(/orçamento de hoje/i);

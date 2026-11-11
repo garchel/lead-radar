@@ -163,7 +163,10 @@ describe("humanizeService — gate de envio", () => {
 
   it("barra quando o teto diário total estourou", () => {
     seedLead("hz-cap");
-    recordCommunication({ leadId: "hz-cap", channel: "whatsapp", status: "sent", message: "já enviada hoje" });
+    // O gate conta por created_at, não por sent_at: sem recuar o created_at o
+    // envio cai "hoje de verdade" e o teste passa/falha conforme a hora do dia.
+    const capComm = recordCommunication({ leadId: "hz-cap", channel: "whatsapp", status: "sent", message: "já enviada hoje" });
+    getDb().prepare("UPDATE communications SET created_at = ? WHERE id = ?").run(at(9, 10).toISOString(), capComm);
 
     const gate = evaluateSendGate({
       purpose: "reply",
@@ -176,7 +179,8 @@ describe("humanizeService — gate de envio", () => {
 
   it("barra o primeiro contato quando o teto de contatos novos estourou — resposta a lead antigo passa", () => {
     seedLead("hz-resp");
-    recordCommunication({ leadId: "hz-resp", channel: "whatsapp", status: "sent", message: "primeiro contato" });
+    const respComm = recordCommunication({ leadId: "hz-resp", channel: "whatsapp", status: "sent", message: "primeiro contato" });
+    getDb().prepare("UPDATE communications SET created_at = ? WHERE id = ?").run(at(9, 10).toISOString(), respComm);
     seedLead("hz-novo");
 
     const settings = { ...FAST, dailyNewCap: 1 };
