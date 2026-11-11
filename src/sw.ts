@@ -20,8 +20,19 @@ import {ExpirationPlugin} from 'workbox-expiration';
 
 declare const self: ServiceWorkerGlobalScope;
 
-precacheAndRoute(self.__WB_MANIFEST);
-cleanupOutdatedCaches();
+// ORDEM IMPORTA: no Workbox a primeira rota registrada ganha. O
+// `precacheAndRoute` registra sozinho um handler para a navegação (serve o
+// index.html do precache, cache-first) e, se ele vier primeiro, a rota abaixo
+// nunca é usada — foi assim que a versão nova deixou de entrar no reload.
+// Por isso a navegação é registrada antes do precache.
+registerRoute(
+  ({request}) => request.mode === 'navigate',
+  new NetworkFirst({
+    cacheName: 'leadfinder-pages',
+    networkTimeoutSeconds: 3,
+    plugins: [new ExpirationPlugin({maxEntries: 5})],
+  })
+);
 
 // A versão nova só assume quando o usuário clica em "Atualizar agora".
 self.addEventListener('message', (event) => {
@@ -35,15 +46,6 @@ self.addEventListener('activate', (event) => {
 });
 
 registerRoute(
-  ({request}) => request.mode === 'navigate',
-  new NetworkFirst({
-    cacheName: 'leadfinder-pages',
-    networkTimeoutSeconds: 3,
-    plugins: [new ExpirationPlugin({maxEntries: 5})],
-  })
-);
-
-registerRoute(
   ({url}) => url.pathname.startsWith('/api/'),
   new NetworkOnly()
 );
@@ -55,3 +57,7 @@ registerRoute(
     plugins: [new ExpirationPlugin({maxEntries: 60, maxAgeSeconds: 7 * 24 * 60 * 60})],
   })
 );
+
+// precache dos assets do build (nome com hash) — registrado por último.
+precacheAndRoute(self.__WB_MANIFEST);
+cleanupOutdatedCaches();

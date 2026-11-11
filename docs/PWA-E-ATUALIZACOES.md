@@ -50,6 +50,33 @@ Alternativa sem `schtasks`: `Win+R` → `shell:startup` → coloque nessa pasta 
 > segundo servidor (o `.cmd` só abre o navegador). Arquivos `.cmd`/`.vbs` precisam de
 > CRLF — está garantido no `.gitattributes`.
 
+### Três modos, não confunda
+
+| Comando | Para quê | Tem service worker? | Precisa ficar aberto? |
+|---|---|---|---|
+| `npm run dev` | desenvolver (HMR, `tsx server.ts`) | não (é removido na entrada) | sim, enquanto você edita |
+| `npm run build` + `npm start` | **servir o app de verdade** | sim | sim, é o servidor |
+| app instalado (atalho) | usar no dia a dia | sim | não — mas ele abre `localhost:3000`, então o servidor acima tem de estar no ar |
+
+Ou seja: **para usar o app instalado não precisa de `npm run dev`** — precisa do
+servidor de produção rodando. Uma vez só:
+
+```bash
+npm run build
+npm start
+```
+
+E, para ele subir sozinho com o Windows, o script/atalho da seção anterior.
+
+### Com o servidor desligado (medido)
+
+O app instalado **abre** (a casca vem do cache do service worker: sidebar, cabeçalhos,
+navegação) mas **não carrega dados** — as chamadas `/api/*` são NetworkOnly e falham.
+Medido: `h1 = "Visão geral"`, sidebar presente, `/api/overview/daily` → `Failed to fetch`.
+
+Consequência prática: número vazio/lista vazia = servidor fora do ar, não banco vazio.
+Ligue o servidor (`scripts/iniciar-app.cmd` ou a tarefa de logon) e recarregue a janela.
+
 ## Publicar uma versão nova
 
 ```bash
@@ -79,6 +106,7 @@ Definida à mão em `src/sw.ts` (`injectManifest`), nesta ordem:
 | Requisição | Estratégia | Por quê |
 |---|---|---|
 | Navegação (`mode: 'navigate'`) | **NetworkFirst** (timeout 3 s, cache `leadfinder-pages`) | versão nova entra no primeiro reload; sem rede, abre o `/` guardado |
+| — | **ordem das rotas** | `precacheAndRoute` registra sozinho um handler de navegação (serve o `index.html` do precache, cache-first). No Workbox a primeira rota registrada ganha, então o `precacheAndRoute` fica **por último** em `src/sw.ts`; senão a rota de navegação acima nunca roda |
 | `/api/*` | **NetworkOnly** | dado de CRM (lead, pipeline, comunicação) não pode vir do cache |
 | Imagens | **StaleWhileRevalidate** (60 itens, 7 dias) | ícone/print não precisa ser fresco |
 | Assets com hash | **precache** do build | nome muda a cada build, então cachear é seguro |
@@ -99,6 +127,9 @@ com **0 entradas de `/api`**, service worker `activated`, `Page.getInstallabilit
 
 ## Armadilhas que já custaram tempo
 
+- **A ordem das rotas decide.** Registrar `precacheAndRoute` antes da rota de navegação
+  faz o precache responder por ela (cache-first) e a NetworkFirst nunca roda — sintoma:
+  `caches.keys()` sem `leadfinder-pages`. O `precacheAndRoute` fica no fim do arquivo.
 - **`generateSW` injeta uma NavigationRoute própria** que responde à navegação com o
   `index.html` do precache. Mesmo com `navigateFallback` removido da config ela continua
   sendo gerada, e o reload pós-atualização voltava com o código antigo. Por isso o SW é
