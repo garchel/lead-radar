@@ -385,8 +385,24 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    app.use(
+      express.static(distPath, {
+        setHeaders(res, filePath) {
+          // sw.js e o manifest têm de ser revalidados SEMPRE: é por esse
+          // "não tenho cache" que o navegador descobre a versão nova.
+          if (/(sw\.js|manifest\.webmanifest|index\.html)$/.test(filePath)) {
+            res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+            return;
+          }
+          // assets com hash no nome podem ser cacheados para sempre.
+          if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+            res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          }
+        },
+      })
+    );
     app.get("*", (_req, res) => {
+      res.setHeader("Cache-Control", "no-cache");
       res.sendFile(path.join(distPath, "index.html"));
     });
   }

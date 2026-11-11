@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Target, Search, FolderKanban, BookOpen, PlusCircle, Cpu, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings, Bot, TrendingUp, Users, KeyRound, ClipboardList, ChevronDown } from 'lucide-react';
+import { PwaInstallButton } from './PwaStatus';
 
 /** Abas do app — a navegação segue a etapa do funil, não a idade da feature. */
 export type AppTab =
@@ -272,6 +273,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Ações rápidas — sempre visíveis no rodapé */}
       <div className="shrink-0 border-t border-slate-800 bg-slate-900 px-3 py-3 space-y-2">
+        <PwaInstallButton />
+
         <button
           id="mcp-server-btn"
           onClick={onOpenMcpModal}
@@ -282,6 +285,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className="flex-1 text-left font-mono text-xs">MCP Server</span>
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
         </button>
+
+        <p className="text-[10px] text-slate-500 text-center select-none" title="Versão do app instalada neste navegador">
+          LeadFinder v{__APP_VERSION__}
+        </p>
 
         <button
           id="add-manual-lead-btn"

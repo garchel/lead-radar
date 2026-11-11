@@ -1,7 +1,7 @@
 {
   "name": "leadradar",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.6",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
@@ -55,7 +55,9 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.3",
-    "vitest": "^4.1.11"
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^4.1.11",
+    "workbox-window": "^7.4.1"
   },
   "allowScripts": {
     "better-sqlite3@11.10.0": true
