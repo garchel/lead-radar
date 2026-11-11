@@ -1,0 +1,4 @@
+# Scripts do Windows (.cmd/.vbs) precisam de CRLF, senão o cmd.exe erra o parse.
+*.cmd text eol=crlf
+*.vbs text eol=crlf
+*.bat text eol=crlf

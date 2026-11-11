@@ -12,13 +12,43 @@ trabalho) e avisa na tela quando existe **versão nova** publicada.
 
 | Onde | Como |
 |---|---|
-| Chrome / Edge (desktop) | Ícone de instalação na barra de endereço, ou menu → *Instalar LeadFinder*, ou o botão **Instalar app** no rodapé da sidebar |
+| **Windows / Chrome** | Botão **Instalar app** no rodapé da sidebar (caminho mais fácil); ou o ícone de instalação na barra de endereço; ou menu ⋮ → *Salvar e compartilhar* → *Instalar página como app* (o nome do submenu muda conforme a versão) |
+| **Windows / Edge** | Botão **Instalar app**, ou ⋯ → *Aplicativos* → *Instalar este site como aplicativo* |
 | Android (Chrome) | Banner automático ou menu → *Adicionar à tela inicial* |
 | iPhone / iPad (Safari) | Compartilhar → *Adicionar à Tela de Início* (o Safari não dispara `beforeinstallprompt`) |
 
 O botão da sidebar só aparece quando o navegador realmente permite instalar
 (`beforeinstallprompt` capturado) e o app não está rodando já instalado
 (`display-mode: standalone`).
+
+### No PC (Windows 11)
+
+Instalado pelo Chrome/Edge o app vira uma janela própria, **sem barra de navegador**,
+com atalho no menu iniciar, ícone na barra de tarefas e entrada em *Configurações → Apps*
+(desinstala por ali). Ao contrário do celular, o Windows não cria "tela inicial": o
+acesso é pelo atalho do menu iniciar/barra de tarefas.
+
+**O servidor precisa estar no ar.** O app instalado aponta para `http://localhost:3000`;
+se o `node dist/server.cjs` não estiver rodando, a janela abre e as chamadas de API
+falham. Para não depender de abrir terminal:
+
+| Script | Uso |
+|---|---|
+| `scripts/iniciar-app.cmd` | clique duplo: sobe o servidor (gera o build se faltar) e, se já estiver no ar, apenas abre o app. Janela de console fica aberta enquanto roda |
+| `scripts/iniciar-app-oculto.vbs` | sobe escondido, sem janela. É o que se usa no login automático |
+
+Login automático (uma vez, no prompt do Windows):
+
+```cmd
+schtasks /Create /TN "LeadFinder" /SC ONLOGON /TR "wscript.exe C:\Users\paulo\OneDrive\Documentos\lead-radar\scripts\iniciar-app-oculto.vbs" /F
+```
+
+Alternativa sem `schtasks`: `Win+R` → `shell:startup` → coloque nessa pasta um atalho para
+`iniciar-app-oculto.vbs`.
+
+> Os dois scripts são idempotentes: se a porta 3000 já estiver ocupada, não sobem um
+> segundo servidor (o `.cmd` só abre o navegador). Arquivos `.cmd`/`.vbs` precisam de
+> CRLF — está garantido no `.gitattributes`.
 
 ## Publicar uma versão nova
 
