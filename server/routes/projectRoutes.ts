@@ -1,5 +1,6 @@
 import { Express, Request, Response } from "express";
-import { getProjects, getProjectById } from "../store/db";
+import { getProjects, getProjectById, getLeadById } from "../store/db";
+import { buildOnboarding, notifyProjectMilestone, sendOnboardingRequest } from "../services/onboardingService";
 import {
   createProject,
   updateProject,
@@ -80,7 +81,13 @@ export function registerProjectRoutes(app: Express) {
       if (patch[key] !== undefined) clean[key] = patch[key];
     }
     try {
+      const antes = getProjectById(req.params.id);
       const project = updateProject(req.params.id, clean);
+      if (clean.stage && antes && antes.stage !== project.stage) {
+        void notifyProjectMilestone(project, project.stage).catch((erro) => {
+          console.warn(`[marco] ${project.id}/${project.stage}: ${erro?.message || erro}`);
+        });
+      }
       res.json({ success: true, project });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err?.message || "Falha ao atualizar projeto." });
@@ -94,9 +101,39 @@ export function registerProjectRoutes(app: Express) {
     }
     try {
       const project = advanceProjectStage(req.params.id, stage as ProjectStage);
+      // Marco vai para o cliente em segundo plano: o kanban não pode esperar o
+      // WhatsApp (digitação simulada pode levar dezenas de segundos).
+      void notifyProjectMilestone(project, stage).catch((erro) => {
+        console.warn(`[marco] ${project.id}/${stage}: ${erro?.message || erro}`);
+      });
       res.json({ success: true, project });
     } catch (err: any) {
       res.status(404).json({ success: false, error: err?.message || "Projeto não encontrado." });
+    }
+  });
+
+  /** Onboarding: o que já chegou do cliente e o que ainda falta pedir. */
+  app.get("/api/projects/:id/onboarding", (req: Request, res: Response) => {
+    try {
+      const projeto = getProjectById(req.params.id);
+      if (!projeto) return res.status(404).json({ success: false, error: "Projeto não encontrado." });
+      const lead = getLeadById(projeto.leadId);
+      if (!lead) return res.status(404).json({ success: false, error: "Lead do projeto não encontrado." });
+      return res.json({ success: true, onboarding: buildOnboarding(lead, projeto) });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || "Falha ao montar o onboarding." });
+    }
+  });
+
+  /** Envia ao cliente o pedido do material que falta. */
+  app.post("/api/projects/:id/onboarding/send", async (req: Request, res: Response) => {
+    try {
+      const projeto = getProjectById(req.params.id);
+      if (!projeto) return res.status(404).json({ success: false, error: "Projeto não encontrado." });
+      const envio = await sendOnboardingRequest(projeto.leadId, projeto.id);
+      return res.json({ success: envio.sent, ...envio });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || "Falha ao pedir o material." });
     }
   });
 

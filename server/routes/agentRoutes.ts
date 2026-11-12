@@ -10,7 +10,7 @@
  */
 
 import { Express, Request, Response } from "express";
-import { getLeadById, getSetting, setSetting } from "../store/db";
+import { getLeadById, getProjects, getSetting, setSetting, upsertLead } from "../store/db";
 import { buildLeadBriefing } from "../services/briefingService";
 import {
   deliveryLabel,
@@ -27,6 +27,8 @@ import {
 import { generateLeadPreview, generateLeadPreviewCached, previewExists, previewSlug, previewsDir, resolvePreviewUrl, resolvePublicBaseUrl } from "../services/previewService";
 import { pagesConfigured, publishPreviews } from "../services/pagesService";
 import { buildPalettePreview, publishPaletteCard, sendPalettePreview } from "../services/paletteService";
+import { generateProposalPdf, proposalFileName } from "../services/proposalService";
+import { generateMonthlyReportPdf, monthlyNumbers, monthlyReportFileName } from "../services/monthlyReportService";
 import {
   describeWarmup,
   getWarmupState,
@@ -207,6 +209,123 @@ export function registerAgentRoutes(app: Express) {
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err?.message || "Falha ao enviar a paleta." });
+    }
+  });
+
+  /**
+   * Proposta em PDF — o documento que o cliente encaminha para quem decide.
+   * `?download=1` força o download; sem isso abre no navegador.
+   */
+  app.get("/api/leads/:id/proposal.pdf", async (req: Request, res: Response) => {
+    const lead = getLeadById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
+    try {
+      const preview = resolvePreviewUrl(previewSlug(lead));
+      const pdf = await generateProposalPdf(lead, {
+        packageId: typeof req.query.pacote === "string" ? req.query.pacote : undefined,
+        previewUrl: req.query.previa === "0" ? null : preview,
+      });
+      const nome = proposalFileName(lead);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `${String(req.query.download || "") === "1" ? "attachment" : "inline"}; filename="${nome}"`
+      );
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
+      return res.send(pdf);
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || "Falha ao gerar a proposta." });
+    }
+  });
+
+  /**
+   * Fila de relatórios do mês: quem já tem site no ar e merece relatório.
+   *
+   * Sem isso o relatório morre na teoria: ninguém lembra de gerar cliente por
+   * cliente. O cron mensal lê esta lista e manda o resumo para o Paulo, que
+   * encaminha (envio automático ao cliente ainda exige revisão humana).
+   */
+  app.get("/api/reports/monthly", (req: Request, res: Response) => {
+    try {
+      const mes = typeof req.query.mes === "string" && /^\d{4}-\d{2}$/.test(req.query.mes) ? req.query.mes : null;
+      const referencia = mes ? new Date(`${mes}-01T12:00:00`) : new Date();
+      const projetos = getProjects().filter((pr) => !pr.archived && (pr.stage === "deploy" || Boolean(pr.deployUrl)));
+      const clientes = projetos
+        .map((pr) => {
+          const lead = pr.leadId ? getLeadById(pr.leadId) : undefined;
+          if (!lead) return null;
+          const numeros = monthlyNumbers(lead, referencia);
+          return {
+            leadId: lead.id,
+            nome: String(lead.name || "").split(" — ")[0],
+            projeto: pr.name,
+            noAr: Boolean(pr.deployUrl),
+            recebidas: numeros.recebidas,
+            respondidas: numeros.respondidas,
+            tempoRespostaMin: numeros.tempoRespostaMin,
+            relatorio: `${resolvePublicBaseUrl().baseUrl || "http://localhost:3000"}/api/leads/${lead.id}/monthly-report.pdf`,
+          };
+        })
+        .filter(Boolean);
+      return res.json({
+        success: true,
+        periodo: referencia.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+        total: clientes.length,
+        clientes,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || "Falha ao montar a fila de relatórios." });
+    }
+  });
+
+  /** Relatório mensal do cliente (PDF). `?mes=2026-11` escolhe o período. */
+  app.get("/api/leads/:id/monthly-report.pdf", async (req: Request, res: Response) => {
+    const lead = getLeadById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
+    try {
+      const mes = typeof req.query.mes === "string" ? /^\d{4}-\d{2}$/.test(req.query.mes) ? req.query.mes : null : null;
+      const referencia = mes ? new Date(`${mes}-01T12:00:00`) : new Date();
+      const pdf = await generateMonthlyReportPdf(lead, referencia);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `inline; filename="${monthlyReportFileName(lead, referencia)}"`);
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
+      return res.send(pdf);
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || "Falha ao gerar o relatório." });
+    }
+  });
+
+  /**
+   * Foto enviada pelo cliente (micro-compromisso antes da prévia).
+   *
+   * Aceita URL pública: o cliente manda o link do Instagram/post e a imagem entra
+   * na frente da fila de imagens, como "enviada pelo cliente", virando hero.
+   */
+  app.post("/api/leads/:id/brand-image", (req: Request, res: Response) => {
+    const lead = getLeadById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
+    const url = String((req.body || {}).url || "").trim();
+    if (!/^https?:\/\//i.test(url)) {
+      return res.status(400).json({ success: false, error: "Informe uma URL http(s) da imagem." });
+    }
+    try {
+      const snapshot = lead.brandSnapshot || {
+        version: 1,
+        createdAt: new Date().toISOString(),
+        source: "manual" as const,
+        query: lead.name,
+        profiles: {},
+        palette: [],
+        tone: [],
+        imagery: [],
+        summary: "",
+        confidence: 0.5,
+      };
+      const imagery = [{ url, description: "Foto enviada pelo cliente" }, ...(snapshot.imagery || [])].slice(0, 8);
+      const atualizado = upsertLead({ ...lead, brandSnapshot: { ...snapshot, imagery } });
+      return res.json({ success: true, totalImagens: imagery.length, brandSnapshot: atualizado?.brandSnapshot });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || "Falha ao salvar a imagem." });
     }
   });
 

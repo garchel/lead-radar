@@ -18,6 +18,7 @@ const KINDS: OwnerAlertKind[] = [
   "resposta_bloqueada",
   "bot_cliente",
   "clara_falhou",
+  "relatorio_mensal",
   "teste",
 ];
 

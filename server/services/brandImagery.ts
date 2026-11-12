@@ -28,7 +28,7 @@ const REGRAS: Array<{ role: ImageRole; re: RegExp }> = [
   },
   {
     role: "retrato",
-    re: /\b(retrato|rosto|sorriso|profissional posando|equipe|dentista|m[eé]dic[ao]|doutor[ao]?|barbeir[oa]|cabeleireir[oa]|atendimento ao paciente|pessoa|mulher|homem|crian[cç]a com|selfie|trabalhando)\b/i,
+    re: /\b(retrato|rosto|sorriso|profissional posando|equipe|dentista|m[eé]dic[ao]|doutor[ao]?|barbeir[oa]|cabeleireir[oa]|atendimento ao paciente|pessoa|mulher|homem|crian[cç]a com|selfie|trabalhando|enviada pelo cliente)\b/i,
   },
   {
     role: "interior",

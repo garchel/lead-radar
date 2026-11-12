@@ -24,6 +24,7 @@ export type OwnerAlertKind =
   | "resposta_bloqueada" // humanização/teto/opt-out impediu
   | "bot_cliente" // bot de cliente não respondeu
   | "clara_falhou" // a própria rotina da Clara falhou
+  | "relatorio_mensal" // resumo mensal dos clientes para o Paulo encaminhar
   | "teste";
 
 export const ALERT_COOLDOWN_MINUTES = 15;
@@ -126,6 +127,17 @@ export function formatOwnerAlert(input: OwnerAlertInput): string {
     ].join("\n");
   }
 
+  // Relatório mensal não é falha: tem mensagem própria, sem alarme.
+  if (input.kind === "relatorio_mensal") {
+    return [
+      "📊 *Relatórios do mês*",
+      "",
+      input.detail,
+      "",
+      "Revise os números e encaminhe para cada cliente.",
+    ].join("\n");
+  }
+
   const quem = input.leadName ? `*${input.leadName}*` : "um lead";
   const motivo: Record<OwnerAlertKind, string> = {
     ia_falhou: "a IA não conseguiu escrever a resposta",
@@ -133,6 +145,7 @@ export function formatOwnerAlert(input: OwnerAlertInput): string {
     resposta_bloqueada: "o envio foi bloqueado",
     bot_cliente: "o bot do cliente não respondeu",
     clara_falhou: "a Clara não conseguiu responder",
+    relatorio_mensal: "relatórios do mês",
     teste: "este é um teste do aviso",
   };
   const linhas = [
