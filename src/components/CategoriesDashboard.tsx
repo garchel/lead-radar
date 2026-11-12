@@ -116,15 +116,15 @@ export const CategoriesDashboard: React.FC = () => {
   const dirty = (id: string) => Boolean(drafts[id]);
 
   return (
-    <div className="space-y-6">
-      <div className="bg-slate-100 border-b border-slate-200/80 py-6 px-4 sm:px-6 lg:px-8">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+      <div>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
               <Briefcase className="w-6 h-6 text-indigo-600" /> Categorias de Negócio
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">propensão × ticket</span>
             </h1>
-            <p className="text-slate-500 text-sm mt-1">
+            <p className="text-sm text-slate-600 mt-1">
               Propensão = chance da categoria precisar de landing page (afeta o score do lead e o filtro <code>minPropensity</code>). Ticket base = valor do projeto antes do multiplicador do tier da cidade.
             </p>
           </div>
@@ -134,7 +134,7 @@ export const CategoriesDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
+      <div className="space-y-4">
         {/* Nova categoria */}
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
           <div className="flex flex-wrap items-end gap-3">

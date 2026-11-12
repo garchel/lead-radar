@@ -84,13 +84,13 @@ export const ChannelsPage: React.FC<{ onOpenAutomation?: () => void }> = ({ onOp
   const active = keys.find((k) => k.isActive) || keys[0];
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <KeyRound className="w-6 h-6 text-indigo-600" /> Canais &amp; APIs
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-600 mt-1">
             As conexões que alimentam o radar: SerpAPI (busca real), WhatsApp (contato) e o servidor MCP (agentes).
           </p>
         </div>

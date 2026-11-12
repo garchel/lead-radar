@@ -154,22 +154,21 @@ export const MonitoringDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
       {error && (
         <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
           {error}
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-600/20">
-            <Activity className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">Fila &amp; Agendamentos</h1>
-            <p className="text-sm text-slate-500">Tudo que roda em segundo plano: tarefas em lote, progresso e a agenda de prospecção.</p>
-          </div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Activity className="w-6 h-6 text-indigo-600" /> Fila &amp; Agendamentos
+          </h1>
+          <p className="text-sm text-slate-600 mt-1">
+            Tudo que roda em segundo plano: tarefas em lote, progresso e a agenda de prospecção.
+          </p>
         </div>
         <div className="flex items-center space-x-3">
           <span className={`flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${connected ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-slate-500 border-slate-200 bg-slate-50'}`}>

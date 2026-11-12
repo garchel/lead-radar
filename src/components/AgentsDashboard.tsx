@@ -163,16 +163,16 @@ export const AgentsDashboard: React.FC = () => {
   const selected = projects.find((p) => p.projectId === selectedId);
 
   return (
-    <div className="space-y-6">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
       {/* Header */}
-      <div className="bg-slate-100 border-b border-slate-200/80 py-6 px-4 sm:px-6 lg:px-8">
+      <div>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <Bot className="w-7 h-7 text-indigo-600" />
+              <Bot className="w-6 h-6 text-indigo-600" />
               Agentes de Execução
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-slate-600 mt-1">
               Delegue um bot Hermes por projeto ativo — ele executa via MCP sem precisar ler a codebase.
             </p>
           </div>
@@ -186,7 +186,7 @@ export const AgentsDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 lg:px-8 space-y-6">
+      <div className="space-y-4">
         {error && (
           <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-200 rounded-lg text-sm text-rose-700">
             <AlertCircle className="w-4 h-4 shrink-0" /> {error}

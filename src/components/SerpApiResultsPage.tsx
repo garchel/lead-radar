@@ -82,20 +82,35 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
   };
 
   if (leads.length === 0 && !raw) {
+    // O estado vazio também segue o cabeçalho padrão: sem isso a aba abria sem
+    // título nem subtítulo, destoando de todas as outras.
     return (
-      <div className="px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center space-y-4 shadow-sm">
-          <SearchX className="w-12 h-12 text-slate-500 mx-auto" />
-          <h3 className="text-lg font-bold text-slate-900">Nenhuma empresa visualizada</h3>
-          <p className="text-slate-500 text-sm max-w-md mx-auto">Faça uma busca em <strong>Busca de Região → Filtrar e Mapear Região</strong> com o provedor <strong>SerpAPI</strong> para ver as empresas reais aqui e o JSON bruto.</p>
+      <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <Building2 className="w-6 h-6 text-indigo-600" /> Resultado da Busca
+            </h1>
+            <p className="text-sm text-slate-600 mt-1">
+              As empresas reais que a busca trouxe, com o que veio do Google Maps e sem dado inventado.
+            </p>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+          <SearchX className="mx-auto h-12 w-12 text-slate-400" />
+          <h2 className="mt-4 text-lg font-bold text-slate-900">Nenhuma empresa visualizada ainda</h2>
+          <p className="mx-auto mt-1 max-w-md text-sm text-slate-600">
+            Faça uma busca em <strong>Busca de Região → Filtrar e Mapear Região</strong> com o provedor{' '}
+            <strong>SerpAPI</strong> para ver as empresas reais aqui e o JSON bruto.
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-slate-100 border-b border-slate-200/80 py-6 px-4 sm:px-6 lg:px-8">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+      <div>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
@@ -103,7 +118,7 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">SerpAPI real</span>
               {cached && <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Cache • 0 gasto (7 dias)</span>}
             </h1>
-            <p className="text-slate-500 text-sm mt-1">Visualização completa das empresas retornadas pela SerpAPI (Google Maps). Sem dados inventados — apenas o que veio do <code className="bg-white px-1 rounded border text-xs">local_results</code>. {cached ? 'Esta busca veio do cache local (não consumiu cota).' : 'Empresas já cadastradas são marcadas.'}</p>
+            <p className="text-sm text-slate-600 mt-1">Visualização completa das empresas retornadas pela SerpAPI (Google Maps). Sem dados inventados — apenas o que veio do <code className="bg-white px-1 rounded border text-xs">local_results</code>. {cached ? 'Esta busca veio do cache local (não consumiu cota).' : 'Empresas já cadastradas são marcadas.'}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm text-xs">
@@ -188,7 +203,7 @@ export const SerpApiResultsPage: React.FC<Props> = ({ leads, serpApiRaw, serpApi
         )}
       </div>
 
-      <div className="px-4 sm:px-6 lg:px-8 pb-12">
+      <div className="space-y-4">
         {viewMode === 'raw' ? (
           <SerpApiRawViewer raw={raw} meta={meta} />
         ) : viewMode === 'table' ? (

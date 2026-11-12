@@ -211,16 +211,16 @@ export const CitiesQueueDashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
       {/* Header */}
-      <div className="bg-slate-100 border-b border-slate-200/80 py-6 px-4 sm:px-6 lg:px-8">
+      <div>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
               <MapPin className="w-6 h-6 text-indigo-600" /> Fila de Cidades
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">IBGE • round-robin</span>
             </h1>
-            <p className="text-slate-500 text-sm mt-1">Base de municípios usada na rotação de prospecção. Desabilite cidades que não quer buscar; a fila sempre pega as há mais tempo sem busca.</p>
+            <p className="text-sm text-slate-600 mt-1">Base de municípios usada na rotação de prospecção. Desabilite cidades que não quer buscar; a fila sempre pega as há mais tempo sem busca.</p>
           </div>
           <button onClick={load} disabled={loading || refreshing} className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5">
             <RefreshCw className={`w-4 h-4 ${(loading || refreshing) ? 'animate-spin' : ''}`} /> Atualizar
@@ -241,7 +241,7 @@ export const CitiesQueueDashboard: React.FC = () => {
       </div>
 
       {/* Filtros */}
-      <div className="px-4 sm:px-6 lg:px-8">
+      <div className="space-y-4">
         <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm space-y-2.5">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
             <div className="col-span-2 flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">

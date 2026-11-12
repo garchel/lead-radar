@@ -122,11 +122,13 @@ export function BotsPage() {
   const mrrTexto = useMemo(() => moeda(overview?.mrr.mrr || 0), [overview]);
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Bots de WhatsApp</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Bot className="h-6 w-6 text-indigo-600" /> Bots de WhatsApp
+          </h1>
+          <p className="text-sm text-slate-600 mt-1">
             Serviço de chatbot para cliente: {moeda(649)} de implantação + mensalidade. A base é dele, o bot responde
             só o que está nela e chama o dono quando não sabe.
           </p>

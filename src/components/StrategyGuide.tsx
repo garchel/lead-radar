@@ -107,10 +107,12 @@ export const StrategyGuide: React.FC = () => {
   }, [propostasSemana, conversao, pacote.price, manutencao, botsMes, botSetup, botMensal]);
 
   return (
-    <div className="space-y-6">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Estratégia &amp; receita</h1>
-        <p className="mt-1 max-w-3xl text-sm text-slate-500">
+        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <Wallet className="h-6 w-6 text-indigo-600" /> Estratégia &amp; receita
+        </h1>
+        <p className="max-w-3xl text-sm text-slate-600 mt-1">
           O método em quatro etapas e a conta que importa: quantas propostas viram site, quanto entra de mensalidade e
           como o ano fecha. Os preços vêm da política comercial, a mesma que o agente usa na conversa.
         </p>

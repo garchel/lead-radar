@@ -92,13 +92,13 @@ export const FollowUpsPage: React.FC = () => {
   };
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Users className="w-6 h-6 text-indigo-600" /> Follow-ups
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-600 mt-1">
             Quem deve ser procurado de novo, e por quê. Todo envio de recontato sai daqui.
           </p>
         </div>

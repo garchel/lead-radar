@@ -396,7 +396,7 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
   };
 
   return (
-    <div className="space-y-6 py-6 px-4 sm:px-6 lg:px-8">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
       {/* Top Banner Stats */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
         <div>
@@ -404,7 +404,7 @@ export const CrmPipeline: React.FC<CrmPipelineProps> = ({
             <FolderKanban className="w-6 h-6 text-indigo-600" />
             <span>Dashboard de Prospecção & CRM</span>
           </h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <p className="text-sm text-slate-600 mt-1">
             Acompanhe o funil de propostas de criação de Landing Pages enviadas para empresas locais.
           </p>
         </div>

@@ -274,11 +274,11 @@ export const AutomationSettingsPage: React.FC = () => {
   if (!settings) return <div className="p-8 text-center text-slate-500 text-sm">Carregando automações...</div>;
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2"><Settings className="w-6 h-6 text-indigo-600" /> Automação do Projeto</h1>
-          <p className="text-sm text-slate-500 mt-1">Ligue ou desligue cada etapa automática. Desativar não apaga dados, só pausa a execução.</p>
+          <p className="text-sm text-slate-600 mt-1">Ligue ou desligue cada etapa automática. Desativar não apaga dados, só pausa a execução.</p>
         </div>
         {saving && <span className="text-xs font-bold text-indigo-600 flex items-center gap-1"><RefreshCw className="w-3 h-3 animate-spin" /> Salvando...</span>}
         {msg && <span className="text-xs font-bold text-emerald-600">{msg}</span>}

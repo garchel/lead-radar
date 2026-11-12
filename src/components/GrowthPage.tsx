@@ -83,7 +83,9 @@ const levelStyle = (level: string) =>
       ? 'bg-amber-50 text-amber-800 border-amber-200'
       : 'bg-slate-100 text-slate-600 border-slate-200';
 
-const fmtPct = (value: number) => `${value.toFixed(1)}%`;
+/** Percentual no padrão brasileiro: 66,7% (ponto decimal parece inglês). */
+const fmtPct = (value: number) =>
+  `${Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 
 export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> = ({ onNavigate }) => {
   const [leads, setLeads] = useState<PriorityReasonLead[]>([]);
@@ -147,7 +149,7 @@ export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> =
 
   const cards = [
     { label: 'Leads contactáveis', value: metrics?.window.contactableLeads ?? 0, icon: Trophy },
-    { label: 'Abordados (30d)', value: metrics?.contacted ?? 0, icon: MessageCircle },
+    { label: 'Abordados (30 dias)', value: metrics?.contacted ?? 0, icon: MessageCircle },
     { label: 'Taxa de resposta', value: fmtPct(metrics?.replyRate ?? 0), icon: Flame },
     { label: 'Reuniões', value: metrics?.meetings ?? 0, icon: CalendarCheck },
     { label: 'Fechados', value: metrics?.closed ?? 0, icon: TrendingUp },
@@ -156,11 +158,13 @@ export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> =
   const semEnvio = (metrics?.funnel || []).length === 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Crescimento</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <TrendingUp className="h-6 w-6 text-indigo-600" /> Crescimento
+          </h1>
+          <p className="text-sm text-slate-600 mt-1">
             Onde está o dinheiro: leads com mais dor, funil dos últimos 30 dias e o que a cadência enviaria hoje.
           </p>
         </div>

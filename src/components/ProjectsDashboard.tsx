@@ -480,15 +480,15 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({ focusProje
   ];
 
   return (
-    <div className="space-y-6 py-6 px-4 sm:px-6 lg:px-8">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
       {/* Top Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Rocket className="w-6 h-6 text-violet-600" />
+            <Rocket className="w-6 h-6 text-indigo-600" />
             <span>Projetos em Desenvolvimento</span>
           </h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <p className="text-sm text-slate-600 mt-1">
             Acompanhe cada landing page do Briefing ao Deploy, mesmo com vários projetos simultâneos.
           </p>
         </div>

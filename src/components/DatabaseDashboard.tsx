@@ -296,13 +296,13 @@ export const DatabaseDashboard: React.FC<DatabaseDashboardProps> = ({ onOpenPipe
   const maxBand = Math.max(1, ...(stats?.scoreBands || []).map((b) => b.total));
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Database className="w-6 h-6 text-indigo-600" /> Banco de Dados
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-600 mt-1">
             Inventário do banco: o que existe e como está classificado. Para agir sobre um lead, use o <strong>Dashboard de Leads</strong>.
           </p>
         </div>

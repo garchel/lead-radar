@@ -225,18 +225,19 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
   };
 
   return (
-    <div className="bg-slate-100 border-b border-slate-200/80 py-6 px-4 sm:px-6 lg:px-8">
-      <div className="space-y-5">
+    <div>
+      <div className="space-y-4">
         {/* Title Banner */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center space-x-2">
-              <span>Mapeamento de Região & Oportunidades</span>
+            <h1 className="text-2xl font-bold text-slate-900 flex flex-wrap items-center gap-2">
+              <Search className="h-6 w-6 text-indigo-600" />
+              <span>Mapeamento de Região &amp; Oportunidades</span>
               <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
                 <Sparkles className="w-3.5 h-3.5 mr-1 text-indigo-600" /> Diagnóstico IA
               </span>
             </h1>
-            <p className="text-slate-500 text-sm mt-1">
+            <p className="text-sm text-slate-600 mt-1">
               Foram encontradas empresas locais com excelente reputação no Google que <strong className="text-indigo-600 font-semibold">não possuem presença de landing page</strong> para fechar contratos de criação de sites.
             </p>
           </div>
