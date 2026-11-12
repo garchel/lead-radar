@@ -11,7 +11,7 @@
  * Tudo que sai para o lead passa por aqui, inclusive o pitch que a IA escreveu.
  */
 
-import type { CommercialPolicy } from "./commercialPolicy";
+import type { CommercialPackage, CommercialPolicy } from "./commercialPolicy";
 
 const AI_DASHES = /[\u2014\u2013]/g; // — e –
 const BOLD_MARK = "*";
@@ -104,25 +104,47 @@ export function formatPrice(value: number): string {
 export function packageLines(policy: CommercialPolicy, opts: { detailed?: boolean } = {}): string[] {
   const lines: string[] = [];
   for (const pack of policy.packages) {
+    // um respiro entre pacotes: 16 bullets colados viram parede de texto
+    if (opts.detailed && lines.length) lines.push("");
     lines.push(`📦 ${bold(`${pack.name} · ${formatPrice(pack.price)}`)}`);
+
+    // No modo detalhado a lista de benefícios é o próprio argumento: cada linha
+    // é algo concreto que o cliente recebe. A `summary` só entra no resumo curto
+    // (senão a conversa vira um bloco de texto repetido).
+    const benefits = detailedBenefits(pack);
+    if (opts.detailed && benefits.length) {
+      lines.push(benefits.map((item) => `• ${item}`).join("\n"));
+      continue;
+    }
+
     const summary = String(pack.summary || "").trim();
-    if (summary) {
-      lines.push(summary.charAt(0).toUpperCase() + summary.slice(1) + ".");
-    }
-    if (opts.detailed && pack.sections.length > 0) {
-      // detalhe curto: até 4 itens, sem repetir o "tudo do Essencial"
-      const items = pack.sections
-        .filter((item) => !/^tudo do/i.test(item))
-        .slice(0, 4)
-        .map((item) => `• ${item}`);
-      if (items.length) lines.push(items.join("\n"));
-      if (pack.revisions) {
-        const n = pack.revisions;
-        lines.push(`• ${n} ${n === 1 ? "rodada" : "rodadas"} de ajuste${n === 1 ? "" : "s"} incluída${n === 1 ? "" : "s"}`);
-      }
-    }
+    if (summary) lines.push(summary.charAt(0).toUpperCase() + summary.slice(1) + ".");
   }
   return lines;
+}
+
+/**
+ * Benefícios que vão para a conversa: até 8 linhas, sem repetir "tudo do
+ * Essencial" no meio da lista (ele abre o pacote, não é um item extra) e sem
+ * repetir a rodada de ajuste, que já aparece na lista quando existe.
+ */
+export function detailedBenefits(pack: CommercialPackage, max = 8): string[] {
+  const list = (pack.benefits || []).map((item) => String(item).trim()).filter(Boolean);
+  const head: string[] = [];
+  const body: string[] = [];
+  for (const item of list) {
+    if (/^tudo\b/i.test(item)) head.push(item);
+    else body.push(item);
+  }
+  // a rodada de ajuste fecha a lista, sempre por último — e por isso ela tem
+  // vaga reservada, senão o corte em `max` a descartaria justo na hora de falar
+  // de valor entregue
+  const ajustes = body.filter((item) => /rodada/i.test(item));
+  const rest = body.filter((item) => !/rodada/i.test(item));
+  const capacidade = Math.max(0, max - head.length);
+  const vagaAjuste = ajustes.length && capacidade > 1 ? 1 : 0;
+  const escolhidos = rest.slice(0, Math.max(0, capacidade - vagaAjuste));
+  return [...head, ...escolhidos, ...ajustes.slice(0, vagaAjuste)];
 }
 
 /**
@@ -136,7 +158,7 @@ export const WHATSAPP_STYLE_RULES = [
   "- Use negrito do WhatsApp (*assim*) em no máximo 2 trechos-chave (nome do negócio, preço ou prévia grátis).",
   "- Use no máximo 3 emojis, um por linha, e só onde ajudam (👋 ⭐ 📦 🚀). Nada de emoji em toda frase.",
   "- Quando falar da prévia, diga explicitamente que é grátis, sem custo nenhum.",
-  "- Quando falar de pacote, diga o nome, o valor fechado e o que ele inclui (não só o preço).",
+  "- Quando falar de pacote, diga o nome, o valor fechado e liste de 4 a 8 benefícios curtos, um por linha, cada um concreto (não só o preço).",
   "- Nada de bloco único corrido, de markdown com # ou de link.",
 ].join("\n");
 

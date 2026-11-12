@@ -16,7 +16,7 @@ import { getGeminiModel } from "../config";
 import { getCommunicationsByLead, getSetting } from "../store/db";
 import type { StoredLead } from "../store/types";
 import { buildLeadBriefing, type LeadBriefing } from "./briefingService";
-import { WHATSAPP_STYLE_RULES, whatsAppify } from "./messageStyle";
+import { WHATSAPP_STYLE_RULES, packageLines, whatsAppify } from "./messageStyle";
 import {
   allowedPrices,
   cheapestPackage,
@@ -284,7 +284,7 @@ ${WHATSAPP_STYLE_RULES}
 Responda o que ele perguntou, respeitando esta ESCADA (não pule etapa):
 1. Pediu a prévia/demonstração: confirme que vai montar e faça UMA pergunta objetiva (o que destacar, ou se tem logo/fotos).
 2. Se a prévia JÁ foi enviada e ele reagiu bem: pergunte se ele quer conhecer os pacotes (sem citar valor ainda). Só depois dessa resposta sim é que preço entra.
-3. Perguntou preço ou pediu os pacotes: aí sim apresente os pacotes em linhas separadas (nome, valor fechado e o que inclui), em negrito no nome e no valor. Nunca invente desconto nem valor fora da política.
+3. Perguntou preço ou pediu os pacotes: aí sim apresente os pacotes em linhas separadas (nome, valor fechado e o que inclui), em negrito no nome e no valor. Liste de 4 a 8 benefícios curtos por pacote, um por linha, cada um sendo algo concreto que o cliente recebe. Nunca invente desconto, item que não esteja na política ou valor fora dela.
 4. Se pediu para depois: concorde, pergunte a melhor semana/dia e não insista.
 5. Se recusou: agradeça em uma linha e encerre. Não tente reverter.
 6. Se foi vago ("oi", "manda"): confirme e faça uma pergunta de qualificação.
@@ -367,7 +367,19 @@ export function fallbackReplyMessage(briefing: LeadBriefing, inbound: string): s
   const text = inbound.toLowerCase();
 
   if (/quanto|pre[çc]o|valor|custa|or[çc]amento/.test(text)) {
-    return `Fica a partir de ${formatBRL(cheapest.price)} (${cheapest.name}: ${cheapest.summary}). A prévia da primeira tela é gratuita, sem compromisso — quer que eu monte a sua?`;
+    // Mesma lista de benefícios do documento dos pacotes: quando a IA está fora
+    // do ar, o cliente ainda recebe o escopo, não uma linha seca com o preço.
+    return whatsAppify(
+      [
+        "Claro, te explico rapidinho 🙂",
+        "",
+        ...packageLines(policy, { detailed: true }),
+        "",
+        `Pra fechar: a *prévia é grátis* e o prazo é de ${deliveryLabel(policy)} depois do ok.`,
+        "",
+        "Quer que eu monte a prévia da sua?",
+      ].join("\n")
+    );
   }
   if (/n[aã]o (tenho|quero)|sem interesse|para de/.test(text)) {
     return "Sem problema, obrigado pelo retorno. Não envio mais mensagens.";

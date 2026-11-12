@@ -18,6 +18,13 @@ export interface CommercialPackage {
   price: number;
   /** Uma linha que o agente pode usar na conversa. */
   summary: string;
+  /**
+   * Lista longa de benefícios, um por linha: é o que sai na conversa quando o
+   * cliente aceita ver o pacote. Mais linhas curtas = escopo percebido maior,
+   * desde que cada linha seja algo concreto que ele recebe.
+   */
+  benefits: string[];
+  /** Estrutura técnica da página (base do que vira seção). */
   sections: string[];
   revisions: number;
   /** Quando faz sentido oferecer este pacote. */
@@ -49,6 +56,21 @@ export const ESSENCIAL: CommercialPackage = {
   name: "Essencial",
   price: 899,
   summary: "uma página com até 5 seções, botão de WhatsApp e publicação",
+  benefits: [
+    "seção inicial com a chamada principal e sua marca",
+    "apresentação do negócio (quem você é e o que faz)",
+    "serviços principais com descrição curta",
+    "localização com endereço, horário e mapa",
+    "rodapé com contato e informações",
+    "botão de WhatsApp que abre a conversa já preenchida",
+    "formulário de orçamento para quem prefere escrever",
+    "botões de contato no meio da página, não só no topo",
+    "layout ajustado para celular, tablet e computador",
+    "título e descrição otimizados para aparecer no Google",
+    "textos organizados e revisados",
+    "publicação no ar, com link próprio para compartilhar",
+    "1 rodada de ajuste incluída",
+  ],
   sections: [
     "seção inicial com a chamada principal",
     "sobre o profissional/empresa",
@@ -68,6 +90,18 @@ export const PROFISSIONAL: CommercialPackage = {
   name: "Profissional",
   price: 1199,
   summary: "tudo do Essencial + diferenciais, depoimentos, FAQ e SEO local melhorado",
+  benefits: [
+    "tudo o que vem no Essencial",
+    "diferenciais que explicam por que escolher você",
+    "serviços detalhados, um bloco para cada",
+    "depoimentos de clientes em destaque",
+    "perguntas frequentes que respondem antes do contato",
+    "galeria com fotos do seu trabalho",
+    "SEO local com cidade e bairro no título",
+    "página mais rápida para carregar",
+    "estrutura para até 8 seções",
+    "2 rodadas de ajustes incluídas",
+  ],
   sections: [
     "tudo do Essencial",
     "seção de diferenciais",
@@ -128,6 +162,7 @@ function normalizePackages(list: any[]): CommercialPackage[] {
         name: String(item?.name || `Pacote ${index + 1}`).trim(),
         price,
         summary: String(item?.summary || "").trim(),
+        benefits: Array.isArray(item?.benefits) ? item.benefits.map((b: unknown) => String(b)).filter(Boolean) : [],
         sections: Array.isArray(item?.sections) ? item.sections.map((s: unknown) => String(s)) : [],
         revisions: Number(item?.revisions) || 0,
         bestFor: String(item?.bestFor || "").trim(),
@@ -197,6 +232,13 @@ export function formatPolicyForPrompt(policy: CommercialPolicy = getCommercialPo
   for (const p of policy.packages) {
     if (p.id === cheapest.id) continue;
     lines.push(`- ${p.name}: ${formatBRL(p.price)} — ${p.summary}. Indicado para ${p.bestFor}.`);
+  }
+  // Os benefícios viram a lista da conversa; a IA precisa conhecê-los para não
+  // resumir tudo em "uma página com botão de WhatsApp".
+  for (const p of policy.packages) {
+    const itens = (p.benefits || []).slice(0, 5);
+    if (!itens.length) continue;
+    lines.push(`  ${p.name} inclui: ${itens.join("; ")}.`);
   }
   lines.push(
     policy.previewFree

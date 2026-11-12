@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_POLICY, ESSENCIAL, PROFISSIONAL } from "../server/services/commercialPolicy";
 import {
   bold,
+  detailedBenefits,
   formatPrice,
   freePreviewLine,
   packageLines,
@@ -9,7 +11,6 @@ import {
   whatsAppify,
 } from "../server/services/messageStyle";
 import { buildProspectMessage } from "../server/services/autoProspectingService";
-import { DEFAULT_POLICY } from "../server/services/commercialPolicy";
 
 /**
  * Estilo das mensagens: o feedback do Paulo (nov/2026) virou contrato.
@@ -158,5 +159,59 @@ describe("bold", () => {
   it("aplica negrito do WhatsApp sem duplicar asteriscos", () => {
     expect(bold("Pianca")).toBe("*Pianca*");
     expect(bold("*Pianca*")).toBe("*Pianca*");
+  });
+});
+
+describe("descrição dos pacotes (benefícios)", () => {
+  it("cada pacote tem pelo menos 8 benefícios escritos", () => {
+    for (const pack of DEFAULT_POLICY.packages) {
+      expect(pack.benefits.length).toBeGreaterThanOrEqual(8);
+    }
+  });
+
+  it("benefício é frase curta e concreta, sem preço e sem travessão", () => {
+    for (const pack of DEFAULT_POLICY.packages) {
+      for (const item of pack.benefits) {
+        expect(item.length).toBeLessThanOrEqual(70);
+        expect(item).not.toMatch(/R\$/);
+        expect(item).not.toMatch(/[\u2014\u2013]/);
+        expect(item.trim()).toBe(item);
+      }
+    }
+  });
+
+  it("não repete benefício dentro do mesmo pacote", () => {
+    for (const pack of DEFAULT_POLICY.packages) {
+      const unicos = new Set(pack.benefits.map((b) => b.toLowerCase()));
+      expect(unicos.size).toBe(pack.benefits.length);
+    }
+  });
+
+  it("mensagem detalhada lista de 4 a 8 itens por pacote", () => {
+    const linhas = packageLines(DEFAULT_POLICY, { detailed: true });
+    for (const pack of DEFAULT_POLICY.packages) {
+      const inicio = linhas.findIndex((l) => l.includes(pack.name));
+      expect(inicio).toBeGreaterThanOrEqual(0);
+      const bloco = linhas[inicio + 1] || "";
+      const itens = bloco.split("\n").filter((l) => l.startsWith("• "));
+      expect(itens.length).toBeGreaterThanOrEqual(4);
+      expect(itens.length).toBeLessThanOrEqual(8);
+    }
+  });
+
+  it("Profissional abre com 'tudo o que vem no Essencial' e fecha com os ajustes", () => {
+    const bloco = detailedBenefits(PROFISSIONAL, 8);
+    expect(bloco[0].toLowerCase()).toContain("essencial");
+    expect(bloco[bloco.length - 1]).toContain("rodadas de ajustes");
+  });
+
+  it("Essencial termina a lista na rodada de ajuste", () => {
+    const bloco = detailedBenefits(ESSENCIAL, 8);
+    expect(bloco[bloco.length - 1]).toBe("1 rodada de ajuste incluída");
+  });
+
+  it("resumo curto continua sendo uma linha, sem bullets", () => {
+    const linhas = packageLines(DEFAULT_POLICY);
+    expect(linhas.some((l) => l.startsWith("• "))).toBe(false);
   });
 });
