@@ -21,6 +21,7 @@ import type { StoredLead } from "../store/types";
 import { prettyName } from "./briefingService";
 import { getCommercialPolicy, formatBRL, cheapestPackage } from "./commercialPolicy";
 import { currentTunnelUrl } from "./tunnelService";
+import { getDb } from "../store/schema";
 
 export interface PreviewResult {
   leadId: string;
@@ -28,7 +29,9 @@ export interface PreviewResult {
   filePath: string;
   /** URL relativa servida pelo próprio app (`/previews/<id>.html`). */
   url: string;
-  /** URL pública, quando `PUBLIC_BASE_URL` está configurado (é a que vai ao cliente). */
+  /** Slug amigável usado no link público (ex.: `dra-carmen-pitol`). */
+  slug: string;
+  /** URL pública que vai ao cliente (base pública + `/p/<slug>`). */
   publicUrl: string | null;
   generatedAt: string;
 }
@@ -179,6 +182,60 @@ export function buildPreviewHtml(lead: StoredLead, now = new Date()): string {
 </html>`;
 }
 
+/**
+ * Slug do link público: `dra-carmen-pitol` em vez de `pv-landing-1`.
+ *
+ * Link com nome do negócio parece endereço de gente, não de sistema — e isso muda
+ * a taxa de clique. A tabela `preview_slugs` garante que dois leads não dividam o
+ * mesmo endereço (e que o link de um cliente não abra o de outro).
+ */
+export function slugifyPreview(value: string): string {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48)
+    .replace(/-+$/g, "");
+}
+
+let slugsReady = false;
+
+function ensureSlugTable(): void {
+  if (slugsReady) return;
+  getDb().exec(`
+    CREATE TABLE IF NOT EXISTS preview_slugs (
+      slug TEXT PRIMARY KEY,
+      lead_id TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL
+    );
+  `);
+  slugsReady = true;
+}
+
+/** Slug estável por lead (reusa o existente; cria e desambigua quando novo). */
+export function previewSlug(lead: StoredLead): string {
+  ensureSlugTable();
+  const db = getDb();
+  const existente = db.prepare("SELECT slug FROM preview_slugs WHERE lead_id = ?").get(lead.id) as any;
+  if (existente?.slug) return existente.slug;
+
+  const base = slugifyPreview(lead.name) || `previa-${lead.id.replace(/[^a-z0-9]/gi, "").slice(-6)}`;
+  let candidato = base;
+  let tentativa = 2;
+  while (db.prepare("SELECT 1 FROM preview_slugs WHERE slug = ?").get(candidato)) {
+    candidato = `${base}-${tentativa}`;
+    tentativa += 1;
+  }
+  db.prepare("INSERT INTO preview_slugs (slug, lead_id, created_at) VALUES (?, ?, ?)").run(
+    candidato,
+    lead.id,
+    new Date().toISOString()
+  );
+  return candidato;
+}
+
 let avisouLan = false;
 
 /**
@@ -225,13 +282,18 @@ export function generateLeadPreview(lead: StoredLead, now = new Date()): Preview
   const dir = previewsDir();
   fs.mkdirSync(dir, { recursive: true });
   const filePath = path.join(dir, `${lead.id}.html`);
-  fs.writeFileSync(filePath, buildPreviewHtml(lead, now), "utf8");
+  const html = buildPreviewHtml(lead, now);
+  fs.writeFileSync(filePath, html, "utf8");
+  // cópia com o slug amigável: é esta que vai no WhatsApp
+  const slug = previewSlug(lead);
+  fs.writeFileSync(path.join(dir, `${slug}.html`), html, "utf8");
   const { baseUrl } = resolvePublicBaseUrl();
   return {
     leadId: lead.id,
     filePath,
     url: `/previews/${lead.id}.html`,
-    publicUrl: baseUrl ? `${baseUrl}/previews/${lead.id}.html` : null,
+    slug,
+    publicUrl: baseUrl ? `${baseUrl}/p/${slug}` : null,
     generatedAt: now.toISOString(),
   };
 }

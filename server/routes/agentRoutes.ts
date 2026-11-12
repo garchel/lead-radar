@@ -24,7 +24,7 @@ import {
   composeApproachMessage,
   composeReplyMessage,
 } from "../services/salesAgentService";
-import { generateLeadPreview, previewExists } from "../services/previewService";
+import { generateLeadPreview, previewExists, previewSlug, resolvePublicBaseUrl } from "../services/previewService";
 import {
   describeWarmup,
   getWarmupState,
@@ -182,11 +182,13 @@ export function registerAgentRoutes(app: Express) {
     if (!previewExists(lead.id)) {
       return res.status(404).json({ success: false, error: "Prévia ainda não gerada (POST para gerar)." });
     }
-    const publicBase = (process.env.PUBLIC_BASE_URL || "").replace(/\/+$/, "");
+    const slug = previewSlug(lead);
+    const { baseUrl } = resolvePublicBaseUrl();
     return res.json({
       success: true,
       url: `/previews/${lead.id}.html`,
-      publicUrl: publicBase ? `${publicBase}/previews/${lead.id}.html` : null,
+      slug,
+      publicUrl: baseUrl ? `${baseUrl}/p/${slug}` : null,
     });
   });
 
