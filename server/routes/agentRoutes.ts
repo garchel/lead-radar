@@ -24,8 +24,9 @@ import {
   composeApproachMessage,
   composeReplyMessage,
 } from "../services/salesAgentService";
-import { generateLeadPreview, previewExists, previewSlug, previewsDir, resolvePreviewUrl, resolvePublicBaseUrl } from "../services/previewService";
+import { generateLeadPreview, generateLeadPreviewCached, previewExists, previewSlug, previewsDir, resolvePreviewUrl, resolvePublicBaseUrl } from "../services/previewService";
 import { pagesConfigured, publishPreviews } from "../services/pagesService";
+import { buildPalettePreview, sendPalettePreview } from "../services/paletteService";
 import {
   describeWarmup,
   getWarmupState,
@@ -160,11 +161,45 @@ export function registerAgentRoutes(app: Express) {
    * Prévia da primeira tela — o que o agente promete quando o lead diz
    * "pode mandar". Determinística (cadastro + ficha), sem custo de IA.
    */
+  /**
+   * Paleta antes da prévia.
+   *
+   * O lead aprova a direção de cor enquanto a página é montada. Evita gastar a
+   * cartada da prévia num rumo que ele não queria.
+   */
+  app.get("/api/leads/:id/palette", (req: Request, res: Response) => {
+    const lead = getLeadById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
+    try {
+      const montada = buildPalettePreview(lead.id);
+      return res.json({ success: Boolean(montada.colors.length), paleta: montada.colors, texto: montada.text, aviso: montada.detail || null });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || "Falha ao montar a paleta." });
+    }
+  });
+
+  app.post("/api/leads/:id/palette", async (req: Request, res: Response) => {
+    const lead = getLeadById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
+    try {
+      const resultado = await sendPalettePreview(lead.id, { forcar: Boolean((req.body || {}).forcar) });
+      return res.json({
+        success: resultado.sent,
+        paleta: resultado.colors,
+        texto: resultado.text,
+        comunicacao: resultado.communicationId || null,
+        aviso: resultado.sent ? null : resultado.detail || "Nada enviado.",
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || "Falha ao enviar a paleta." });
+    }
+  });
+
   app.post("/api/leads/:id/preview", async (req: Request, res: Response) => {
     const lead = getLeadById(req.params.id);
     if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
     try {
-      const preview = generateLeadPreview(lead);
+      const preview = await generateLeadPreviewCached(lead);
 
       // Publica no Pages quando configurado: o link precisa estar no ar ANTES de
       // ir para o cliente, senão ele abre um 404.

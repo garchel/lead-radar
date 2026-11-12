@@ -15,6 +15,8 @@
  */
 import type { StoredLead } from "../store/types";
 import { prettyName } from "./briefingService";
+import { pickPreviewImages } from "./brandImagery";
+import { monogramSvg } from "./logoSvg";
 
 export function esc(value: unknown): string {
   return String(value ?? "")
@@ -44,7 +46,7 @@ function mix(hex: string, target: [number, number, number], amount: number): str
 }
 
 /** Contraste simples: decide se o texto sobre a cor de marca é branco ou preto. */
-function readableOn(hex: string): string {
+export function readableOn(hex: string): string {
   const rgb = hexToRgb(hex);
   if (!rgb) return "#ffffff";
   const [r, g, b] = rgb.map((c) => {
@@ -385,15 +387,6 @@ function ordenaServicos(lista: string[]): string[] {
 /* blocos                                                              */
 /* ------------------------------------------------------------------ */
 
-function monograma(name: string): string {
-  const partes = String(name || "")
-    .replace(/[^\p{L}\s]/gu, " ")
-    .split(/\s+/)
-    .filter((p) => p.length > 2);
-  const iniciais = (partes.length >= 2 ? [partes[0], partes[partes.length - 1]] : partes).map((p) => p[0]?.toUpperCase() || "");
-  return iniciais.join("").slice(0, 2) || "•";
-}
-
 function ratingLine(lead: StoredLead): string {
   const nota = typeof lead.rating === "number" && Number.isFinite(lead.rating) ? String(lead.rating).replace(".", ",") : null;
   const reviews = lead.reviewsCount;
@@ -425,14 +418,20 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   const prova = ratingLine(lead);
   const horario = lead.clientProfile?.hours || "";
   const endereco = lead.address || "";
-  // CDN do Instagram bloqueia hotlink e entrega imagem quebrada: fica fora.
-  const urlUsavel = (u: string) => /^https?:\/\//i.test(u) && !/lookaside\.fbsbx\.com|fbcdn\.net/i.test(u);
-  const fotos = [...new Set((lead.brandSnapshot?.imagery || []).map((i) => String(i.url || "")).filter(urlUsavel))];
-  // "logo" só entra se a IA teve confiança: foto pequena no topo parece amador
+  // Imagens classificadas por papel: fachada NUNCA vira hero (é foto de rua, com
+  // reflexo e placa torta) — ela prova localização, no bloco de endereço.
+  const imagens = pickPreviewImages(lead.brandSnapshot);
+  const heroImg = imagens.hero;
+  const galeria = imagens.gallery;
+  const fachada = imagens.facade;
+
+  // Logo de verdade (a IA descreveu como logo e confiou). Foto pequena no topo,
+  // ainda que "confiante", é o que faz a página parecer amadora.
   const logoBruto = String(lead.brandSnapshot?.logo?.url || "");
   const logoConfianca = Number(lead.brandSnapshot?.logo?.confidence ?? 0);
-  const logoEhFoto = fotos.some((f) => f.split("?")[0] === logoBruto.split("?")[0]);
-  const logo = urlUsavel(logoBruto) && logoConfianca >= 0.55 && !logoEhFoto ? logoBruto : null;
+  const logoPareceLogo = /logo|logotipo|logomarca|monograma/i.test(String(lead.brandSnapshot?.logo?.description || ""));
+  const logo = /^https?:\/\//i.test(logoBruto) && logoConfianca >= 0.55 && logoPareceLogo ? logoBruto : null;
+  const marcaSvg = monogramSvg(name, pal, 36);
 
   const servicosReais = semDuplicata((lead.clientProfile?.services || []).filter(Boolean)).slice(0, 6);
   // card vazio de texto e seção com 2 itens parecem placeholder: completa com o
@@ -454,8 +453,7 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   const mapa = [name, endereco, lead.city, lead.state].filter(Boolean).join(" ");
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapa)}`;
 
-  const heroFoto = fotos[0];
-  const galeria = fotos.slice(1, 3); // já deduplicado e sem o CDN do Instagram
+  const heroFoto = heroImg?.url || "";
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -497,8 +495,8 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   .top-in{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 0}
   .brand{display:flex;align-items:center;gap:11px;min-width:0;text-decoration:none}
   .brand img{height:34px;width:auto;border-radius:8px;object-fit:contain}
-  .mark{width:36px;height:36px;border-radius:11px;background:var(--accent);color:var(--on-accent);
-        display:grid;place-items:center;font-size:13px;font-weight:700;letter-spacing:.02em;flex:none}
+  .mark-svg{display:inline-flex;flex:none;line-height:0;border-radius:11px}
+  .mark-cover{display:block;line-height:0}
   .brand b{display:block;font-size:15px;color:var(--ink);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .brand span{display:block;font-size:11.5px;color:var(--mute)}
   .top .btn{white-space:nowrap}
@@ -531,8 +529,14 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   .shot{position:relative;border-radius:var(--r-lg);overflow:hidden;background:var(--accent-soft);box-shadow:var(--shadow);
         aspect-ratio:4/5;min-height:280px}
   .shot img{width:100%;height:100%;object-fit:cover}
-  .shot.noimg{display:grid;place-items:center}
-  .shot.noimg .mark{width:88px;height:88px;border-radius:26px;font-size:26px}
+  .shot.noimg{display:grid;place-items:center;background:
+      radial-gradient(120% 90% at 80% 0%, var(--accent-soft) 0%, #fff 62%);aspect-ratio:5/4}
+  .cover-brand{display:grid;justify-items:center;text-align:center;gap:10px;padding:34px 26px;max-width:340px}
+  .cover-brand b{font-size:20px;color:var(--ink);letter-spacing:-.02em;line-height:1.2}
+  .cover-brand span{font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:#54585f;font-weight:600}
+  .cover-brand em{font-size:13.5px;font-style:normal;color:var(--mute);line-height:1.5;border-top:1px solid var(--accent-line);padding-top:12px;margin-top:2px}
+  .fachada{margin:16px 0 0;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--accent-soft)}
+  .fachada img{width:100%;height:150px;object-fit:cover}
   .float{position:absolute;left:14px;bottom:14px;right:14px;background:rgba(255,255,255,.94);backdrop-filter:blur(6px);
          border-radius:var(--r-md);padding:12px 14px;display:flex;align-items:center;gap:11px;box-shadow:0 8px 24px -14px rgba(0,0,0,.4)}
   .float b{display:block;font-size:13.5px;color:var(--ink);line-height:1.2}
@@ -623,7 +627,7 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
 <header class="top">
   <div class="wrap top-in">
     <a class="brand" href="#topo">
-      ${logo ? `<img src="${esc(logo)}" alt="${esc(name)}" loading="lazy" />` : `<span class="mark">${esc(monograma(name))}</span>`}
+      ${logo ? `<img src="${esc(logo)}" alt="${esc(name)}" loading="lazy" />` : `<span class="mark-svg">${marcaSvg}</span>`}
       <span>
         <b>${esc(name)}</b>
         <span>${esc(categoria)}${lead.city ? ` · ${esc(lead.city)}` : ""}</span>
@@ -654,7 +658,16 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
       </div>
 
       <div class="shot${heroFoto ? "" : " noimg"}">
-        ${heroFoto ? `<img src="${esc(heroFoto)}" alt="${esc(name)}" />` : `<span class="mark">${esc(monograma(name))}</span>`}
+        ${
+          heroFoto
+            ? `<img src="${esc(heroFoto)}" alt="${esc(heroImg?.description || name)}" />`
+            : `<span class="cover-brand">
+            ${monogramSvg(name, pal, 88)}
+            <b>${esc(name)}</b>
+            <span>${esc(categoria)}${lead.city ? ` · ${esc(lead.city)}` : ""}</span>
+            <em>Atendimento com hora marcada, direto no WhatsApp.</em>
+          </span>`
+        }
         <div class="float">
           <span class="dot"></span>
           <span>
@@ -737,6 +750,7 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
       <div class="card-info">
         <h3>Onde estamos</h3>
         <p>${esc(endereco || [lead.neighborhood, lead.city, lead.state].filter(Boolean).join(", ") || "Endereço a confirmar")}</p>
+        ${fachada ? `<figure class="fachada"><img src="${esc(fachada.url)}" alt="Fachada de ${esc(name)}" loading="lazy" /></figure>` : ""}
         <div style="margin-top:18px">
           <div class="linha">
             <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>

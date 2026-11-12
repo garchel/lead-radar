@@ -22,7 +22,9 @@ import { prettyName } from "./briefingService";
 import { currentTunnelUrl } from "./tunnelService";
 import { pagesCachedBase } from "./pagesService";
 import { getDb } from "../store/schema";
-import { renderPreviewHtml } from "./previewTemplate";
+import { renderPreviewHtml, previewPalette, readableOn } from "./previewTemplate";
+import { wordmarkSvg } from "./logoSvg";
+import { cacheSnapshotImages } from "./imageCacheService";
 
 export interface PreviewResult {
   leadId: string;
@@ -194,6 +196,26 @@ export function generateLeadPreview(lead: StoredLead, now = new Date()): Preview
   // cópia com o slug amigável: é esta que vai no WhatsApp
   const slug = previewSlug(lead);
   fs.writeFileSync(path.join(dir, `${slug}.html`), html, "utf8");
+
+  // Logo em SVG ao lado da prévia: nítida em qualquer tela e reaproveitável no
+  // site final (o cliente costuma não ter o arquivo da própria marca).
+  try {
+    const pal = previewPalette(
+      (lead.brandSnapshot?.palette || []).map((c) => String(c.hex || "")).find((h) => /^#[0-9a-f]{6}$/i.test(h))
+    );
+    const categoria = lead.searchCategory || lead.category || "Negócio local";
+    fs.writeFileSync(
+      path.join(dir, `${slug}-logo.svg`),
+      wordmarkSvg(prettyName(lead.name, 64), categoria, {
+        accent: pal.accent,
+        onAccent: readableOn(pal.accent),
+        ink: pal.ink,
+      }),
+      "utf8"
+    );
+  } catch {
+    /* logo é extra: sem ela a prévia continua de pé */
+  }
   const { baseUrl } = resolvePublicBaseUrl();
   return {
     leadId: lead.id,
@@ -203,6 +225,17 @@ export function generateLeadPreview(lead: StoredLead, now = new Date()): Preview
     publicUrl: resolvePreviewUrl(slug),
     generatedAt: now.toISOString(),
   };
+}
+
+/**
+ * Gera a prévia com as imagens já copiadas para o servidor.
+ *
+ * É a versão usada pelas rotas: sem a cópia, foto de Instagram chega quebrada e
+ * foto de fachada pode sair do ar antes do cliente abrir o link.
+ */
+export async function generateLeadPreviewCached(lead: StoredLead, now = new Date()): Promise<PreviewResult> {
+  const snapshot = await cacheSnapshotImages(lead.brandSnapshot);
+  return generateLeadPreview(snapshot ? { ...lead, brandSnapshot: snapshot } : lead, now);
 }
 
 /** Já existe prévia para este lead? */
