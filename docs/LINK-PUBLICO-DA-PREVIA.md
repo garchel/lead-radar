@@ -9,7 +9,7 @@ Três formas de resolver, em ordem de simplicidade:
 |---|---|---|---|
 | **Rede local** (automático) | `http://192.168.15.9:3000/...` | enquanto o PC estiver ligado | testar no seu próprio celular, no mesmo Wi-Fi |
 | **Túnel cloudflared** (automático) | `https://algo-aleatorio.trycloudflare.com/...` | enquanto o app e o túnel estiverem rodando — **muda a cada reinício** | mandar link para cliente agora |
-| **Cloudflare Pages** (configurado) | `https://vertice-previas-aqa.pages.dev/<slug>` | **estável, sobrevive ao app fechar** | produção — é o padrão agora |
+| **Cloudflare Pages** (configurado) | `https://vertice-paginas.pages.dev/<slug>` | **estável, sobrevive ao app fechar** | produção — é o padrão agora |
 | **Domínio próprio** (`PUBLIC_BASE_URL`) | `https://previa.vertice.com.br/<slug>` | estável, com a marca | quando houver domínio |
 
 ## Como o app escolhe
@@ -63,12 +63,15 @@ Configuração no `.env` (nunca versionado):
 ```
 CLOUDFLARE_ACCOUNT_ID=<id da conta>
 CLOUDFLARE_API_TOKEN=<token com Account > Cloudflare Pages > Edit>
-CF_PAGES_PROJECT=vertice-previas
+CF_PAGES_PROJECT=vertice-paginas
 ```
 
-O subdomínio real é descoberto na API (`vertice-previas` já existia no Cloudflare,
-então ele virou `vertice-previas-aqa.pages.dev`). O app lê isso no boot e usa como
-base.
+O subdomínio real é descoberto na API. Atenção: o subdomínio `pages.dev` é
+definido **na criação** do projeto e não pode ser trocado depois — renomear o
+projeto mantém o subdomínio antigo. Se o nome desejado já existir globalmente, o
+Cloudflare acrescenta um sufixo aleatório (`vertice-previas` virou
+`vertice-previas-aqa.pages.dev`). Por isso o projeto atual é `vertice-paginas`,
+que ficou limpo: `vertice-paginas.pages.dev`.
 
 Fluxo: `POST /api/leads/:id/preview` gera o HTML, **publica no Pages** e só então
 devolve `publicUrl`. Se a publicação falhar, o link do túnel continua valendo.

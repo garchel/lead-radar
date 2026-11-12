@@ -150,7 +150,8 @@ export async function publishPreviews(dir: string, timeoutMs = 90_000): Promise<
 
       if (codigo === 0) {
         ultimoErro = null;
-        fim({ ok: true, url: sub ? sub[0] : null });
+        // quando nada mudou o wrangler não imprime a URL; a base do projeto serve
+        fim({ ok: true, url: sub ? sub[0] : subdominioCache ? `https://${subdominioCache}` : null });
       } else {
         ultimoErro = `wrangler saiu com código ${codigo}: ${saida.slice(-300)}`;
         fim({ ok: false, url: null, error: ultimoErro });
