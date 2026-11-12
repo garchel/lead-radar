@@ -24,7 +24,8 @@ import {
   composeApproachMessage,
   composeReplyMessage,
 } from "../services/salesAgentService";
-import { generateLeadPreview, previewExists, previewSlug, resolvePublicBaseUrl } from "../services/previewService";
+import { generateLeadPreview, previewExists, previewSlug, previewsDir, resolvePreviewUrl, resolvePublicBaseUrl } from "../services/previewService";
+import { pagesConfigured, publishPreviews } from "../services/pagesService";
 import {
   describeWarmup,
   getWarmupState,
@@ -159,17 +160,27 @@ export function registerAgentRoutes(app: Express) {
    * Prévia da primeira tela — o que o agente promete quando o lead diz
    * "pode mandar". Determinística (cadastro + ficha), sem custo de IA.
    */
-  app.post("/api/leads/:id/preview", (req: Request, res: Response) => {
+  app.post("/api/leads/:id/preview", async (req: Request, res: Response) => {
     const lead = getLeadById(req.params.id);
     if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
     try {
       const preview = generateLeadPreview(lead);
+
+      // Publica no Pages quando configurado: o link precisa estar no ar ANTES de
+      // ir para o cliente, senão ele abre um 404.
+      let publicação: { ok: boolean; url: string | null; error?: string } | null = null;
+      if (pagesConfigured()) {
+        publicação = await publishPreviews(previewsDir());
+      }
+
+      const publicUrl = resolvePreviewUrl(preview.slug);
       return res.json({
         success: true,
-        preview,
-        aviso: preview.publicUrl
+        preview: { ...preview, publicUrl },
+        publicação,
+        aviso: publicUrl
           ? null
-          : "PUBLIC_BASE_URL não configurado: a prévia existe no servidor, mas o link não abre no celular do cliente.",
+          : "Sem base pública (Pages, túnel ou rede local): a prévia existe no servidor, mas o link não abre no cliente. O link NÃO deve ser enviado.",
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err?.message || "Falha ao gerar a prévia." });
@@ -183,12 +194,12 @@ export function registerAgentRoutes(app: Express) {
       return res.status(404).json({ success: false, error: "Prévia ainda não gerada (POST para gerar)." });
     }
     const slug = previewSlug(lead);
-    const { baseUrl } = resolvePublicBaseUrl();
     return res.json({
       success: true,
       url: `/previews/${lead.id}.html`,
       slug,
-      publicUrl: baseUrl ? `${baseUrl}/p/${slug}` : null,
+      publicUrl: resolvePreviewUrl(slug),
+      fonte: resolvePublicBaseUrl().source,
     });
   });
 

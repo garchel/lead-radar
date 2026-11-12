@@ -21,6 +21,7 @@ import type { StoredLead } from "../store/types";
 import { prettyName } from "./briefingService";
 import { getCommercialPolicy, formatBRL, cheapestPackage } from "./commercialPolicy";
 import { currentTunnelUrl } from "./tunnelService";
+import { pagesCachedBase } from "./pagesService";
 import { getDb } from "../store/schema";
 
 export interface PreviewResult {
@@ -236,6 +237,16 @@ export function previewSlug(lead: StoredLead): string {
   return candidato;
 }
 
+/**
+ * URL pública do slug respeitando o caminho de cada base: no Pages o arquivo é
+ * servido na raiz (`/<slug>`); no túnel e na rede local, em `/p/<slug>`.
+ */
+export function resolvePreviewUrl(slug: string): string | null {
+  const { baseUrl, source } = resolvePublicBaseUrl();
+  if (!baseUrl) return null;
+  return source === "pages" ? `${baseUrl}/${slug}` : `${baseUrl}/p/${slug}`;
+}
+
 let avisouLan = false;
 
 /**
@@ -246,9 +257,16 @@ let avisouLan = false;
  * simulação sem configurar túnel. Sem nenhuma das duas, devolve `null` — e aí o
  * link NÃO é enviado ao cliente (nunca inventar endereço).
  */
-export function resolvePublicBaseUrl(): { baseUrl: string | null; source: "env" | "tunnel" | "lan" | "none" } {
+export function resolvePublicBaseUrl(): {
+  baseUrl: string | null;
+  source: "env" | "pages" | "tunnel" | "lan" | "none";
+} {
   const env = (process.env.PUBLIC_BASE_URL || "").trim().replace(/\/+$/, "");
   if (env) return { baseUrl: env, source: "env" };
+
+  // Pages: endereço estável, sobrevive ao app fechar (arquivo estático na CDN).
+  const pages = pagesCachedBase();
+  if (pages) return { baseUrl: pages, source: "pages" };
 
   // Túnel público: é o único endereço que funciona fora da rede local (o cliente
   // do outro lado da cidade não alcança 192.168.x.x).
@@ -293,7 +311,7 @@ export function generateLeadPreview(lead: StoredLead, now = new Date()): Preview
     filePath,
     url: `/previews/${lead.id}.html`,
     slug,
-    publicUrl: baseUrl ? `${baseUrl}/p/${slug}` : null,
+    publicUrl: resolvePreviewUrl(slug),
     generatedAt: now.toISOString(),
   };
 }

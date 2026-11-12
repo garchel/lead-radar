@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { KeyRound, MessageCircle, Server, RefreshCw, ExternalLink, AlertTriangle, CheckCircle2, Globe, Play, Copy, Check } from 'lucide-react';
+import { KeyRound, MessageCircle, Server, RefreshCw, ExternalLink, AlertTriangle, CheckCircle2, Globe, Play, Copy, Check, UploadCloud } from 'lucide-react';
 import { SerpApiKeyManager } from './SerpApiKeyManager';
 import { WhatsappSettingsCard } from './WhatsappSettingsCard';
 import { LeadQualityCard } from './LeadQualityCard';
@@ -240,6 +240,8 @@ function PublicLinkCard() {
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
+  const [pages, setPages] = useState<{ configured: boolean; project: string | null; baseUrl: string | null; error?: string } | null>(null);
+  const [publicacao, setPublicacao] = useState<string | null>(null);
 
   const carregar = async () => {
     try {
@@ -248,6 +250,13 @@ function PublicLinkCard() {
       if (data?.success) setEstado(data);
     } catch {
       /* cartão secundário */
+    }
+    try {
+      const res = await fetch('/api/previews/public');
+      const data = await res.json();
+      if (data?.success) setPages(data.pages);
+    } catch {
+      /* sem Pages configurado */
     }
   };
 
@@ -270,6 +279,23 @@ function PublicLinkCard() {
     }
   };
 
+  const publicar = async () => {
+    setOcupado('publish');
+    setErro(null);
+    setPublicacao(null);
+    try {
+      const res = await fetch('/api/previews/publish', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.error || 'A publicação falhou.');
+      setPublicacao(data.base?.baseUrl ? `publicado em ${data.base.baseUrl}` : 'publicado');
+      await carregar();
+    } catch (e: any) {
+      setErro(e?.message || 'Falha ao publicar no Cloudflare.');
+    } finally {
+      setOcupado(null);
+    }
+  };
+
   const url = estado?.previewBase?.baseUrl;
   const fonte = estado?.previewBase?.source;
 
@@ -284,7 +310,15 @@ function PublicLinkCard() {
             O cliente abre a prévia de qualquer rede. Sem isso o link só funciona no mesmo Wi-Fi.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => void publicar()}
+            disabled={ocupado !== null || !pages?.configured}
+            title={pages?.configured ? 'Publica todas as prévias no Cloudflare (link estável)' : 'Configure CLOUDFLARE_ACCOUNT_ID e CLOUDFLARE_API_TOKEN no .env'}
+            className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
+          >
+            {ocupado === 'publish' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />} Publicar
+          </button>
           <button
             onClick={() => void acao('start')}
             disabled={ocupado !== null}
@@ -323,6 +357,14 @@ function PublicLinkCard() {
           )}
         </div>
         {estado?.previewExample && <p className="mt-1 text-[11px] text-slate-500">exemplo: {estado.previewExample}</p>}
+        <p className="mt-1 text-[11px] text-slate-600">
+          Cloudflare Pages: {!pages
+            ? 'lendo…'
+            : pages.configured
+              ? `${pages.project}${pages.baseUrl ? ` — ${pages.baseUrl}` : ' (publicando…)'}`
+              : 'não configurado (defina CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN e CF_PAGES_PROJECT)'}
+        </p>
+        {publicacao && <p className="mt-1 text-[11px] text-emerald-700">{publicacao}</p>}
         {estado?.tunnel?.error && <p className="mt-1 text-[11px] text-amber-700">{estado.tunnel.error}</p>}
         <p className="mt-1 text-[11px] text-slate-500">
           Túnel do cloudflared: a URL muda a cada reinício e cai se o app fechar. Para endereço fixo, defina{' '}

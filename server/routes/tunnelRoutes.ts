@@ -1,6 +1,7 @@
 import { Express, Request, Response } from "express";
 import { startTunnel, stopTunnel, tunnelStatus, cloudflaredAvailable } from "../services/tunnelService";
-import { resolvePublicBaseUrl } from "../services/previewService";
+import { previewsDir, resolvePublicBaseUrl } from "../services/previewService";
+import { pagesConfigured, pagesStatus, publishPreviews } from "../services/pagesService";
 
 /**
  * Link público das prévias.
@@ -11,6 +12,33 @@ import { resolvePublicBaseUrl } from "../services/previewService";
  * que o cliente recebeu.
  */
 export function registerTunnelRoutes(app: Express) {
+  /** Estado do link público: Pages (estável), túnel (efêmero) ou rede local. */
+  app.get("/api/previews/public", async (_req: Request, res: Response) => {
+    try {
+      const base = resolvePublicBaseUrl();
+      const pages = pagesStatus();
+      return res.json({ success: true, base, pages, tunnel: tunnelStatus() });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao ler o link público." });
+    }
+  });
+
+  /** Publica todas as prévias no Cloudflare Pages (1 deploy por chamada). */
+  app.post("/api/previews/publish", async (_req: Request, res: Response) => {
+    if (!pagesConfigured()) {
+      return res.status(400).json({
+        success: false,
+        error: "Cloudflare Pages não configurado: defina CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN e CF_PAGES_PROJECT no .env.",
+      });
+    }
+    try {
+      const resultado = await publishPreviews(previewsDir());
+      return res.json({ success: resultado.ok, publicacao: resultado, base: resolvePublicBaseUrl(), pages: pagesStatus() });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao publicar." });
+    }
+  });
+
   app.get("/api/tunnel", (_req: Request, res: Response) => {
     try {
       const status = tunnelStatus();

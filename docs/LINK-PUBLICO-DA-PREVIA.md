@@ -9,16 +9,22 @@ Três formas de resolver, em ordem de simplicidade:
 |---|---|---|---|
 | **Rede local** (automático) | `http://192.168.15.9:3000/...` | enquanto o PC estiver ligado | testar no seu próprio celular, no mesmo Wi-Fi |
 | **Túnel cloudflared** (automático) | `https://algo-aleatorio.trycloudflare.com/...` | enquanto o app e o túnel estiverem rodando — **muda a cada reinício** | mandar link para cliente agora |
-| **Domínio próprio** (`PUBLIC_BASE_URL`) | `https://previa.vertice.com.br/...` | estável | produção (precisa de túnel nomeado com domínio, ou VPS) |
+| **Cloudflare Pages** (configurado) | `https://vertice-previas-aqa.pages.dev/<slug>` | **estável, sobrevive ao app fechar** | produção — é o padrão agora |
+| **Domínio próprio** (`PUBLIC_BASE_URL`) | `https://previa.vertice.com.br/<slug>` | estável, com a marca | quando houver domínio |
 
 ## Como o app escolhe
 
 `resolvePublicBaseUrl()` tenta, nesta ordem:
 
-1. `PUBLIC_BASE_URL` (env) — se definido, é ele que vale;
-2. **túnel cloudflared** no ar;
-3. **IP da rede local**;
-4. nada (nesse caso o link **não** é enviado ao cliente — nunca inventar endereço).
+1. `PUBLIC_BASE_URL` (env) — domínio próprio;
+2. **Cloudflare Pages** (`CF_PAGES_PROJECT` + token) — estável;
+3. **túnel cloudflared** no ar;
+4. **IP da rede local**;
+5. nada (nesse caso o link **não** é enviado ao cliente — nunca inventar endereço).
+
+Caminho da URL muda com a base: no Pages o arquivo é servido na raiz (`/<slug>`),
+no túnel e na rede local em `/p/<slug>` (rota própria). `resolvePreviewUrl(slug)`
+cuida disso para ninguém montar o link na mão.
 
 O painel mostra a base em uso em **Canais & APIs → Link público das prévias**, com
 botão de copiar e de subir/derrubar o túnel. `GET /api/tunnel` devolve o mesmo.
@@ -49,3 +55,42 @@ Duas saídas, ambas exigem algo além do PC:
   abre mais.
 - Para o cliente ver a versão final, o caminho é o site publicado (deploy), não a prévia.
 - O HTML da prévia é `noindex` — não aparece no Google.
+
+## Cloudflare Pages (o caminho escolhido)
+
+Configuração no `.env` (nunca versionado):
+
+```
+CLOUDFLARE_ACCOUNT_ID=<id da conta>
+CLOUDFLARE_API_TOKEN=<token com Account > Cloudflare Pages > Edit>
+CF_PAGES_PROJECT=vertice-previas
+```
+
+O subdomínio real é descoberto na API (`vertice-previas` já existia no Cloudflare,
+então ele virou `vertice-previas-aqa.pages.dev`). O app lê isso no boot e usa como
+base.
+
+Fluxo: `POST /api/leads/:id/preview` gera o HTML, **publica no Pages** e só então
+devolve `publicUrl`. Se a publicação falhar, o link do túnel continua valendo.
+Botão **Publicar** em Canais & APIs publica tudo manualmente.
+
+### Plano Free: o que limita e o que não cobra
+
+| Item | Free |
+|---|---|
+| Deploys | 500/mês (1 por prévia gerada) |
+| Arquivos por projeto | 20.000 (~4 KB cada prévia) |
+| Requisições / banda | ilimitadas |
+| Projetos | 100 |
+| Cartão de crédito | **não exige** |
+
+Proteções contra cobrança: não cadastrar cartão; não ativar Workers Paid, R2,
+Images, Stream, Argo ou Load Balancing (são medidos); não servir vídeo/arquivo
+grande pelo Pages no Free (o termo exige serviço pago). Se um dia houver cartão,
+ligar **Notifications → Billing** e conferir **Billing → Subscriptions**.
+
+### Próximo degrau: link com a marca
+
+Comprar um domínio (`.com.br`, ~R$ 40/ano), mover o DNS para o Cloudflare e
+adicionar como domínio customizado do projeto Pages. Fica
+`https://previa.seudominio.com.br/<slug>`, ainda no Free.
