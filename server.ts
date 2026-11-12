@@ -3,6 +3,7 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import path from "path";
+import fs from "node:fs";
 import { createServer as createViteServer } from "vite";
 import { registerMcpRoutes } from "./server/mcpServer";
 import { registerQueueRoutes } from "./server/jobs/queueRoutes";
@@ -18,9 +19,10 @@ import { registerGrowthRoutes } from "./server/routes/growthRoutes";
 import { registerOutboxRoutes } from "./server/routes/outboxRoutes";
 import { registerActionItemsRoutes } from "./server/routes/actionItemsRoutes";
 import { registerAutopilotRoutes } from "./server/routes/autopilotRoutes";
+import { registerAgentRoutes } from "./server/routes/agentRoutes";
 import { registerDatabaseRoutes } from "./server/routes/databaseRoutes";
 import { scheduleBackups } from "./server/backup/backupService";
-import { scheduler, ensureDefaultFollowUpSchedule } from "./server/scheduler/scheduler";
+import { scheduler, ensureDefaultFollowUpSchedule, ensureDefaultCadenceSchedule } from "./server/scheduler/scheduler";
 import { startTypeformPolling } from "./server/typeform/polling";
 import { getSchedulerConfig, getSerpApiConfig, getProspectingProvider } from "./server/config";
 import { analyzeLead, searchBusinesses } from "./server/services/prospectingService";
@@ -79,6 +81,7 @@ registerGrowthRoutes(app);
 registerOutboxRoutes(app);
 registerActionItemsRoutes(app);
 registerAutopilotRoutes(app);
+registerAgentRoutes(app);
 registerDatabaseRoutes(app);
 
 app.get("/api/health", (_req, res) => {
@@ -377,6 +380,25 @@ app.post("/api/analyze-lead", async (req, res) => {
 });
 
 async function startServer() {
+  // Prévia da landing page: arquivo estático gerado por `previewService`.
+  // Servido antes do Vite/dist e do fallback da SPA — um .html de prévia nunca
+  // pode cair no index.html do app.
+  {
+    const { previewsDir } = await import("./server/services/previewService");
+    const previewsPath = previewsDir();
+    fs.mkdirSync(previewsPath, { recursive: true });
+    app.use(
+      "/previews",
+      express.static(previewsPath, {
+        index: false,
+        setHeaders(res) {
+          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+          res.setHeader("X-Robots-Tag", "noindex, nofollow");
+        },
+      })
+    );
+  }
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -418,6 +440,33 @@ async function startServer() {
   const httpServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`LeadRadar AI disponível em http://localhost:${PORT}`);
   });
+
+  // Rede de segurança do atendimento: se o bot Clara não respondeu (pausado,
+  // gateway caído, máquina dormindo), o app responde depois de alguns minutos.
+  // Nunca com o auto-atendimento do webhook ligado ao mesmo tempo — os dois
+  // responderiam a mesma mensagem.
+  if (process.env.NODE_ENV !== "test") {
+    try {
+      const { fallbackAnswerTick } = await import("./server/services/agentWatchdog");
+      let watching = false;
+      setInterval(async () => {
+        if (watching) return;
+        watching = true;
+        try {
+          const result = await fallbackAnswerTick();
+          if (result.answered.length) {
+            console.log(`[fallback] ${result.answered.length} conversa(s) respondida(s) pela rede de segurança`);
+          }
+        } catch (e: any) {
+          console.warn("[fallback] pulso falhou:", e?.message || e);
+        } finally {
+          watching = false;
+        }
+      }, 120_000).unref?.();
+    } catch (e: any) {
+      console.warn("[fallback] não iniciado:", e?.message || e);
+    }
+  }
 
   // Seed base IBGE e categorias no boot (evita latência na 1ª requisição)
   try {
@@ -469,6 +518,8 @@ async function startServer() {
   // Agenda padrão de recontatos autorizados (visível na UI mesmo com o
   // agendador desligado; dispara diariamente quando o scheduler está ativo).
   ensureDefaultFollowUpSchedule();
+  // Sem este agendamento a cadência D+3/D+7 nunca rodava sozinha.
+  ensureDefaultCadenceSchedule();
 
   try {
     const { getSetting } = await import("./server/store/db");
