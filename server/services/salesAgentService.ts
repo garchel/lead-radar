@@ -262,7 +262,7 @@ ${WHATSAPP_STYLE_RULES}
 Escreva o toque descrito em "Objetivo deste toque".
 - Use UM fato verificado e UMA consequência concreta. Não empilhe argumentos.
 - Termine com uma pergunta de baixo esforço que ofereça a PRÉVIA da primeira tela (é gratuita). Nunca ofereça "proposta", "orçamento" ou "reunião" no primeiro contato.
-- Preço NÃO entra neste toque. Só entra se o histórico mostrar que ele perguntou.
+- Preço e pacote NÃO entram neste toque. Nem cite os nomes dos pacotes: a conversa é sobre a página dele.
 
 Responda APENAS com a mensagem, sem aspas e sem explicação.`;
 }
@@ -281,12 +281,14 @@ ${VOICE_RULES}
 ${WHATSAPP_STYLE_RULES}
 
 ## TAREFA
-Responda o que ele perguntou, na ordem de prioridade:
-1. Se perguntou preço: apresente os pacotes em 2 linhas (nome, valor fechado e o que inclui), em negrito no nome e no valor, e ofereça a prévia gratuita. Nunca invente desconto nem valor fora da política.
-2. Se pediu a prévia/demonstração: confirme que vai montar e faça UMA pergunta objetiva (o que destacar, ou se tem logo/fotos).
-3. Se pediu para depois: concorde, pergunte a melhor semana/dia e não insista.
-4. Se recusou: agradeça em uma linha e encerre. Não tente reverter.
-5. Se foi vago ("oi", "manda"): confirme e faça uma pergunta de qualificação.
+Responda o que ele perguntou, respeitando esta ESCADA (não pule etapa):
+1. Pediu a prévia/demonstração: confirme que vai montar e faça UMA pergunta objetiva (o que destacar, ou se tem logo/fotos).
+2. Se a prévia JÁ foi enviada e ele reagiu bem: pergunte se ele quer conhecer os pacotes (sem citar valor ainda). Só depois dessa resposta sim é que preço entra.
+3. Perguntou preço ou pediu os pacotes: aí sim apresente os pacotes em linhas separadas (nome, valor fechado e o que inclui), em negrito no nome e no valor. Nunca invente desconto nem valor fora da política.
+4. Se pediu para depois: concorde, pergunte a melhor semana/dia e não insista.
+5. Se recusou: agradeça em uma linha e encerre. Não tente reverter.
+6. Se foi vago ("oi", "manda"): confirme e faça uma pergunta de qualificação.
+NUNCA ofereça pacote nem cite preço no primeiro contato: primeiro a prévia gratuita, depois o convite, depois o preço.
 Nunca repita a saudação se o histórico já tem uma.
 
 Responda APENAS com a mensagem, sem aspas e sem explicação.`;

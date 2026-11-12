@@ -38,14 +38,14 @@ function seed(id: string, overrides: Partial<StoredLead> = {}): StoredLead {
 }
 
 describe("política comercial", () => {
-  it("o pacote mais barato é o Essencial de R$ 900", () => {
+  it("o pacote mais barato é o Essencial de R$ 899", () => {
     const cheapest = cheapestPackage(DEFAULT_POLICY);
-    expect(cheapest.price).toBe(900);
-    expect(formatBRL(cheapest.price)).toBe("R$ 900");
+    expect(cheapest.price).toBe(899);
+    expect(formatBRL(cheapest.price)).toBe("R$ 899");
   });
 
   it("só os preços dos pacotes são citáveis", () => {
-    expect(ALLOWED).toEqual([900, 1200]);
+    expect(ALLOWED).toEqual([899, 1199]);
   });
 
   it("prazo padrão é 5 a 7 dias úteis", () => {
@@ -55,24 +55,24 @@ describe("política comercial", () => {
 
 describe("extração de preço", () => {
   it("acha valores em reais com e sem centavos", () => {
-    expect(extractPrices("fica a partir de R$ 900, ou R$ 1.200 no completo")).toEqual([900, 1200]);
+    expect(extractPrices("fica a partir de R$ 899, ou R$ 1.199 no completo")).toEqual([899, 1199]);
     expect(extractPrices("R$ 2.500,00")).toEqual([2500]);
     expect(extractPrices("sem valor aqui")).toEqual([]);
   });
 
   it("pega também o valor escrito por extenso em 'reais'", () => {
-    expect(extractPrices("começa a partir de 900 reais")).toEqual([900]);
+    expect(extractPrices("começa a partir de 899 reais")).toEqual([899]);
     expect(extractPrices("fica 2.500 reais")).toEqual([2500]);
-    expect(extractPrices("são 1200 reais no completo")).toEqual([1200]);
+    expect(extractPrices("são 1199 reais no completo")).toEqual([1199]);
   });
 
   it("não confunde número de avaliação com preço", () => {
     expect(extractPrices("tem 235 avaliações e nota 5")).toEqual([]);
   });
 
-  it("padroniza '900 reais' para 'R$ 900'", () => {
-    expect(normalizePriceFormat("começa a partir de 900 reais, com prévia grátis", ALLOWED)).toBe(
-      "começa a partir de R$ 900, com prévia grátis"
+  it("padroniza '899 reais' para 'R$ 899'", () => {
+    expect(normalizePriceFormat("começa a partir de 899 reais, com prévia grátis", ALLOWED)).toBe(
+      "começa a partir de R$ 899, com prévia grátis"
     );
   });
 
@@ -97,7 +97,7 @@ describe("portão de qualidade do texto do agente", () => {
   });
 
   it("aceita o preço da política", () => {
-    const check = checkAgentText("Fica a partir de R$ 900, com a prévia gratuita. Quer ver?", base);
+    const check = checkAgentText("Fica a partir de R$ 899, com a prévia gratuita. Quer ver?", base);
     expect(check.ok).toBe(true);
   });
 
@@ -176,7 +176,7 @@ describe("fallback determinístico (quando a IA cai)", () => {
   it("pergunta de preço recebe o valor do pacote mais barato", () => {
     const briefing = buildLeadBriefing(seed("lead-fb-3"));
     const reply = fallbackReplyMessage(briefing, "Quanto custa?");
-    expect(reply).toContain("R$ 900");
+    expect(reply).toContain("R$ 899");
     expect(reply).toMatch(/prévia/i);
   });
 
@@ -194,7 +194,7 @@ describe("dossiê do lead", () => {
     expect(briefing.facts.join(" ")).toMatch(/5★/);
     expect(briefing.facts.join(" ")).toMatch(/47 avaliações/);
     expect(briefing.forbidden.join(" ")).toMatch(/Ticket/i);
-    expect(briefing.prompt).toContain("R$ 900");
+    expect(briefing.prompt).toContain("R$ 899");
     expect(briefing.prompt).not.toContain("R$ 1.800 - R$ 3.500");
   });
 
@@ -240,6 +240,6 @@ describe("composição sem IA disponível", () => {
     const lead = seed("lead-cp-2");
     const composed = await composeReplyMessage(lead, "quanto fica?");
     expect(composed.source).toBe("template");
-    expect(composed.message).toContain("R$ 900");
+    expect(composed.message).toContain("R$ 899");
   });
 });

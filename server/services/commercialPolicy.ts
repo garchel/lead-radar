@@ -3,7 +3,7 @@
  *
  * Regra de ouro: o agente de IA nunca "sabe" um preço — ele recebe a política
  * pronta e é proibido de citar valor fora dela. Sem isso, o modelo inventa
- * "R$ 2.500" porque viu ticket estimado no banco, e o Paulo entrega por R$ 900.
+ * "R$ 2.500" porque viu ticket estimado no banco, e o Paulo entrega por R$ 899.
  *
  * Editável em `app_settings` (chave `commercial_policy`, JSON parcial) sem
  * reiniciar o app e sem tocar em código.
@@ -47,7 +47,7 @@ export interface CommercialPolicy {
 export const ESSENCIAL: CommercialPackage = {
   id: "essencial",
   name: "Essencial",
-  price: 900,
+  price: 899,
   summary: "uma página com até 5 seções, botão de WhatsApp e publicação",
   sections: [
     "seção inicial com a chamada principal",
@@ -66,7 +66,7 @@ export const ESSENCIAL: CommercialPackage = {
 export const PROFISSIONAL: CommercialPackage = {
   id: "profissional",
   name: "Profissional",
-  price: 1200,
+  price: 1199,
   summary: "tudo do Essencial + diferenciais, depoimentos, FAQ e SEO local melhorado",
   sections: [
     "tudo do Essencial",

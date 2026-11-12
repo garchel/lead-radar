@@ -18,7 +18,7 @@ import { approachLead } from "./salesAgentService";
 import { passesQualityGate, isReachableOnWhatsApp, classifyPhone } from "./leadQuality";
 import { validateLeadsWhatsApp } from "./whatsappValidationService";
 import { getCommercialPolicy } from "./commercialPolicy";
-import { bold, boldFirstOccurrence, freePreviewLine, packageLines, whatsAppify } from "./messageStyle";
+import { bold, boldFirstOccurrence, freePreviewLine, whatsAppify } from "./messageStyle";
 
 /**
  * Coleta automática de leads com cota controlada.
@@ -378,29 +378,31 @@ export function buildProspectMessage(lead: StoredLead): string {
   const nota = typeof lead.rating === "number" ? String(lead.rating).replace(".", ",") : "";
   const reviews = typeof lead.reviewsCount === "number" && lead.reviewsCount > 0 ? lead.reviewsCount : 0;
 
+  // Sem artigo antes do nome: o gênero do nome do negócio é imprevisível
+  // ("a Quintal dos Sonhos" soa errado), então a frase é neutra.
   const prova = nota
     ? reviews
-      ? `Vi a ${bold(biz)} com ${nota}★ no Google (${reviews} avaliações)`
-      : `Vi a ${bold(biz)} com ${nota}★ no Google`
-    : `Achei a ${bold(biz)} no Google Maps`;
+      ? `Achei ${bold(biz)} no Google: ${nota}★ com ${reviews} avaliações`
+      : `Achei ${bold(biz)} no Google: ${nota}★`
+    : `Achei ${bold(biz)} no Google Maps`;
 
   const gap =
     lead.websiteStatus === "none"
       ? "e reparei que vocês ainda não têm um site próprio."
       : "e vi que a presença de vocês está só em rede social ou marketplace, sem site próprio.";
 
+  // Primeiro contato NÃO fala de pacote nem de preço: conversa primeiro,
+  // mostra a prévia, e só depois oferece os pacotes (ver packagesInviteLine).
   const lines: string[] = [
-    "Olá! Aqui é da Vértice Páginas Web 👋",
+    "Olá! Tudo bem? 👋 Aqui é da Vértice Páginas Web.",
     "",
     `${prova} ${gap}`,
     "",
-    "A gente monta uma página simples, rápida e bonita, com botão direto pro WhatsApp e formulário de orçamento.",
+    "A gente monta uma página simples e rápida, com botão direto pro WhatsApp e formulário de orçamento.",
     "",
     freePreviewLine(policy),
     "",
-    ...packageLines(policy),
-    "",
-    "Quer que eu monte a prévia da sua página? 🚀",
+    "Quer que eu prepare a de vocês?",
   ];
 
   return whatsAppify(lines.filter((line, index) => !(line === "" && lines[index - 1] === "")).join("\n"));

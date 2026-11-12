@@ -116,7 +116,10 @@ export function packageLines(policy: CommercialPolicy, opts: { detailed?: boolea
         .slice(0, 4)
         .map((item) => `• ${item}`);
       if (items.length) lines.push(items.join("\n"));
-      if (pack.revisions) lines.push(`• ${pack.revisions} rodada(s) de ajustes incluída(s)`);
+      if (pack.revisions) {
+        const n = pack.revisions;
+        lines.push(`• ${n} ${n === 1 ? "rodada" : "rodadas"} de ajuste${n === 1 ? "" : "s"} incluída${n === 1 ? "" : "s"}`);
+      }
     }
   }
   return lines;
@@ -136,6 +139,17 @@ export const WHATSAPP_STYLE_RULES = [
   "- Quando falar de pacote, diga o nome, o valor fechado e o que ele inclui (não só o preço).",
   "- Nada de bloco único corrido, de markdown com # ou de link.",
 ].join("\n");
+
+/**
+ * Convite para conhecer os pacotes, usado DEPOIS que a prévia foi enviada.
+ * Preço só entra na conversa quando o lead aceita esse convite.
+ */
+export function packagesInviteLine(policy: CommercialPolicy): string {
+  const nomes = policy.packages.map((pack) => pack.name);
+  const lista =
+    nomes.length <= 1 ? nomes[0] || "" : `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}`;
+  return `Se fizer sentido pra você, eu te mando os pacotes (${lista}) com o que cada um inclui. Quer ver?`;
+}
 
 /** Frase da prévia gratuita, sempre presente no primeiro contato. */
 export function freePreviewLine(policy: CommercialPolicy): string {

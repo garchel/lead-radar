@@ -46,7 +46,7 @@ describe("prévia da landing page", () => {
 
   it("só cita o preço da política comercial (nada de ticket do CRM)", () => {
     const html = buildPreviewHtml(seed("pv-c", { estimatedValue: "R$ 1.800 - R$ 3.500" }));
-    expect(html).toContain("R$ 900");
+    expect(html).toContain("R$ 899");
     expect(html).not.toContain("1.800");
   });
 

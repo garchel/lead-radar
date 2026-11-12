@@ -4,6 +4,7 @@ import {
   formatPrice,
   freePreviewLine,
   packageLines,
+  packagesInviteLine,
   stripAiDashes,
   whatsAppify,
 } from "../server/services/messageStyle";
@@ -80,8 +81,21 @@ describe("pacotes e prévia", () => {
   });
 
   it("formata preço sem centavos", () => {
-    expect(formatPrice(900)).toBe("R$ 900");
-    expect(formatPrice(1200)).toBe("R$ 1.200");
+    expect(formatPrice(899)).toBe("R$ 899");
+    expect(formatPrice(1199)).toBe("R$ 1.199");
+  });
+
+  it("os pacotes da política terminam em 99", () => {
+    for (const pack of DEFAULT_POLICY.packages) {
+      expect(String(pack.price).endsWith("99")).toBe(true);
+    }
+  });
+
+  it("o convite aos pacotes só cita os nomes, sem preço", () => {
+    const convite = packagesInviteLine(DEFAULT_POLICY);
+    for (const pack of DEFAULT_POLICY.packages) expect(convite).toContain(pack.name);
+    expect(convite).not.toMatch(/R\$/);
+    expect(convite).toMatch(/Quer ver\?/);
   });
 });
 
@@ -100,7 +114,7 @@ describe("buildProspectMessage (D0)", () => {
   const msg = buildProspectMessage(lead);
 
   it("usa blocos curtos em vez de um parágrafo", () => {
-    expect(msg.split("\n").filter(Boolean).length).toBeGreaterThanOrEqual(6);
+    expect(msg.split("\n").filter(Boolean).length).toBeGreaterThanOrEqual(4);
   });
 
   it("não usa travessão", () => {
@@ -112,11 +126,17 @@ describe("buildProspectMessage (D0)", () => {
     expect(msg).toMatch(/sem custo/i);
   });
 
-  it("apresenta os pacotes com valor e escopo", () => {
+  it("NÃO fala de pacote nem de preço no primeiro contato", () => {
     for (const pack of DEFAULT_POLICY.packages) {
-      expect(msg).toContain(pack.name);
-      expect(msg).toContain(formatPrice(pack.price));
+      expect(msg).not.toContain(pack.name);
+      expect(msg).not.toContain(formatPrice(pack.price));
     }
+    expect(msg).not.toMatch(/R\$/);
+  });
+
+  it("promete a prévia grátis e termina com convite leve", () => {
+    expect(msg).toMatch(/prepare|preparar|monto/i);
+    expect(msg.trim().endsWith("?")).toBe(true);
   });
 
   it("usa negrito no nome do negócio e pelo menos um emoji", () => {
