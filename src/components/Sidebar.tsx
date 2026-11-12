@@ -239,7 +239,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <>
           <button id="nav-guide-btn" onClick={() => setActiveTab('guide')} className={navBtn('guide', activeTab === 'guide')}>
             <BookOpen className="w-4 h-4 shrink-0" />
-            <span>Estratégia &amp; Pitch</span>
+            <span>Estratégia &amp; Receita</span>
           </button>
 
           <button id="nav-growth-btn" onClick={() => setActiveTab('growth')} className={navBtn('growth', activeTab === 'growth')}>

@@ -10,6 +10,8 @@ import {
   Trophy,
   AlertTriangle,
   Loader2,
+  ArrowRight,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface PriorityReasonLead {
@@ -73,12 +75,13 @@ const STATUS_LABELS: Record<string, string> = {
   has_website: 'Tem site',
 };
 
+/** Selo de prioridade no tema claro (o escuro anterior destoava do resto do app). */
 const levelStyle = (level: string) =>
   level === 'alta'
-    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
     : level === 'media'
-      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-      : 'bg-slate-700/40 text-slate-400 border-slate-600/40';
+      ? 'bg-amber-50 text-amber-800 border-amber-200'
+      : 'bg-slate-100 text-slate-600 border-slate-200';
 
 const fmtPct = (value: number) => `${value.toFixed(1)}%`;
 
@@ -136,8 +139,8 @@ export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> =
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 text-slate-400">
-        <Loader2 className="w-5 h-5 animate-spin mr-2" /> Carregando crescimento…
+      <div className="flex h-64 items-center justify-center text-slate-500">
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Carregando crescimento…
       </div>
     );
   }
@@ -150,190 +153,214 @@ export const GrowthPage: React.FC<{ onNavigate?: (tab: 'followups') => void }> =
     { label: 'Fechados', value: metrics?.closed ?? 0, icon: TrendingUp },
   ];
 
+  const semEnvio = (metrics?.funnel || []).length === 0;
+
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-indigo-400" /> Crescimento
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Onde está o dinheiro: leads com mais dor, funil dos últimos 30 dias e o que a cadência
-            enviaria hoje.
+          <h1 className="text-2xl font-bold text-slate-900">Crescimento</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Onde está o dinheiro: leads com mais dor, funil dos últimos 30 dias e o que a cadência enviaria hoje.
           </p>
         </div>
         <button
           onClick={() => void load()}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm"
+          className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
-          <RefreshCw className="w-4 h-4" /> Atualizar
+          <RefreshCw className="h-4 w-4" /> Atualizar
         </button>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 text-sm">
-          <AlertTriangle className="w-4 h-4" /> {error}
+        <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          <AlertTriangle className="h-4 w-4" /> {error}
         </div>
       )}
       {msg && (
-        <div className="text-sm text-indigo-300 bg-indigo-500/10 border border-indigo-500/30 rounded-lg px-3 py-2">
-          {msg}
+        <div className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-800">
+          <CheckCircle2 className="h-4 w-4" /> {msg}
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         {cards.map((card) => (
-          <div key={card.label} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <card.icon className="w-4 h-4 text-indigo-400 mb-2" />
-            <div className="text-2xl font-bold text-white">{card.value}</div>
-            <div className="text-[11px] uppercase tracking-wide text-slate-400 mt-1">{card.label}</div>
+          <div key={card.label} className="rounded-xl border border-slate-200 bg-white p-4">
+            <card.icon className="mb-2 h-4 w-4 text-indigo-600" />
+            <div className="text-2xl font-bold text-slate-900">{card.value}</div>
+            <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{card.label}</div>
           </div>
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-4">
-        <section className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <h3 className="text-sm font-semibold text-white mb-3">Funil de outbound (30 dias)</h3>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="rounded-xl border border-slate-200 bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold text-slate-800">Funil de outbound (30 dias)</h2>
           <div className="space-y-3">
             {(metrics?.funnel || []).map((step) => (
               <div key={step.step}>
-                <div className="flex justify-between text-xs text-slate-400 mb-1">
+                <div className="mb-1 flex justify-between text-xs text-slate-600">
                   <span>{step.step}</span>
                   <span>
-                    {step.count} <span className="text-slate-400">({fmtPct(step.rate)})</span>
+                    {step.count} <span className="text-slate-500">({fmtPct(step.rate)})</span>
                   </span>
                 </div>
-                <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                   <div
-                    className="h-full bg-indigo-500"
-                    style={{ width: `${Math.min(100, Math.max(0, step.rate))}%` }}
+                    className="h-full rounded-full bg-indigo-500"
+                    style={{ width: `${Math.min(100, Math.max(2, step.rate))}%` }}
                   />
                 </div>
               </div>
             ))}
-            {(metrics?.funnel || []).length === 0 && (
-              <p className="text-xs text-slate-400">Sem envios na janela — rode a cadência ou faça um contato manual.</p>
+            {semEnvio && (
+              <p className="text-xs text-slate-500">Sem envios na janela. Rode a cadência ou faça um contato manual.</p>
             )}
           </div>
         </section>
 
-        <section className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <h3 className="text-sm font-semibold text-white mb-3">Ganchos: qual dor puxa resposta</h3>
+        <section className="rounded-xl border border-slate-200 bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold text-slate-800">Ganchos: qual dor puxa resposta</h2>
           {metrics?.bestHook ? (
-            <p className="text-xs text-slate-400 mb-3">
-              Melhor gancho: <span className="text-emerald-400 font-semibold">{HOOK_LABELS[metrics.bestHook.hook] || metrics.bestHook.hook}</span>{' '}
-              ({fmtPct(metrics.bestHook.replyRate)} de resposta, {metrics.bestHook.replies}/{metrics.bestHook.leads} leads)
+            <p className="mb-3 text-xs text-slate-600">
+              Melhor gancho:{' '}
+              <span className="font-semibold text-emerald-700">
+                {HOOK_LABELS[metrics.bestHook.hook] || metrics.bestHook.hook}
+              </span>{' '}
+              ({fmtPct(metrics.bestHook.replyRate)} de resposta, {metrics.bestHook.replies}/{metrics.bestHook.leads}{' '}
+              leads)
             </p>
           ) : (
-            <p className="text-xs text-slate-400 mb-3">Ainda sem dados suficientes de resposta por gancho.</p>
+            <p className="mb-3 text-xs text-slate-500">Ainda sem dados suficientes de resposta por gancho.</p>
           )}
           <div className="space-y-2">
             {(metrics?.byHook || []).map((hook) => (
-              <div key={hook.hook} className="flex items-center justify-between text-xs">
-                <span className="text-slate-300">{HOOK_LABELS[hook.hook] || hook.hook}</span>
-                <span className="text-slate-400">
+              <div
+                key={hook.hook}
+                className="flex items-center justify-between border-b border-slate-100 pb-1 text-xs last:border-0"
+              >
+                <span className="text-slate-700">{HOOK_LABELS[hook.hook] || hook.hook}</span>
+                <span className="text-slate-500">
                   {hook.leads} lead(s) · {hook.sent} msg · {fmtPct(hook.replyRate)}
                 </span>
               </div>
             ))}
-            {(metrics?.byHook || []).length === 0 && <p className="text-xs text-slate-400">Sem dados ainda.</p>}
+            {(metrics?.byHook || []).length === 0 && <p className="text-xs text-slate-500">Sem dados ainda.</p>}
           </div>
         </section>
       </div>
 
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-            <Send className="w-4 h-4 text-indigo-400" /> Entrega das mensagens (30 dias)
-          </h3>
+      <section className="rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+            <Send className="h-4 w-4 text-indigo-600" /> Entrega das mensagens (30 dias)
+          </h2>
           {(metrics?.delivery.unconfirmed ?? 0) > 0 && (
-            <span className="text-[11px] text-amber-400 flex items-center gap-1">
-              <AlertTriangle className="w-3.5 h-3.5" /> {metrics?.delivery.unconfirmed} sem confirmação há +24h
+            <span className="flex items-center gap-1 text-[11px] font-medium text-amber-700">
+              <AlertTriangle className="h-3.5 w-3.5" /> {metrics?.delivery.unconfirmed} sem confirmação há +24h
             </span>
           )}
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
           {[
-            { label: 'Enviadas', value: metrics?.delivery.sent ?? 0, tone: 'text-slate-200' },
-            { label: 'Entregues', value: metrics?.delivery.delivered ?? 0, tone: 'text-emerald-400' },
-            { label: 'Lidas', value: metrics?.delivery.read ?? 0, tone: 'text-sky-400' },
-            { label: 'Falhas', value: metrics?.delivery.failed ?? 0, tone: 'text-rose-400' },
-            { label: 'Pendentes', value: metrics?.delivery.pending ?? 0, tone: 'text-amber-400' },
+            { label: 'Enviadas', value: metrics?.delivery.sent ?? 0, tone: 'text-slate-900' },
+            { label: 'Entregues', value: metrics?.delivery.delivered ?? 0, tone: 'text-emerald-700' },
+            { label: 'Lidas', value: metrics?.delivery.read ?? 0, tone: 'text-sky-700' },
+            { label: 'Falhas', value: metrics?.delivery.failed ?? 0, tone: 'text-rose-700' },
+            { label: 'Pendentes', value: metrics?.delivery.pending ?? 0, tone: 'text-amber-700' },
           ].map((item) => (
-            <div key={item.label} className="bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-2">
+            <div key={item.label} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
               <div className={`text-xl font-bold ${item.tone}`}>{item.value}</div>
-              <div className="text-[11px] uppercase tracking-wide text-slate-400 mt-0.5">{item.label}</div>
+              <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                {item.label}
+              </div>
             </div>
           ))}
         </div>
-        <p className="text-[11px] text-slate-400 mt-3">
-          ACKs vêm do webhook; use <code className="text-slate-400">whatsapp_sync_history</code> para reconciliar
+        <p className="mt-3 text-[11px] text-slate-500">
+          ACKs vêm do webhook; use{' '}
+          <code className="rounded bg-slate-100 px-1 text-slate-600">whatsapp_sync_history</code> para reconciliar
           mensagens sem confirmação.
         </p>
       </section>
 
-      <section className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-white">Top oportunidades por dor</h3>
-          <span className="text-[11px] text-slate-400">score = sem site próprio + reputação + auditoria</span>
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 p-4">
+          <h2 className="text-sm font-semibold text-slate-800">Top oportunidades por dor</h2>
+          <span className="text-[11px] text-slate-500">score = sem site próprio + reputação + auditoria</span>
         </div>
-        <div className="divide-y divide-slate-800">
+        <div className="divide-y divide-slate-100">
           {leads.map((lead) => (
-            <div key={lead.id} className="p-4 flex flex-col md:flex-row md:items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-white truncate">{lead.name}</span>
-                  <span className={`text-[11px] px-2 py-0.5 rounded-full border ${levelStyle(lead.priority.level)}`}>
+            <div key={lead.id} className="flex flex-col gap-3 p-4 md:flex-row md:items-center">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="truncate text-sm font-semibold text-slate-900">{lead.name}</span>
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${levelStyle(lead.priority.level)}`}
+                  >
                     {lead.priority.score} · {lead.priority.level}
                   </span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                  <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] text-slate-700">
                     {STATUS_LABELS[lead.websiteStatus || 'none'] || lead.websiteStatus}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 mt-1 truncate">
+                <p className="mt-1 truncate text-xs text-slate-500">
                   {[lead.category, lead.city].filter(Boolean).join(' · ') || 'Sem categoria'}
                 </p>
-                <p className="text-xs text-slate-400 mt-1 line-clamp-2">{lead.priority.reasons.slice(0, 3).join(' • ')}</p>
+                <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+                  {lead.priority.reasons.slice(0, 3).join(' • ')}
+                </p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex shrink-0 items-center gap-2">
                 {lead.siteAudit && (
-                  <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> {lead.siteAudit.healthScore}/100
+                  <span className="flex items-center gap-1 text-[11px] text-slate-600">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> {lead.siteAudit.healthScore}/100
                   </span>
                 )}
                 <button
                   onClick={() => void auditLead(lead)}
                   disabled={busyLead === lead.id || lead.websiteStatus !== 'has_website'}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 flex items-center gap-1.5"
-                  title={lead.websiteStatus === 'has_website' ? 'Auditar site real' : 'Lead sem site próprio — não há o que auditar'}
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  title={
+                    lead.websiteStatus === 'has_website'
+                      ? 'Auditar site real'
+                      : 'Lead sem site próprio: não há o que auditar'
+                  }
                 >
-                  {busyLead === lead.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                  {busyLead === lead.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                  )}
                   Auditar
                 </button>
               </div>
             </div>
           ))}
-          {leads.length === 0 && <p className="p-4 text-sm text-slate-400">Nenhum lead na base ainda.</p>}
+          {leads.length === 0 && <p className="p-4 text-sm text-slate-500">Nenhum lead na base ainda.</p>}
         </div>
       </section>
 
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between gap-3">
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
         <div>
-          <h3 className="text-sm font-semibold text-white">Follow-ups (recontato e cadência)</h3>
-          <p className="text-xs text-slate-400 mt-1">
-            Recontatos autorizados e a cadência D+3/D+7 saíram daqui: envio de mensagem agora mora só em <strong className="text-slate-300">Follow-ups</strong>.
+          <h2 className="text-sm font-semibold text-slate-800">Follow-ups (recontato e cadência)</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Recontatos autorizados e a cadência D+3/D+7 saíram daqui: envio de mensagem agora mora só em{' '}
+            <strong className="font-semibold text-slate-700">Follow-ups</strong>.
           </p>
         </div>
         {onNavigate && (
           <button
             type="button"
             onClick={() => onNavigate('followups')}
-            className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
           >
-            Abrir follow-ups
+            Abrir follow-ups <ArrowRight className="h-3.5 w-3.5" />
           </button>
         )}
       </section>
     </div>
   );
 };
+
+export default GrowthPage;
