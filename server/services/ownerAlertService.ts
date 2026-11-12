@@ -113,6 +113,19 @@ export function maskPhone(phone?: string | null): string {
 
 /** Texto do aviso. Curto, em blocos, sem travessão (regra do WhatsApp da casa). */
 export function formatOwnerAlert(input: OwnerAlertInput): string {
+  // Teste tem texto próprio: o aviso de verdade começa com "Preciso de você", e
+  // receber isso sem contexto assusta.
+  if (input.kind === "teste") {
+    return [
+      "✅ *Teste do aviso*",
+      "",
+      "Se você recebeu esta mensagem, o aviso de falha está funcionando.",
+      "Nenhuma conversa está parada agora.",
+      "",
+      "Quando a Clara não conseguir responder alguém, chega uma mensagem parecida com o nome do lead e o motivo.",
+    ].join("\n");
+  }
+
   const quem = input.leadName ? `*${input.leadName}*` : "um lead";
   const motivo: Record<OwnerAlertKind, string> = {
     ia_falhou: "a IA não conseguiu escrever a resposta",
@@ -128,7 +141,7 @@ export function formatOwnerAlert(input: OwnerAlertInput): string {
     `Fiquei sem responder ${quem}.`,
     `Motivo: ${motivo[input.kind] || input.detail}.`,
   ];
-  if (input.detail && input.kind !== "teste") {
+  if (input.detail) {
     const detalhe = input.detail.trim().slice(0, 220);
     if (detalhe) linhas.push(`Detalhe: ${detalhe}`);
   }
