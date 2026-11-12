@@ -10,6 +10,7 @@ import { detectOptOut } from "../services/optOutService";
 import { fetchGatewayInstanceState, getGatewayConfig } from "../services/whatsappGateway";
 import { getHumanizeStatus } from "../services/humanizeService";
 import { buildClientProfile } from "../services/clientProfileService";
+import { agentEnabled, answerLead } from "../services/salesAgentService";
 import {
   AI_MIN_CONFIDENCE,
   classifyByRules,
@@ -573,6 +574,30 @@ export function registerWhatsAppWebhook(app: Express) {
           });
         })
         .catch((e: any) => console.warn(`[whatsapp] Classificação por IA falhou: ${e?.message}`));
+    }
+
+    // AGENTE COMERCIAL: escreve a resposta e envia. Roda depois do ACK, em
+    // segundo plano (a humanização pode segurar até ~2 min). Recusa/opt-out NÃO
+    // é respondida pelo agente — LGPD: quem recusa não recebe mais nada.
+    if (agentEnabled() && !optedOut && !lead.doNotContact && intent !== "recusa" && inbound.text.trim().length >= 1) {
+      void answerLead(lead, inbound.text)
+        .then((result) => {
+          if (!result.dispatch) return; // conversa já respondida ou sem inbound aberto
+          console.log(
+            `[whatsapp] Agente respondeu ${lead.name} (${result.source}): ${
+              result.dispatch.status === "sent" ? result.message.slice(0, 80) : `BLOQUEADO — ${result.dispatch.detail}`
+            }`
+          );
+          eventHub.emit("agent_replied", {
+            leadId: lead.id,
+            name: lead.name,
+            source: result.source,
+            sent: result.dispatch.status === "sent",
+            detail: result.dispatch.detail,
+            message: result.message.slice(0, 200),
+          });
+        })
+        .catch((e: any) => console.warn(`[whatsapp] Agente falhou para ${lead.id}: ${e?.message}`));
     }
 
     eventHub.emit("whatsapp_inbound", {

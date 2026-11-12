@@ -159,6 +159,14 @@ export function qaPitch(pitch: string, ctx: PitchContext): PitchQaResult {
     }
   }
 
+  // 4) Estilo: travessão é a marca de texto de IA e bloco único cansa a leitura.
+  if (/[\u2014\u2013]/.test(text)) {
+    issues.push("O texto usa travessão (—). Troque por vírgula ou ponto: é a marca mais óbvia de texto de IA.");
+  }
+  if (!text.includes("\n") && text.length > 200) {
+    issues.push("O texto é um bloco único. Quebre em 2 a 5 linhas curtas, uma ideia por linha.");
+  }
+
   const retryHint = issues.length
     ? [
         "",

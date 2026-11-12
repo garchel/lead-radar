@@ -687,6 +687,8 @@ export interface Communication {
   intentSource?: "regex" | "ia";
   /** 0–1: confiança da classificação. */
   intentConfidence?: number;
+  /** Motivo do envio ter falhado (mensagem do gateway ou da política). */
+  errorDetail?: string;
   createdAt: string;
 }
 
@@ -710,13 +712,15 @@ export function recordCommunication(input: {
   sentAt?: string;
   externalId?: string;
   hook?: string;
+  /** Motivo da falha, quando `status: 'failed'`. */
+  errorDetail?: string;
 }): string {
   const id = `comm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const now = new Date().toISOString();
   getDb()
     .prepare(`INSERT INTO communications
-      (id, lead_id, channel, direction, status, subject, to_address, message, sent_at, created_at, external_id, hook)
-      VALUES (@id, @leadId, @channel, @direction, @status, @subject, @toAddress, @message, @sentAt, @createdAt, @externalId, @hook)`)
+      (id, lead_id, channel, direction, status, subject, to_address, message, sent_at, created_at, external_id, hook, error_detail)
+      VALUES (@id, @leadId, @channel, @direction, @status, @subject, @toAddress, @message, @sentAt, @createdAt, @externalId, @hook, @errorDetail)`)
     .run({
       id,
       leadId: input.leadId,
@@ -730,6 +734,7 @@ export function recordCommunication(input: {
       createdAt: now,
       externalId: input.externalId || null,
       hook: input.hook || null,
+      errorDetail: input.errorDetail || null,
     });
   eventHub.emit('communications', { id, leadId: input.leadId });
   return id;
@@ -793,6 +798,7 @@ function rowToCommunication(row: any): Communication {
     intent: row.intent || undefined,
     intentSource: (row.intent_source as "regex" | "ia" | null) || undefined,
     intentConfidence: row.intent_confidence ?? undefined,
+    errorDetail: row.error_detail || undefined,
     createdAt: row.created_at,
   };
 }

@@ -7,6 +7,7 @@ import {
   updateInteraction,
   upsertLead,
   getLeadById,
+  countFailedCommunications,
 } from "../store/db";
 import { InteractionOutcome, LeadInteraction, StoredLead } from "../store/types";
 
@@ -91,6 +92,20 @@ export async function dispatchLeadContact(
   const channel = options.channel || (lead.phone ? "whatsapp" : "email");
   const to = channel === "whatsapp" ? String(lead.phone || "").replace(/\D/g, "") : String(lead.email || "");
 
+  // Número que já recusou duas vezes não recebe nova abordagem. A regra existia
+  // só dentro do autopilot; aqui vale para TODA porta (UI, cadência, agente),
+  // porque insistir em número morto é o caminho mais curto para restrição.
+  if ((options.purpose ?? "prospect") === "prospect" && countFailedCommunications(lead.id) >= 2) {
+    return {
+      channel,
+      status: "failed",
+      communicationId: "",
+      to,
+      detail: "2 envios falharam para este número — abordagem suspensa (verifique o número antes de tentar de novo).",
+      blocked: true,
+    };
+  }
+
   if (!policy.allowed) {
     return {
       channel,
@@ -169,7 +184,10 @@ export async function dispatchLeadReply(
   const hasOpenReply = latest?.direction === "inbound";
 
   if (!hasOpenReply) {
-    return dispatchLeadContact(lead, options);
+    // Sem conversa aberta, `dispatchLeadContact` faria uma ABORDAGEM — mas isto
+    // veio de `dispatchLeadReply`, então marcamos o propósito como resposta
+    // (senão o bloqueio de 2 falhas impediria responder quem nos procurou).
+    return dispatchLeadContact(lead, { ...options, purpose: options.purpose ?? "reply" });
   }
 
   const message = options.message?.trim();

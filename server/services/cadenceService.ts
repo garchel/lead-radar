@@ -3,6 +3,8 @@ import type { StoredLead } from "../store/types";
 import { dispatchLeadContact } from "./interactionService";
 import { effectiveWebsiteStatus, presenceLabel } from "./presenceService";
 import { getHumanizeSettings, getHumanizeUsage } from "./humanizeService";
+import { composeCadenceMessage } from "./salesAgentService";
+import { whatsAppify } from "./messageStyle";
 
 /**
  * Cadência de follow-up D0 / D3 / D7.
@@ -77,6 +79,10 @@ export function nextCadenceStep(lead: StoredLead): CadenceStep | null {
  * personalização vem do gancho real (auditoria/sem site), não de IA genérica.
  */
 export function buildCadenceMessage(lead: StoredLead, step: CadenceStep): string {
+  return whatsAppify(buildCadenceRaw(lead, step));
+}
+
+function buildCadenceRaw(lead: StoredLead, step: CadenceStep): string {
   const name = firstName(lead.name);
   const audit = lead.siteAudit;
   const headline = audit?.headline?.replace(/\.$/, "");
@@ -90,7 +96,7 @@ export function buildCadenceMessage(lead: StoredLead, step: CadenceStep): string
         `Oi ${name}! Semana passada te mandei o diagnóstico do site da ${lead.name}${headline ? ` (${headline.toLowerCase()})` : ""}.`,
         `Montei uma prévia de como ficaria a primeira tela — mais rápida e com botão de WhatsApp direto.`,
         `Quer que eu te mande aqui pra você ver?`,
-      ].join(" ");
+      ].join("\n");
     }
     if (status === "marketplace_only") {
       const platform = presenceLabel(lead.websiteUrl) || "marketplace";
@@ -98,13 +104,13 @@ export function buildCadenceMessage(lead: StoredLead, step: CadenceStep): string
         `Oi ${name}! Vi que a ${lead.name} vende pelo ${platform} mas não tem site próprio.`,
         `Fiz um esboço de uma página simples com cardápio/serviços, botão de WhatsApp e pedido direto — sem depender de comissão de marketplace.`,
         `Posso te mandar a prévia?`,
-      ].join(" ");
+      ].join("\n");
     }
     return [
       `Oi ${name}! Vi que a ${lead.name} aparece no Google mas não tem site próprio.`,
       `Fiz um esboço de como ficaria uma página de ${lead.category || "apresentação"} pra vocês, com botão de WhatsApp e formulário de orçamento.`,
       `Posso te mandar a prévia?`,
-    ].join(" ");
+    ].join("\n");
   }
 
   // ângulo "prazo"
@@ -117,13 +123,13 @@ export function buildCadenceMessage(lead: StoredLead, step: CadenceStep): string
       `Oi ${name}, tudo bem? Vou fechar a agenda de sites na sexta (${date}).`,
       `O ponto principal do site da ${lead.name} continua sendo ${bullet.toLowerCase()}.`,
       `Consigo encaixar vocês essa semana — prefere que eu te ligue hoje ou amanhã?`,
-    ].join(" ");
+    ].join("\n");
   }
   return [
     `Oi ${name}, tudo bem? Vou fechar a agenda de sites na sexta (${date}).`,
     `Consigo encaixar a ${lead.name} ainda essa semana.`,
     `Prefere que eu te ligue hoje ou amanhã?`,
-  ].join(" ");
+  ].join("\n");
 }
 
 function usedTodayCount(now: Date): number {
@@ -322,8 +328,21 @@ async function runCadenceInner(
     }
     const { lead, step, message } = candidate;
     try {
+      // O texto de cada toque é escrito pelo agente a partir do dossiê; se a IA
+      // não entregar algo aprovado, mantém o texto determinístico do plano.
+      let text = message;
+      let hook: string | undefined;
+      {
+        const composed = await composeCadenceMessage(lead, step.angle);
+        if (composed.source === "ia") {
+          text = composed.message;
+          hook = composed.hook;
+        }
+      }
+
       const dispatch = await dispatchLeadContact(lead, {
-        message,
+        message: text,
+        hook,
         // Sem hook explícito: a atribuição usa o gancho do PRIMEIRO contato
         // (o follow-up não pode roubar o crédito da resposta).
         ignoreCooldown: true,

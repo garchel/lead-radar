@@ -14,9 +14,11 @@ import { buildStableLeadId } from "./leadIdentity";
 import { searchBusinesses } from "./prospectingService";
 import { getSerpApiUsage } from "./serpApi";
 import { canRunSearch, getBudgetPlan, registerSearch } from "./quotaBudgetService";
-import { dispatchLeadContact } from "./interactionService";
+import { approachLead } from "./salesAgentService";
 import { passesQualityGate, isReachableOnWhatsApp, classifyPhone } from "./leadQuality";
 import { validateLeadsWhatsApp } from "./whatsappValidationService";
+import { getCommercialPolicy } from "./commercialPolicy";
+import { bold, boldFirstOccurrence, freePreviewLine, packageLines, whatsAppify } from "./messageStyle";
 
 /**
  * Coleta automática de leads com cota controlada.
@@ -348,19 +350,60 @@ export function displayBusinessName(name: string, maxLength = 48): string {
   return titled.length > maxLength ? `${titled.slice(0, maxLength).trim()}…` : titled;
 }
 
-/** Mensagem de D0: usa o pitch da análise quando existe; senão monta um curto. */
+/**
+ /** Nome do negócio do jeito que cabe numa linha de WhatsApp. */
+ export function shortBusinessName(raw?: string, maxLength = 40): string {
+   const full = displayBusinessName(raw);
+   const cut = full.split(/\s+[-|–—]\s+/)[0].trim();
+   const base = cut.length >= 6 ? cut : full;
+   return base.length > maxLength ? `${base.slice(0, maxLength).trim()}…` : base;
+ }
+
+ /** Mensagem de D0.
+ *
+ * Formato pedido pelo Paulo: blocos curtos (uma ideia por linha), sem travessão,
+ * prévia gratuita explícita, pacotes com o que cada um inclui, negrito e emoji
+ * na medida. Quando existe pitch da análise, ele passa pelo mesmo saneamento.
+ */
 export function buildProspectMessage(lead: StoredLead): string {
+  const policy = getCommercialPolicy();
   const pitch = String(lead.analysis?.customPitchWhatsApp || "").trim();
-  if (pitch) return pitch;
-  const biz = displayBusinessName(lead.name);
-  const social = lead.rating
-    ? `Vi a ${biz} com ${String(lead.rating).replace(".", ",")}★ no Google`
-    : `Achei a ${biz} no Google Maps`;
+  if (pitch) {
+    return whatsAppify(boldFirstOccurrence(pitch, lead.name));
+  }
+
+  // Nome curto: o Google costuma colar descritor ("Buffet Don Pepe Kids - Buffet
+  // Infantil e Eventos"); no WhatsApp isso estoura a linha e cansa a leitura.
+  const biz = shortBusinessName(lead.name);
+  const nota = typeof lead.rating === "number" ? String(lead.rating).replace(".", ",") : "";
+  const reviews = typeof lead.reviewsCount === "number" && lead.reviewsCount > 0 ? lead.reviewsCount : 0;
+
+  const prova = nota
+    ? reviews
+      ? `Vi a ${bold(biz)} com ${nota}★ no Google (${reviews} avaliações)`
+      : `Vi a ${bold(biz)} com ${nota}★ no Google`
+    : `Achei a ${bold(biz)} no Google Maps`;
+
   const gap =
     lead.websiteStatus === "none"
-      ? "e reparei que ainda não tem um site próprio"
-      : "e vi que a presença de vocês está só em rede social/marketplace";
-  return `Olá! Aqui é da Vértice Páginas Web. ${social} ${gap} — dá pra resolver com uma página simples, com botão direto pro WhatsApp. Quer que eu te mostre como ficaria?`;
+      ? "e reparei que vocês ainda não têm um site próprio."
+      : "e vi que a presença de vocês está só em rede social ou marketplace, sem site próprio.";
+
+  const lines: string[] = [
+    "Olá! Aqui é da Vértice Páginas Web 👋",
+    "",
+    `${prova} ${gap}`,
+    "",
+    "A gente monta uma página simples, rápida e bonita, com botão direto pro WhatsApp e formulário de orçamento.",
+    "",
+    freePreviewLine(policy),
+    "",
+    ...packageLines(policy),
+    "",
+    "Quer que eu monte a prévia da sua página? 🚀",
+  ];
+
+  return whatsAppify(lines.filter((line, index) => !(line === "" && lines[index - 1] === "")).join("\n"));
 }
 
 function countNewContactsToday(now = new Date()): number {
@@ -421,8 +464,11 @@ export async function prospectBestLead(
   const lead = candidates[0];
   if (!lead) return { attempted: false, reason: "nenhum lead novo acima do score mínimo" };
 
-  const message = buildProspectMessage(lead);
-  const result = await dispatchLeadContact(lead, { channel: "whatsapp", message });
+  // A mensagem do primeiro contato é escrita pelo agente de IA a partir do
+  // dossiê do lead (fatos reais → texto). Se a IA falhar, `approachLead` já
+  // devolve o texto determinístico: o autopilot nunca fica sem mensagem.
+  const composed = await approachLead(lead);
+  const result = composed.dispatch;
   const sent = result.status === "sent";
   return {
     attempted: true,

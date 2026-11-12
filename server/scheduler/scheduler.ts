@@ -200,5 +200,29 @@ export function ensureDefaultFollowUpSchedule() {
   });
 }
 
+/**
+ * Cadência D+3/D+7 automática.
+ *
+ * Antes disso, `runCadence` só rodava por job manual (UI/MCP): na prática o
+ * follow-up NUNCA acontecia e ~95% dos leads morriam no primeiro toque.
+ * `dryRun: false` aqui é intencional — com a janela e os tetos da humanização,
+ * a cadência é o motor de follow-up; simulação continua disponível pela UI.
+ */
+export function ensureDefaultCadenceSchedule() {
+  const hasCadence = getSchedules().some((s) => s.jobType === "outbound_cadence");
+  if (hasCadence) return;
+  const now = new Date().toISOString();
+  upsertSchedule({
+    id: "sch_default_cadence",
+    name: "Cadência D+3/D+7 (dias úteis, 9h)",
+    cron: "0 9 * * 1-5",
+    jobType: "outbound_cadence",
+    payload: { dryRun: false, limit: 10 },
+    enabled: true,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
 /** Singleton global do agendador. */
 export const scheduler = new Scheduler();

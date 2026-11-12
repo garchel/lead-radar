@@ -24,6 +24,36 @@ import {
 import { SerpApiQuotaError } from "../services/serpApi";
 import { validateLeadsWhatsApp, getWhatsAppValidationSummary } from "../services/whatsappValidationService";
 import { syncLeadProject } from "../projects/service";
+import { checkAgentText } from "../services/salesAgentService";
+import { allowedPrices } from "../services/commercialPolicy";
+
+/**
+ * Portão de código para texto escrito por AGENTE (bot Clara).
+ *
+ * O agente tem julgamento, mas não pode ter a última palavra sobre preço, link,
+ * tamanho ou repetição. Quando o corpo traz `source: "agent"`, a mensagem passa
+ * pelo mesmo `checkAgentText` do compositor interno antes de virar WhatsApp.
+ * Envios da UI e de rotinas legadas (sem `source`) não são afetados.
+ */
+function rejectAgentText(
+  lead: StoredLead,
+  message: string,
+  kind: "approach" | "reply",
+  res: Response
+): boolean {
+  const previous = getCommunicationsByLead(lead.id)
+    .filter((c) => c.direction === "outbound" && c.status !== "failed")
+    .map((c) => String(c.message || ""));
+  const check = checkAgentText(message, { kind, allowedPriceList: allowedPrices(), previousOutbound: previous });
+  if (check.ok) return false;
+  res.status(422).json({
+    success: false,
+    error: "Mensagem reprovada pelo validador do agente — reescreva antes de enviar.",
+    issues: check.issues,
+    precosAutorizados: allowedPrices(),
+  });
+  return true;
+}
 
 export function registerLeadRoutes(app: Express) {
   // List leads
@@ -121,6 +151,9 @@ export function registerLeadRoutes(app: Express) {
     if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
     try {
       const { channel, message, subject } = req.body || {};
+      if (req.body?.source === "agent" && String(message || "").trim()) {
+        if (rejectAgentText(lead, String(message).trim(), "approach", res)) return;
+      }
       const result = await dispatchLeadContact(lead, { channel, message, subject });
       if (result.blocked) {
         return res.status(409).json({ success: false, error: result.detail, ...result });
@@ -199,6 +232,9 @@ export function registerLeadRoutes(app: Express) {
     }
 
     try {
+      if (req.body?.source === "agent") {
+        if (rejectAgentText(lead, message, "reply", res)) return;
+      }
       const result = await dispatchLeadReply(lead, {
         channel: req.body?.channel === "email" ? "email" : "whatsapp",
         message,

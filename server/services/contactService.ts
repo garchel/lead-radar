@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { StoredLead } from "../store/types";
+import { whatsAppify } from "./messageStyle";
 import { recordCommunication, getSetting } from "../store/db";
 import { primaryAuditHook } from "./siteAuditService";
 import { effectiveWebsiteStatus } from "./presenceService";
@@ -260,7 +261,8 @@ async function deliverWhatsApp(
 ): Promise<ContactResult> {
   // Texto com bytes perdidos (U+FFFD): melhor recusar do que mandar "�" ao cliente.
   if (hasLostCharacters(message)) {
-    const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message, hook });
+    const lostText = "Texto com caracteres inválidos (encoding quebrado — contém \"�\"): nada foi enviado. Reenvie a mensagem em UTF-8.";
+    const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message, hook, errorDetail: lostText });
     return {
       channel: "whatsapp",
       status: "failed",
@@ -272,11 +274,12 @@ async function deliverWhatsApp(
     };
   }
   const encoding = repairMojibake(message);
-  const text = encoding.text;
+  // Estilo único de saída: sem travessão (marca de IA) e em blocos legíveis.
+  const text = whatsAppify(encoding.text);
 
   const { provider, reason } = resolveWhatsappProvider();
   if (!provider) {
-    const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message: text, hook });
+    const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message: text, hook, errorDetail: reason });
     return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: reason };
   }
 
@@ -289,7 +292,15 @@ async function deliverWhatsApp(
     });
 
     if (paced.blocked) {
-      const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message: text, hook });
+      const id = recordCommunication({
+        leadId,
+        channel: "whatsapp",
+        status: "failed",
+        toAddress: to,
+        message: text,
+        hook,
+        errorDetail: paced.blocked.reason || "Envio bloqueado pela humanização do WhatsApp.",
+      });
       return {
         channel: "whatsapp",
         status: "failed",
@@ -319,13 +330,14 @@ async function deliverWhatsApp(
     const fixed = encoding.repaired ? " — encoding corrigido (latin1→UTF-8)" : "";
     return { channel: "whatsapp", status: "sent", communicationId: id, to, detail: `${outcome.detail}${typing}${fixed}` };
   } catch (e: any) {
-    const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message: text, hook });
+    const failure = `${e?.message || "Falha no envio"} (backend: ${provider} — ${reason})`;
+    const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message: text, hook, errorDetail: failure });
     return {
       channel: "whatsapp",
       status: "failed",
       communicationId: id,
       to,
-      detail: `${e?.message || "Falha no envio"} (backend: ${provider} — ${reason})`,
+      detail: failure,
     };
   }
 }

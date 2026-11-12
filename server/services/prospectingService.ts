@@ -6,6 +6,7 @@ import { getLeads, getCities, getCityByCode, getBusinessCategories, estimateTick
 import { normalizePhone, normalizeText } from "./leadIdentity";
 import { qaPitch } from "./pitchQaService";
 import { computeLeadScore } from "./leadQuality";
+import { WHATSAPP_STYLE_RULES } from "./messageStyle";
 
 /* ------------------------------------------------------------------ */
 /*  Shared, real business search + AI analysis used by the queue,      */
@@ -157,6 +158,8 @@ export async function analyzeLead(input: AnalyzeInput): Promise<any> {
 
   const promptText = `
 Você é um especialista em diagnóstico de marketing e vendas B2B.
+${WHATSAPP_STYLE_RULES}
+
 Analise a seguinte empresa e gere um plano de venda de Landing Page:
 - Empresa: ${businessName}
 - Categoria: ${category}
@@ -175,7 +178,7 @@ Retorne estritamente JSON com as chaves:
 - missingFeatures: array de strings (ex: "Botão direto para WhatsApp de Agendamento", "Formulário de Orçamento Rápido", "Tabela / Catálogo de Serviços", "Prova Social com Avaliações do Google")
 - whyTheyNeedLandingPage: justificativa persuasiva detalhando o dinheiro/clientes que estão deixando na mesa
 - competitorAdvantage: como concorrentes com site estão capturando clientes que buscam no Google
-- customPitchWhatsApp: mensagem amigável, direta e persuasiva para o WhatsApp do proprietário
+- customPitchWhatsApp: mensagem amigável, direta e persuasiva para o WhatsApp do proprietário. FORMATO OBRIGATÓRIO: 2 a 5 linhas curtas (quebra de linha de verdade), uma ideia por linha, sem travessão (—) nem meia-risca (–), com negrito *assim* em no máximo 2 trechos e no máximo 3 emojis, dizendo que a PRÉVIA É GRÁTIS e citando os pacotes com o que cada um inclui
 - customPitchEmail: e-mail profissional com assunto e proposta de valor
 - customPitchColdCall: roteiro resumido de ligação de 30s contornando a objeção "já tenho Instagram"
 - landingPageConcept: objeto com heroHeadline, heroSubheadline, callToAction, recommendedSections (array), suggestedColorPalette, keySellingPoints (array)

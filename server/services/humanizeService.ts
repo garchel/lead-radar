@@ -1,3 +1,4 @@
+import { warmupNewContactCap } from "./warmupService";
 import { getCommunications, getCommunicationsByLead, getSetting, setSetting } from "../store/db";
 import type { Communication } from "../store/db";
 
@@ -431,14 +432,16 @@ export function evaluateSendGate(input: {
     };
   }
 
-  // 3) teto de contatos novos
-  if (isFirstContact && usage.newContactsToday >= s.dailyNewCap) {
+  // 3) teto de contatos novos — vale o MENOR entre o configurado e a rampa
+  // de aquecimento do número (número novo começa em 5/dia, não em 30).
+  const newContactCap = Math.min(s.dailyNewCap, warmupNewContactCap(now, s.dailyNewCap));
+  if (isFirstContact && usage.newContactsToday >= newContactCap) {
     const next = nextWindowOpeningAt(input.purpose, new Date(now.getTime() + 24 * 60 * 60 * 1000), s).toISOString();
     return {
       ...base,
       allowed: false,
       nextAllowedAt: next,
-      reason: `Teto de ${s.dailyNewCap} contatos novos por dia atingido (${usage.newContactsToday} hoje). Próximo primeiro contato liberado às ${formatClock(next)}.`,
+      reason: `Teto de ${newContactCap} contatos novos por dia atingido${newContactCap < s.dailyNewCap ? " (aquecimento do número)" : ""} (${usage.newContactsToday} hoje). Próximo primeiro contato liberado às ${formatClock(next)}.`,
     };
   }
 
@@ -570,7 +573,7 @@ export function getHumanizeStatus(now: Date = new Date()) {
     usage,
     remaining: {
       total: Math.max(0, settings.dailyTotalCap - usage.sentToday),
-      newContacts: Math.max(0, settings.dailyNewCap - usage.newContactsToday),
+      newContacts: Math.max(0, Math.min(settings.dailyNewCap, warmupNewContactCap(now, settings.dailyNewCap)) - usage.newContactsToday),
     },
     windows: {
       reply: windowFor("reply", settings),
