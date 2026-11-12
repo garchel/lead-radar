@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { buildPreviewHtml, generateLeadPreview, previewServices, whatsappLink, previewExists } from "../server/services/previewService";
+import { buildPreviewHtml, generateLeadPreview, previewServices, whatsappLink, previewExists, resolvePublicBaseUrl } from "../server/services/previewService";
 import { ensureDefaultCadenceSchedule } from "../server/scheduler/scheduler";
 import { dispatchLeadContact } from "../server/services/interactionService";
 import { getCommunicationsByLead, getSchedules, recordCommunication, upsertLead } from "../server/store/db";
@@ -64,18 +64,35 @@ describe("prévia da landing page", () => {
     expect(previewServices(lead)).toEqual(["Clareamento", "Implante", "Ortodontia"]);
   });
 
-  it("gera arquivo e devolve URL local; pública só com PUBLIC_BASE_URL", () => {
+  it("gera arquivo e devolve URL local; pública vem do env ou da rede local", () => {
     const lead = seed("pv-f");
     delete process.env.PUBLIC_BASE_URL;
-    const semBase = generateLeadPreview(lead);
+
+    const semEnv = generateLeadPreview(lead);
     expect(previewExists(lead.id)).toBe(true);
-    expect(semBase.url).toBe(`/previews/${lead.id}.html`);
-    expect(semBase.publicUrl).toBeNull();
+    expect(semEnv.url).toBe(`/previews/${lead.id}.html`);
+    // Sem env, a base é o IP da rede local (o celular no mesmo Wi-Fi abre o link).
+    // Em máquina sem interface de rede o fallback é null e o link não é enviado.
+    if (semEnv.publicUrl) {
+      expect(semEnv.publicUrl).toMatch(/^http:\/\/(\d{1,3}\.){3}\d{1,3}:\d+\/previews\//);
+      expect(semEnv.publicUrl).toContain(`/previews/${lead.id}.html`);
+    }
 
     process.env.PUBLIC_BASE_URL = "https://preview.vertice.com.br/";
     const comBase = generateLeadPreview(lead);
     expect(comBase.publicUrl).toBe(`https://preview.vertice.com.br/previews/${lead.id}.html`);
+    expect(resolvePublicBaseUrl()).toEqual({ baseUrl: "https://preview.vertice.com.br", source: "env" });
     delete process.env.PUBLIC_BASE_URL;
+  });
+
+  it("usa o IP da rede local quando não há PUBLIC_BASE_URL", () => {
+    delete process.env.PUBLIC_BASE_URL;
+    const resolvido = resolvePublicBaseUrl();
+    if (resolvido.source === "lan") {
+      expect(resolvido.baseUrl).toMatch(/^http:\/\/(\d{1,3}\.){3}\d{1,3}:\d+$/);
+    } else {
+      expect(resolvido.source).toBe("none");
+    }
   });
 
   it("normaliza telefone para wa.me e recusa número inválido", () => {

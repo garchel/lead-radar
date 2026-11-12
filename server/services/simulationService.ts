@@ -10,12 +10,17 @@
  * O texto da abordagem usa os dados do lead ESCOLHIDO (nota, avaliações, cidade) e
  * é enviado para o número do Paulo.
  */
+import fs from "node:fs";
+import path from "node:path";
 import { getDb } from "../store/schema";
-import { getLeadById, getProjectsByLead, getSetting, setSetting, upsertProject } from "../store/db";
+import { generateLeadPreview, previewsDir } from "./previewService";
+import { researchLeadBrand } from "./brandResearchService";
+import { getLeadById, getProjectsByLead, getSetting, setLeadBrandSnapshot, setSetting, upsertProject } from "../store/db";
 import { normalizeText } from "./leadIdentity";
 import { buildProspectMessage } from "./autoProspectingService";
 import { dispatchLeadReply } from "./interactionService";
-import type { Project, ProjectStage, StoredLead } from "../store/types";
+import { searchSerpApiImages } from "./serpApi";
+import type { BrandSnapshot, Project, ProjectStage, StoredLead } from "../store/types";
 
 /** Lead que faz o papel de Paulo nas simulações. */
 export const SIMULATION_LEAD_ID = "pv-landing-1";
@@ -32,9 +37,25 @@ export interface SimulationCard {
   projectStatus: string;
 }
 
+export interface SimulationAssets {
+  ok: boolean;
+  /** Imagens encontradas na identidade visual (podem ser 0). */
+  images: number;
+  /** Cores da paleta detectadas. */
+  colors: number;
+  confidence: number;
+  /** Link público da prévia (null quando não há base pública acessível). */
+  previewUrl: string | null;
+  /** Observações da coleta (ex.: imagens descartadas por serem de outro negócio). */
+  notes?: string;
+  /** Só quando a captura falhou de vez. */
+  error?: string;
+}
+
 export interface SimulationResult {
   candidate: { id: string; name: string; city?: string; state?: string; rating?: number; reviews?: number; score?: number };
   card: SimulationCard;
+  assets: SimulationAssets;
   message: string;
   dispatch: { status: string; detail: string; communicationId: string };
 }
@@ -67,6 +88,40 @@ export function pickSimulationCandidates(limit = 12): StoredLead[] {
 }
 
 /**
+ * Plano B da captura de assets: guarda as fotos públicas do negócio sem análise
+ * visual (que exige IA e pode estar sem cota). A prévia ganha a capa; a paleta e o
+ * tom ficam vazios, e o snapshot diz por quê.
+ */
+async function captureImagesOnly(lead: StoredLead): Promise<BrandSnapshot | null> {
+  try {
+    const query = `${lead.name} ${lead.city || ""}`.trim();
+    const imagens = await searchSerpApiImages({ query, limit: 9, safeSearch: true });
+    if (!imagens.length) return null;
+    const snapshot: BrandSnapshot = {
+      version: 1,
+      createdAt: new Date().toISOString(),
+      source: "serpapi",
+      query,
+      profiles: {},
+      palette: [],
+      tone: [],
+      imagery: imagens.slice(0, 6).map((img) => ({
+        url: img.imageUrl || img.thumbnailUrl || "",
+        description: img.title,
+      })).filter((img) => /^https?:\/\//i.test(img.url)),
+      summary: `Fotos públicas de ${lead.name} encontradas no Google. Análise visual não executada.`,
+      confidence: 0.25,
+      notes: "Análise de identidade visual indisponível no momento (IA): a prévia usa apenas as fotos encontradas.",
+    };
+    if (!snapshot.imagery.length) return null;
+    setLeadBrandSnapshot(SIMULATION_LEAD_ID, snapshot);
+    return snapshot;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Devolve o card do Paulo para o início e renomeia com a empresa simulada.
  * Usa SQL direto porque são campos que nenhuma outra rotina deve tocar (é reset,
  * não atualização de negócio).
@@ -95,6 +150,9 @@ export function resetSimulationCard(
             last_contact_outcome = NULL,
             next_contact_at = NULL,
             contact_attempts = 0,
+            brand_snapshot_json = NULL,
+            client_profile_json = NULL,
+            site_audit_json = NULL,
             updated_at = ?
       WHERE id = ?`
   ).run(
@@ -144,6 +202,15 @@ export function resetSimulationCard(
   }
   const salvo = upsertProject(projeto);
 
+  // A prévia antiga é da empresa anterior: se ficar no disco, o cliente abre e vê
+  // outro negócio. Apaga para a próxima geração começar limpa.
+  try {
+    const arquivo = path.join(previewsDir(), `${SIMULATION_LEAD_ID}.html`);
+    if (fs.existsSync(arquivo)) fs.unlinkSync(arquivo);
+  } catch {
+    /* best-effort: a próxima geração sobrescreve */
+  }
+
   const lead = getLeadById(SIMULATION_LEAD_ID)!;
   return {
     leadId: lead.id,
@@ -183,6 +250,37 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
     city: candidato.city,
     state: candidato.state,
   });
+
+  // Assets do cliente: pesquisa a identidade visual com o nome NOVO (o card já é a
+  // empresa simulada) e regenera a prévia com a foto e a cor da marca.
+  let assets: SimulationAssets = { ok: false, images: 0, colors: 0, confidence: 0, previewUrl: null };
+  try {
+    const research = await researchLeadBrand(SIMULATION_LEAD_ID, { force: true, maxImages: 6, maxSearches: 2 });
+    const atualizado = getLeadById(SIMULATION_LEAD_ID)!;
+    const preview = generateLeadPreview(atualizado);
+    assets = {
+      ok: true,
+      images: research.snapshot.imagery?.length || 0,
+      colors: research.snapshot.palette?.length || 0,
+      confidence: Number(research.snapshot.confidence || 0),
+      previewUrl: preview.publicUrl,
+      notes: research.snapshot.notes,
+    };
+  } catch (error: any) {
+    assets.error = String(error?.message || error).slice(0, 220);
+    // Análise visual depende de IA (cota). Sem ela, ainda vale guardar as fotos
+    // públicas encontradas: a prévia mostra a capa e o cliente vê o negócio dele.
+    const capturado = await captureImagesOnly(candidato);
+    if (capturado) {
+      const atualizado = getLeadById(SIMULATION_LEAD_ID)!;
+      const preview = generateLeadPreview(atualizado);
+      assets.ok = true;
+      assets.images = capturado.imagery.length;
+      assets.confidence = capturado.confidence;
+      assets.previewUrl = preview.publicUrl;
+    }
+  }
+
   const paulo = getLeadById(SIMULATION_LEAD_ID)!;
   const mensagem = buildProspectMessage(candidato);
 
@@ -193,6 +291,7 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
   });
 
   return {
+    assets,
     candidate: {
       id: candidato.id,
       name: candidato.name,

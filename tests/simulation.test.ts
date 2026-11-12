@@ -77,6 +77,28 @@ describe("reset do card de simulação", () => {
     expect(depois.deployUrl).toBeUndefined();
   });
 
+  it("limpa os assets antigos e apaga a prévia da simulação anterior", async () => {
+    const { previewsDir } = await import("../server/services/previewService");
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+
+    getDb()
+      .prepare("UPDATE leads SET brand_snapshot_json = ?, client_profile_json = ?, site_audit_json = ? WHERE id = ?")
+      .run(JSON.stringify({ version: 1 }), JSON.stringify({ name: "antiga" }), JSON.stringify({ score: 1 }), SIMULATION_LEAD_ID);
+
+    const dir = previewsDir();
+    fs.mkdirSync(dir, { recursive: true });
+    const arquivo = path.join(dir, `${SIMULATION_LEAD_ID}.html`);
+    fs.writeFileSync(arquivo, "<html>empresa antiga</html>", "utf8");
+
+    resetSimulationCard("Empresa Nova");
+    const lead = getLeadById(SIMULATION_LEAD_ID)!;
+    expect(lead.brandSnapshot).toBeUndefined();
+    expect(lead.clientProfile).toBeUndefined();
+    expect(lead.siteAudit).toBeUndefined();
+    expect(fs.existsSync(arquivo)).toBe(false);
+  });
+
   it("nome vazio cai no rótulo padrão em vez de criar card sem nome", () => {
     const card = resetSimulationCard("   ");
     expect(card.leadName).toBe("Simulação");

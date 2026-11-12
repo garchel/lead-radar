@@ -8,12 +8,14 @@
  * Regras:
  * - **determinístico**: nada de IA aqui. Fatos do cadastro + ficha do cliente,
  *   template fixo. Prévia que inventa serviço ou prêmio queima a venda.
- * - **autocontido**: um HTML só, sem asset externo, sem fonte remota, sem JS.
- *   Abre no celular do cliente sem depender de nada nosso.
+ * - **quase autocontido**: um HTML só, sem fonte remota e sem JS. A única coisa
+ *   externa é a foto de capa, que vem da identidade visual coletada do próprio
+ *   negócio (URL pública). Se a foto não carregar, o layout continua de pé.
  * - **declaradamente uma prévia**: badge no topo e rodapé explicando o que é.
  */
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import type { StoredLead } from "../store/types";
 import { prettyName } from "./briefingService";
@@ -100,6 +102,16 @@ export function buildPreviewHtml(lead: StoredLead, now = new Date()): string {
     ? `<a class="cta" href="${esc(wa)}" rel="noopener">Falar no WhatsApp</a>`
     : `<span class="cta cta-disabled">Falar no WhatsApp</span>`;
 
+  // Identidade visual coletada do negócio (cor + foto). Sem ela, o template usa o
+  // verde padrão e não mostra imagem — nunca inventa foto.
+  const corMarca = (lead.brandSnapshot?.palette || [])
+    .map((cor) => String(cor.hex || ""))
+    .find((hex) => /^#[0-9a-f]{6}$/i.test(hex));
+  const fotoCapa = (lead.brandSnapshot?.imagery || []).map((img) => String(img.url || "")).find((url) => /^https?:\/\//i.test(url));
+  const heroImagem = fotoCapa
+    ? `<figure class="hero"><img src="${esc(fotoCapa)}" alt="${esc(name)}" loading="lazy" onerror="this.parentElement.style.display='none'" /></figure>`
+    : "";
+
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -108,7 +120,7 @@ export function buildPreviewHtml(lead: StoredLead, now = new Date()): string {
 <meta name="robots" content="noindex, nofollow" />
 <title>${esc(name)} — prévia</title>
 <style>
-  :root { --ink:#0f172a; --muted:#475569; --line:#e2e8f0; --accent:#0b6b3a; --surface:#f7f8fa; }
+  :root { --ink:#0f172a; --muted:#475569; --line:#e2e8f0; --accent:${corMarca || "#0b6b3a"}; --surface:#f7f8fa; }
   * { box-sizing: border-box; }
   body { margin:0; font-family: -apple-system, "Segoe UI", Roboto, system-ui, sans-serif; color:var(--ink);
          background:#fff; -webkit-font-smoothing:antialiased; }
@@ -132,6 +144,8 @@ export function buildPreviewHtml(lead: StoredLead, now = new Date()): string {
   .card-num { font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; }
   .card-text { font-size:16px; }
   .foot { margin-top:40px; padding-top:18px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); line-height:1.6; }
+  .hero { margin:22px 0 0; border-radius:18px; overflow:hidden; border:1px solid var(--line); background:var(--surface); }
+  .hero img { display:block; width:100%; height:auto; max-height:320px; object-fit:cover; }
   @media (prefers-color-scheme: dark) {
     body { background:#0b1220; color:#e8eef7; }
     .lead { color:#b9c4d4; }
@@ -147,6 +161,7 @@ export function buildPreviewHtml(lead: StoredLead, now = new Date()): string {
     <span class="badge">Prévia · primeira tela</span>
     <p class="kicker">${esc(category)}${location ? ` · ${esc(location)}` : ""}</p>
     <h1>${esc(name)}</h1>
+    ${heroImagem}
     <p class="lead">${
       "Resposta direta no WhatsApp, sem formulário."
     }</p>
@@ -163,18 +178,54 @@ export function buildPreviewHtml(lead: StoredLead, now = new Date()): string {
 </html>`;
 }
 
+let avisouLan = false;
+
+/**
+ * Base pública das prévias.
+ *
+ * `PUBLIC_BASE_URL` (túnel/domínio) tem prioridade. Sem ela, cai para o IP da
+ * rede local: o celular do Paulo abre o link no mesmo Wi-Fi, o que resolve a
+ * simulação sem configurar túnel. Sem nenhuma das duas, devolve `null` — e aí o
+ * link NÃO é enviado ao cliente (nunca inventar endereço).
+ */
+export function resolvePublicBaseUrl(): { baseUrl: string | null; source: "env" | "lan" | "none" } {
+  const env = (process.env.PUBLIC_BASE_URL || "").trim().replace(/\/+$/, "");
+  if (env) return { baseUrl: env, source: "env" };
+
+  const porta = Number(process.env.PORT) || 3000;
+  const candidatos: string[] = [];
+  for (const lista of Object.values(os.networkInterfaces())) {
+    for (const endereco of lista || []) {
+      if (endereco.family !== "IPv4" || endereco.internal) continue;
+      candidatos.push(endereco.address);
+    }
+  }
+  // Prefere faixas privadas usuais (Wi-Fi da casa/escritório).
+  const privado = candidatos.find((ip) => /^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[01])\./.test(ip)) || candidatos[0];
+  if (!privado) return { baseUrl: null, source: "none" };
+
+  if (!avisouLan) {
+    console.log(
+      `[previa] PUBLIC_BASE_URL não definida: usando o IP da rede local (http://${privado}:${porta}). ` +
+        "Funciona no mesmo Wi-Fi; fora dele, configure um túnel."
+    );
+    avisouLan = true;
+  }
+  return { baseUrl: `http://${privado}:${porta}`, source: "lan" };
+}
+
 /** Gera (ou regenera) o arquivo da prévia e devolve as URLs. */
 export function generateLeadPreview(lead: StoredLead, now = new Date()): PreviewResult {
   const dir = previewsDir();
   fs.mkdirSync(dir, { recursive: true });
   const filePath = path.join(dir, `${lead.id}.html`);
   fs.writeFileSync(filePath, buildPreviewHtml(lead, now), "utf8");
-  const publicBase = (process.env.PUBLIC_BASE_URL || "").replace(/\/+$/, "");
+  const { baseUrl } = resolvePublicBaseUrl();
   return {
     leadId: lead.id,
     filePath,
     url: `/previews/${lead.id}.html`,
-    publicUrl: publicBase ? `${publicBase}/previews/${lead.id}.html` : null,
+    publicUrl: baseUrl ? `${baseUrl}/previews/${lead.id}.html` : null,
     generatedAt: now.toISOString(),
   };
 }
