@@ -11,9 +11,17 @@
  * forma de quadradinhos + nome em português + hex. É legível, não depende de API
  * nova e o lead pode responder "gostei" ou "não gosto desse amarelo".
  */
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import type { StoredLead } from "../store/types";
 import { dispatchLeadReply } from "./interactionService";
 import { getLeadById } from "../store/db";
+import { previewSlug, previewsDir, resolvePublicBaseUrl } from "./previewService";
+import { previewPalette } from "./previewTemplate";
+import { pagesConfigured, publishPreviews } from "./pagesService";
+import { paletteCardFileName, paletteCardPng } from "./paletteCard";
+import { deliverWhatsAppMedia } from "./contactService";
 
 export interface PaletteEntry {
   hex: string;
@@ -131,12 +139,83 @@ export interface PaletteSendResult {
   colors: PaletteEntry[];
   communicationId?: string;
   detail?: string;
+  /** Cartão em PNG publicado (quando o envio foi em imagem). */
+  imageUrl?: string;
 }
 
 /**
  * Envia a paleta pelo WhatsApp. Não faz nada (e diz por quê) quando o negócio
  * ainda não tem identidade coletada: inventar cor é pior que esperar.
  */
+/**
+ * Gera e publica o cartão da paleta em PNG.
+ *
+ * O arquivo vai para a pasta das prévias (que já é publicada no Pages) porque o
+ * gateway do WhatsApp recebe uma URL e baixa a imagem por conta própria.
+ */
+export async function publishPaletteCard(lead: StoredLead): Promise<{ filePath: string; publicUrl: string | null; fileName: string }> {
+  const colors = paletteForLead(lead);
+  if (!colors.length) throw new Error("Sem identidade visual coletada: nada para desenhar.");
+
+  const hexAcento = colors[0].hex;
+  const pal = previewPalette(hexAcento);
+  const slug = previewSlug(lead);
+  const fileName = paletteCardFileName(lead, slug);
+  const png = await paletteCardPng(colors, {
+    accent: pal.accent,
+    onAccent: pal.onAccent,
+    businessName: String(lead.name || "").split(" — ")[0],
+    category: lead.searchCategory || lead.category || "Negócio local",
+    city: lead.city,
+  });
+
+  const dir = previewsDir();
+  fs.mkdirSync(dir, { recursive: true });
+
+  // Nome com hash do conteúdo: o Cloudflare cacheia por URL, então reusar o mesmo
+  // nome faria o WhatsApp baixar a imagem antiga depois de uma correção.
+  const hash = crypto.createHash("sha1").update(png).digest("hex").slice(0, 8);
+  const nomeFinal = fileName.replace(/\.png$/, `-${hash}.png`);
+
+  // limpa cartões anteriores deste lead (inclusive o sem hash, de versões antigas)
+  const prefixo = fileName.replace(/\.png$/, "");
+  try {
+    for (const arquivo of fs.readdirSync(dir)) {
+      const ehCartaoDesteLead = arquivo === `${prefixo}.png` || arquivo.startsWith(`${prefixo}-`);
+      if (ehCartaoDesteLead && arquivo !== nomeFinal) fs.unlinkSync(path.join(dir, arquivo));
+    }
+  } catch {
+    /* best-effort */
+  }
+
+  const filePath = path.join(dir, nomeFinal);
+  fs.writeFileSync(filePath, png);
+
+  if (pagesConfigured()) {
+    await publishPreviews(dir);
+  }
+
+  const { baseUrl, source } = resolvePublicBaseUrl();
+  // No Pages o arquivo é servido na raiz; no app/túnel, em /previews.
+  const publicUrl = baseUrl ? (source === "pages" ? `${baseUrl}/${nomeFinal}` : `${baseUrl}/previews/${nomeFinal}`) : null;
+
+  // O deploy leva alguns segundos para propagar. Enviar ao WhatsApp antes disso faz
+  // o gateway receber 404 e a imagem não chegar. Espera o link responder.
+  if (publicUrl && source === "pages") {
+    for (let tentativa = 0; tentativa < 8; tentativa += 1) {
+      try {
+        const res = await fetch(publicUrl, { method: "HEAD" });
+        if (res.ok) break;
+      } catch {
+        /* segue tentando */
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+  }
+
+  return { filePath, publicUrl, fileName: nomeFinal };
+}
+
 export function buildPalettePreview(leadId: string): PaletteSendResult {
   const lead = getLeadById(leadId);
   if (!lead) throw new Error("Lead não encontrado.");
@@ -157,7 +236,7 @@ export function buildPalettePreview(leadId: string): PaletteSendResult {
  */
 export async function sendPalettePreview(
   leadId: string,
-  options: { forcar?: boolean } = {}
+  options: { forcar?: boolean; formato?: "texto" | "imagem" } = {}
 ): Promise<PaletteSendResult> {
   const lead = getLeadById(leadId);
   if (!lead) throw new Error("Lead não encontrado.");
@@ -167,6 +246,30 @@ export async function sendPalettePreview(
   if (!montada.colors.length) return montada;
 
   const { text, colors } = montada;
+
+  if (options.formato === "imagem") {
+    const cartao = await publishPaletteCard(lead);
+    if (!cartao.publicUrl) {
+      return { sent: false, text, colors, detail: "Cartão gerado, mas sem URL pública: o gateway precisa de link para baixar a imagem." };
+    }
+    const envio = await deliverWhatsAppMedia(
+      lead.id,
+      String(lead.phone).replace(/\D/g, ""),
+      text,
+      { url: cartao.publicUrl, fileName: cartao.fileName, mimetype: "image/png" },
+      undefined,
+      "reply"
+    );
+    return {
+      sent: envio.status === "sent",
+      text,
+      colors,
+      communicationId: envio.communicationId,
+      detail: envio.detail,
+      imageUrl: cartao.publicUrl,
+    };
+  }
+
   const result = await dispatchLeadReply(lead, {
     message: text,
     purpose: "reply",

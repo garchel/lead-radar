@@ -193,6 +193,39 @@ async function sendViaEvolution(to: string, message: string): Promise<SendOutcom
 }
 
 /** Envio via WhatsMiau self-hosted (fork da Evolution, endpoints com prefixo /v1). */
+/**
+ * Imagem/documento no WhatsMiau: `POST /v1/message/sendMedia/{instance}`.
+ * `media` é URL pública (o gateway baixa), daí a necessidade de publicar antes.
+ */
+async function sendViaWhatsmiauMedia(
+  to: string,
+  media: { url: string; fileName: string; mimetype?: string; caption?: string }
+): Promise<SendOutcome> {
+  const baseUrl = (process.env.WHATSMIAU_API_URL || "").replace(/\/$/, "");
+  const instance = process.env.WHATSMIAU_INSTANCE || "leadradar";
+  const mimetype = media.mimetype || "image/png";
+
+  const res = await fetch(`${baseUrl}/v1/message/sendMedia/${instance}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: process.env.WHATSMIAU_API_KEY || "" },
+    body: JSON.stringify({
+      number: to,
+      mediatype: mimetype.startsWith("image/") ? "image" : "document",
+      mimetype,
+      media: media.url,
+      fileName: media.fileName,
+      caption: media.caption || "",
+    }),
+    signal: AbortSignal.timeout(WHATSAPP_FETCH_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`WhatsMiau mídia HTTP ${res.status}${body ? `: ${body.slice(0, 140)}` : ""}`);
+  }
+  const payload = await readResponsePayload(res);
+  return { detail: "Imagem enviada via whatsmiau", externalId: readProviderMessageId(payload) };
+}
+
 async function sendViaWhatsmiau(to: string, message: string): Promise<SendOutcome> {
   const baseUrl = (process.env.WHATSMIAU_API_URL || "").replace(/\/$/, "");
   const apiKey = process.env.WHATSMIAU_API_KEY;
@@ -361,6 +394,87 @@ async function sendThroughProvider(provider: WhatsappProvider, to: string, messa
     detail: `Enviado via webhook legado (${legacyUrl})`,
     externalId: readProviderMessageId(payload),
   };
+}
+
+/**
+ * Envia imagem com legenda pelo WhatsApp.
+ *
+ * Passa pelo mesmo portão do texto (`runPaced`: janela 7–20h, pausa, tetos) e
+ * registra a comunicação do mesmo jeito — mídia não é atalho para furar regra.
+ * Só o provider WhatsMiau tem esse endpoint; nos outros, cai em erro claro.
+ */
+export async function deliverWhatsAppMedia(
+  leadId: string,
+  to: string,
+  caption: string,
+  media: { url: string; fileName: string; mimetype?: string },
+  hook?: string,
+  purpose: SendPurpose = "reply"
+): Promise<ContactResult> {
+  const { provider, reason } = resolveWhatsappProvider();
+  const registro = `[imagem] ${media.fileName}\n\n${caption}`;
+
+  if (!provider) {
+    const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message: registro, hook, errorDetail: reason });
+    return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: reason };
+  }
+  if (provider !== "whatsmiau" && provider !== "evolution") {
+    const motivo = `Envio de imagem não suportado no provider ${provider}.`;
+    const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message: registro, hook, errorDetail: motivo });
+    return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: motivo };
+  }
+
+  try {
+    const paced = await runPaced({
+      leadId,
+      purpose,
+      message: caption,
+      task: () =>
+        sendViaWhatsmiauMedia(to, {
+          url: media.url,
+          fileName: media.fileName,
+          mimetype: media.mimetype || "image/png",
+          caption,
+        }),
+    });
+
+    if (paced.blocked) {
+      const id = recordCommunication({
+        leadId,
+        channel: "whatsapp",
+        status: "failed",
+        toAddress: to,
+        message: registro,
+        hook,
+        errorDetail: paced.blocked.reason || "Envio bloqueado pela humanização do WhatsApp.",
+      });
+      return {
+        channel: "whatsapp",
+        status: "failed",
+        communicationId: id,
+        to,
+        detail: paced.blocked.reason || "Envio bloqueado pela humanização do WhatsApp.",
+        blocked: true,
+        nextAllowedAt: paced.blocked.nextAllowedAt,
+      };
+    }
+
+    const outcome = (paced.value as SendOutcome) || { detail: "" };
+    const id = recordCommunication({
+      leadId,
+      channel: "whatsapp",
+      status: "sent",
+      toAddress: to,
+      message: registro,
+      hook,
+      externalId: outcome.externalId,
+    });
+    return { channel: "whatsapp", status: "sent", communicationId: id, to, detail: outcome.detail };
+  } catch (error: any) {
+    const motivo = error?.message || String(error);
+    const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message: registro, hook, errorDetail: motivo });
+    return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: motivo };
+  }
 }
 
 /** Gancho comercial padrão do lead — usado nas métricas por defeito. */

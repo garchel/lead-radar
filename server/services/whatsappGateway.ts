@@ -109,6 +109,36 @@ export async function sendGatewayText(
   return { externalId: typeof id === "string" ? id : undefined };
 }
 
+/**
+ * Envia imagem ou documento.
+ *
+ * O campo `media` é uma URL pública (o gateway baixa o arquivo), então quem chama
+ * precisa publicar a imagem antes — ver `publishPaletteCard`.
+ */
+export async function sendGatewayMedia(
+  phone: string,
+  media: { url: string; mediatype?: "image" | "document"; mimetype?: string; fileName?: string; caption?: string },
+  instance?: string
+): Promise<{ externalId?: string }> {
+  const destino = String(phone || "").replace(/\D/g, "");
+  if (!destino) throw new Error("Telefone de destino vazio.");
+  if (!/^https?:\/\//i.test(media.url)) throw new Error("Mídia precisa de URL pública (http/https).");
+  const inst = instanceOrDefault(instance);
+  const resposta: any = await gatewayRequest(`/v1/message/sendMedia/${encodeURIComponent(inst)}`, {
+    method: "POST",
+    body: {
+      number: destino,
+      mediatype: media.mediatype || "image",
+      mimetype: media.mimetype || "image/png",
+      media: media.url,
+      fileName: media.fileName || "paleta.png",
+      caption: media.caption || "",
+    },
+  });
+  const id = resposta?.key?.id || resposta?.id || resposta?.message?.key?.id;
+  return { externalId: typeof id === "string" ? id : undefined };
+}
+
 function instanceOrDefault(instance?: string): string {
   const config = getGatewayConfig();
   return (instance || config?.instance || "leadradar").trim() || "leadradar";

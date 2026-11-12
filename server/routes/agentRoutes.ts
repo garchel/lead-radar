@@ -26,7 +26,7 @@ import {
 } from "../services/salesAgentService";
 import { generateLeadPreview, generateLeadPreviewCached, previewExists, previewSlug, previewsDir, resolvePreviewUrl, resolvePublicBaseUrl } from "../services/previewService";
 import { pagesConfigured, publishPreviews } from "../services/pagesService";
-import { buildPalettePreview, sendPalettePreview } from "../services/paletteService";
+import { buildPalettePreview, publishPaletteCard, sendPalettePreview } from "../services/paletteService";
 import {
   describeWarmup,
   getWarmupState,
@@ -167,12 +167,22 @@ export function registerAgentRoutes(app: Express) {
    * O lead aprova a direção de cor enquanto a página é montada. Evita gastar a
    * cartada da prévia num rumo que ele não queria.
    */
-  app.get("/api/leads/:id/palette", (req: Request, res: Response) => {
+  app.get("/api/leads/:id/palette", async (req: Request, res: Response) => {
     const lead = getLeadById(req.params.id);
     if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
     try {
       const montada = buildPalettePreview(lead.id);
-      return res.json({ success: Boolean(montada.colors.length), paleta: montada.colors, texto: montada.text, aviso: montada.detail || null });
+      // ?imagem=1 desenha e publica o cartão sem enviar (revisão e teste).
+      const querImagem = String(req.query.imagem || "") === "1";
+      const cartao = querImagem && montada.colors.length ? await publishPaletteCard(lead) : null;
+      return res.json({
+        success: Boolean(montada.colors.length),
+        paleta: montada.colors,
+        texto: montada.text,
+        imagem: cartao?.publicUrl || null,
+        arquivo: cartao?.fileName || null,
+        aviso: montada.detail || null,
+      });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err?.message || "Falha ao montar a paleta." });
     }
@@ -182,11 +192,16 @@ export function registerAgentRoutes(app: Express) {
     const lead = getLeadById(req.params.id);
     if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
     try {
-      const resultado = await sendPalettePreview(lead.id, { forcar: Boolean((req.body || {}).forcar) });
+      const corpo = req.body || {};
+      const resultado = await sendPalettePreview(lead.id, {
+        forcar: Boolean(corpo.forcar),
+        formato: corpo.formato === "imagem" ? "imagem" : "texto",
+      });
       return res.json({
         success: resultado.sent,
         paleta: resultado.colors,
         texto: resultado.text,
+        imagem: resultado.imageUrl || null,
         comunicacao: resultado.communicationId || null,
         aviso: resultado.sent ? null : resultado.detail || "Nada enviado.",
       });

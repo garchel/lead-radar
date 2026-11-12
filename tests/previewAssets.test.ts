@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { classifyImage, pickPreviewImages } from "../server/services/brandImagery";
 import { colorName, paletteForLead, paletteMessageText, swatchFor } from "../server/services/paletteService";
 import { monogramOf, monogramSvg, wordmarkSvg } from "../server/services/logoSvg";
+import { paletteCardSvg } from "../server/services/paletteCard";
 import type { StoredLead } from "../server/store/types";
 
 function leadCom(imagery: Array<{ url: string; description?: string }>, palette: string[] = []): StoredLead {
@@ -112,6 +113,39 @@ describe("paleta", () => {
     expect(texto).toMatch(/O que acha\?/);
     expect(texto).not.toContain("—");
     expect(texto).not.toMatch(/R\$/);
+  });
+});
+
+describe("cartão da paleta", () => {
+  const cartao = () => paletteCardSvg(
+    [
+      { hex: "#E5D399", name: "dourado", swatch: "🟡" },
+      { hex: "#FFFFFF", name: "branco", swatch: "⚪" },
+      { hex: "#2F2F2F", name: "grafite", swatch: "⚫" },
+    ],
+    { accent: "#E5D399", onAccent: "#20170a", businessName: "Dra. Carmen Pitol", category: "Clínica odontológica", city: "Balneário Camboriú" }
+  );
+
+  it("mostra as três cores com nome e hex, e a assinatura da Vértice", () => {
+    const svg = cartao();
+    expect(svg).toContain("#E5D399");
+    expect(svg).toContain("#2F2F2F");
+    expect(svg).toMatch(/Dourado/);
+    expect(svg).toMatch(/Grafite/);
+    expect(svg).toContain("Vértice Páginas Web");
+    expect(svg).toContain("Dra. Carmen Pitol");
+  });
+
+  it("não repete atributo fill (SVG inválido quebra a rasterização)", () => {
+    for (const tag of cartao().match(/<text[^>]*>/g) || []) {
+      expect((tag.match(/fill=/g) || []).length).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("texto sobre dourado claro usa tinta escura", () => {
+    const svg = cartao();
+    const linhaDourado = svg.split("\n").find((l) => l.includes("#E5D399") && l.includes("<text")) || "";
+    expect(linhaDourado).toContain("#141414");
   });
 });
 
