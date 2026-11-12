@@ -20,6 +20,7 @@ import path from "node:path";
 import type { StoredLead } from "../store/types";
 import { prettyName } from "./briefingService";
 import { getCommercialPolicy, formatBRL, cheapestPackage } from "./commercialPolicy";
+import { currentTunnelUrl } from "./tunnelService";
 
 export interface PreviewResult {
   leadId: string;
@@ -188,9 +189,14 @@ let avisouLan = false;
  * simulação sem configurar túnel. Sem nenhuma das duas, devolve `null` — e aí o
  * link NÃO é enviado ao cliente (nunca inventar endereço).
  */
-export function resolvePublicBaseUrl(): { baseUrl: string | null; source: "env" | "lan" | "none" } {
+export function resolvePublicBaseUrl(): { baseUrl: string | null; source: "env" | "tunnel" | "lan" | "none" } {
   const env = (process.env.PUBLIC_BASE_URL || "").trim().replace(/\/+$/, "");
   if (env) return { baseUrl: env, source: "env" };
+
+  // Túnel público: é o único endereço que funciona fora da rede local (o cliente
+  // do outro lado da cidade não alcança 192.168.x.x).
+  const tunel = currentTunnelUrl();
+  if (tunel) return { baseUrl: tunel.replace(/\/+$/, ""), source: "tunnel" };
 
   const porta = Number(process.env.PORT) || 3000;
   const candidatos: string[] = [];

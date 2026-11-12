@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { KeyRound, MessageCircle, Server, RefreshCw, ExternalLink, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { KeyRound, MessageCircle, Server, RefreshCw, ExternalLink, AlertTriangle, CheckCircle2, Globe, Play, Copy, Check } from 'lucide-react';
 import { SerpApiKeyManager } from './SerpApiKeyManager';
 import { WhatsappSettingsCard } from './WhatsappSettingsCard';
 import { LeadQualityCard } from './LeadQualityCard';
@@ -185,6 +185,9 @@ export const ChannelsPage: React.FC<{ onOpenAutomation?: () => void }> = ({ onOp
         <WhatsappSettingsCard />
       </section>
 
+      {/* Link público das prévias */}
+      <PublicLinkCard />
+
       {/* MCP */}
       <section className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -220,3 +223,114 @@ export const ChannelsPage: React.FC<{ onOpenAutomation?: () => void }> = ({ onOp
     </div>
   );
 };
+
+/**
+ * Link público das prévias.
+ *
+ * Sem isso o cliente do outro lado da cidade recebe um endereço 192.168.x.x que
+ * não abre. Aqui o operador vê qual base está em uso e sobe/derruba o túnel.
+ */
+function PublicLinkCard() {
+  const [estado, setEstado] = useState<{
+    available: boolean;
+    tunnel: { running: boolean; url: string | null; source: string; error?: string };
+    previewBase: { baseUrl: string | null; source: string };
+    previewExample: string | null;
+  } | null>(null);
+  const [ocupado, setOcupado] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [copiado, setCopiado] = useState(false);
+
+  const carregar = async () => {
+    try {
+      const res = await fetch('/api/tunnel');
+      const data = await res.json();
+      if (data?.success) setEstado(data);
+    } catch {
+      /* cartão secundário */
+    }
+  };
+
+  useEffect(() => {
+    void carregar();
+  }, []);
+
+  const acao = async (nome: 'start' | 'stop') => {
+    setOcupado(nome);
+    setErro(null);
+    try {
+      const res = await fetch(`/api/tunnel/${nome}`, { method: 'POST' });
+      const data = await res.json();
+      if (data?.error) throw new Error(data.error);
+      await carregar();
+    } catch (e: any) {
+      setErro(e?.message || 'Falha ao mexer no túnel.');
+    } finally {
+      setOcupado(null);
+    }
+  };
+
+  const url = estado?.previewBase?.baseUrl;
+  const fonte = estado?.previewBase?.source;
+
+  return (
+    <section className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-bold text-slate-900 flex items-center gap-2">
+            <Globe className="w-4 h-4 text-indigo-600" /> Link público das prévias
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">
+            O cliente abre a prévia de qualquer rede. Sem isso o link só funciona no mesmo Wi-Fi.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => void acao('start')}
+            disabled={ocupado !== null}
+            className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+          >
+            {ocupado === 'start' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />} Subir túnel
+          </button>
+          <button
+            onClick={() => void acao('stop')}
+            disabled={ocupado !== null || !estado?.tunnel?.running}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 disabled:opacity-50"
+          >
+            Parar
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          base em uso ({fonte || '—'})
+        </div>
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <code className="min-w-0 flex-1 truncate text-xs text-slate-800">{url || 'nenhuma: o link não será enviado'}</code>
+          {url && (
+            <button
+              onClick={() => {
+                void navigator.clipboard?.writeText(url).then(() => {
+                  setCopiado(true);
+                  setTimeout(() => setCopiado(false), 1500);
+                });
+              }}
+              className="flex items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-700"
+            >
+              {copiado ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} {copiado ? 'copiado' : 'copiar'}
+            </button>
+          )}
+        </div>
+        {estado?.previewExample && <p className="mt-1 text-[11px] text-slate-500">exemplo: {estado.previewExample}</p>}
+        {estado?.tunnel?.error && <p className="mt-1 text-[11px] text-amber-700">{estado.tunnel.error}</p>}
+        <p className="mt-1 text-[11px] text-slate-500">
+          Túnel do cloudflared: a URL muda a cada reinício e cai se o app fechar. Para endereço fixo, defina{' '}
+          <code className="rounded bg-white px-1">PUBLIC_BASE_URL</code> ou rode numa VPS.
+        </p>
+      </div>
+
+      {erro && <p className="text-xs text-rose-700">{erro}</p>}
+    </section>
+  );
+}
