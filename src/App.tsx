@@ -14,6 +14,7 @@ import { DuplicateMergeModal } from './components/DuplicateMergeModal';
 import { FollowUpQueue } from './components/FollowUpQueue';
 import { ProjectsDashboard } from './components/ProjectsDashboard';
 import { AgentsDashboard } from './components/AgentsDashboard';
+import { BotsPage } from './components/BotsPage';
 import { LeaveDevelopmentModal } from './components/LeaveDevelopmentModal';
 import { ProjectTypeSelectModal } from './components/ProjectTypeSelectModal';
 import { SerpApiResultsPage } from './components/SerpApiResultsPage';
@@ -688,6 +689,7 @@ export default function App() {
           <ProjectsDashboard focusProjectId={focusProjectId} onFocused={() => setFocusProjectId(null)} />
         )}
 
+        {activeTab === 'bots' && <BotsPage />}
         {activeTab === 'agents' && <AgentsDashboard />}
 
         {activeTab === 'cities' && <CitiesQueueDashboard />}

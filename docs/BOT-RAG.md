@@ -63,15 +63,42 @@ vender, a chave precisa estar com **faturamento ativado**. Custo aproximado por
 resposta com Flash: fração de centavo (uma conversa inteira custa menos de R$ 0,01).
 `R$ 150/mês` cobre com folga, inclusive vários clientes na mesma chave.
 
-## O que ainda falta para operar comercialmente
+## O que já está pronto para vender
 
-| Falta | Impacto |
-|---|---|
-| Uma instância de WhatsApp por cliente (hoje `WHATSMIAU_INSTANCE` é única no ambiente) | sem isso não roda mais de um cliente ao mesmo tempo |
-| Roteamento do webhook para a base certa (por instância) | hoje todo inbound cai no fluxo da Vértice |
-| Tela para cadastrar cliente, colar a base e testar perguntas | sem tela, cada cliente é um script |
-| Assinatura: plano, valor, vencimento, status, MRR | hoje o CRM não sabe quem paga mensalidade |
-| Handoff: quando o dono entra na conversa, o bot para | risco de bot e humano responderem juntos |
+| Peça | Onde | Estado |
+|---|---|---|
+| Base de conhecimento por cliente | `botKnowledgeService` | indexa texto colado no painel, lista e remove documentos |
+| Isolamento por cliente | `bot_clients.instance` | cada cliente tem a própria instância no gateway; o webhook resolve pelo campo `instance` |
+| Roteamento no webhook | `whatsappWebhookRoutes` | inbound de instância de cliente vai para o bot e **não** vira lead da Vértice |
+| Handoff (dono assume) | `botConversationService` | dono digitando pausa o bot por 6h; mensagem nossa voltando do gateway é reconhecida e não pausa nada |
+| Pergunta sem resposta | `bot_escalations` | cliente recebe aviso, dono recebe a pergunta, painel lista e permite responder (o texto é repassado ao cliente) |
+| Assinatura e MRR | `subscriptionService` | implantação + mensalidade, próximo vencimento, marcar pagamento, cancelar, atraso |
+| Painel | `BotsPage` | cadastrar cliente, colar base, testar pergunta, ver conversas, responder pendência, registrar pagamento |
+| Alerta de cota | `bot_last_ai_error` | se a IA falhar/estourar cota, o painel mostra em vez de fingir que está tudo bem |
+
+## Roteiro de implantação (o que fazer em cada cliente)
+
+1. Cadastrar o cliente no painel (nome, WhatsApp do dono, instância, valores).
+2. Criar a instância no gateway e parear o número do cliente.
+3. Colar a base que ele mandou (serviços, preços, horário, endereço, pagamento, dúvidas).
+4. Testar 5 perguntas reais com ele: 3 que a base cobre e 2 que não cobre.
+5. Ajustar a base até as 3 cobertas responderem certo.
+6. Apontar o webhook do gateway para o app (uma URL só; o roteamento é pela instância).
+7. Mandar uma mensagem de teste do celular do cliente para o número dele.
+8. Combinar o combinado do mês: quem recebe as escaladas e em que horário responde.
+
+## Custo e cota (importante)
+
+O plano gratuito do Gemini permite **20 gerações por dia por modelo** — não serve
+para um cliente pagante. O bot não quebra: ele escala tudo. Mas o serviço só existe
+com **faturamento ativado** na chave. Com Flash, uma conversa custa menos de centavo.
+
+## Limite atual (honesto)
+
+- Um número por cliente: se o cliente quiser dois números, são duas instâncias e dois
+  cadastros.
+- A base é texto: PDF e planilha precisam ser colados/convertidos (não há upload de arquivo).
+- O relatório é na tela; não gera PDF/mensagem automática ainda.
 
 ## Contrato do serviço (o que prometer ao cliente)
 

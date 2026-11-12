@@ -17,6 +17,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { getDb } from "../store/schema";
 import { gatewayRequest } from "./whatsappGateway";
+import { setSetting } from "../store/db";
 
 export const EMBEDDING_MODEL = process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001";
 export const EMBEDDING_DIMENSIONS = 768;
@@ -38,6 +39,16 @@ export interface BotClient {
   monthlyPrice: number;
   status: "active" | "paused";
   minScore: number;
+  /** Anotações comerciais (o que combinou, o que falta). */
+  notes?: string;
+  /** Assinatura vinculada (receita recorrente). */
+  subscriptionId?: string;
+  /**
+   * Handoff: quando o dono responde manualmente, o bot fica calado até este
+   * horário. Sem isso, bot e humano respondem juntos e o cliente fica confuso.
+   */
+  botPausedUntil?: string;
+  botPausedReason?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -113,7 +124,34 @@ export function ensureBotTables(): void {
       created_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_bot_chunks_client ON bot_chunks(client_id);
+    CREATE TABLE IF NOT EXISTS bot_messages (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      direction TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      text TEXT NOT NULL,
+      external_id TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_bot_messages_client ON bot_messages(client_id, created_at);
   `);
+
+  // Migração aditiva: bancos criados antes do handoff/assinatura não têm estas
+  // colunas, e `CREATE TABLE IF NOT EXISTS` não altera tabela existente.
+  const cols = new Set((db.prepare("PRAGMA table_info(bot_clients)").all() as any[]).map((c) => c.name));
+  const addCols: Record<string, string> = {
+    notes: "TEXT",
+    subscription_id: "TEXT",
+    bot_paused_until: "TEXT",
+    bot_paused_reason: "TEXT",
+  };
+  for (const [nome, tipo] of Object.entries(addCols)) {
+    if (!cols.has(nome)) db.exec(`ALTER TABLE bot_clients ADD COLUMN ${nome} ${tipo}`);
+  }
+  const msgCols = new Set((db.prepare("PRAGMA table_info(bot_messages)").all() as any[]).map((c) => c.name));
+  if (!msgCols.has("external_id")) db.exec("ALTER TABLE bot_messages ADD COLUMN external_id TEXT");
+
   tablesReady = true;
 }
 
@@ -144,15 +182,16 @@ export function createBotClient(input: {
     monthlyPrice: Math.round(Number(input.monthlyPrice ?? 150)) || 0,
     status: "active",
     minScore: Number(input.minScore ?? DEFAULT_MIN_SCORE),
+    notes: undefined,
     createdAt: now,
     updatedAt: now,
   };
   getDb()
     .prepare(
-      `INSERT INTO bot_clients (id, name, owner_phone, instance, setup_price, monthly_price, status, min_score, created_at, updated_at)
-       VALUES (@id, @name, @ownerPhone, @instance, @setupPrice, @monthlyPrice, @status, @minScore, @createdAt, @updatedAt)`
+      `INSERT INTO bot_clients (id, name, owner_phone, instance, setup_price, monthly_price, status, min_score, notes, created_at, updated_at)
+       VALUES (@id, @name, @ownerPhone, @instance, @setupPrice, @monthlyPrice, @status, @minScore, @notes, @createdAt, @updatedAt)`
     )
-    .run(client);
+    .run({ ...client, notes: null });
   return client;
 }
 
@@ -166,6 +205,10 @@ function rowToClient(row: any): BotClient {
     monthlyPrice: row.monthly_price ?? 0,
     status: row.status === "paused" ? "paused" : "active",
     minScore: row.min_score ?? DEFAULT_MIN_SCORE,
+    notes: row.notes || undefined,
+    subscriptionId: row.subscription_id || undefined,
+    botPausedUntil: row.bot_paused_until || undefined,
+    botPausedReason: row.bot_paused_reason || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -191,9 +234,17 @@ export function updateBotClient(id: string, patch: Partial<BotClient>): BotClien
     .prepare(
       `UPDATE bot_clients SET name = @name, owner_phone = @ownerPhone, instance = @instance,
         setup_price = @setupPrice, monthly_price = @monthlyPrice, status = @status,
-        min_score = @minScore, updated_at = @updatedAt WHERE id = @id`
+        min_score = @minScore, notes = @notes, subscription_id = @subscriptionId,
+        bot_paused_until = @botPausedUntil, bot_paused_reason = @botPausedReason,
+        updated_at = @updatedAt WHERE id = @id`
     )
-    .run(next);
+    .run({
+      ...next,
+      notes: next.notes ?? null,
+      subscriptionId: next.subscriptionId ?? null,
+      botPausedUntil: next.botPausedUntil ?? null,
+      botPausedReason: next.botPausedReason ?? null,
+    });
   return getBotClient(id);
 }
 
@@ -413,7 +464,22 @@ export async function answerWithRag(
   const client = getBotClient(clientId);
   if (!client) throw new Error(`Cliente de bot não encontrado: ${clientId}`);
 
-  const { topScore, hits } = await searchKnowledge(clientId, question, { k: opts.k ?? 4 });
+  let busca: { topScore: number; hits: RagAnswer["sources"] };
+  try {
+    busca = await searchKnowledge(clientId, question, { k: opts.k ?? 4 });
+  } catch (error: any) {
+    // Sem chave / rede fora: não dá para buscar. Responde escalando, nunca chutando.
+    console.warn(`[bot] busca na base falhou para ${clientId}: ${error?.message || error}`);
+    return {
+      answer: "",
+      customerMessage: HOLDING_MESSAGE,
+      escalated: true,
+      reason: process.env.GEMINI_API_KEY ? "erro_ia" : "sem_chave",
+      topScore: 0,
+      sources: [],
+    };
+  }
+  const { topScore, hits } = busca;
   const base: RagAnswer = {
     answer: "",
     customerMessage: HOLDING_MESSAGE,
@@ -447,7 +513,22 @@ export async function answerWithRag(
       ...decisao,
     };
   } catch (error: any) {
-    console.warn(`[bot] resposta com base falhou para ${clientId}: ${error?.message || error}`);
+    const detalhe = String(error?.message || error);
+    console.warn(`[bot] resposta com base falhou para ${clientId}: ${detalhe.slice(0, 200)}`);
+    // Cota estourada ou IA fora: fica registrado para o painel não fingir que está
+    // tudo bem (o bot cai na escalada, mas o cliente final sente a diferença).
+    try {
+      setSetting(
+        "bot_last_ai_error",
+        JSON.stringify({
+          at: new Date().toISOString(),
+          quota: /429|RESOURCE_EXHAUSTED|quota/i.test(detalhe),
+          message: detalhe.slice(0, 400),
+        })
+      );
+    } catch {
+      /* best-effort */
+    }
     return { ...base, escalated: true, reason: "erro_ia" };
   }
 }
@@ -483,6 +564,26 @@ export function formatOwnerEscalation(input: {
 }
 
 /**
+ * Envia texto a partir da instância do cliente.
+ *
+ * A instância vai no caminho da URL do gateway (o baseUrl e a apikey são da
+ * conta), então cada cliente fala pelo próprio número.
+ */
+export async function sendBotText(
+  instance: string | undefined,
+  phone: string,
+  text: string
+): Promise<{ externalId?: string }> {
+  const destino = String(phone || "").replace(/\D/g, "");
+  if (!destino) throw new Error("Telefone de destino vazio.");
+  const inst = (instance || "").trim();
+  const caminho = `/message/sendText/${encodeURIComponent(inst)}`;
+  const resposta: any = await gatewayRequest(caminho, { method: "POST", body: { number: destino, text } });
+  const id = resposta?.key?.id || resposta?.id || resposta?.message?.key?.id;
+  return { externalId: typeof id === "string" ? id : undefined };
+}
+
+/**
  * Manda a pergunta não respondida para o WhatsApp do dono.
  * Usa a instância do cliente (se houver) para a mensagem sair do número dele.
  */
@@ -504,10 +605,7 @@ export async function escalateToOwner(input: {
   });
 
   try {
-    await gatewayRequest(`/message/sendText/${client.instance || ""}`.replace(/\/+$/, ""), {
-      method: "POST",
-      body: { number: client.ownerPhone, text: texto },
-    });
+    await sendBotText(client.instance, client.ownerPhone, texto);
     return { sent: true, detail: `pergunta enviada para o dono (${client.ownerPhone})` };
   } catch (error: any) {
     return { sent: false, detail: `falha ao avisar o dono: ${error?.message || error}` };
@@ -520,4 +618,190 @@ export function knowledgeStats(clientId: string): { docs: number; chunks: number
   const docs = getDb().prepare("SELECT COUNT(*) c FROM bot_docs WHERE client_id = ?").get(clientId) as any;
   const chunks = getDb().prepare("SELECT COUNT(*) c FROM bot_chunks WHERE client_id = ?").get(clientId) as any;
   return { docs: docs?.c ?? 0, chunks: chunks?.c ?? 0 };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Roteamento por instância (um número por cliente)                   */
+/* ------------------------------------------------------------------ */
+
+/** Acha o cliente dono de uma instância do gateway (ex.: "barbearia-nivaldo"). */
+export function findBotClientByInstance(instance: string): BotClient | undefined {
+  ensureBotTables();
+  const alvo = String(instance || "").trim();
+  if (!alvo) return undefined;
+  const row = getDb()
+    .prepare("SELECT * FROM bot_clients WHERE lower(instance) = lower(?) ORDER BY created_at DESC LIMIT 1")
+    .get(alvo) as any;
+  return row ? rowToClient(row) : undefined;
+}
+
+/** Clientes ativos com instância configurada (os que podem receber mensagem). */
+export function listRoutableBots(): BotClient[] {
+  ensureBotTables();
+  return (getDb()
+    .prepare("SELECT * FROM bot_clients WHERE status = 'active' AND instance IS NOT NULL AND instance != '' ORDER BY created_at DESC")
+    .all() as any[]).map(rowToClient);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Handoff: o dono assume a conversa e o bot fica calado              */
+/* ------------------------------------------------------------------ */
+
+export const DEFAULT_HANDOFF_HOURS = Number(process.env.BOT_HANDOFF_HOURS || 6);
+
+/** O bot está calado agora? (o dono assumiu e o prazo não venceu) */
+export function isBotPaused(client: Pick<BotClient, "botPausedUntil">, now: Date = new Date()): boolean {
+  if (!client.botPausedUntil) return false;
+  const ate = new Date(client.botPausedUntil).getTime();
+  return Number.isFinite(ate) && ate > now.getTime();
+}
+
+/** Pausa o bot (padrão 6h) porque um humano entrou na conversa. */
+export function pauseBot(clientId: string, hours = DEFAULT_HANDOFF_HOURS, reason = "atendimento humano"): BotClient | undefined {
+  const ate = new Date(Date.now() + Math.max(1, hours) * 60 * 60 * 1000).toISOString();
+  return updateBotClient(clientId, { botPausedUntil: ate, botPausedReason: reason });
+}
+
+export function resumeBot(clientId: string): BotClient | undefined {
+  return updateBotClient(clientId, { botPausedUntil: undefined, botPausedReason: undefined });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Histórico de conversas do bot (relatório e auditoria)              */
+/* ------------------------------------------------------------------ */
+
+export type BotMessageKind = "inbound" | "answer" | "holding" | "escalation" | "owner";
+
+export function recordBotMessage(input: {
+  clientId: string;
+  phone: string;
+  direction: "in" | "out";
+  kind: BotMessageKind;
+  text: string;
+  occurredAt?: string;
+  externalId?: string;
+}): void {
+  ensureBotTables();
+  getDb()
+    .prepare(
+      `INSERT INTO bot_messages (id, client_id, phone, direction, kind, text, external_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      newId("msg"),
+      input.clientId,
+      String(input.phone || "").replace(/\D/g, ""),
+      input.direction,
+      input.kind,
+      String(input.text || "").slice(0, 4000),
+      input.externalId || null,
+      input.occurredAt || new Date().toISOString()
+    );
+}
+
+/**
+ * A mensagem que o gateway ecoou é uma que nós mesmos enviamos?
+ * Sem isso, cada resposta do bot pareceria "o dono digitando" e o bot se calaria
+ * depois de falar a primeira vez.
+ */
+export function isOwnBotMessage(clientId: string, externalId?: string): boolean {
+  if (!externalId) return false;
+  ensureBotTables();
+  const row = getDb()
+    .prepare("SELECT 1 FROM bot_messages WHERE client_id = ? AND external_id = ? LIMIT 1")
+    .get(clientId, externalId);
+  return Boolean(row);
+}
+
+export interface BotMessageRow {
+  id: string;
+  clientId: string;
+  phone: string;
+  direction: "in" | "out";
+  kind: BotMessageKind;
+  text: string;
+  createdAt: string;
+}
+
+export function listBotMessages(clientId: string, limit = 50): BotMessageRow[] {
+  ensureBotTables();
+  const rows = getDb()
+    .prepare("SELECT * FROM bot_messages WHERE client_id = ? ORDER BY created_at DESC LIMIT ?")
+    .all(clientId, Math.max(1, Math.min(500, limit))) as any[];
+  return rows.map((r) => ({
+    id: r.id,
+    clientId: r.client_id,
+    phone: r.phone,
+    direction: r.direction === "out" ? "out" : "in",
+    kind: r.kind,
+    text: r.text,
+    createdAt: r.created_at,
+  }));
+}
+
+/** Números do mês: quantas conversas, quantas o bot resolveu, quantas escalou. */
+export function botStats(clientId: string, sinceIso?: string): {
+  inbound: number;
+  answered: number;
+  escalated: number;
+  owner: number;
+  resolutionRate: number;
+} {
+  ensureBotTables();
+  const desde = sinceIso || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const linhas = getDb()
+    .prepare("SELECT kind, COUNT(*) AS c FROM bot_messages WHERE client_id = ? AND created_at >= ? GROUP BY kind")
+    .all(clientId, desde) as any[];
+  const mapa = new Map<string, number>(linhas.map((l) => [l.kind, l.c]));
+  const inbound = mapa.get("inbound") || 0;
+  const answered = mapa.get("answer") || 0;
+  const escalated = mapa.get("escalation") || 0;
+  return {
+    inbound,
+    answered,
+    escalated,
+    owner: mapa.get("owner") || 0,
+    resolutionRate: inbound ? Math.round((answered / inbound) * 100) : 0,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Documentos da base                                                 */
+/* ------------------------------------------------------------------ */
+
+export interface KnowledgeDoc {
+  id: string;
+  title?: string;
+  source?: string;
+  chars: number;
+  chunks: number;
+  createdAt: string;
+}
+
+export function listKnowledgeDocs(clientId: string): KnowledgeDoc[] {
+  ensureBotTables();
+  const rows = getDb()
+    .prepare(
+      `SELECT d.id, d.title, d.source, d.content, d.created_at,
+              (SELECT COUNT(*) FROM bot_chunks c WHERE c.doc_id = d.id) AS chunks
+       FROM bot_docs d WHERE d.client_id = ? ORDER BY d.created_at DESC`
+    )
+    .all(clientId) as any[];
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title || undefined,
+    source: r.source || undefined,
+    chars: String(r.content || "").length,
+    chunks: r.chunks ?? 0,
+    createdAt: r.created_at,
+  }));
+}
+
+/** Remove um documento e seus trechos (reindexação manual do cliente). */
+export function deleteKnowledgeDoc(clientId: string, docId: string): { removed: boolean; chunks: number } {
+  ensureBotTables();
+  const db = getDb();
+  const chunks = db.prepare("DELETE FROM bot_chunks WHERE client_id = ? AND doc_id = ?").run(clientId, docId).changes;
+  const docs = db.prepare("DELETE FROM bot_docs WHERE client_id = ? AND id = ?").run(clientId, docId).changes;
+  return { removed: docs > 0, chunks };
 }

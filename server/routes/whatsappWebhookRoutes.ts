@@ -12,6 +12,8 @@ import { getHumanizeStatus } from "../services/humanizeService";
 import { buildClientProfile } from "../services/clientProfileService";
 import { agentEnabled, answerLead } from "../services/salesAgentService";
 import { pitchTestLeadOnFirstMessage, shouldPitchTestLead } from "../services/testLeadService";
+import { findBotClientByInstance } from "../services/botKnowledgeService";
+import { handleBotInbound, handleOwnerEcho } from "../services/botConversationService";
 import {
   AI_MIN_CONFIDENCE,
   classifyByRules,
@@ -80,6 +82,35 @@ function extractInbound(req: Request): {
     messageId: key.id || data.id || undefined,
     stanzaId: data.contextInfo?.stanzaId || undefined,
     isEdit: messageType === "editedMessage" || m.type === "editedMessage",
+  };
+}
+
+/**
+ * Extrai mensagem que SAIU do próprio número (fromMe = true).
+ *
+ * Para o bot de cliente isso importa: se quem digitou foi o dono do negócio, o bot
+ * tem que calar; se foi o próprio bot, o eco é ignorado (reconhecido pelo id).
+ */
+function extractEcho(req: Request): { instance: string; toPhone: string; text: string; messageId?: string } | null {
+  const body = req.body || {};
+  if (body.event && body.event !== "messages.upsert") return null;
+  const data = body.data || body;
+  const key = data.key || {};
+  if (key.fromMe !== true) return null;
+
+  const jid: string = key.remoteJid || data.remoteJid || "";
+  if (!jid || jid.includes("@g.us")) return null;
+
+  const m = data.message || {};
+  const text =
+    m.conversation || m.extendedTextMessage?.text || m.imageMessage?.caption || m.documentMessage?.caption || "";
+  if (!String(text).trim()) return null;
+
+  return {
+    instance: body.instance || "",
+    toPhone: jid.split("@")[0],
+    text: String(text).trim(),
+    messageId: key.id || data.id || undefined,
   };
 }
 
@@ -318,12 +349,35 @@ export function registerWhatsAppWebhook(app: Express) {
 
     const inbound = extractInbound(req) || extractInboundMeta(req);
     if (!inbound) {
+      // Eco do próprio número de um cliente com bot: dono digitando ou mensagem
+      // nossa voltando do gateway.
+      const eco = extractEcho(req);
+      if (eco && findBotClientByInstance(eco.instance)) {
+        void handleOwnerEcho({ ...eco, externalId: eco.messageId })
+          .then((r) => console.log(`[bot] eco ${eco.instance}: ${r.detail}`))
+          .catch((e: any) => console.warn(`[bot] eco falhou: ${e?.message}`));
+        return;
+      }
       // ACK de entrega/leitura das mensagens que enviamos (messages.update / statuses).
       try {
         handleAckEvent(req.body);
       } catch (e: any) {
         console.warn(`[whatsapp] Falha ao aplicar ACK: ${e?.message}`);
       }
+      return;
+    }
+
+    // BOT DE CLIENTE: a instância pertence a um cliente cadastrado, então a
+    // mensagem é conversa dele, não lead da Vértice. Roteia e para aqui.
+    if (findBotClientByInstance(inbound.instance)) {
+      void handleBotInbound({
+        instance: inbound.instance,
+        from: inbound.from,
+        text: inbound.text,
+        pushName: inbound.pushName,
+      })
+        .then((r) => console.log(`[bot] ${inbound.instance}: ${r.detail || (r.escalated ? "escalou" : "respondeu")}`))
+        .catch((e: any) => console.warn(`[bot] falhou (${inbound.instance}): ${e?.message}`));
       return;
     }
 

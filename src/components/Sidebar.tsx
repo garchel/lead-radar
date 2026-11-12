@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Target, Search, FolderKanban, BookOpen, Cpu, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings, Bot, TrendingUp, Users, KeyRound, ClipboardList, ChevronDown } from 'lucide-react';
+import { Target, Search, FolderKanban, BookOpen, Cpu, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings, Bot, TrendingUp, Users, KeyRound, ClipboardList, ChevronDown, MessageSquare } from 'lucide-react';
 import { PwaInstallButton } from './PwaStatus';
 
 /** Abas do app — a navegação segue a etapa do funil, não a idade da feature. */
@@ -7,7 +7,7 @@ export type AppTab =
   | 'overview'
   | 'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents'
   | 'companies' | 'cities' | 'categories' | 'automation' | 'database'
-  | 'followups' | 'channels';
+  | 'followups' | 'channels' | 'bots';
 
 /** Grupos recolhidos ficam salvos no navegador. */
 const GROUPS_STORAGE_KEY = 'leadradar.sidebar.groups.collapsed.v1';
@@ -217,6 +217,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {projectCount}
               </span>
             )}
+          </button>
+
+          <button id="nav-bots-btn" onClick={() => setActiveTab('bots')} className={navBtn('bots', activeTab === 'bots')}>
+            <MessageSquare className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Bots de WhatsApp</span>
           </button>
 
           <button id="nav-agents-btn" onClick={() => setActiveTab('agents')} className={navBtn('agents', activeTab === 'agents')}>
