@@ -19,6 +19,7 @@
 import { getDb } from "../store/schema";
 import { getLeadById, getSetting } from "../store/db";
 import { answerLead } from "./salesAgentService";
+import { sendOwnerAlert } from "./ownerAlertService";
 
 export const FALLBACK_MIN_AGE_MINUTES = 6;
 export const FALLBACK_LIMIT = 3;
@@ -127,6 +128,17 @@ export async function fallbackAnswerTick(
         status: composed.dispatch.status,
         detail: composed.dispatch.detail,
       });
+
+      // Se nem a rede de segurança conseguiu, o aviso é obrigatório.
+      if (composed.dispatch.status !== "sent") {
+        void sendOwnerAlert({
+          kind: composed.dispatch.blocked ? "resposta_bloqueada" : "envio_falhou",
+          detail: composed.dispatch.detail || `status ${composed.dispatch.status}`,
+          leadId: lead.id,
+          leadName: lead.name,
+          leadPhone: lead.phone,
+        });
+      }
       console.log(
         `[fallback] ${lead.name}: ${composed.dispatch.status === "sent" ? "respondeu" : "bloqueado"} (${composed.source}) — ${composed.message.slice(0, 80)}`
       );

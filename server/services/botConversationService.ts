@@ -13,6 +13,7 @@
  *   - em qualquer caso, o bot fica calado por algumas horas (handoff).
  */
 import { getDb } from "../store/schema";
+import { sendOwnerAlert } from "./ownerAlertService";
 import {
   answerWithRag,
   getBotClient,
@@ -234,6 +235,15 @@ export async function handleBotInbound(input: {
       direction: "out",
       kind: "escalation",
       text: `[falha de envio] ${input.text} — ${falhaEnvio}`,
+    });
+    // Falha técnica no bot de um cliente também é assunto do Paulo: é o serviço
+    // que ele vende e o cliente dele está no escuro.
+    void sendOwnerAlert({
+      kind: "bot_cliente",
+      detail: `${client.name}: ${falhaEnvio}`,
+      leadId: client.id,
+      leadName: `Bot de ${client.name}`,
+      leadPhone: telefone,
     });
     return {
       handled: true,

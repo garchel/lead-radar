@@ -491,6 +491,8 @@ export const AutomationSettingsPage: React.FC = () => {
         </div>
       </SettingsCard>
 
+      <OwnerAlertCard />
+
       <SettingsCard
         id="mcp"
         title="Autopilot (MCP)"
@@ -645,3 +647,142 @@ export const AutomationSettingsPage: React.FC = () => {
     </div>
   );
 };
+
+/**
+ * Aviso no WhatsApp do Paulo quando o atendimento automático falha.
+ *
+ * Sem isso, conversa parada só é descoberta quando o lead já esfriou.
+ */
+function OwnerAlertCard() {
+  const [estado, setEstado] = useState<{
+    enabled: boolean;
+    phone: string;
+    configured: boolean;
+    cooldownMinutes: number;
+    dailyCap: number;
+    sentToday: number;
+    recent: { id: string; kind: string; detail: string; leadName?: string; status: string; sentAt: string }[];
+  } | null>(null);
+  const [telefone, setTelefone] = useState('');
+  const [ocupado, setOcupado] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const carregar = async () => {
+    try {
+      const res = await fetch('/api/alerts/owner');
+      const data = await res.json();
+      if (data?.success) setEstado(data);
+    } catch {
+      /* silencioso: é um cartão secundário */
+    }
+  };
+
+  useEffect(() => {
+    void carregar();
+  }, []);
+
+  const acao = async (nome: string, url: string, init?: RequestInit) => {
+    setOcupado(nome);
+    setErro(null);
+    setMsg(null);
+    try {
+      const res = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) } });
+      const data = await res.json();
+      if (!res.ok || data?.success === false) throw new Error(data?.error || `falha (${res.status})`);
+      setMsg(nome === 'teste' ? 'Teste enviado: confira o WhatsApp.' : 'Aviso atualizado.');
+      await carregar();
+    } catch (e: any) {
+      setErro(e?.message || 'Falha na ação.');
+    } finally {
+      setOcupado(null);
+    }
+  };
+
+  return (
+    <SettingsCard
+      id="owner-alert"
+      title="Aviso de falha no WhatsApp"
+      icon={<AlertTriangle className="w-4 h-4 text-amber-600" />}
+      open
+      onToggle={() => undefined}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3 py-2 border-b border-slate-100">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-slate-800">Avisar meu WhatsApp quando a Clara travar</div>
+          <div className="text-xs text-slate-500">
+            Se a IA não escrever a resposta, se o envio falhar ou se o lead ficar sem retorno, chega uma mensagem no seu
+            celular com quem ficou esperando. Um aviso por conversa a cada {estado?.cooldownMinutes ?? 15} minutos, no
+            máximo {estado?.dailyCap ?? 20} por dia.
+          </div>
+        </div>
+        <Toggle
+          checked={estado?.enabled ?? true}
+          onChange={(v) => void acao('toggle', '/api/alerts/owner', { method: 'PUT', body: JSON.stringify({ enabled: v }) })}
+          label="Avisar no WhatsApp quando o atendimento falhar"
+        />
+      </div>
+
+      <div className="py-3 border-b border-slate-100 space-y-2">
+        <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          Meu número (celular pessoal, não o número do bot)
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <input
+            value={telefone}
+            onChange={(e) => setTelefone(e.target.value)}
+            placeholder={estado?.phone || '+55 61 99999-9999'}
+            className="w-56 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          />
+          <button
+            onClick={() => void acao('salvar', '/api/alerts/owner', { method: 'PUT', body: JSON.stringify({ phone: telefone }) })}
+            disabled={!telefone.trim() || ocupado === 'salvar'}
+            className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+          >
+            {ocupado === 'salvar' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Salvar número
+          </button>
+          <button
+            onClick={() => void acao('teste', '/api/alerts/owner/test', { method: 'POST' })}
+            disabled={!estado?.configured || ocupado === 'teste'}
+            className="flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 disabled:opacity-50"
+          >
+            {ocupado === 'teste' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />} Enviar teste
+          </button>
+        </div>
+        {!estado?.configured && (
+          <p className="text-xs text-amber-700">Sem número configurado o aviso não sai.</p>
+        )}
+        {msg && <p className="text-xs text-emerald-700">{msg}</p>}
+        {erro && <p className="text-xs text-rose-700">{erro}</p>}
+      </div>
+
+      {estado?.recent?.length ? (
+        <div className="pt-2">
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Últimos avisos ({estado.sentToday} hoje)
+          </div>
+          <ul className="space-y-1">
+            {estado.recent.slice(0, 5).map((a) => (
+              <li key={a.id} className="flex items-start gap-2 text-xs text-slate-600">
+                <span
+                  className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+                    a.status === 'sent' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-700'
+                  }`}
+                >
+                  {a.kind}
+                </span>
+                <span className="min-w-0 flex-1 truncate">
+                  {a.leadName ? `${a.leadName}: ` : ''}
+                  {a.detail}
+                </span>
+                <span className="shrink-0 text-[11px] text-slate-400">
+                  {new Date(a.sentAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </SettingsCard>
+  );
+}

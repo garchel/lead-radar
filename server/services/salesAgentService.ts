@@ -17,6 +17,7 @@ import { getCommunicationsByLead, getSetting } from "../store/db";
 import type { StoredLead } from "../store/types";
 import { buildLeadBriefing, type LeadBriefing } from "./briefingService";
 import { WHATSAPP_STYLE_RULES, packageLines, whatsAppify } from "./messageStyle";
+import { sendOwnerAlert } from "./ownerAlertService";
 import {
   allowedPrices,
   cheapestPackage,
@@ -493,6 +494,15 @@ export async function composeReplyMessage(lead: StoredLead, inbound: string): Pr
   const { composed, issues } = await composeWithGuardrails({ lead, briefing }, { kind: "reply", inbound });
   if (composed) return composed;
   if (issues.length) console.warn(`[agent] IA reprovada (resposta) para ${lead.name}: ${issues.join("; ")}`);
+  // A IA não entregou texto aceitável: o lead vai receber o texto padrão, mas o
+  // Paulo precisa saber que a conversa saiu do trilho.
+  void sendOwnerAlert({
+    kind: "ia_falhou",
+    detail: issues.join("; ") || "a IA não devolveu texto",
+    leadId: lead.id,
+    leadName: lead.name,
+    leadPhone: lead.phone,
+  });
   return {
     message: fallbackReplyMessage(briefing, inbound),
     source: "template",
@@ -537,5 +547,18 @@ export async function answerLead(lead: StoredLead, inbound: string): Promise<Com
 
   const composed = await composeReplyMessage(lead, inbound);
   const dispatch = await dispatchLeadReply(lead, { channel: "whatsapp", message: composed.message });
+
+  // Ninguém respondeu: ou o gateway recusou, ou a humanização barrou. O lead está
+  // esperando e o Paulo é a única pessoa que pode destravar.
+  if (dispatch.status !== "sent") {
+    void sendOwnerAlert({
+      kind: dispatch.blocked ? "resposta_bloqueada" : "envio_falhou",
+      detail: dispatch.detail || `status ${dispatch.status}`,
+      leadId: lead.id,
+      leadName: lead.name,
+      leadPhone: lead.phone,
+    });
+  }
+
   return { ...composed, dispatch };
 }

@@ -16,7 +16,7 @@
  */
 import { GoogleGenAI } from "@google/genai";
 import { getDb } from "../store/schema";
-import { gatewayRequest } from "./whatsappGateway";
+import { gatewayRequest, sendGatewayText } from "./whatsappGateway";
 import { setSetting } from "../store/db";
 
 export const EMBEDDING_MODEL = process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001";
@@ -576,11 +576,7 @@ export async function sendBotText(
 ): Promise<{ externalId?: string }> {
   const destino = String(phone || "").replace(/\D/g, "");
   if (!destino) throw new Error("Telefone de destino vazio.");
-  const inst = (instance || "").trim();
-  const caminho = `/message/sendText/${encodeURIComponent(inst)}`;
-  const resposta: any = await gatewayRequest(caminho, { method: "POST", body: { number: destino, text } });
-  const id = resposta?.key?.id || resposta?.id || resposta?.message?.key?.id;
-  return { externalId: typeof id === "string" ? id : undefined };
+  return sendGatewayText(destino, text, instance);
 }
 
 /**

@@ -85,6 +85,30 @@ export async function gatewayRequest<T = any>(
   }
 }
 
+/**
+ * Envia texto puro pelo gateway, da instância pedida.
+ *
+ * Existe para mensagens operacionais (aviso ao dono, escalada do bot de cliente):
+ * elas não passam pela humanização de propósito — são urgentes e não são conversa
+ * com lead. Usa o caminho `/v1/...` do WhatsMiau; sem o prefixo o gateway
+ * responde 404.
+ */
+export async function sendGatewayText(
+  phone: string,
+  text: string,
+  instance?: string
+): Promise<{ externalId?: string }> {
+  const destino = String(phone || "").replace(/\D/g, "");
+  if (!destino) throw new Error("Telefone de destino vazio.");
+  const inst = instanceOrDefault(instance);
+  const resposta: any = await gatewayRequest(`/v1/message/sendText/${encodeURIComponent(inst)}`, {
+    method: "POST",
+    body: { number: destino, text },
+  });
+  const id = resposta?.key?.id || resposta?.id || resposta?.message?.key?.id;
+  return { externalId: typeof id === "string" ? id : undefined };
+}
+
 function instanceOrDefault(instance?: string): string {
   const config = getGatewayConfig();
   return (instance || config?.instance || "leadradar").trim() || "leadradar";
