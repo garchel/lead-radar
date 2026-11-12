@@ -61,6 +61,7 @@ interface AutomationSettings {
   whatsappAutoFollowUp: boolean;
   intentAi: boolean;
   agentEnabled: boolean;
+  preferClara: boolean;
   autopilotAutoEnrich: boolean;
   autopilotAnalyzeTopN: number;
   autopilotSendPitches: boolean;
@@ -438,13 +439,24 @@ export const AutomationSettingsPage: React.FC = () => {
       >
         <div className="flex items-center justify-between py-2 border-b border-slate-100">
           <div>
-            <div className="text-sm font-semibold text-slate-800">Agente responde sozinho</div>
+            <div className="text-sm font-semibold text-slate-800">Clara responde primeiro</div>
             <div className="text-xs text-slate-500">
-              Quem mandar mensagem recebe resposta escrita no estilo da Vértice (prévia grátis, sem preço no primeiro contato).
-              Desligado, nenhuma resposta automática sai.
+              A Clara (fora do app) escreve e envia a resposta, com todo o contexto da conversa. A IA interna do app só
+              entra se ela não responder em alguns minutos.
             </div>
           </div>
-          <Toggle checked={settings.agentEnabled} onChange={(v) => void update({ agentEnabled: v })} label="Agente comercial responde automaticamente" />
+          <Toggle checked={settings.preferClara} onChange={(v) => void update({ preferClara: v })} label="Clara responde primeiro" />
+        </div>
+        <div className="flex items-center justify-between py-2 border-b border-slate-100">
+          <div>
+            <div className="text-sm font-semibold text-slate-800">Resposta automática pela IA interna</div>
+            <div className="text-xs text-slate-500">
+              {settings.preferClara
+                ? 'Ligada como rede de segurança: só responde conversa parada há alguns minutos (evita duas respostas para o mesmo lead).'
+                : 'Ligada em primeiro lugar: responde na hora com o compositor interno (Gemini), sem esperar a Clara.'}
+            </div>
+          </div>
+          <Toggle checked={settings.agentEnabled} onChange={(v) => void update({ agentEnabled: v })} label="Resposta automática pela IA interna" />
         </div>
         <div className="flex items-center justify-between py-2 border-b border-slate-100">
           <div>

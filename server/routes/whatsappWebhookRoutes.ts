@@ -657,7 +657,17 @@ export function registerWhatsAppWebhook(app: Express) {
     // AGENTE COMERCIAL: escreve a resposta e envia. Roda depois do ACK, em
     // segundo plano (a humanização pode segurar até ~2 min). Recusa/opt-out NÃO
     // é respondida pelo agente — LGPD: quem recusa não recebe mais nada.
-    if (!testPitch && agentEnabled() && !optedOut && !lead.doNotContact && intent !== "recusa" && inbound.text.trim().length >= 1) {
+    //
+    // Quem responde é a Clara (rotina de 1 min fora do app). O compositor interno
+    // só entra na frente quando `preferClara` está desligado; senão ele espera a
+    // rede de segurança (`agentWatchdog`) e só fala se ninguém respondeu.
+    let claraPrimeiro = false;
+    try {
+      claraPrimeiro = getAutomationSettings().preferClara;
+    } catch {
+      claraPrimeiro = true;
+    }
+    if (!testPitch && !claraPrimeiro && agentEnabled() && !optedOut && !lead.doNotContact && intent !== "recusa" && inbound.text.trim().length >= 1) {
       void answerLead(lead, inbound.text)
         .then((result) => {
           if (!result.dispatch) return; // conversa já respondida ou sem inbound aberto

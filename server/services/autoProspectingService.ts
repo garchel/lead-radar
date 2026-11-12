@@ -394,7 +394,7 @@ export function buildProspectMessage(lead: StoredLead): string {
   // Primeiro contato NÃO fala de pacote nem de preço: conversa primeiro,
   // mostra a prévia, e só depois oferece os pacotes (ver packagesInviteLine).
   const lines: string[] = [
-    "Olá! Tudo bem? 👋 Aqui é da Vértice Páginas Web.",
+    "Olá! Tudo bem? 👋 Aqui é a Clara, da Vértice Páginas Web.",
     "",
     `${prova} ${gap}`,
     "",

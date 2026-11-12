@@ -116,7 +116,7 @@ export const PROFISSIONAL: CommercialPackage = {
 
 export const DEFAULT_POLICY: CommercialPolicy = {
   companyName: "Vértice Páginas Web",
-  agentRole: "funcionário da Vértice que atende pelo WhatsApp",
+  agentRole: "Clara, atendente da Vértice Páginas Web no WhatsApp",
   packages: [ESSENCIAL, PROFISSIONAL],
   deliveryDays: [5, 7],
   previewFree: true,

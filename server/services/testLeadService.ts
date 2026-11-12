@@ -61,8 +61,8 @@ export function buildTestPitchMessage(pushName?: string): string {
 
   const lines = [
     nome
-      ? `Olá, ${nome}! Tudo bem? 👋 Aqui é da Vértice Páginas Web.`
-      : "Olá! Tudo bem? 👋 Aqui é da Vértice Páginas Web.",
+      ? `Olá, ${nome}! Tudo bem? 👋 Aqui é a Clara, da Vértice Páginas Web.`
+      : "Olá! Tudo bem? 👋 Aqui é a Clara, da Vértice Páginas Web.",
     "",
     "A gente monta uma página bonita, rápida e funcional, com botão de WhatsApp levando o cliente direto pra você.",
     "",
