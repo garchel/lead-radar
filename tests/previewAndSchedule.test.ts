@@ -44,10 +44,40 @@ describe("prévia da landing page", () => {
     expect(html).toMatch(/ajustados com você antes de qualquer pagamento/);
   });
 
-  it("só cita o preço da política comercial (nada de ticket do CRM)", () => {
+  it("página da prévia não mostra preço nem pacote (isso é conversa, depois da prévia)", () => {
     const html = buildPreviewHtml(seed("pv-c", { estimatedValue: "R$ 1.800 - R$ 3.500" }));
-    expect(html).toContain("R$ 899");
+    expect(html).not.toContain("R$");
     expect(html).not.toContain("1.800");
+    expect(html).not.toMatch(/Essencial|Profissional/);
+  });
+
+  it("página tem as seções que sustentam a venda, sem JS", () => {
+    const html = buildPreviewHtml(seed("pv-f"));
+    for (const marcador of ["<header", "<main", "Serviços", "Perguntas frequentes", "Falar no WhatsApp", "</footer>"]) {
+      expect(html).toContain(marcador);
+    }
+    expect(html).toContain("<details>"); // FAQ sem JavaScript
+    expect(html).not.toMatch(/<script/i);
+    expect(html).toContain("theme-color");
+  });
+
+  it("usa a cor e a foto da identidade visual quando existem", () => {
+    const lead = seed("pv-g");
+    lead.brandSnapshot = {
+      version: 1,
+      createdAt: new Date().toISOString(),
+      source: "serpapi",
+      query: "clinica",
+      profiles: {},
+      palette: [{ hex: "#E5D399" }],
+      tone: ["sofisticado"],
+      imagery: [{ url: "https://exemplo.com/foto.jpg" }],
+      summary: "",
+      confidence: 0.9,
+    } as any;
+    const html = buildPreviewHtml(lead);
+    expect(html).toMatch(/--accent:#[0-9a-f]{6}/i);
+    expect(html).toContain("https://exemplo.com/foto.jpg");
   });
 
   it("sem ficha do cliente, os serviços são espaços nomeados (não invenção)", () => {

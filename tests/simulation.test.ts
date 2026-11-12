@@ -99,6 +99,23 @@ describe("reset do card de simulação", () => {
     expect(fs.existsSync(arquivo)).toBe(false);
   });
 
+  it("limpa a pasta da LP e o repositório da simulação anterior", () => {
+    const db = getDb();
+    db.prepare("UPDATE projects SET site_path = ?, github_repo_url = ?, repo_owner = ?, repo_name = ? WHERE lead_id = ?").run(
+      "sites/marketing/pv-landing",
+      "https://github.com/x/y",
+      "x",
+      "y",
+      SIMULATION_LEAD_ID
+    );
+
+    resetSimulationCard("Empresa Sem Assets");
+    const projeto = getProjectsByLead(SIMULATION_LEAD_ID).find((p) => !p.archived)!;
+    expect(projeto.sitePath).toBeUndefined();
+    expect(projeto.githubRepoUrl).toBeUndefined();
+    expect(projeto.repoOwner).toBeUndefined();
+  });
+
   it("nome vazio cai no rótulo padrão em vez de criar card sem nome", () => {
     const card = resetSimulationCard("   ");
     expect(card.leadName).toBe("Simulação");

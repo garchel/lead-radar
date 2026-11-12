@@ -182,6 +182,13 @@ export function resetSimulationCard(
       devMessage: undefined,
       previewUrl: undefined,
       deployUrl: undefined,
+      // A pasta da LP e o repositório eram da empresa anterior: se ficam, o painel
+      // de assets mostra arquivos de outro negócio (foi o que aconteceu com
+      // `sites/marketing/pv-landing` aparecendo num cartão de dentista).
+      sitePath: undefined,
+      githubRepoUrl: undefined,
+      repoOwner: undefined,
+      repoName: undefined,
       completedAt: undefined,
       archived: false,
       updatedAt: agora,
