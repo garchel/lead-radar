@@ -11,6 +11,7 @@ import { fetchGatewayInstanceState, getGatewayConfig } from "../services/whatsap
 import { getHumanizeStatus } from "../services/humanizeService";
 import { buildClientProfile } from "../services/clientProfileService";
 import { agentEnabled, answerLead } from "../services/salesAgentService";
+import { pitchTestLeadOnFirstMessage, shouldPitchTestLead } from "../services/testLeadService";
 import {
   AI_MIN_CONFIDENCE,
   classifyByRules,
@@ -576,10 +577,33 @@ export function registerWhatsAppWebhook(app: Express) {
         .catch((e: any) => console.warn(`[whatsapp] Classificação por IA falhou: ${e?.message}`));
     }
 
+    // NÚMERO DE TESTE (Paulo e convidados): a primeira mensagem que a pessoa
+    // manda dispara a abordagem de prospecção, como se ela fosse um lead real
+    // encontrado no Google. Também em segundo plano, e o agente não responde
+    // junto — seria duas mensagens seguidas.
+    const testPitch = shouldPitchTestLead(lead);
+    if (testPitch && !optedOut) {
+      void pitchTestLeadOnFirstMessage(lead, inbound.pushName)
+        .then((result) => {
+          console.log(
+            `[whatsapp] Número de teste ${lead.name}: ${result.sent ? "prospecção enviada" : `não enviada (${result.detail})`}`
+          );
+          eventHub.emit("agent_replied", {
+            leadId: lead.id,
+            name: lead.name,
+            source: "teste",
+            sent: result.sent,
+            detail: result.detail,
+            message: result.sent ? "prospecção (D0) para número de teste" : "",
+          });
+        })
+        .catch((e: any) => console.warn(`[whatsapp] Prospecção de teste falhou para ${lead.id}: ${e?.message}`));
+    }
+
     // AGENTE COMERCIAL: escreve a resposta e envia. Roda depois do ACK, em
     // segundo plano (a humanização pode segurar até ~2 min). Recusa/opt-out NÃO
     // é respondida pelo agente — LGPD: quem recusa não recebe mais nada.
-    if (agentEnabled() && !optedOut && !lead.doNotContact && intent !== "recusa" && inbound.text.trim().length >= 1) {
+    if (!testPitch && agentEnabled() && !optedOut && !lead.doNotContact && intent !== "recusa" && inbound.text.trim().length >= 1) {
       void answerLead(lead, inbound.text)
         .then((result) => {
           if (!result.dispatch) return; // conversa já respondida ou sem inbound aberto

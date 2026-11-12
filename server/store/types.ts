@@ -184,6 +184,8 @@ export interface StoredLead {
   opportunityScore?: number;
   opportunityLevel?: "high" | "medium" | "low";
   estimatedValue?: string;
+  /** Número de teste (Paulo e convidados): recebe prospecção na 1ª mensagem. */
+  isTest?: boolean;
   keyInsights?: string[];
   pipelineStatus: PipelineStatus;
   notes?: string;

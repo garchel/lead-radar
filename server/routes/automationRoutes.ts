@@ -21,6 +21,8 @@ export interface AutomationSettings {
   whatsappAutoCreateLead: boolean;
   /** Segunda opinião da IA quando o regex não entende a resposta ("manda", "claro"). */
   intentAi: boolean;
+  /** Agente comercial responde sozinho quem manda mensagem no WhatsApp. */
+  agentEnabled: boolean;
   autopilotAutoEnrich: boolean;
   autopilotAnalyzeTopN: number;
   autopilotSendPitches: boolean;
@@ -43,6 +45,7 @@ const DEFAULTS: Omit<AutomationSettings, "humanize"> = {
   whatsappAutoFollowUp: true,
   whatsappAutoCreateLead: true,
   intentAi: true,
+  agentEnabled: true,
   autopilotAutoEnrich: true,
   autopilotAnalyzeTopN: 3,
   autopilotSendPitches: false,
@@ -64,6 +67,9 @@ function getAutomationSettings(): AutomationSettings {
   const typeformPollingEnabled = tfEnabledRaw !== null ? tfEnabledRaw === "true" : DEFAULTS.typeformPollingEnabled;
   const tfIntervalRaw = getSetting("automation_typeform_interval_min");
   const typeformIntervalMin = tfIntervalRaw ? Math.max(1, Math.floor(Number(tfIntervalRaw) || DEFAULTS.typeformIntervalMin)) : DEFAULTS.typeformIntervalMin;
+
+  const agentRaw = getSetting("automation_agent_enabled");
+  const agentEnabled = agentRaw !== null ? agentRaw === "true" : DEFAULTS.agentEnabled;
 
   const waIntentRaw = getSetting("automation_whatsapp_auto_intent");
   const whatsappAutoIntent = waIntentRaw !== null ? waIntentRaw === "true" : DEFAULTS.whatsappAutoIntent;
@@ -103,6 +109,7 @@ function getAutomationSettings(): AutomationSettings {
     whatsappAutoFollowUp,
     whatsappAutoCreateLead,
     intentAi,
+    agentEnabled,
     autopilotAutoEnrich,
     autopilotAnalyzeTopN,
     autopilotSendPitches,
@@ -126,7 +133,7 @@ export function registerAutomationRoutes(app: Express) {
     const body = req.body || {};
     const allowed: (keyof AutomationSettings)[] = [
       "schedulerEnabled","backupEnabled","backupIntervalHours","typeformPollingEnabled","typeformIntervalMin",
-      "whatsappAutoIntent","whatsappAutoPipeline","whatsappAutoFollowUp","whatsappAutoCreateLead","intentAi",
+      "whatsappAutoIntent","whatsappAutoPipeline","whatsappAutoFollowUp","whatsappAutoCreateLead","intentAi","agentEnabled",
       "autopilotAutoEnrich","autopilotAnalyzeTopN","autopilotSendPitches","cadenceEnabled","cadenceDailyCap"
     ];
     try {
@@ -140,7 +147,7 @@ export function registerAutomationRoutes(app: Express) {
         if (body[key] !== undefined) {
           const val = body[key];
           // validação por chave
-          if (["schedulerEnabled","backupEnabled","typeformPollingEnabled","whatsappAutoIntent","whatsappAutoPipeline","whatsappAutoFollowUp","whatsappAutoCreateLead","intentAi","autopilotAutoEnrich","autopilotSendPitches","cadenceEnabled"].includes(key)) {
+          if (["schedulerEnabled","backupEnabled","typeformPollingEnabled","whatsappAutoIntent","whatsappAutoPipeline","whatsappAutoFollowUp","whatsappAutoCreateLead","intentAi","agentEnabled","autopilotAutoEnrich","autopilotSendPitches","cadenceEnabled"].includes(key)) {
             if (typeof val !== "boolean") return res.status(400).json({ success: false, error: `${key} deve ser boolean.` });
           }
           if (key === "backupIntervalHours" || key === "typeformIntervalMin") {

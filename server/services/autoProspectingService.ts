@@ -398,7 +398,7 @@ export function buildProspectMessage(lead: StoredLead): string {
     "",
     `${prova} ${gap}`,
     "",
-    "A gente monta uma página simples e rápida, com botão direto pro WhatsApp e formulário de orçamento.",
+    "A gente monta uma página bonita, rápida e funcional, com botão de WhatsApp levando o cliente direto pra você.",
     "",
     freePreviewLine(policy),
     "",

@@ -60,6 +60,7 @@ interface AutomationSettings {
   whatsappAutoPipeline: boolean;
   whatsappAutoFollowUp: boolean;
   intentAi: boolean;
+  agentEnabled: boolean;
   autopilotAutoEnrich: boolean;
   autopilotAnalyzeTopN: number;
   autopilotSendPitches: boolean;
@@ -435,6 +436,16 @@ export const AutomationSettingsPage: React.FC = () => {
         open={!collapsedSections.includes('whatsapp')}
         onToggle={() => toggleSection('whatsapp')}
       >
+        <div className="flex items-center justify-between py-2 border-b border-slate-100">
+          <div>
+            <div className="text-sm font-semibold text-slate-800">Agente responde sozinho</div>
+            <div className="text-xs text-slate-500">
+              Quem mandar mensagem recebe resposta escrita no estilo da Vértice (prévia grátis, sem preço no primeiro contato).
+              Desligado, nenhuma resposta automática sai.
+            </div>
+          </div>
+          <Toggle checked={settings.agentEnabled} onChange={(v) => void update({ agentEnabled: v })} label="Agente comercial responde automaticamente" />
+        </div>
         <div className="flex items-center justify-between py-2 border-b border-slate-100">
           <div>
             <div className="text-sm font-semibold text-slate-800">Classificar intenção automaticamente</div>

@@ -35,7 +35,7 @@ Olá! Tudo bem? 👋 Aqui é da Vértice Páginas Web.
 
 Achei *Via Kennedy Auto Center* no Google: 4,6★ com 109 avaliações e reparei que vocês ainda não têm um site próprio.
 
-A gente monta uma página simples e rápida, com botão direto pro WhatsApp e formulário de orçamento.
+A gente monta uma página bonita, rápida e funcional, com botão de WhatsApp levando o cliente direto pra você.
 
 ⭐ *A prévia é grátis*, sem custo nenhum: eu monto a tela inicial e você vê como fica antes de decidir.
 

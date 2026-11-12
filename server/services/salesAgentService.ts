@@ -354,7 +354,7 @@ export function fallbackApproachMessage(briefing: LeadBriefing, angle: "abertura
       "",
       `${fact.replace(/\.$/, "")}, e ${loss}.`,
       "",
-      "A gente monta uma página simples com botão direto pro WhatsApp. A *prévia é grátis*, sem custo nenhum.",
+      "A gente monta uma página bonita, rápida e funcional, com botão de WhatsApp levando o cliente direto pra você. A *prévia é grátis*, sem custo nenhum.",
       "",
       "Posso te mandar?",
     ].join("\n")

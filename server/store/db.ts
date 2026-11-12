@@ -49,6 +49,7 @@ function rowToLead(row: any): StoredLead {
     keyInsights: row.key_insights ? JSON.parse(row.key_insights) : undefined,
     pipelineStatus: row.pipeline_status || 'prospect',
     notes: row.notes || undefined,
+    isTest: Boolean(row.is_test),
     analysis: row.analysis ? JSON.parse(row.analysis) : undefined,
     normalizedName: row.normalized_name || undefined,
     normalizedCity: row.normalized_city || undefined,
@@ -94,6 +95,7 @@ function leadToRow(lead: StoredLead): any {
     key_insights: lead.keyInsights ? JSON.stringify(lead.keyInsights) : null,
     pipeline_status: lead.pipelineStatus || 'prospect',
     notes: lead.notes || null,
+    is_test: lead.isTest ? 1 : 0,
     analysis: lead.analysis ? JSON.stringify(lead.analysis) : null,
     normalized_name: lead.normalizedName || normalizeText(lead.name) || null,
     normalized_city: lead.normalizedCity || normalizeText(lead.city) || null,
@@ -309,14 +311,14 @@ export function upsertLead(
       opportunity_score, opportunity_level, estimated_value, key_insights, pipeline_status, notes,
       analysis, normalized_name, normalized_city, normalized_phone, last_contact_at, last_response_at,
       last_contact_outcome, next_contact_at, contact_attempts, do_not_contact, saved_at, updated_at,
-      brand_snapshot_json, client_profile_json, search_category, whatsapp_status, whatsapp_checked_at
+      brand_snapshot_json, client_profile_json, search_category, whatsapp_status, whatsapp_checked_at, is_test
     ) VALUES (
       @id, @name, @category, @address, @neighborhood, @city, @state, @phone, @email, @cnpj, @google_place_id,
       @rating, @reviews_count, @website_status, @website_url, @instagram_handle, @lat, @lng,
       @opportunity_score, @opportunity_level, @estimated_value, @key_insights, @pipeline_status, @notes,
       @analysis, @normalized_name, @normalized_city, @normalized_phone, @last_contact_at, @last_response_at,
       @last_contact_outcome, @next_contact_at, @contact_attempts, @do_not_contact, @saved_at, @updated_at,
-      @brand_snapshot_json, @client_profile_json, @search_category, @whatsapp_status, @whatsapp_checked_at
+      @brand_snapshot_json, @client_profile_json, @search_category, @whatsapp_status, @whatsapp_checked_at, @is_test
     )`).run(data);
   }
 

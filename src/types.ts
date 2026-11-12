@@ -43,6 +43,8 @@ export interface BusinessLead {
   nextContactAt?: string;
   contactAttempts?: number;
   doNotContact?: boolean;
+  /** Número de teste (Paulo e convidados), não é lead real. */
+  isTest?: boolean;
   isAlreadySaved?: boolean;
   existingLeadId?: string;
   /** Identidade visual captada em perfis/imagens públicas. */

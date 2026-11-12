@@ -46,6 +46,7 @@ function migrateSchema(db: Database.Database) {
       pipeline_status TEXT DEFAULT 'prospect',
       notes         TEXT,
       analysis      TEXT,
+      is_test       INTEGER NOT NULL DEFAULT 0,
       normalized_name TEXT,
       normalized_city TEXT,
       normalized_phone TEXT,
@@ -284,6 +285,9 @@ function migrateSchema(db: Database.Database) {
     priority_score: "INTEGER DEFAULT 0",
     priority_level: "TEXT",
     priority_reasons: "TEXT",
+    // Número de teste (Paulo e convidados): não é lead real, então a abordagem
+    // é disparada na primeira mensagem que ELE manda, sem coleta de cota.
+    is_test: "INTEGER NOT NULL DEFAULT 0",
     // Qualificação: nicho buscado, número validado no WhatsApp e quando.
     search_category: "TEXT",
     whatsapp_status: "TEXT DEFAULT 'unknown'",

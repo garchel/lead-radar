@@ -148,7 +148,17 @@ const SortableLeadCard: React.FC<SortableLeadCardProps> = ({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="font-bold text-slate-900 line-clamp-1">{lead.name}</div>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className="font-bold text-slate-900 line-clamp-1">{lead.name}</div>
+            {lead.isTest && (
+              <span
+                className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800"
+                title="Número de teste: não é lead real"
+              >
+                teste
+              </span>
+            )}
+          </div>
           <div className="text-slate-500 text-[11px] font-medium truncate">{lead.category} • {lead.city}</div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
