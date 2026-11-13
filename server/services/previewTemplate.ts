@@ -18,6 +18,7 @@ import { prettyName } from "./briefingService";
 import { pickPreviewImages } from "./brandImagery";
 import { monogramSvg } from "./logoSvg";
 import { fontFamilyCss, fontStylesheetUrl, pickFontPair } from "./fontPairs";
+import { getProjectsByLead } from "../store/db";
 
 export function esc(value: unknown): string {
   return String(value ?? "")
@@ -413,10 +414,13 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   const nicho = nicheFor(lead);
   // Tipografia: display com personalidade + texto discreto, escolhidos pelo tom
   // da marca. Sem a fonte, o fallback do CSS mantém a página legível.
+  // Tipografia escolhida no painel do projeto manda; sem escolha, o tom decide.
+  const projetoDoLead = getProjectsByLead(lead.id).find((p) => !p.archived);
   const fontes = pickFontPair({
     tone: lead.brandSnapshot?.tone,
     typography: lead.brandSnapshot?.typography,
     nicho: `${lead.searchCategory || ""} ${lead.category || ""}`,
+    escolhido: { display: projetoDoLead?.fontDisplay, body: projetoDoLead?.fontBody },
   });
   const fontUrl = fontStylesheetUrl(fontes);
   const fonteDisplay = fontFamilyCss(fontes.display, "display");

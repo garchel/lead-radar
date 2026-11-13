@@ -356,6 +356,9 @@ export interface Project {
    * Ausente = o dev kit sugere um caminho a partir da categoria do lead.
    */
   sitePath?: string;
+  /** Tipografia escolhida no painel: vale para a prévia e para o site final. */
+  fontDisplay?: string;
+  fontBody?: string;
   /** URL temporária / GitHub Pages de preview antes do deploy final (etapa desenvolvimento → revisão). */
   previewUrl?: string;
   /** Situação atual da etapa desenvolvimento perante o agente de IA. */

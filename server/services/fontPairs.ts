@@ -82,7 +82,19 @@ function nomeConhecido(valor?: string): string | null {
   return FAMILIAS_CONHECIDAS.has(nome.toLowerCase()) ? nome : null;
 }
 
-export function pickFontPair(input: { tone?: string[]; typography?: { display?: string; body?: string }; nicho?: string }): FontPair {
+export function pickFontPair(input: {
+  tone?: string[];
+  typography?: { display?: string; body?: string };
+  nicho?: string;
+  /** Escolha feita no painel do projeto: manda sobre tom e identidade. */
+  escolhido?: { display?: string; body?: string };
+}): FontPair {
+  const escolhidoDisplay = nomeConhecido(input.escolhido?.display);
+  const escolhidoBody = nomeConhecido(input.escolhido?.body);
+  if (escolhidoDisplay && escolhidoBody) {
+    return { display: escolhidoDisplay, body: escolhidoBody, reason: "tipografia escolhida no painel do projeto" };
+  }
+
   const display = nomeConhecido(input.typography?.display);
   const body = nomeConhecido(input.typography?.body);
   if (display && body && display.toLowerCase() !== body.toLowerCase()) {

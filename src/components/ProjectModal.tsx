@@ -3,6 +3,7 @@ import { Copy, ExternalLink, Bot, GitBranch, X, Save, CheckCircle2, Trash2, Rock
 import { BusinessLead, Project, ProjectBriefingField, ProjectDevStatus, ProjectPriority, ProjectStage, ProjectStatus, ProjectTask, ProjectType } from '../types';
 import { ProjectAssetsPanel } from './ProjectAssetsPanel';
 import { ProjectOnboardingPanel } from './ProjectOnboardingPanel';
+import { ProjectFontPanel } from './ProjectFontPanel';
 
 interface ProjectModalProps {
   mode: 'create' | 'edit';
@@ -948,6 +949,14 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
               {/* Checklist do material que o cliente precisa mandar */}
               <ProjectOnboardingPanel projectId={project.id} refreshKey={`${sitePath}|${project.updatedAt}`} />
+
+              {/* Tipografia: escolha do par usado na prévia e no site */}
+              <ProjectFontPanel
+                projectId={project.id}
+                fontDisplay={project.fontDisplay}
+                fontBody={project.fontBody}
+                refreshKey={project.updatedAt}
+              />
 
               {/* Stepper de etapas — progresso e navegação */}
               <div className="border-b border-slate-200 pb-3 mb-6">

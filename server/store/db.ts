@@ -405,6 +405,8 @@ function rowToProject(row: any): Project {
     repoOwner: row.repo_owner || undefined,
     repoName: row.repo_name || undefined,
     sitePath: row.site_path || undefined,
+    fontDisplay: row.font_display || undefined,
+    fontBody: row.font_body || undefined,
     previewUrl: row.preview_url || undefined,
     devStatus: row.dev_status || undefined,
     devMessage: row.dev_message || undefined,
@@ -422,7 +424,7 @@ function rowToProject(row: any): Project {
 
 const PROJECT_COLUMNS =
   'p.id, p.lead_id, p.name, p.type, p.typeform_token, p.stage, p.status, p.priority, p.brief, p.briefing_json, p.tasks_json, p.copy, p.design_notes, p.wireframe_url, p.dev_notes, ' +
-  'p.review_notes, p.deploy_url, p.github_repo_url, p.repo_owner, p.repo_name, p.site_path, p.preview_url, p.dev_status, p.dev_message, p.due_date, p.completed_at, p.archived, p.archived_at, p.created_at, p.updated_at, ' +
+  'p.review_notes, p.deploy_url, p.github_repo_url, p.repo_owner, p.repo_name, p.site_path, p.font_display, p.font_body, p.preview_url, p.dev_status, p.dev_message, p.due_date, p.completed_at, p.archived, p.archived_at, p.created_at, p.updated_at, ' +
   'l.name AS lead_name, l.city AS lead_city, l.category AS lead_category';
 
 const PROJECT_SELECT = `SELECT ${PROJECT_COLUMNS} FROM projects p LEFT JOIN leads l ON l.id = p.lead_id`;
@@ -470,6 +472,8 @@ export function upsertProject(project: Project) {
     repo_owner: project.repoOwner ?? null,
     repo_name: project.repoName ?? null,
     site_path: project.sitePath ?? null,
+    font_display: project.fontDisplay ?? null,
+    font_body: project.fontBody ?? null,
     preview_url: project.previewUrl ?? null,
     dev_status: project.devStatus ?? null,
     dev_message: project.devMessage ?? null,
@@ -488,8 +492,8 @@ export function upsertProject(project: Project) {
   } else {
     getDb()
       .prepare(
-        `INSERT INTO projects (id, lead_id, name, type, typeform_token, stage, status, priority, brief, briefing_json, tasks_json, copy, design_notes, wireframe_url, dev_notes, review_notes, deploy_url, github_repo_url, repo_owner, repo_name, site_path, preview_url, dev_status, dev_message, due_date, completed_at, archived, archived_at, created_at, updated_at)
-         VALUES (@id, @lead_id, @name, @type, @typeform_token, @stage, @status, @priority, @brief, @briefing_json, @tasks_json, @copy, @design_notes, @wireframe_url, @dev_notes, @review_notes, @deploy_url, @github_repo_url, @repo_owner, @repo_name, @site_path, @preview_url, @dev_status, @dev_message, @due_date, @completed_at, @archived, @archived_at, @created_at, @updated_at)`
+        `INSERT INTO projects (id, lead_id, name, type, typeform_token, stage, status, priority, brief, briefing_json, tasks_json, copy, design_notes, wireframe_url, dev_notes, review_notes, deploy_url, github_repo_url, repo_owner, repo_name, site_path, font_display, font_body, preview_url, dev_status, dev_message, due_date, completed_at, archived, archived_at, created_at, updated_at)
+         VALUES (@id, @lead_id, @name, @type, @typeform_token, @stage, @status, @priority, @brief, @briefing_json, @tasks_json, @copy, @design_notes, @wireframe_url, @dev_notes, @review_notes, @deploy_url, @github_repo_url, @repo_owner, @repo_name, @site_path, @font_display, @font_body, @preview_url, @dev_status, @dev_message, @due_date, @completed_at, @archived, @archived_at, @created_at, @updated_at)`
       )
       .run(data);
   }

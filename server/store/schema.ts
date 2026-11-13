@@ -147,6 +147,8 @@ function migrateSchema(db: Database.Database) {
       dev_notes      TEXT,
       review_notes   TEXT,
       deploy_url     TEXT,
+      font_display   TEXT,
+      font_body      TEXT,
       due_date       TEXT,
       completed_at   TEXT,
       archived       INTEGER DEFAULT 0,
@@ -339,6 +341,8 @@ function migrateSchema(db: Database.Database) {
     dev_status: "TEXT",
     dev_message: "TEXT",
     wireframe_url: "TEXT",
+    font_display: "TEXT",
+    font_body: "TEXT",
   };
   for (const [name, definition] of Object.entries(projectColumnsToAdd)) {
     if (!existingProjectColumns.has(name)) {

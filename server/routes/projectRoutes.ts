@@ -71,6 +71,8 @@ export function registerProjectRoutes(app: Express) {
       "repoOwner",
       "repoName",
       "sitePath",
+      "fontDisplay",
+      "fontBody",
       "previewUrl",
       "devStatus",
       "devMessage",

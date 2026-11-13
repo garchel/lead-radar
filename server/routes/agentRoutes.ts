@@ -30,6 +30,7 @@ import { buildPalettePreview, publishPaletteCard, sendPalettePreview } from "../
 import { generateProposalPdf, proposalFileName, publishProposal } from "../services/proposalService";
 import { deliverWhatsAppMedia } from "../services/contactService";
 import { generateMonthlyReportPdf, monthlyNumbers, monthlyReportFileName } from "../services/monthlyReportService";
+import { CATALOGO, suggestDisplays, suggestPairs } from "../services/fontCatalog";
 import {
   describeWarmup,
   getWarmupState,
@@ -164,6 +165,44 @@ export function registerAgentRoutes(app: Express) {
    * Prévia da primeira tela — o que o agente promete quando o lead diz
    * "pode mandar". Determinística (cadastro + ficha), sem custo de IA.
    */
+  /**
+   * Tipografia: catálogo e sugestões de par.
+   *
+   * `?family=Playfair+Display` devolve as fontes de texto que combinam com ela;
+   * `?body=Inter` faz o caminho inverso (quais títulos casam com esse texto).
+   */
+  app.get("/api/fonts", (req: Request, res: Response) => {
+    try {
+      const familia = typeof req.query.family === "string" ? req.query.family : "";
+      const corpo = typeof req.query.body === "string" ? req.query.body : "";
+      const limite = Math.min(10, Math.max(1, Number(req.query.limit) || 5));
+
+      if (familia) {
+        const sugestoes = suggestPairs(familia, limite);
+        return res.json({
+          success: Boolean(sugestoes.length),
+          familia,
+          sugestoes,
+          aviso: sugestoes.length ? null : `Fonte "${familia}" não está no catálogo.`,
+        });
+      }
+
+      if (corpo) {
+        return res.json({ success: true, familia: corpo, sugestoes: suggestDisplays(corpo, limite) });
+      }
+
+      return res.json({
+        success: true,
+        total: CATALOGO.length,
+        fontes: CATALOGO,
+        // par sugerido para o tom do lead, quando o painel está aberto num projeto
+        sugestao: null,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || "Falha ao consultar fontes." });
+    }
+  });
+
   /**
    * Paleta antes da prévia.
    *
