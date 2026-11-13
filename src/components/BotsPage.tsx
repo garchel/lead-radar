@@ -216,7 +216,9 @@ export function BotsPage() {
             <Gauge className="h-4 w-4 text-indigo-600" /> Consumo de IA em {uso?.periodo || "—"}
           </h2>
           <span className="text-xs text-slate-500">
-            {uso ? `${uso.total.chamadas} chamadas · ${(uso.total.tokensIn + uso.total.tokensOut).toLocaleString("pt-BR")} tokens · US$ ${uso.total.usd.toFixed(2)} (≈ ${moeda(uso.total.brl)}) · câmbio ${uso.cambioUsdBrl.toFixed(2)}` : "sem dados"}
+            {uso
+              ? `${uso.total.chamadas} chamadas · ${(uso.total.tokensIn + uso.total.tokensOut).toLocaleString("pt-BR")} tokens · US$ ${uso.total.usd.toFixed(4)} (≈ ${custo(uso.total.brl)}) · câmbio ${uso.cambioUsdBrl.toFixed(2)}`
+              : "sem dados"}
           </span>
         </div>
 

@@ -77,13 +77,28 @@ export function registerBotRoutes(app: Express) {
         };
       });
 
+      // Cliente apagado continua tendo custado dinheiro: entra como linha própria.
+      const orfaos = relatorio.porCliente
+        .filter((b) => b.key !== "sem-dono" && !clientes.some((c) => c.id === b.key))
+        .map((b) => ({
+          id: b.key,
+          name: "Cliente removido (histórico)",
+          monthlyFee: 0,
+          chamadas: Number(b.chamadas || 0),
+          tokensIn: Number(b.tokensIn || 0),
+          tokensOut: Number(b.tokensOut || 0),
+          usd: Math.round(Number(b.usd || 0) * 10000) / 10000,
+          brl: Math.round(Number(b.usd || 0) * cambio * 10000) / 10000,
+          margemBrl: Math.round(-Number(b.usd || 0) * cambio * 100) / 100,
+        }));
+
       return res.json({
         success: true,
         periodo: relatorio.periodo,
         cambioUsdBrl: cambio,
         total: { ...relatorio.total, brl: Math.round(relatorio.total.usd * cambio * 100) / 100 },
         porTipo: relatorio.porTipo,
-        clientes: porCliente.sort((a, b) => b.usd - a.usd),
+        clientes: [...porCliente, ...orfaos].sort((a, b) => b.usd - a.usd),
       });
     } catch (erro: any) {
       return res.status(500).json({ success: false, error: erro?.message || "Falha ao calcular o consumo." });
