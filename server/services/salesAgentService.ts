@@ -12,6 +12,7 @@
  */
 
 import { GoogleGenAI } from "@google/genai";
+import { recordAiUsage, usageFromResponse } from "./aiUsageService";
 import { getGeminiModel } from "../config";
 import { getCommunicationsByLead, getSetting } from "../store/db";
 import type { StoredLead } from "../store/types";
@@ -106,7 +107,11 @@ async function generateText(prompt: string, opts: { temperature?: number } = {})
         },
       });
       const raw = response.text?.trim();
-      if (raw) return raw;
+      if (raw) {
+        const uso = usageFromResponse(response, prompt, raw);
+        recordAiUsage({ kind: "clara", model, tokensIn: uso.tokensIn, tokensOut: uso.tokensOut });
+        return raw;
+      }
     } catch (err: any) {
       const message = String(err?.message || err || "");
       if (isCapacityError(message)) continue;

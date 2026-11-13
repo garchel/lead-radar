@@ -1,4 +1,5 @@
 import { Express, Request, Response } from "express";
+import { usageReport } from "../services/aiUsageService";
 import {
   addKnowledge,
   botStats,
@@ -47,6 +48,48 @@ export function registerBotRoutes(app: Express) {
   // -----------------------------------------------------------------
   // Visão geral (MRR, clientes, escaladas em aberto, estado da IA)
   // -----------------------------------------------------------------
+  /**
+   * Consumo de IA por cliente do bot (quantos tokens e quanto custa).
+   *
+   * Existe porque a mensalidade é fixa (R$ 150) e o custo é variável: sem esse
+   * número, um cliente que pergunta muito vira prejuízo silencioso.
+   */
+  app.get("/api/bot/usage", (req: Request, res: Response) => {
+    try {
+      const mes = typeof req.query.mes === "string" ? req.query.mes : undefined;
+      const relatorio = usageReport(mes);
+      const cambio = Number(process.env.USD_BRL_RATE) > 0 ? Number(process.env.USD_BRL_RATE) : 5.4;
+      const clientes = listBotClients();
+      const porCliente = clientes.map((cliente) => {
+        const uso = relatorio.porCliente.find((b) => b.key === cliente.id);
+        const usd = Number(uso?.usd || 0);
+        const mensalidade = Number(cliente.monthlyPrice || 0);
+        return {
+          id: cliente.id,
+          name: cliente.name,
+          monthlyFee: mensalidade,
+          chamadas: Number(uso?.chamadas || 0),
+          tokensIn: Number(uso?.tokensIn || 0),
+          tokensOut: Number(uso?.tokensOut || 0),
+          usd: Math.round(usd * 10000) / 10000,
+          brl: Math.round(usd * cambio * 100) / 100,
+          margemBrl: Math.round((mensalidade - usd * cambio) * 100) / 100,
+        };
+      });
+
+      return res.json({
+        success: true,
+        periodo: relatorio.periodo,
+        cambioUsdBrl: cambio,
+        total: { ...relatorio.total, brl: Math.round(relatorio.total.usd * cambio * 100) / 100 },
+        porTipo: relatorio.porTipo,
+        clientes: porCliente.sort((a, b) => b.usd - a.usd),
+      });
+    } catch (erro: any) {
+      return res.status(500).json({ success: false, error: erro?.message || "Falha ao calcular o consumo." });
+    }
+  });
+
   app.get("/api/bot/overview", (_req: Request, res: Response) => {
     try {
       const clientes = listBotClients();

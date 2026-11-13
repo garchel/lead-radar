@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   AlertTriangle,
+  Gauge,
   Bot,
   Check,
   ChevronDown,
@@ -83,6 +84,25 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
+interface UsoCliente {
+  id: string;
+  name: string;
+  monthlyFee: number;
+  chamadas: number;
+  tokensIn: number;
+  tokensOut: number;
+  usd: number;
+  brl: number;
+  margemBrl: number;
+}
+
+interface UsoIa {
+  periodo: string;
+  cambioUsdBrl: number;
+  total: { chamadas: number; tokensIn: number; tokensOut: number; usd: number; brl: number };
+  clientes: UsoCliente[];
+}
+
 export function BotsPage() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [clients, setClients] = useState<BotClient[]>([]);
@@ -91,6 +111,7 @@ export function BotsPage() {
   const [erro, setErro] = useState<string | null>(null);
   const [aberto, setAberto] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
+  const [uso, setUso] = useState<UsoIa | null>(null);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -102,6 +123,11 @@ export function BotsPage() {
       ]);
       setOverview(ov);
       setClients(lista.clients);
+      try {
+        setUso(await api<UsoIa>("/api/bot/usage"));
+      } catch {
+        setUso(null);
+      }
       try {
         const inst = await api<{ instances: any[] }>("/api/bot/instances");
         setInstances(inst.instances);
@@ -120,6 +146,9 @@ export function BotsPage() {
   }, [carregar]);
 
   const mrrTexto = useMemo(() => moeda(overview?.mrr.mrr || 0), [overview]);
+
+  // Custo de token é fração de centavo: "R$ 0,00" faria parecer que nada foi gasto.
+  const custo = (valor: number) => (valor > 0 && valor < 0.01 ? "< R$ 0,01" : moeda(valor));
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
@@ -178,6 +207,65 @@ export function BotsPage() {
           valor={String(overview?.openEscalations || 0)}
           detalhe="o bot não soube responder"
         />
+      </div>
+
+      {/* Consumo de IA: mensalidade é fixa, token não */}
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <Gauge className="h-4 w-4 text-indigo-600" /> Consumo de IA em {uso?.periodo || "—"}
+          </h2>
+          <span className="text-xs text-slate-500">
+            {uso ? `${uso.total.chamadas} chamadas · ${(uso.total.tokensIn + uso.total.tokensOut).toLocaleString("pt-BR")} tokens · US$ ${uso.total.usd.toFixed(2)} (≈ ${moeda(uso.total.brl)}) · câmbio ${uso.cambioUsdBrl.toFixed(2)}` : "sem dados"}
+          </span>
+        </div>
+
+        {uso && uso.clientes.length > 0 ? (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="text-slate-500">
+                <tr className="border-b border-slate-200">
+                  <th className="py-1.5 pr-3 font-semibold">Cliente</th>
+                  <th className="py-1.5 pr-3 font-semibold text-right">Respostas</th>
+                  <th className="py-1.5 pr-3 font-semibold text-right">Tokens</th>
+                  <th className="py-1.5 pr-3 font-semibold text-right">Custo</th>
+                  <th className="py-1.5 pr-3 font-semibold text-right">Mensalidade</th>
+                  <th className="py-1.5 font-semibold text-right">Margem</th>
+                </tr>
+              </thead>
+              <tbody>
+                {uso.clientes.map((linha) => (
+                  <tr key={linha.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-1.5 pr-3 font-medium text-slate-800">{linha.name}</td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums text-slate-600">{linha.chamadas}</td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums text-slate-600">
+                      {(linha.tokensIn + linha.tokensOut).toLocaleString("pt-BR")}
+                    </td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums text-slate-700">
+                      {linha.usd > 0 ? `≈ ${custo(linha.brl)}` : "—"}
+                      <span className="ml-1 text-[10px] text-slate-400">US$ {linha.usd.toFixed(4)}</span>
+                    </td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums text-slate-600">{moeda(linha.monthlyFee)}</td>
+                    <td
+                      className={`py-1.5 text-right tabular-nums font-semibold ${
+                        linha.margemBrl < 0 ? "text-rose-700" : "text-emerald-700"
+                      }`}
+                    >
+                      {linha.chamadas ? custo(linha.margemBrl) : moeda(linha.margemBrl)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-2 text-[11px] text-slate-500">
+              Token é medido; o valor em reais é estimativa (preço por milhão + câmbio configurados no servidor).
+            </p>
+          </div>
+        ) : (
+          <p className="mt-2 text-xs text-slate-500">
+            Nenhuma chamada de IA registrada neste mês. O consumo aparece aqui conforme os bots atendem.
+          </p>
+        )}
       </div>
 
       {criando && <NovoClienteBot instances={instances} onCriado={() => void carregar()} onFechar={() => setCriando(false)} />}

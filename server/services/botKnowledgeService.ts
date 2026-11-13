@@ -17,7 +17,8 @@
 import { GoogleGenAI } from "@google/genai";
 import { getDb } from "../store/schema";
 import { gatewayRequest, sendGatewayText } from "./whatsappGateway";
-import { setSetting } from "../store/db";
+import { getSetting, setSetting } from "../store/db";
+import { approximateTokens, recordAiUsage, usageFromResponse } from "./aiUsageService";
 
 export const EMBEDDING_MODEL = process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001";
 export const EMBEDDING_DIMENSIONS = 768;
@@ -346,7 +347,7 @@ function getAi(): GoogleGenAI | null {
   return new GoogleGenAI({ apiKey });
 }
 
-async function embedAll(texts: string[]): Promise<number[][]> {
+async function embedAll(texts: string[], clientId?: string): Promise<number[][]> {
   const ai = getAi();
   if (!ai) throw new Error("GEMINI_API_KEY ausente: não é possível indexar a base.");
   const out: number[][] = [];
@@ -363,6 +364,14 @@ async function embedAll(texts: string[]): Promise<number[][]> {
       throw new Error(`Embedding devolveu ${vetores.length} vetores para ${pedaco.length} trechos.`);
     }
     for (const item of vetores) out.push(item.values as number[]);
+    // indexar custa token: o gasto é do cliente, não da Vértice
+    recordAiUsage({
+      kind: "bot_embeddings",
+      model: EMBEDDING_MODEL,
+      clientId,
+      tokensIn: pedaco.reduce((soma, t) => soma + approximateTokens(t), 0),
+      tokensOut: 0,
+    });
   }
   return out;
 }
@@ -383,7 +392,7 @@ export async function addKnowledge(
   if (!conteudo) throw new Error("Conteúdo vazio: nada para indexar.");
 
   const pedacos = chunkText(conteudo);
-  const vetores = await embedAll(pedacos);
+  const vetores = await embedAll(pedacos, clientId);
   const db = getDb();
   const now = new Date().toISOString();
   const docId = newId("doc");
@@ -421,7 +430,7 @@ export async function searchKnowledge(
     .all(clientId) as any[];
   if (!rows.length) return { topScore: 0, hits: [] };
 
-  const [vetorPergunta] = await embedAll([pergunta]);
+  const [vetorPergunta] = await embedAll([pergunta], clientId);
   const k = Math.max(1, opts.k ?? 5);
 
   const scored = rows
@@ -497,12 +506,45 @@ export async function answerWithRag(
   if (!ai) return { ...base, escalated: true, reason: "sem_chave" };
 
   try {
-    const res = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || "gemini-flash-latest",
-      contents: [{ role: "user", parts: [{ text: buildGroundedPrompt(client, question, hits.map((h) => h.content)) }] }],
-      config: { temperature: 0, abortSignal: AbortSignal.timeout(20000) },
-    });
+    // Um modelo só é ponto único de falha: um 503 do provedor virava escalada e o
+    // cliente final recebia "vou confirmar" com a resposta na base. Tenta em fila.
+    const modelos = [
+      process.env.GEMINI_MODEL || "gemini-flash-latest",
+      ...(process.env.GEMINI_BOT_FALLBACK_MODEL || "gemini-3-flash-preview,gemini-3.1-flash-lite").split(","),
+    ]
+      .map((m) => m.trim())
+      .filter(Boolean);
+
+    const prompt = buildGroundedPrompt(client, question, hits.map((h) => h.content));
+    let res: any = null;
+    let ultimoErro = "";
+    for (const modelo of modelos) {
+      try {
+        res = await ai.models.generateContent({
+          model: modelo,
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          config: { temperature: 0, abortSignal: AbortSignal.timeout(20000) },
+        });
+        if (String(res?.text || "").trim()) break;
+        ultimoErro = `modelo ${modelo} devolveu vazio`;
+      } catch (erro: any) {
+        ultimoErro = String(erro?.message || erro);
+        // 404/400 de modelo morto ou 503 de demanda: tenta o próximo
+        if (/503|429|UNAVAILABLE|RESOURCE_EXHAUSTED|not found|no longer available|404/i.test(ultimoErro)) continue;
+        throw erro;
+      }
+    }
+    if (!res) throw new Error(ultimoErro || "nenhum modelo disponível");
     const answer = (res.text || "").trim();
+    const uso = usageFromResponse(res, question, answer);
+    recordAiUsage({
+      kind: "bot_resposta",
+      model: String((res as any)?.modelVersion || process.env.GEMINI_MODEL || "gemini-flash-latest"),
+      clientId,
+      label: client.name,
+      tokensIn: uso.tokensIn,
+      tokensOut: uso.tokensOut,
+    });
     const decisao = decideAnswer({ answer, topScore, minScore: client.minScore });
     // O cliente nunca fica sem resposta: ou é a resposta com base, ou o aviso de
     // que o responsável vai confirmar (e o dono recebe a pergunta).
