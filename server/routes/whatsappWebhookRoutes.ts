@@ -12,6 +12,7 @@ import { getHumanizeStatus } from "../services/humanizeService";
 import { buildClientProfile } from "../services/clientProfileService";
 import { agentEnabled, answerLead } from "../services/salesAgentService";
 import { pitchTestLeadOnFirstMessage, shouldPitchTestLead } from "../services/testLeadService";
+import { handleOwnerCommand, isOwnerCommand, isOwnerPhone } from "../services/ownerCommandService";
 import { findBotClientByInstance } from "../services/botKnowledgeService";
 import { handleBotInbound, handleOwnerEcho } from "../services/botConversationService";
 import {
@@ -484,6 +485,26 @@ export function registerWhatsAppWebhook(app: Express) {
     const recorded = recordInboundIfNew({ lead, text: inbound.text, externalId: inbound.messageId });
     // Webhook reentregue: a mensagem já existe — não duplica interação/pipeline.
     if (!recorded.created) return;
+
+    // COMANDO DO DONO ("/hoje", "/fora"...): só vale vindo do número do Paulo.
+    // Responde e encerra — comando não é conversa de lead: não move pipeline, não
+    // cria follow-up e não acorda a Clara (o monitor ignora intent comando_dono).
+    if (isOwnerCommand(inbound.text) && isOwnerPhone(lead.phone)) {
+      if (recorded.communicationId) {
+        try {
+          setCommunicationIntent(recorded.communicationId, { intent: "comando_dono", source: "regex", confidence: 1 });
+        } catch {
+          /* auditoria best-effort */
+        }
+      }
+      void handleOwnerCommand(lead, inbound.text)
+        .then((resultado) => {
+          if (!resultado.handled) return;
+          console.log(`[comando] /${resultado.comando} respondido para ${lead.name}`);
+        })
+        .catch((e: any) => console.warn(`[comando] falhou: ${e?.message || e}`));
+      return;
+    }
 
     // Auditoria: guarda a intenção classificada e de onde ela veio.
     if (rulesDecision.intent !== "outro" && recorded.communicationId) {
