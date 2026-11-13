@@ -209,6 +209,16 @@ export function resetSimulationCard(
   }
   const salvo = upsertProject(projeto);
 
+  // Histórico de conversa da empresa anterior: se fica, a Clara lê mensagens de
+  // outro negócio e o painel mostra um thread misturado (aconteceu na simulação
+  // Quintal dos Sonhos → Dra. Carmen Pitol).
+  try {
+    db.prepare("DELETE FROM communications WHERE lead_id = ?").run(SIMULATION_LEAD_ID);
+    db.prepare("DELETE FROM interactions WHERE lead_id = ?").run(SIMULATION_LEAD_ID);
+  } catch {
+    /* tabela pode não existir em banco antigo: a simulação não pode quebrar por isso */
+  }
+
   // A prévia antiga é da empresa anterior: se ficar no disco, o cliente abre e vê
   // outro negócio. Apaga para a próxima geração começar limpa.
   try {

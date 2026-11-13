@@ -19,3 +19,4 @@ conectar-whatsapp.html
 
 # Fonte vendorizado do WhatsMiau (fork local, build via Docker — não versionar)
 .whatsmiau-src/
+data-onedrive-legado/

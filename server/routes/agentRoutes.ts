@@ -27,7 +27,8 @@ import {
 import { generateLeadPreview, generateLeadPreviewCached, previewExists, previewSlug, previewsDir, resolvePreviewUrl, resolvePublicBaseUrl } from "../services/previewService";
 import { pagesConfigured, publishPreviews } from "../services/pagesService";
 import { buildPalettePreview, publishPaletteCard, sendPalettePreview } from "../services/paletteService";
-import { generateProposalPdf, proposalFileName } from "../services/proposalService";
+import { generateProposalPdf, proposalFileName, publishProposal } from "../services/proposalService";
+import { deliverWhatsAppMedia } from "../services/contactService";
 import { generateMonthlyReportPdf, monthlyNumbers, monthlyReportFileName } from "../services/monthlyReportService";
 import {
   describeWarmup,
@@ -326,6 +327,50 @@ export function registerAgentRoutes(app: Express) {
       return res.json({ success: true, totalImagens: imagery.length, brandSnapshot: atualizado?.brandSnapshot });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err?.message || "Falha ao salvar a imagem." });
+    }
+  });
+
+  /**
+   * Envia a proposta como DOCUMENTO no WhatsApp.
+   *
+   * É o formato que o cliente encaminha para quem decide. Passa pelo portão do
+   * texto (janela 7–20h, pausa, tetos) igual a qualquer mensagem.
+   */
+  app.post("/api/leads/:id/proposal", async (req: Request, res: Response) => {
+    const lead = getLeadById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
+    if (!lead.phone) return res.status(400).json({ success: false, error: "Lead sem telefone." });
+    try {
+      const corpo = req.body || {};
+      const publicacao = await publishProposal(lead, {
+        packageId: typeof corpo.pacote === "string" ? corpo.pacote : undefined,
+        previewUrl: resolvePreviewUrl(previewSlug(lead)),
+      });
+      if (!publicacao.publicUrl) {
+        return res.status(400).json({ success: false, error: "Proposta gerada, mas sem URL pública para o gateway baixar.", publicação: publicacao });
+      }
+
+      const legenda = String(corpo.legenda || "").trim() ||
+        `Te mandei a proposta em PDF, dá para ler com calma e mostrar para quem decide.\n\nQualquer dúvida me chama por aqui.`;
+      const envio = await deliverWhatsAppMedia(
+        lead.id,
+        String(lead.phone).replace(/\D/g, ""),
+        legenda,
+        { url: publicacao.publicUrl, fileName: publicacao.fileName, mimetype: "application/pdf" },
+        undefined,
+        "reply"
+      );
+
+      return res.json({
+        success: envio.status === "sent",
+        enviado: envio.status === "sent",
+        arquivo: publicacao.fileName,
+        url: publicacao.publicUrl,
+        comunicacao: envio.communicationId || null,
+        aviso: envio.status === "sent" ? null : envio.detail,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || "Falha ao enviar a proposta." });
     }
   });
 

@@ -10,6 +10,9 @@
  * mão aqui); nada de promessa que não esteja no escopo; sem CNPJ, sem dado de
  * ficha do cliente.
  */
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import PDFDocument from "pdfkit";
 import sharp from "sharp";
 import type { StoredLead } from "../store/types";
@@ -17,6 +20,8 @@ import { getCommercialPolicy, formatBRL, type CommercialPackage } from "./commer
 import { previewPalette, readableOn } from "./previewTemplate";
 import { wordmarkSvg } from "./logoSvg";
 import { formatDateBr } from "./dateFormat";
+import { previewsDir as previewsDirAll, resolvePublicBaseUrl } from "./previewService";
+import { pagesConfigured, publishPreviews } from "./pagesService";
 
 export interface ProposalOptions {
   /** Pacote proposto (id). Default: o de maior escopo entre os ativos. */
@@ -75,6 +80,56 @@ async function logoPng(lead: StoredLead, accent: string): Promise<Buffer | null>
   } catch {
     return null;
   }
+}
+
+/**
+ * Publica a proposta como arquivo e devolve a URL pública.
+ *
+ * O gateway do WhatsApp recebe URL (não bytes), então o PDF precisa estar no ar
+ * antes do envio. Nome com hash porque o Cloudflare cacheia por URL.
+ */
+export async function publishProposal(
+  lead: StoredLead,
+  options: ProposalOptions = {}
+): Promise<{ filePath: string; publicUrl: string | null; fileName: string }> {
+  const pdf = await generateProposalPdf(lead, options);
+  const dir = previewsDirAll();
+  fs.mkdirSync(dir, { recursive: true });
+
+  const base = proposalFileName(lead).replace(/\.pdf$/, "");
+  const hash = crypto.createHash("sha1").update(pdf).digest("hex").slice(0, 8);
+  const fileName = `${base}-${hash}.pdf`;
+
+  const prefixo = `${base}-`;
+  try {
+    for (const arquivo of fs.readdirSync(dir)) {
+      if (arquivo.startsWith(prefixo) && arquivo !== fileName) fs.unlinkSync(path.join(dir, arquivo));
+    }
+  } catch {
+    /* best-effort */
+  }
+
+  const filePath = path.join(dir, fileName);
+  fs.writeFileSync(filePath, pdf);
+
+  if (pagesConfigured()) await publishPreviews(dir);
+
+  const { baseUrl, source } = resolvePublicBaseUrl();
+  const publicUrl = baseUrl ? (source === "pages" ? `${baseUrl}/${fileName}` : `${baseUrl}/previews/${fileName}`) : null;
+
+  if (publicUrl && source === "pages") {
+    for (let tentativa = 0; tentativa < 8; tentativa += 1) {
+      try {
+        const res = await fetch(publicUrl, { method: "HEAD" });
+        if (res.ok) break;
+      } catch {
+        /* segue tentando */
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+  }
+
+  return { filePath, publicUrl, fileName };
 }
 
 export async function generateProposalPdf(lead: StoredLead, options: ProposalOptions = {}): Promise<Buffer> {
