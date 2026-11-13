@@ -3,6 +3,7 @@ import {
   conversasDeHoje,
   conversasParadas,
   foraDaJanela,
+  extractOwnerCommand,
   handleOwnerCommand,
   isOwnerCommand,
   isOwnerPhone,
@@ -19,6 +20,17 @@ describe("comando do dono pelo WhatsApp", () => {
     expect(isOwnerCommand("  /fora ")).toBe(true);
     expect(isOwnerCommand("hoje")).toBe(false);
     expect(isOwnerCommand("oi, tudo bem?")).toBe(false);
+  });
+
+  it("reconhece comando colado junto com a lista (lixo/markdown antes)", () => {
+    const menuColado = "----------\n**Comandos**\n\n/hoje — conversas de hoje\n/fora — fora do horário";
+    expect(extractOwnerCommand(menuColado)).toBe("/hoje");
+    expect(isOwnerCommand(menuColado)).toBe(true);
+  });
+
+  it("ignora barra que não é comando conhecido", () => {
+    expect(isOwnerCommand("/etc/passwd")).toBe(false);
+    expect(extractOwnerCommand("veja em /hoje depois")).toBeNull();
   });
 
   it("reconhece o número do dono com e sem o nono dígito", () => {

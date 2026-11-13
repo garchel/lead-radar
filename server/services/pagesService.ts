@@ -13,6 +13,7 @@
  * - HTML é servido em URL limpa (`/<slug>`), sem `.html`.
  */
 import { spawn } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 
 export interface PagesConfig {
@@ -98,9 +99,36 @@ export function pagesStatus(): { configured: boolean; project: string | null; ba
  * Usa o wrangler porque o upload direto pela API exige montar o fluxo de
  * multipart em três etapas; o CLI já faz isso e é o caminho documentado.
  */
+/**
+ * Regras de cache do projeto publicado.
+ *
+ * Sem isso o Cloudflare serve a prévia ANTIGA depois de uma correção — aconteceu
+ * ao trocar a tipografia: a página nova tinha Playfair, o link entregava a versão
+ * com fonte do sistema. HTML revalida sempre; arquivo com hash no nome pode ficar
+ * em cache para sempre.
+ */
+export function ensureCacheHeaders(dir: string): void {
+  const arquivo = path.join(dir, "_headers");
+  const conteudo = `/*
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Robots-Tag: noindex, nofollow
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+`;
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const atual = fs.existsSync(arquivo) ? fs.readFileSync(arquivo, "utf8") : "";
+    if (atual !== conteudo) fs.writeFileSync(arquivo, conteudo, "utf8");
+  } catch (erro: any) {
+    console.warn(`[pages] não consegui escrever _headers: ${erro?.message || erro}`);
+  }
+}
+
 export async function publishPreviews(dir: string, timeoutMs = 90_000): Promise<PagesPublishResult> {
   const cfg = pagesConfig();
   if (!cfg) return { ok: false, url: null, error: "Cloudflare Pages não configurado (token, conta ou projeto)." };
+  ensureCacheHeaders(dir);
   if (publicando) return publicando;
 
   publicando = new Promise<PagesPublishResult>((resolve) => {

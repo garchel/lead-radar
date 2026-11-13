@@ -3,6 +3,8 @@ import { classifyImage, pickPreviewImages } from "../server/services/brandImager
 import { colorName, paletteForLead, paletteMessageText, swatchFor } from "../server/services/paletteService";
 import { monogramOf, monogramSvg, wordmarkSvg } from "../server/services/logoSvg";
 import { paletteCardSvg } from "../server/services/paletteCard";
+import { fontStylesheetUrl, pickFontPair } from "../server/services/fontPairs";
+import { buildPreviewHtml } from "../server/services/previewService";
 import type { StoredLead } from "../server/store/types";
 
 function leadCom(imagery: Array<{ url: string; description?: string }>, palette: string[] = []): StoredLead {
@@ -113,6 +115,93 @@ describe("paleta", () => {
     expect(texto).toMatch(/O que acha\?/);
     expect(texto).not.toContain("—");
     expect(texto).not.toMatch(/R\$/);
+  });
+});
+
+describe("tipografia da prévia", () => {
+  it("tom sofisticado puxa serifa de contraste", () => {
+    const par = pickFontPair({ tone: ["sofisticado", "acolhedor"], nicho: "odontologia" });
+    expect(par.display).toBe("Playfair Display");
+    expect(par.body).toBe("Inter");
+  });
+
+  it("tom acolhedor puxa serifa suave", () => {
+    expect(pickFontPair({ tone: ["acolhedor"], nicho: "pet" }).display).toBe("Lora");
+  });
+
+  it("clean puxa geométrica", () => {
+    expect(pickFontPair({ tone: ["clean", "moderno"], nicho: "arquitetura" }).display).toBe("Space Grotesk");
+  });
+
+  it("sem tom, o nicho decide; sem nada, par neutro", () => {
+    expect(pickFontPair({ nicho: "clínica odontológica" }).display).toBe("Lora");
+    expect(pickFontPair({}).display).toBe("Manrope");
+  });
+
+  it("tipografia declarada na marca manda no par", () => {
+    const par = pickFontPair({ tone: ["clean"], typography: { display: "DM Serif Display", body: "Work Sans" } });
+    expect(par.display).toBe("DM Serif Display");
+    expect(par.body).toBe("Work Sans");
+    expect(par.reason).toContain("declarada");
+  });
+
+  it("recusa nome estranho (evita injeção no link de fonte)", () => {
+    const par = pickFontPair({ typography: { display: 'X"><script>', body: "Inter" } as any });
+    expect(par.display).not.toContain("script");
+  });
+
+  it("descrição em português não é nome de fonte — cai no par do tom", () => {
+    // a pesquisa de marca devolve "Serifada elegante", "Sans-serif leve e moderna"
+    const par = pickFontPair({
+      tone: ["sofisticado"],
+      typography: { display: "Serifada elegante", body: "Sans-serif leve e moderna" },
+    });
+    expect(par.display).toBe("Playfair Display");
+    expect(par.body).toBe("Inter");
+    expect(par.reason).toContain("tom");
+  });
+
+  it("URL leva só os pesos usados e display=swap", () => {
+    const url = fontStylesheetUrl({ display: "Playfair Display", body: "Inter", reason: "" });
+    expect(url).toContain("Playfair+Display:wght@500;600;700");
+    expect(url).toContain("Inter:wght@400;500;600");
+    expect(url).toContain("display=swap");
+  });
+
+  it("página carrega a fonte e mantém fallback", () => {
+    const lead = leadCom([]);
+    lead.brandSnapshot!.tone = ["sofisticado"];
+    const html = buildPreviewHtml(lead);
+    expect(html).toContain("fonts.googleapis.com");
+    expect(html).toContain("preconnect");
+    expect(html).toContain("--font-display:");
+    expect(html).toContain("ui-serif");
+  });
+});
+
+describe("movimento na prévia", () => {
+  it("anima a primeira dobra sem JavaScript", () => {
+    const html = buildPreviewHtml(leadCom([]));
+    expect(html).toContain("@keyframes subir");
+    expect(html).toContain("@keyframes aparecer");
+    expect(html).toMatch(/\.hero h1\{animation:subir/);
+    expect(html).not.toMatch(/<script/i);
+  });
+
+  it("nenhuma seção pode começar invisível (animação que esconde é pior que nada)", () => {
+    const html = buildPreviewHtml(leadCom([]));
+    // regra de scroll-reveal escondia a seção ao entrar na tela: foi descartada
+    expect(html).not.toContain("animation-timeline:view()");
+    expect(html).not.toMatch(/\.servico\{[^}]*opacity:0/);
+    expect(html).not.toMatch(/\.blk-head\{[^}]*opacity:0/);
+  });
+
+  it("imprimir em PDF não perde conteúdo animado", () => {
+    expect(buildPreviewHtml(leadCom([]))).toContain("@media print");
+  });
+
+  it("respeita quem prefere menos movimento", () => {
+    expect(buildPreviewHtml(leadCom([]))).toContain("prefers-reduced-motion:reduce");
   });
 });
 

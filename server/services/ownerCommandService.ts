@@ -49,8 +49,53 @@ export function isOwnerPhone(phone?: string): boolean {
   return ownerPhones().some((dono) => chaveTelefone(dono) === alvo);
 }
 
+const COMANDOS_CONHECIDOS = new Set([
+  "hoje",
+  "pendentes",
+  "paradas",
+  "fora",
+  "status",
+  "lead",
+  "pausar",
+  "parar",
+  "retomar",
+  "ligar",
+  "ajuda",
+  "help",
+  "comandos",
+]);
+
+/**
+ * Extrai o comando de um texto que pode vir sujo.
+ *
+ * O dono colou a lista de comandos inteira no WhatsApp e nada aconteceu, porque a
+ * checagem exigia que a mensagem começasse com "/". Agora procura o primeiro
+ * `/comando` conhecido **no começo de qualquer linha**, tolerando markdown, bullets
+ * e traços que o app de mensagem adiciona ao colar.
+ */
+/** "/hoje — conversas de hoje" → "/hoje" (a descrição do menu não é argumento). */
+function normalizaLinha(linha: string): string | null {
+  const limpa = linha.replace(/^[\s>*•\-–—`.]+/, "").trim();
+  if (!limpa.startsWith(PREFIXO)) return null;
+  let corpo = limpa.slice(PREFIXO.length).trim();
+  corpo = corpo.split(/\s+[—–]\s+|\s+-\s+|:\s+/)[0].trim();
+  const [comando, ...resto] = corpo.split(/\s+/);
+  if (!/^[a-z]+$/i.test(comando || "")) return null;
+  return `${PREFIXO}${[comando.toLowerCase(), ...resto].join(" ")}`.trim();
+}
+
+export function extractOwnerCommand(text?: string): string | null {
+  for (const linha of String(text || "").split(/\r?\n/)) {
+    const normalizada = normalizaLinha(linha);
+    if (!normalizada) continue;
+    const nome = normalizada.slice(1).split(/\s+/)[0];
+    if (COMANDOS_CONHECIDOS.has(nome)) return normalizada;
+  }
+  return null;
+}
+
 export function isOwnerCommand(text?: string): boolean {
-  return String(text || "").trim().startsWith(PREFIXO);
+  return extractOwnerCommand(text) !== null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -284,10 +329,13 @@ export async function handleOwnerCommand(
   texto: string,
   opcoes: { enviar?: boolean } = {}
 ): Promise<OwnerCommandResult> {
-  const bruto = String(texto || "").trim();
-  if (!isOwnerCommand(bruto)) return { handled: false };
+  // Comando conhecido em qualquer linha (menu colado) ou, se a mensagem já começa
+  // com "/", qualquer palavra — comando inválido responde com a ajuda.
+  const comandoExtraido =
+    extractOwnerCommand(texto) ?? (/^\s*\//.test(String(texto || "")) ? normalizaLinha(String(texto).trim()) : null);
+  if (!comandoExtraido) return { handled: false };
 
-  const semPrefixo = bruto.slice(PREFIXO.length).trim();
+  const semPrefixo = comandoExtraido.slice(PREFIXO.length).trim();
   const [comandoBruto, ...resto] = semPrefixo.split(/\s+/);
   const comando = (comandoBruto || "ajuda").toLowerCase();
   const argumento = resto.join(" ");

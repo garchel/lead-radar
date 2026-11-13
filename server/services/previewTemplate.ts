@@ -17,6 +17,7 @@ import type { StoredLead } from "../store/types";
 import { prettyName } from "./briefingService";
 import { pickPreviewImages } from "./brandImagery";
 import { monogramSvg } from "./logoSvg";
+import { fontFamilyCss, fontStylesheetUrl, pickFontPair } from "./fontPairs";
 
 export function esc(value: unknown): string {
   return String(value ?? "")
@@ -410,6 +411,16 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
     (lead.brandSnapshot?.palette || []).map((c) => String(c.hex || "")).find((h) => /^#[0-9a-f]{6}$/i.test(h))
   );
   const nicho = nicheFor(lead);
+  // Tipografia: display com personalidade + texto discreto, escolhidos pelo tom
+  // da marca. Sem a fonte, o fallback do CSS mantém a página legível.
+  const fontes = pickFontPair({
+    tone: lead.brandSnapshot?.tone,
+    typography: lead.brandSnapshot?.typography,
+    nicho: `${lead.searchCategory || ""} ${lead.category || ""}`,
+  });
+  const fontUrl = fontStylesheetUrl(fontes);
+  const fonteDisplay = fontFamilyCss(fontes.display, "display");
+  const fonteCorpo = fontFamilyCss(fontes.body, "body");
   const name = prettyName(lead.name, 64);
   const categoria = lead.searchCategory || lead.category || "Negócio local";
   const local = [lead.neighborhood, lead.city, lead.state].filter(Boolean).join(", ");
@@ -462,6 +473,9 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="${pal.accent}" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="${esc(fontUrl)}" />
 <title>${esc(name)} — ${esc(categoria)} em ${esc(lead.city || "sua cidade")}</title>
 <meta name="description" content="${esc(`${name}: ${nicho.sub}`)}" />
 <style>
@@ -470,6 +484,7 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
     --accent-line:${pal.accentLine}; --accent-deep:${pal.accentDeep}; --on-accent:${pal.onAccent};
     --ink:${pal.ink}; --body:${pal.body}; --mute:${pal.mute}; --line:${pal.line};
     --paper:${pal.paper}; --wash:${pal.wash};
+    --font-display:${fonteDisplay}; --font-body:${fonteCorpo};
     --r-lg:22px; --r-md:14px; --r-sm:10px;
     --shadow:0 1px 2px rgba(16,16,16,.04), 0 12px 32px -18px rgba(16,16,16,.25);
   }
@@ -477,15 +492,15 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   html{scroll-behavior:smooth}
   body{
     margin:0;background:var(--paper);color:var(--body);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-family:var(--font-body);
     font-size:17px;line-height:1.62;-webkit-font-smoothing:antialiased;text-wrap:pretty;
   }
   img{max-width:100%;display:block}
   a{color:inherit}
   .wrap{width:100%;max-width:1120px;margin:0 auto;padding:0 22px}
-  .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#54585f;font-weight:650;margin:0 0 14px;text-wrap:pretty}
-  h1,h2,h3{color:var(--ink);margin:0;letter-spacing:-.025em;line-height:1.08;font-weight:700;text-wrap:balance}
-  h1{font-size:clamp(32px,5.2vw,60px)}
+  .eyebrow{font-size:11.5px;letter-spacing:.18em;font-family:var(--font-body);text-transform:uppercase;color:#54585f;font-weight:650;margin:0 0 14px;text-wrap:pretty}
+  h1,h2,h3{color:var(--ink);margin:0;letter-spacing:-.025em;line-height:1.08;font-weight:700;text-wrap:balance;font-family:var(--font-display)}
+  h1{font-size:clamp(32px,5.2vw,60px);font-weight:600;letter-spacing:-.035em}
   h2{font-size:clamp(26px,3.6vw,40px)}
   h3{font-size:19px;letter-spacing:-.01em;line-height:1.25}
   p{margin:0}
@@ -497,7 +512,7 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   .brand img{height:34px;width:auto;border-radius:8px;object-fit:contain}
   .mark-svg{display:inline-flex;flex:none;line-height:0;border-radius:11px}
   .mark-cover{display:block;line-height:0}
-  .brand b{display:block;font-size:15px;color:var(--ink);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand b{display:block;font-family:var(--font-display);font-size:15.5px;color:var(--ink);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .brand span{display:block;font-size:11.5px;color:var(--mute)}
   .top .btn{white-space:nowrap}
   .nav{display:none;gap:26px;margin-left:auto;margin-right:8px}
@@ -562,7 +577,7 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
            transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}
   .servico:hover{border-color:var(--accent-line);box-shadow:var(--shadow);transform:translateY(-2px)}
   .servico .n{font-size:12px;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700;letter-spacing:.06em}
-  .servico h3{margin:10px 0 0}
+  .servico h3{margin:10px 0 0;font-family:var(--font-display);font-weight:600}
   .servico p{font-size:14px;color:var(--mute);margin:7px 0 0}
 
   .galeria{display:grid;gap:12px;grid-template-columns:1fr 1fr}
@@ -592,7 +607,7 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
 
   /* CTA final */
   .final{background:var(--ink);color:#f6f5f3;padding:clamp(52px,7vw,88px) 0}
-  .final h2{color:#fff;max-width:24ch}
+  .final h2{color:#fff;max-width:24ch;font-family:var(--font-display)}
   .final p{color:#c9c7c2;margin-top:16px;max-width:48ch}
   .final .btn-primary{background:#fff;color:#141414;box-shadow:0 12px 28px -18px rgba(0,0,0,.8)}
   .final .btn-primary:hover{background:#f4f1ec}
@@ -606,6 +621,54 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
                  font-size:11px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:14px}
   footer strong{color:var(--ink)}
 
+
+  /* ---------------------------------------------------------------- */
+  /* movimento                                                         */
+  /* ---------------------------------------------------------------- */
+  @keyframes subir{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  @keyframes aparecer{from{opacity:0;transform:translateY(22px) scale(.995)}to{opacity:1;transform:none}}
+
+  /* a primeira dobra entra uma vez: dá a sensação de página montada na hora */
+  .hero .eyebrow{animation:subir .6s cubic-bezier(.22,.7,.25,1) both}
+  .hero h1{animation:subir .75s cubic-bezier(.22,.7,.25,1) .06s both}
+  .hero .sub{animation:subir .75s cubic-bezier(.22,.7,.25,1) .14s both}
+  .hero .proof,.hero .place{animation:subir .7s cubic-bezier(.22,.7,.25,1) .2s both}
+  .hero .actions{animation:subir .7s cubic-bezier(.22,.7,.25,1) .26s both}
+  .hero .shot{animation:aparecer .9s cubic-bezier(.22,.7,.25,1) .12s both}
+
+  /* Reveal por scroll foi testado e DESCARTADO: com animation-timeline view()
+     a seção ficava invisível justamente quando entrava na tela (o progresso do
+     timeline não avança como esperado em viewport grande). Animação que esconde
+     conteúdo é pior que animação nenhuma; no lugar dela, movimento sem risco:
+     hover, toque e abertura de pergunta. */
+
+  /* ponto de "online" pulsando devagar */
+  @keyframes pulsar{0%,100%{box-shadow:0 0 0 4px rgba(34,197,94,.16)}50%{box-shadow:0 0 0 7px rgba(34,197,94,.06)}}
+  .dot{animation:pulsar 3.2s ease-in-out infinite}
+
+  /* pergunta abrindo aparece suave (não depende de scroll) */
+  .faq details[open] p{animation:subir .28s ease both}
+
+  /* resposta ao toque: botão afunda, card levanta */
+  .btn:active{transform:translateY(1px) scale(.995)}
+  .servico:active{transform:translateY(0)}
+
+  /* toque vivo nos elementos clicáveis */
+  .btn{will-change:transform}
+  .galeria figure{transition:transform .3s ease,box-shadow .3s ease}
+  .galeria figure:hover{transform:translateY(-3px) scale(1.01);box-shadow:var(--shadow)}
+  .shot img{transition:transform .6s ease}
+  .shot:hover img{transform:scale(1.015)}
+
+  @media print{
+    /* imprimir/salvar em PDF não rola a página: nada pode ficar invisível */
+    .hero .eyebrow,.hero h1,.hero .sub,.hero .actions,.hero .shot{animation:none!important;opacity:1!important;transform:none!important}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  }
+
   @media(min-width:720px){
     .hero-grid{grid-template-columns:1.05fr .95fr}
     .nav{display:flex}
@@ -616,9 +679,6 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   }
   @media(min-width:1000px){
     .servicos{grid-template-columns:repeat(3,1fr)}
-  }
-  @media(prefers-reduced-motion:reduce){
-    *{transition:none!important;scroll-behavior:auto}
   }
 </style>
 </head>
