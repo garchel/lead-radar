@@ -19,6 +19,7 @@ import { passesQualityGate, isReachableOnWhatsApp, classifyPhone } from "./leadQ
 import { validateLeadsWhatsApp } from "./whatsappValidationService";
 import { getCommercialPolicy } from "./commercialPolicy";
 import { bold, boldFirstOccurrence, freePreviewLine, whatsAppify } from "./messageStyle";
+import { previewExists } from "./previewService";
 
 /**
  * Coleta automática de leads com cota controlada.
@@ -365,7 +366,7 @@ export function displayBusinessName(name: string, maxLength = 48): string {
  * prévia gratuita explícita, pacotes com o que cada um inclui, negrito e emoji
  * na medida. Quando existe pitch da análise, ele passa pelo mesmo saneamento.
  */
-export function buildProspectMessage(lead: StoredLead): string {
+export function buildProspectMessage(lead: StoredLead, opts: { previewPronta?: boolean } = {}): string {
   const policy = getCommercialPolicy();
   const pitch = String(lead.analysis?.customPitchWhatsApp || "").trim();
   if (pitch) {
@@ -402,7 +403,10 @@ export function buildProspectMessage(lead: StoredLead): string {
     "",
     freePreviewLine(policy),
     "",
-    "Quer que eu prepare a de vocês?",
+    // Com a prévia já montada (é o caso da simulação e do autopilot que gera
+    // antes do D0), a pergunta oferece algo que existe. Sem prévia, prometer
+    // "já preparei" seria mentira e o lead cobraria o link na hora.
+    opts.previewPronta ?? previewExists(lead) ? "Quer ver a prévia que já preparei para vocês?" : "Quer que eu prepare a de vocês?",
   ];
 
   return whatsAppify(lines.filter((line, index) => !(line === "" && lines[index - 1] === "")).join("\n"));

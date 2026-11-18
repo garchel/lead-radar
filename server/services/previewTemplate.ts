@@ -333,10 +333,24 @@ const DESCRICOES: Array<{ re: RegExp; texto: string }> = [
   { re: /entrega|encomenda|delivery|encomendas/i, texto: "Pedido combinado no WhatsApp, com horário de retirada ou entrega." },
   { re: /almo[cç]o|prato|card[aá]pio/i, texto: "Feito no dia, com opção de comer no salão ou levar." },
   { re: /reserva/i, texto: "Mesa reservada no horário combinado, sem fila." },
+  // saúde mental e recuperação: sem isso, cinco cartões saíam com a mesma frase
+  { re: /sa[uú]de mental|psicoterap|psic[oó]log|terapia|ansiedade|depress/i, texto: "Escuta profissional em sessões combinadas, presencial ou online." },
+  { re: /depend[eê]ncia|droga|qu[ií]mic/i, texto: "Acolhimento e acompanhamento por etapas, com a família participando." },
+  { re: /alcool|etilis/i, texto: "Acompanhamento contínuo, com plano definido depois da avaliação." },
+  { re: /remo[cç][oõ]|transfer[eê]ncia|leva e traz/i, texto: "Transporte combinado com antecedência, com equipe preparada." },
+  { re: /repouso|acolhimento|interna|moradia/i, texto: "Rotina estruturada, com acompanhamento diário e visita combinada." },
+  { re: /grupo|reuni[aã]o|famil/i, texto: "Encontros com quem passa pelo mesmo momento, mediados pela equipe." },
+  { re: /acompanhamento|monitor/i, texto: "Retorno combinado para revisar o que está funcionando." },
 ];
 
-function descricaoServico(nome: string): string {
-  return DESCRICOES.find((d) => d.re.test(nome))?.texto || "Fale com a gente para entender como funciona no seu caso.";
+const DESCRICOES_GENERICAS = [
+  "Fale com a gente para entender como funciona no seu caso.",
+  "Atendimento combinado na conversa, com o que faz sentido para você.",
+  "Explicamos como funciona e o que está incluído antes de começar.",
+];
+
+function descricaoServico(nome: string, indice = 0): string {
+  return DESCRICOES.find((d) => d.re.test(nome))?.texto || DESCRICOES_GENERICAS[indice % DESCRICOES_GENERICAS.length];
 }
 
 const FAMILIAS: Array<{ re: RegExp; familia: string }> = [
@@ -773,7 +787,7 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
             (s, i) => `<article class="servico">
           <span class="n">${String(i + 1).padStart(2, "0")}</span>
           <h3>${esc(s)}</h3>
-          <p>${esc(descricaoServico(s))}</p>
+          <p>${esc(descricaoServico(s, i))}</p>
         </article>`
           )
           .join("")}

@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { buildPreviewHtml, generateLeadPreview, previewServices, whatsappLink, previewExists, resolvePublicBaseUrl, previewSlug, slugifyPreview } from "../server/services/previewService";
+import { buildProspectMessage } from "../server/services/autoProspectingService";
 import { ensureDefaultCadenceSchedule } from "../server/scheduler/scheduler";
 import { dispatchLeadContact } from "../server/services/interactionService";
 import { getCommunicationsByLead, getSchedules, recordCommunication, upsertLead } from "../server/store/db";
@@ -100,6 +101,9 @@ describe("prévia da landing page", () => {
 
     const semEnv = generateLeadPreview(lead);
     expect(previewExists(lead.id)).toBe(true);
+    // prévia no disco = a mensagem oferece o link, não promete montar depois
+    expect(previewExists(lead)).toBe(true);
+    expect(buildProspectMessage(lead)).toContain("Quer ver a prévia que já preparei");
     expect(semEnv.url).toBe(`/previews/${lead.id}.html`);
     // Sem env, a base é o IP da rede local (o celular no mesmo Wi-Fi abre o link).
     // Em máquina sem interface de rede o fallback é null e o link não é enviado.

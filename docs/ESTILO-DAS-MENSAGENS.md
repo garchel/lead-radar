@@ -39,7 +39,7 @@ A gente monta uma página bonita, rápida e funcional, com botão de WhatsApp le
 
 ⭐ *A prévia é grátis*, sem custo nenhum: eu monto a tela inicial e você vê como fica antes de decidir.
 
-Quer que eu prepare a de vocês?
+Quer ver a prévia que já preparei para vocês?
 ```
 
 ## Escada da conversa (não pule etapa)

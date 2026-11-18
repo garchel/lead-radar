@@ -68,7 +68,7 @@ export function buildTestPitchMessage(pushName?: string): string {
     "",
     freePreviewLine(policy),
     "",
-    "Quer que eu prepare a sua?",
+    "Quer ver a prévia que já preparei para você?",
   ];
 
   return whatsAppify(lines.filter((line, i) => line !== "" || i > 0).join("\n"));

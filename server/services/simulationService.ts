@@ -13,7 +13,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { getDb } from "../store/schema";
-import { generateLeadPreview, previewsDir } from "./previewService";
+import { generateLeadPreview, generateLeadPreviewCached, previewsDir } from "./previewService";
+import { applyPlacePhoto } from "./placePhotoService";
 import { researchLeadBrand } from "./brandResearchService";
 import { getLeadById, getProjectsByLead, getSetting, setLeadBrandSnapshot, setSetting, upsertProject } from "../store/db";
 import { normalizeText } from "./leadIdentity";
@@ -292,11 +293,15 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
   let assets: SimulationAssets = { ok: false, images: 0, colors: 0, confidence: 0, previewUrl: null };
   try {
     const research = await researchLeadBrand(SIMULATION_LEAD_ID, { force: true, maxImages: 6, maxSearches: 2 });
+    // Sem imagem utilizável (só Instagram, CDN bloqueado), aproveita a foto que a
+    // busca do Google Maps já trouxe. Persiste: as próximas gerações usam a mesma.
+    const comFoto = applyPlacePhoto(getLeadById(SIMULATION_LEAD_ID)!);
+    if (comFoto.url && comFoto.lead.brandSnapshot) setLeadBrandSnapshot(SIMULATION_LEAD_ID, comFoto.lead.brandSnapshot);
     const atualizado = getLeadById(SIMULATION_LEAD_ID)!;
-    const preview = generateLeadPreview(atualizado);
+    const preview = await generateLeadPreviewCached(atualizado);
     assets = {
       ok: true,
-      images: research.snapshot.imagery?.length || 0,
+      images: atualizado.brandSnapshot?.imagery?.length || 0,
       colors: research.snapshot.palette?.length || 0,
       confidence: Number(research.snapshot.confidence || 0),
       previewUrl: preview.publicUrl,
@@ -318,7 +323,9 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
   }
 
   const paulo = getLeadById(SIMULATION_LEAD_ID)!;
-  const mensagem = buildProspectMessage(candidato);
+  // A prévia já foi montada acima com o que a busca trouxe (fotos + paleta), então
+  // o D0 pode oferecer o link em vez de prometer que vai montar.
+  const mensagem = buildProspectMessage(candidato, { previewPronta: assets.ok && Boolean(assets.previewUrl) });
 
   const dispatch = await dispatchLeadReply(paulo, {
     channel: "whatsapp",

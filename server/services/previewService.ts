@@ -25,6 +25,7 @@ import { getDb } from "../store/schema";
 import { renderPreviewHtml, previewPalette, readableOn } from "./previewTemplate";
 import { wordmarkSvg } from "./logoSvg";
 import { cacheSnapshotImages } from "./imageCacheService";
+import { applyPlacePhoto } from "./placePhotoService";
 
 export interface PreviewResult {
   leadId: string;
@@ -234,14 +235,30 @@ export function generateLeadPreview(lead: StoredLead, now = new Date()): Preview
  * foto de fachada pode sair do ar antes do cliente abrir o link.
  */
 export async function generateLeadPreviewCached(lead: StoredLead, now = new Date()): Promise<PreviewResult> {
-  const snapshot = await cacheSnapshotImages(lead.brandSnapshot);
-  return generateLeadPreview(snapshot ? { ...lead, brandSnapshot: snapshot } : lead, now);
+  // Sem imagem utilizável (caso clássico: só Instagram, CDN bloqueado), usa a foto
+  // que a própria busca do Google Maps já trouxe — sem gastar cota nova.
+  const comFoto = applyPlacePhoto(lead).lead;
+  const snapshot = await cacheSnapshotImages(comFoto.brandSnapshot);
+  return generateLeadPreview(snapshot ? { ...comFoto, brandSnapshot: snapshot } : comFoto, now);
 }
 
-/** Já existe prévia para este lead? */
-export function previewExists(leadId: string): boolean {
+/**
+ * Já existe prévia para este lead?
+ *
+ * Desde que o arquivo passou a ter o nome do NEGÓCIO (`<slug>.html`), checar
+ * `<leadId>.html` respondia "não" para toda prévia gerada e a mensagem oferecia
+ * "quer que eu prepare" mesmo com a página pronta no disco. Consulta só leitura:
+ * não cria slug.
+ */
+export function previewExists(leadOrId: StoredLead | string): boolean {
+  const leadId = typeof leadOrId === "string" ? leadOrId : leadOrId.id;
   try {
-    return fs.existsSync(path.join(previewsDir(), `${leadId}.html`));
+    ensureSlugTable();
+    const linha = getDb().prepare("SELECT slug FROM preview_slugs WHERE lead_id = ?").get(leadId) as any;
+    const dir = previewsDir();
+    if (linha?.slug && fs.existsSync(path.join(dir, `${linha.slug}.html`))) return true;
+    // prévia antiga, gravada com o id do lead
+    return fs.existsSync(path.join(dir, `${leadId}.html`));
   } catch {
     return false;
   }
