@@ -30,7 +30,7 @@ import { buildPalettePreview, publishPaletteCard, sendPalettePreview } from "../
 import { generateProposalPdf, proposalFileName, publishProposal } from "../services/proposalService";
 import { deliverWhatsAppMedia } from "../services/contactService";
 import { generateMonthlyReportPdf, monthlyNumbers, monthlyReportFileName } from "../services/monthlyReportService";
-import { CATALOGO, suggestDisplays, suggestPairs } from "../services/fontCatalog";
+import { CATALOGO, bodyFonts, curatedPairs, suggestDisplays, suggestPairs, titleFonts } from "../services/fontCatalog";
 import {
   describeWarmup,
   getWarmupState,
@@ -195,8 +195,11 @@ export function registerAgentRoutes(app: Express) {
         success: true,
         total: CATALOGO.length,
         fontes: CATALOGO,
-        // par sugerido para o tom do lead, quando o painel está aberto num projeto
-        sugestao: null,
+        // separado por papel para o seletor não oferecer fonte só de texto como título
+        titulos: titleFonts(),
+        textos: bodyFonts(),
+        // pares prontos: quem não quer pensar em tipografia escolhe um destes
+        pares: curatedPairs(),
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err?.message || "Falha ao consultar fontes." });

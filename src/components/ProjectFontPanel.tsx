@@ -1,17 +1,33 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Type, Check, Loader2, Sparkles } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Type, Check, Loader2, Sparkles, BadgeCheck } from 'lucide-react';
 
 interface FontMeta {
   name: string;
   category: string;
+  role?: 'titulo' | 'texto' | 'ambos';
   tags: string[];
 }
+
+interface ReadyPair {
+  display: string;
+  body: string;
+  nota: string;
+}
+
+const CATEGORIA_LABEL: Record<string, string> = {
+  serif: 'serifa',
+  sans: 'sem serifa',
+  display: 'display',
+  slab: 'serifa grossa',
+  mono: 'monoespaçada',
+};
 
 interface Suggestion {
   display: string;
   body: string;
   score: number;
   reason: string;
+  curated?: boolean;
 }
 
 interface ProjectFontPanelProps {
@@ -30,7 +46,9 @@ interface ProjectFontPanelProps {
  * todas as prévias saem com a mesma cara, que é o que o cliente percebe.
  */
 export const ProjectFontPanel: React.FC<ProjectFontPanelProps> = ({ projectId, fontDisplay, fontBody, refreshKey, onSaved }) => {
-  const [fontes, setFontes] = useState<FontMeta[]>([]);
+  const [titulos, setTitulos] = useState<FontMeta[]>([]);
+  const [textos, setTextos] = useState<FontMeta[]>([]);
+  const [prontos, setProntos] = useState<ReadyPair[]>([]);
   const [display, setDisplay] = useState(fontDisplay || '');
   const [body, setBody] = useState(fontBody || '');
   const [sugestoes, setSugestoes] = useState<Suggestion[]>([]);
@@ -49,7 +67,10 @@ export const ProjectFontPanel: React.FC<ProjectFontPanelProps> = ({ projectId, f
       try {
         const res = await fetch('/api/fonts');
         const data = await res.json();
-        if (ativo && data?.success) setFontes(data.fontes as FontMeta[]);
+        if (!ativo || !data?.success) return;
+        setTitulos((data.titulos || data.fontes || []) as FontMeta[]);
+        setTextos((data.textos || data.fontes || []) as FontMeta[]);
+        setProntos((data.pares || []) as ReadyPair[]);
       } catch {
         /* painel secundário */
       }
@@ -84,8 +105,7 @@ export const ProjectFontPanel: React.FC<ProjectFontPanelProps> = ({ projectId, f
   useEffect(() => {
     if (!display && !body) return;
     const id = 'preview-fonts';
-    const existente = document.getElementById(id);
-    if (existente) existente.remove();
+    document.getElementById(id)?.remove();
     const partes = [display, body]
       .filter(Boolean)
       .map((nome) => `family=${encodeURIComponent(nome).replace(/%20/g, '+')}:wght@400;600;700`);
@@ -117,10 +137,7 @@ export const ProjectFontPanel: React.FC<ProjectFontPanelProps> = ({ projectId, f
     }
   };
 
-  const opcoes = useMemo(
-    () => [...fontes].sort((a, b) => a.name.localeCompare(b.name)),
-    [fontes]
-  );
+  const paresDoTitulo = prontos.filter((p) => p.display === display);
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
@@ -138,6 +155,30 @@ export const ProjectFontPanel: React.FC<ProjectFontPanelProps> = ({ projectId, f
         </button>
       </div>
 
+      {/* caminho 1: par pronto */}
+      {!display && !body && prontos.length > 0 && (
+        <div>
+          <p className="text-[11px] font-semibold text-slate-600">Pares prontos (escolhidos a mão)</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {prontos.slice(0, 8).map((p) => (
+              <button
+                key={`${p.display}|${p.body}`}
+                type="button"
+                onClick={() => {
+                  setDisplay(p.display);
+                  setBody(p.body);
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] text-slate-700 hover:border-indigo-300 hover:bg-slate-50"
+              >
+                <span className="font-semibold">{p.display}</span>
+                <span className="text-slate-400"> + </span>
+                {p.body}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="text-[11px] text-slate-600">
           Título
@@ -147,9 +188,9 @@ export const ProjectFontPanel: React.FC<ProjectFontPanelProps> = ({ projectId, f
             className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-800"
           >
             <option value="">(automático pelo tom da marca)</option>
-            {opcoes.map((f) => (
+            {titulos.map((f) => (
               <option key={f.name} value={f.name}>
-                {f.name} · {f.category}
+                {f.name} · {CATEGORIA_LABEL[f.category] || f.category}
               </option>
             ))}
           </select>
@@ -162,9 +203,9 @@ export const ProjectFontPanel: React.FC<ProjectFontPanelProps> = ({ projectId, f
             className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-800"
           >
             <option value="">(automático pelo tom da marca)</option>
-            {opcoes.map((f) => (
+            {textos.map((f) => (
               <option key={f.name} value={f.name}>
-                {f.name} · {f.category}
+                {f.name} · {CATEGORIA_LABEL[f.category] || f.category}
               </option>
             ))}
           </select>
@@ -195,6 +236,25 @@ export const ProjectFontPanel: React.FC<ProjectFontPanelProps> = ({ projectId, f
         </div>
       )}
 
+      {/* pares consagrados para o título escolhido */}
+      {display && paresDoTitulo.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">consagrados</span>
+          {paresDoTitulo.map((p) => (
+            <button
+              key={p.body}
+              type="button"
+              onClick={() => setBody(p.body)}
+              className={`rounded-md border px-1.5 py-0.5 text-[10px] ${
+                body === p.body ? 'border-emerald-400 bg-emerald-50 text-emerald-800' : 'border-slate-200 text-slate-600 hover:border-emerald-300'
+              }`}
+            >
+              {p.body}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* sugestões de par */}
       {display && (
         <div>
@@ -217,7 +277,10 @@ export const ProjectFontPanel: React.FC<ProjectFontPanelProps> = ({ projectId, f
                     }`}
                   >
                     <span className="flex items-baseline justify-between gap-2">
-                      <span className="text-xs font-semibold text-slate-800">{s.body}</span>
+                      <span className="flex items-center gap-1 text-xs font-semibold text-slate-800">
+                        {s.body}
+                        {s.curated && <BadgeCheck className="h-3 w-3 text-emerald-600" />}
+                      </span>
                       <span className="text-[10px] tabular-nums text-slate-500">{s.score}</span>
                     </span>
                     <span className="mt-0.5 block text-[10px] text-slate-500">{s.reason}</span>
