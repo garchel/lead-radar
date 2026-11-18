@@ -221,9 +221,28 @@ export function resetSimulationCard(
 
   // A prévia antiga é da empresa anterior: se ficar no disco, o cliente abre e vê
   // outro negócio. Apaga para a próxima geração começar limpa.
+  //
+  // O slug é estável POR LEAD, mas na simulação o lead troca de empresa: manter o
+  // mapeamento fazia o link da empresa nova sair como `dra-carmen-pitol` (outro
+  // negócio, outra cidade). Apaga o mapeamento para o endereço nascer do nome novo.
+  let slugAnterior: string | undefined;
   try {
-    const arquivo = path.join(previewsDir(), `${SIMULATION_LEAD_ID}.html`);
-    if (fs.existsSync(arquivo)) fs.unlinkSync(arquivo);
+    slugAnterior = (db.prepare("SELECT slug FROM preview_slugs WHERE lead_id = ?").get(SIMULATION_LEAD_ID) as any)?.slug;
+    db.prepare("DELETE FROM preview_slugs WHERE lead_id = ?").run(SIMULATION_LEAD_ID);
+  } catch {
+    /* tabela ainda não existe (banco antigo): nada a limpar, a geração cria */
+  }
+  // apagar arquivo é independente do banco: se a tabela falhar, a prévia velha
+  // ainda tem que sair do disco
+  try {
+    const dir = previewsDir();
+    for (const nome of [slugAnterior, SIMULATION_LEAD_ID]) {
+      if (!nome) continue;
+      for (const sufixo of [".html", "-logo.svg"]) {
+        const arquivo = path.join(dir, `${nome}${sufixo}`);
+        if (fs.existsSync(arquivo)) fs.unlinkSync(arquivo);
+      }
+    }
   } catch {
     /* best-effort: a próxima geração sobrescreve */
   }

@@ -99,6 +99,30 @@ describe("reset do card de simulação", () => {
     expect(fs.existsSync(arquivo)).toBe(false);
   });
 
+  it("o link da prévia nasce do nome NOVO, não do negócio anterior", async () => {
+    const { previewSlug } = await import("../server/services/previewService");
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+
+    // simulação anterior: o lead ficou com o slug de outro negócio
+    getDb()
+      .prepare("CREATE TABLE IF NOT EXISTS preview_slugs (slug TEXT PRIMARY KEY, lead_id TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL)")
+      .run();
+    getDb()
+      .prepare("INSERT OR REPLACE INTO preview_slugs (slug, lead_id, created_at) VALUES (?, ?, ?)")
+      .run("dra-carmen-pitol", SIMULATION_LEAD_ID, new Date().toISOString());
+    const { previewsDir } = await import("../server/services/previewService");
+    const velho = path.join(previewsDir(), "dra-carmen-pitol.html");
+    fs.writeFileSync(velho, "<html>dentista</html>", "utf8");
+
+    resetSimulationCard("Rede Amor À Vida Cachoeirinha");
+
+    const lead = getLeadById(SIMULATION_LEAD_ID)!;
+    const slug = previewSlug(lead);
+    expect(slug).toBe("rede-amor-a-vida-cachoeirinha");
+    expect(fs.existsSync(velho)).toBe(false);
+  });
+
   it("limpa a pasta da LP e o repositório da simulação anterior", () => {
     const db = getDb();
     db.prepare("UPDATE projects SET site_path = ?, github_repo_url = ?, repo_owner = ?, repo_name = ? WHERE lead_id = ?").run(
