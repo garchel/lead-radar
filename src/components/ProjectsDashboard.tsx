@@ -245,7 +245,7 @@ const SortableProjectCard: React.FC<SortableProjectCardProps> = ({ project, onCl
           )}
           {!isConcluded && project.devStatus === 'codigo_entregue' && (
             <span
-              title="O agente entregou o código — abra o projeto e revise para aprovar."
+              title="O agente entregou o código. Abra o projeto e revise para aprovar."
               className="inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[11px] bg-amber-50 text-amber-800 border-amber-300"
             >
               <Code2 className="w-3 h-3 inline mr-0.5 -mt-px" />
@@ -263,7 +263,7 @@ const SortableProjectCard: React.FC<SortableProjectCardProps> = ({ project, onCl
           )}
           {!isConcluded && project.devStatus === 'aprovado' && (
             <span
-              title="Código aprovado — falta fazer deploy."
+              title="Código aprovado. Falta publicar o site."
               className="inline-flex items-center px-2 py-0.5 rounded-full border font-bold text-[11px] bg-teal-50 text-teal-700 border-teal-200"
             >
               <BadgeCheck className="w-3 h-3 inline mr-0.5 -mt-px" />
@@ -310,10 +310,10 @@ const SortableProjectCard: React.FC<SortableProjectCardProps> = ({ project, onCl
               onCopyBriefingLink(project);
             }}
             className="w-full inline-flex items-center justify-center gap-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 font-semibold px-3 py-2 rounded-lg text-[11px] border border-violet-200 transition-colors"
-            title="Copiar o link do briefing com o token deste projeto"
+            title="Copiar o link do formulário que o cliente preenche"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? 'Link copiado!' : 'Copiar link de briefing'}</span>
+            <span>{copied ? 'Link copiado!' : 'Copiar link do formulário'}</span>
             <Link2 className="w-3.5 h-3.5 text-violet-400" />
           </button>
         )}
@@ -441,12 +441,12 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({ focusProje
   const handleCopyBriefingLink = async (project: Project) => {
     try {
       const data = await requestJson(`/api/projects/${project.id}/typeform-link`, { method: 'POST' });
-      if (!data.url) throw new Error('Não foi possível gerar o link do briefing.');
+      if (!data.url) throw new Error('Não foi possível gerar o link do formulário.');
       await navigator.clipboard.writeText(data.url as string);
       setCopiedId(project.id);
       setTimeout(() => setCopiedId((id) => (id === project.id ? null : id)), 2000);
     } catch (err: any) {
-      setError(`Falha ao copiar o link do briefing: ${err?.message || 'erro desconhecido'}`);
+      setError(`Falha ao copiar o link do formulário: ${err?.message || 'erro desconhecido'}`);
     }
   };
 
@@ -489,7 +489,8 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({ focusProje
             <span>Projetos em Desenvolvimento</span>
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Acompanhe cada landing page do Briefing ao Deploy, mesmo com vários projetos simultâneos.
+            Acompanhe cada landing page da coleta de informações até a publicação,
+            mesmo com vários projetos ao mesmo tempo.
           </p>
         </div>
 

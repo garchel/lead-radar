@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: inherit; color: var(--foreground); margin: 0; font-size: 14px; line-height: 1.5; }
+  .linha { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+  .col { flex: 1 1 380px; min-width: 330px; }
+  .titulo-col { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--muted-foreground); margin: 0 0 8px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+  .h1 { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .sub { font-size: 12px; color: #475569; margin: 5px 0 0; }
+  .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; margin-top: 10px; }
+  .pill.antes { background: #ede9fe; color: #5b21b6; }
+  .pill.depois { background: #ede9fe; color: #5b21b6; }
+  .pil { font-size: 10px; border: 1px solid #ddd6fe; color: #6d28d9; border-radius: 99px; padding: 1px 7px; margin-right: 5px; font-weight: 600; }
+  .pil2 { font-size: 10px; border: 1px solid #fde68a; background: #fef3c7; color: #92400e; border-radius: 99px; padding: 1px 7px; font-weight: 600; }
+  .anot { font-size: 12px; color: var(--muted-foreground); margin: 8px 0 0; }
+  .marca { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--border); color: var(--muted-foreground); vertical-align: 1px; margin-right: 5px; }
+  .errado { border-color: #fca5a5; color: #b91c1c; background: rgba(252,165,165,.12); }
+  .certo { border-color: #86efac; color: #15803d; background: rgba(134,239,172,.12); }
+  .bloco { margin-bottom: 14px; }
+  .dica { font-size: 11px; background: #0f172a; color: #e2e8f0; padding: 6px 9px; border-radius: 6px; margin-top: 8px; display: inline-block; max-width: 100%; }
+  .dica b { color: #fbbf24; font-weight: 600; }
+  .sep { height: 1px; background: var(--border); margin: 14px 0 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td { padding: 4px 10px 4px 0; vertical-align: top; color: var(--muted-foreground); }
+  td:first-child { color: var(--foreground); font-weight: 600; white-space: nowrap; }
+</style></head>
+<body>
+
+<div class="linha">
+  <div class="col">
+    <p class="titulo-col">Hoje</p>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="h1">🚀 Projetos em Desenvolvimento</div>
+        <p class="sub">Acompanhe cada landing page do <b>Briefing</b> ao <b>Deploy</b>, mesmo com vários projetos simultâneos.</p>
+      </div>
+      <p class="anot"><span class="marca errado">U5</span>duas palavras em inglês numa frase que descreve o produto para quem vende site.</p>
+    </div>
+
+    <div class="bloco">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div>
+            <div style="font-size:13px;font-weight:700;line-height:1.3">Dra. Carmen Pitol — Landing …</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px">Dra. Carmen Pitol • Balneário Ca…</div>
+          </div>
+        </div>
+        <div style="margin-top:8px"><span class="pil">Landing Page</span><span class="pil2">Média</span></div>
+        <span class="pill antes">⧉ Copiar link de briefing</span>
+        <div class="dica">O agente entregou o código <b>—</b> abra o projeto e revise para aprovar.</div>
+      </div>
+      <p class="anot"><span class="marca errado">U5</span><span class="marca errado">U13</span>"briefing" é o formulário; e o tooltip do status usa travessão.</p>
+    </div>
+  </div>
+
+  <div class="col">
+    <p class="titulo-col">Depois</p>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="h1">🚀 Projetos em Desenvolvimento</div>
+        <p class="sub">Acompanhe cada landing page da coleta de informações até a publicação, mesmo com vários projetos ao mesmo tempo.</p>
+      </div>
+      <p class="anot"><span class="marca certo">ok</span>a mesma coisa em português. Cabe em duas linhas, não empurra os cartões de resumo.</p>
+    </div>
+
+    <div class="bloco">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div>
+            <div style="font-size:13px;font-weight:700;line-height:1.3">Dra. Carmen Pitol — Landing …</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px">Dra. Carmen Pitol • Balneário Ca…</div>
+          </div>
+        </div>
+        <div style="margin-top:8px"><span class="pil">Landing Page</span><span class="pil2">Média</span></div>
+        <span class="pill depois">⧉ Copiar link do formulário</span>
+        <div class="dica">O agente entregou o código. Abra o projeto e revise para aprovar.</div>
+      </div>
+      <p class="anot"><span class="marca certo">ok</span>o botão diz o que o link abre; o tooltip termina em ponto.</p>
+    </div>
+  </div>
+</div>
+
+<div class="sep"></div>
+
+<table>
+  <tr><td>Muda</td><td>Uma frase de cabeçalho, um botão do card, três mensagens de erro e três tooltips.</td></tr>
+  <tr><td>Não muda</td><td>Etapas, contadores, arrastar entre colunas, progresso, tags, link gerado, permissões.</td></tr>
+  <tr><td>Fica de fora</td><td>O nome do projeto vem do banco com travessão ("Dra. Carmen Pitol — Landing Page"). É dado, não layout: renomear exigiria mexer nos registros.</td></tr>
+</table>
+
+</body></html>
