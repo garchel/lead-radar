@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: inherit; color: var(--foreground); margin: 0; font-size: 14px; line-height: 1.5; }
+  .linha { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+  .col { flex: 1 1 300px; min-width: 280px; }
+  .titulo-col { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--muted-foreground); margin: 0 0 8px; }
+  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 12px 16px; box-shadow: 0 1px 2px rgba(16,16,16,.05); }
+  .kpi-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
+  .kpi-topo .rot { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kpi-ico { color: #94a3b8; flex: none; line-height: 0; }
+  .kpi-val { display: block; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .kpi-hint { display: block; font-size: 11px; color: #475569; margin-top: 2px; }
+  .sub-pagina { font-size: 14px; color: #475569; margin: 0; }
+  .anot { font-size: 12px; color: var(--muted-foreground); margin: 7px 0 0; }
+  .marca { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--border); color: var(--muted-foreground); vertical-align: 1px; margin-right: 5px; }
+  .certo { border-color: #86efac; color: #15803d; background: rgba(134,239,172,.12); }
+  .errado { border-color: #fca5a5; color: #b91c1c; background: rgba(252,165,165,.12); }
+  .sep { height: 1px; background: var(--border); margin: 18px 0 12px; }
+  .bloco { margin-bottom: 16px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td { padding: 4px 10px 4px 0; vertical-align: top; color: var(--muted-foreground); }
+  td:first-child { color: var(--foreground); font-weight: 600; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<div class="linha">
+  <div class="col">
+    <p class="titulo-col">Hoje, no app</p>
+
+    <div class="bloco">
+      <div class="kpi">
+        <div class="kpi-topo">
+          <span class="rot">Prontos p/ D0</span>
+          <span class="kpi-ico">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
+          </span>
+        </div>
+        <span class="kpi-val">128</span>
+        <span class="kpi-hint">Leads com telefone, sem site e nunca abordados</span>
+      </div>
+      <p class="anot"><span class="marca errado">U11</span>ícone que repete o que o rótulo já diz, no mesmo nível de atenção do número.</p>
+      <p class="anot"><span class="marca errado">U1 + U5</span>caixa alta e <b>"D0"</b>: nome de etapa interna na tela de quem vende.</p>
+    </div>
+
+    <div class="bloco">
+      <p class="sub-pagina">O que aconteceu em 19/11 — da captura ao envio.</p>
+      <p class="anot"><span class="marca errado">unslop 13</span>travessão no subtítulo da página.</p>
+    </div>
+  </div>
+
+  <div class="col">
+    <p class="titulo-col">Sem os tells (aplicado)</p>
+
+    <div class="bloco">
+      <div class="kpi">
+        <div class="kpi-topo">
+          <span class="rot" style="text-transform:none;letter-spacing:normal;font-size:12px;font-weight:600">Prontos p/ contato</span>
+        </div>
+        <span class="kpi-val">128</span>
+        <span class="kpi-hint">Com telefone, sem site e nunca abordados</span>
+      </div>
+      <p class="anot"><span class="marca certo">ok</span>sem ícone, o olho vai direto no número.</p>
+      <p class="anot"><span class="marca certo">ok</span>"D0" virou "contato": mesmo significado, sem jargão. Ficou curto para caber no card.</p>
+    </div>
+
+    <div class="bloco">
+      <p class="sub-pagina">O que aconteceu hoje, da captura ao envio.</p>
+      <p class="anot"><span class="marca certo">ok</span>mesma frase, sem o travessão.</p>
+    </div>
+  </div>
+</div>
+
+<div class="sep"></div>
+
+<table>
+  <tr><td>Muda</td><td>Só texto e decoração. Cor, layout, tamanho, dado e lógica ficam iguais.</td></tr>
+  <tr><td>Ganha</td><td>O número passa a ser a primeira coisa que o olho encontra.</td></tr>
+  <tr><td>Perde</td><td>A pista visual do ícone. Se você gostar dela, dá para manter o ícone e tirar só a caixa alta do rótulo.</td></tr>
+</table>
+
+</body>
+</html>

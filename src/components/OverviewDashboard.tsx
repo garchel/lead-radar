@@ -131,8 +131,8 @@ const KpiCard: React.FC<{
         onClick ? 'hover:border-indigo-300 hover:shadow-md cursor-pointer' : 'cursor-default'
       }`}
     >
-      <span className="flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-        <span className="truncate">{label}</span>
+      <span className="flex items-center justify-between gap-2">
+        <span className="truncate text-[11.5px] font-semibold text-slate-600">{label}</span>
         <span className="text-slate-400 shrink-0">{icon}</span>
       </span>
       <span className={`block text-2xl font-bold tabular-nums mt-1 ${tones[tone]}`}>{value}</span>
@@ -269,8 +269,8 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
           </h1>
           <p className="text-sm text-slate-600 mt-1">
             {isToday
-              ? `O que aconteceu em ${daily?.dayLabel || 'hoje'} — da captura ao envio.`
-              : 'Como estão a coleta, o contato e a entrega — sem precisar abrir cada página.'}
+              ? `O que aconteceu em ${daily?.dayLabel || 'hoje'}, da captura ao envio.`
+              : 'Como estão a coleta, o contato e a entrega, sem precisar abrir cada página.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -316,12 +316,12 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
             <KpiCard
               label="Leads hoje"
               value={String(num(dayLeads.created))}
-              hint={`${num(dayLeads.readyForD0)} prontos p/ D0`}
+              hint={`${num(dayLeads.readyForD0)} prontos para o 1º contato`}
               icon={<Database className="w-4 h-4" />}
               onClick={() => onNavigate('database')}
             />
             <KpiCard
-              label="Prontos p/ D0"
+              label="Prontos p/ contato"
               value={String(num(dayLeads.readyForD0))}
               hint={`${num(dayLeads.withPhone)} com telefone`}
               icon={<Target className="w-4 h-4" />}
@@ -368,7 +368,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
               onClick={() => onNavigate('database')}
             />
             <KpiCard
-              label="Prontos p/ D0"
+              label="Prontos p/ contato"
               value={String(num(totals.prontosParaD0))}
               hint={`${num(totals.semSite)} sem site · ${num(totals.comFone)} com telefone`}
               icon={<Target className="w-4 h-4" />}
@@ -417,7 +417,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ onNavigate
             <section className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
               <h2 className="text-sm font-bold text-slate-900">Movimentação do dia</h2>
               <p className="text-[11px] text-slate-600 mt-0.5">
-                Só o que mudou desde a meia-noite — o retrato acumulado fica em <strong>Tudo</strong>.
+                Só o que mudou desde a meia-noite. O retrato acumulado fica em <strong>Tudo</strong>.
               </p>
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
                 <div className="divide-y divide-slate-100">
