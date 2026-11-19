@@ -195,12 +195,12 @@ export function BotsPage() {
       )}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Kpi titulo="Receita recorrente" valor={mrrTexto} detalhe={`${overview?.mrr.activeCount || 0} assinatura(s)`} destaque />
-        <Kpi titulo="Clientes" valor={String(overview?.clients.total || 0)} detalhe={`${overview?.clients.active || 0} ativos`} />
+        <Kpi titulo="Receita recorrente" valor={mrrTexto} detalhe={`${overview?.mrr.activeCount || 0} ${(overview?.mrr.activeCount || 0) === 1 ? 'assinatura' : 'assinaturas'}`} destaque />
+        <Kpi titulo="Clientes" valor={String(overview?.clients.total || 0)} detalhe={`${overview?.clients.active || 0} ${(overview?.clients.active || 0) === 1 ? 'ativo' : 'ativos'}`} />
         <Kpi
           titulo="Em atraso"
           valor={moeda(overview?.mrr.overdueAmount || 0)}
-          detalhe={`${overview?.mrr.overdueCount || 0} vencida(s)`}
+          detalhe={`${overview?.mrr.overdueCount || 0} ${(overview?.mrr.overdueCount || 0) === 1 ? 'vencida' : 'vencidas'}`}
         />
         <Kpi
           titulo="Perguntas abertas"
@@ -213,11 +213,11 @@ export function BotsPage() {
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-            <Gauge className="h-4 w-4 text-indigo-600" /> Consumo de IA em {uso?.periodo || "—"}
+            <Gauge className="h-4 w-4 text-indigo-600" /> Consumo de IA em {periodoLegivel(uso?.periodo)}
           </h2>
           <span className="text-xs text-slate-500">
             {uso
-              ? `${uso.total.chamadas} chamadas · ${(uso.total.tokensIn + uso.total.tokensOut).toLocaleString("pt-BR")} tokens · US$ ${uso.total.usd.toFixed(4)} (≈ ${custo(uso.total.brl)}) · câmbio ${uso.cambioUsdBrl.toFixed(2)}`
+              ? `${uso.total.chamadas} chamadas · ${(uso.total.tokensIn + uso.total.tokensOut).toLocaleString("pt-BR")} tokens · US$ ${uso.total.usd.toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} (≈ ${custo(uso.total.brl)}) · câmbio ${uso.cambioUsdBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
               : "sem dados"}
           </span>
         </div>
@@ -245,7 +245,9 @@ export function BotsPage() {
                     </td>
                     <td className="py-1.5 pr-3 text-right tabular-nums text-slate-700">
                       {linha.usd > 0 ? `≈ ${custo(linha.brl)}` : "—"}
-                      <span className="ml-1 text-[10px] text-slate-400">US$ {linha.usd.toFixed(4)}</span>
+                      <span className="whitespace-nowrap text-[10px] text-slate-400">
+                        {'\u00A0'}(US$ {linha.usd.toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 })})
+                      </span>
                     </td>
                     <td className="py-1.5 pr-3 text-right tabular-nums text-slate-600">{moeda(linha.monthlyFee)}</td>
                     <td
@@ -260,7 +262,8 @@ export function BotsPage() {
               </tbody>
             </table>
             <p className="mt-2 text-[11px] text-slate-500">
-              Token é medido; o valor em reais é estimativa (preço por milhão + câmbio configurados no servidor).
+              Os tokens são medidos de verdade. O valor em reais é estimativa, calculada com o preço
+              por milhão de tokens e o câmbio do dia.
             </p>
           </div>
         ) : (
@@ -303,10 +306,19 @@ export function BotsPage() {
   );
 }
 
+/** O servidor guarda o período como 2026-11; a tela mostra mês por extenso. */
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function periodoLegivel(periodo?: string | null): string {
+  if (!periodo) return 'sem dados';
+  const [ano, mes] = periodo.split('-');
+  const indice = Number(mes) - 1;
+  return MESES[indice] ? `${MESES[indice]} de ${ano}` : periodo;
+}
+
 function Kpi({ titulo, valor, detalhe, destaque }: { titulo: string; valor: string; detalhe?: string; destaque?: boolean }) {
   return (
     <div className={`rounded-xl border bg-white px-4 py-3 ${destaque ? "border-indigo-200" : "border-slate-200"}`}>
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{titulo}</div>
+      <div className="text-[11.5px] font-semibold text-slate-600">{titulo}</div>
       <div className={`text-xl font-bold ${destaque ? "text-indigo-700" : "text-slate-900"}`}>{valor}</div>
       {detalhe && <div className="text-xs text-slate-500">{detalhe}</div>}
     </div>
@@ -427,7 +439,7 @@ function NovoClienteBot({
 function Campo({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+      <span className="mb-1 block text-[11.5px] font-semibold text-slate-600">{label}</span>
       {children}
     </label>
   );
@@ -500,18 +512,18 @@ function ClienteCard({
           <span className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-slate-900">{client.name}</span>
             {client.paused && (
-              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-800">
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10.5px] font-semibold text-amber-800">
                 humano atendendo
               </span>
             )}
             {client.pendingQuestion && (
-              <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-rose-700">
+              <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[10.5px] font-semibold text-rose-700">
                 1 pergunta aberta
               </span>
             )}
           </span>
           <span className="mt-0.5 block text-xs text-slate-500">
-            {client.instance || "sem número conectado"} · {client.knowledge?.chunks || 0} trecho(s) na base ·{" "}
+            {client.instance || "sem número conectado"} · {client.knowledge?.chunks || 0} {(client.knowledge?.chunks || 0) === 1 ? 'trecho' : 'trechos'} na base ·{" "}
             {moeda(client.monthlyPrice)}/mês
             {sub ? ` · vence ${dataBR(sub.nextDueAt)}` : ""}
           </span>
@@ -560,7 +572,8 @@ function ClienteCard({
             <div className="mb-2 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-slate-800">Base de conhecimento</h3>
               <span className="text-xs text-slate-500">
-                {detalhe?.knowledge?.docs || 0} documento(s) · {detalhe?.knowledge?.chunks || 0} trecho(s)
+                {detalhe?.knowledge?.docs || 0} {(detalhe?.knowledge?.docs || 0) === 1 ? 'documento' : 'documentos'} ·{' '}
+                {detalhe?.knowledge?.chunks || 0} {(detalhe?.knowledge?.chunks || 0) === 1 ? 'trecho' : 'trechos'}
               </span>
             </div>
             <textarea
@@ -600,7 +613,7 @@ function ClienteCard({
                 {docs.map((d: any) => (
                   <li key={d.id} className="flex items-center gap-2 px-3 py-2 text-xs">
                     <span className="min-w-0 flex-1 truncate text-slate-700">{d.title || "Documento sem título"}</span>
-                    <span className="shrink-0 text-slate-500">{d.chunks} trecho(s)</span>
+                    <span className="shrink-0 text-slate-500">{d.chunks} {d.chunks === 1 ? 'trecho' : 'trechos'}</span>
                     <button
                       onClick={() => acao(`del-${d.id}`, () => api(`/api/bot/clients/${client.id}/knowledge/${d.id}`, { method: "DELETE" }))}
                       className="shrink-0 rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
@@ -670,7 +683,7 @@ function ClienteCard({
                 {teste.sources?.length > 0 && (
                   <details className="mt-1">
                     <summary className="cursor-pointer text-[11px] text-slate-500">
-                      {teste.sources.length} trecho(s) usados
+                      {teste.sources.length} {teste.sources.length === 1 ? 'trecho usado' : 'trechos usados'}
                     </summary>
                     <ul className="mt-1 space-y-1">
                       {teste.sources.map((s, i) => (
