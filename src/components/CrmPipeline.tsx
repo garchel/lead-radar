@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { BusinessLead, InteractionOutcome } from '../types';
-import { FolderKanban, Download, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { FolderKanban, Download, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Pencil } from 'lucide-react';
 import { computePipelineValue } from '../utils/pipelineValue';
 import { StageOverview } from './StageOverview';
 
@@ -164,6 +164,7 @@ const SortableLeadCard: React.FC<SortableLeadCardProps> = ({
         <div className="flex items-center gap-1 shrink-0">
           <span
             title="Score de oportunidade"
+            aria-label={`Score de oportunidade ${typeof lead.opportunityScore === 'number' ? lead.opportunityScore : 'não calculado'}`}
             className={`px-2 py-0.5 rounded-md border text-[11px] font-bold tabular-nums ${scoreBadge(lead.opportunityScore)}`}
           >
             {typeof lead.opportunityScore === 'number' ? lead.opportunityScore : '—'}
@@ -241,7 +242,6 @@ const SortableLeadCard: React.FC<SortableLeadCardProps> = ({
       )}
 
       <div className="pt-2 border-t border-slate-100 space-y-1">
-        <div className="text-[11px] text-slate-600 font-semibold">Anotações</div>
 
         {editingNotesId === lead.id ? (
           <div className="space-y-2">
@@ -270,10 +270,25 @@ const SortableLeadCard: React.FC<SortableLeadCardProps> = ({
               </button>
             </div>
           </div>
-        ) : (
-          <p className="text-slate-600 bg-slate-50 p-2 rounded border border-slate-200/60 italic text-[11px] line-clamp-2">
-            {lead.notes || 'Nenhuma nota adicionada.'}
+        ) : lead.notes ? (
+          <p className="text-slate-600 bg-slate-50 p-2 rounded border border-slate-200/60 text-[11px] line-clamp-2">
+            {lead.notes}
           </p>
+        ) : (
+          // Sem nota, o card não abre uma caixa dizendo que está vazio: mostra o
+          // convite para escrever, que é a única ação possível aqui.
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingNotesId(lead.id);
+              setTempNotes('');
+            }}
+            className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-indigo-700"
+          >
+            <Pencil className="w-3 h-3" aria-hidden="true" />
+            Adicionar nota
+          </button>
         )}
       </div>
 

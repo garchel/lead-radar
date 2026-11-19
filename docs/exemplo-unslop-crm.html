@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: inherit; color: var(--foreground); margin: 0; font-size: 14px; line-height: 1.5; }
+  .linha { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+  .col { flex: 1 1 320px; min-width: 300px; }
+  .titulo-col { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--muted-foreground); margin: 0 0 8px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; box-shadow: 0 1px 2px rgba(16,16,16,.05); }
+  .topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .nome { font-size: 13px; font-weight: 700; color: var(--foreground); }
+  .local { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .score { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: #4f46e5; color: #fff; border: 1px solid #4f46e5; font-variant-numeric: tabular-nums; }
+  .projeto { font-size: 11px; color: #64748b; margin-top: 8px; }
+  .projeto b { color: var(--foreground); }
+  .rot { font-size: 11px; font-weight: 600; color: #475569; margin-top: 8px; }
+  .vazio { font-size: 11px; font-style: italic; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 8px; margin-top: 3px; }
+  .add { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: #64748b; margin-top: 6px; }
+  .add svg { width: 11px; height: 11px; }
+  .sep-linha { border-top: 1px solid #f1f5f9; margin: 8px 0 0; padding-top: 8px; }
+  .anot { font-size: 12px; color: var(--muted-foreground); margin: 7px 0 0; }
+  .marca { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--border); color: var(--muted-foreground); vertical-align: 1px; margin-right: 5px; }
+  .errado { border-color: #fca5a5; color: #b91c1c; background: rgba(252,165,165,.12); }
+  .certo { border-color: #86efac; color: #15803d; background: rgba(134,239,172,.12); }
+  .eb-up { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
+  .eb-down { font-size: 12px; font-weight: 600; color: #475569; }
+  .contador { font-size: 12px; color: #475569; }
+  .sep { height: 1px; background: var(--border); margin: 18px 0 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td { padding: 4px 10px 4px 0; vertical-align: top; color: var(--muted-foreground); }
+  td:first-child { color: var(--foreground); font-weight: 600; white-space: nowrap; }
+  .bloco { margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<div class="linha">
+  <div class="col">
+    <p class="titulo-col">Hoje, no Dashboard de Leads</p>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="topo">
+          <div>
+            <div class="nome">Ótica Jade</div>
+            <div class="local">Ótica • Pato Branco</div>
+          </div>
+          <span class="score">82</span>
+        </div>
+        <div class="projeto">Projeto: <b>R$ 1.800 – R$ 3.500</b></div>
+        <div class="sep-linha">
+          <div class="rot">Anotações</div>
+          <p class="vazio">Nenhuma nota adicionada.</p>
+        </div>
+      </div>
+      <p class="anot"><span class="marca errado">U4</span>caixa com borda e itálico só para dizer que está vazio. Ocupa 3 linhas do card em todos os 1.667 leads.</p>
+    </div>
+
+    <div class="bloco">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <span class="eb-up">Visão rápida por etapa</span>
+          <span class="contador"><b>1673</b> leads em 6 etapas</span>
+        </div>
+      </div>
+      <p class="anot"><span class="marca errado">U1</span>rótulo em caixa alta com tracking, do lado de uma frase que já diz o mesmo.</p>
+    </div>
+  </div>
+
+  <div class="col">
+    <p class="titulo-col">Depois</p>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="topo">
+          <div>
+            <div class="nome">Ótica Jade</div>
+            <div class="local">Ótica • Pato Branco</div>
+          </div>
+          <span class="score" title="Score de oportunidade">82</span>
+        </div>
+        <div class="projeto">Projeto: <b>R$ 1.800 – R$ 3.500</b></div>
+        <div class="sep-linha">
+          <span class="add">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+            Adicionar nota
+          </span>
+        </div>
+      </div>
+      <p class="anot"><span class="marca certo">ok</span>o card fica mais curto e o espaço vazio virou a única ação possível ali.</p>
+    </div>
+
+    <div class="bloco">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <span class="eb-down">Visão rápida por etapa</span>
+          <span class="contador"><b>1673</b> leads em 6 etapas</span>
+        </div>
+      </div>
+      <p class="anot"><span class="marca certo">ok</span>mesma frase, sem caixa alta: lê como texto, não como etiqueta.</p>
+    </div>
+  </div>
+</div>
+
+<div class="sep"></div>
+
+<table>
+  <tr><td>Muda</td><td>Estado vazio das anotações, tipografia de dois rótulos e um <code>aria-label</code> no badge de score.</td></tr>
+  <tr><td>Não muda</td><td>Score, cores do badge, valor do projeto, edição de nota, filtros, arrastar entre etapas.</td></tr>
+  <tr><td>Ganha</td><td>Cada card fica ~28px mais curto: com 16 cards na tela é quase meia página de rolagem a menos.</td></tr>
+</table>
+
+</body>
+</html>

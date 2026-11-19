@@ -31,9 +31,7 @@ export const StageOverview: React.FC<StageOverviewProps> = ({ items, onSelect, u
   return (
     <section className="bg-white border border-slate-200 rounded-2xl px-3 py-2.5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-          Visão rápida por etapa
-        </span>
+        <span className="text-xs font-semibold text-slate-600">Visão rápida por etapa</span>
         <span className="text-xs text-slate-600">
           <strong className="tabular-nums text-slate-900">{total}</strong> {unit} em {items.length} etapas
         </span>
