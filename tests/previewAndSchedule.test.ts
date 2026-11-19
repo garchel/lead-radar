@@ -72,7 +72,7 @@ describe("prévia da landing page", () => {
       profiles: {},
       palette: [{ hex: "#E5D399" }],
       tone: ["sofisticado"],
-      imagery: [{ url: "https://exemplo.com/foto.jpg" }],
+      imagery: [{ url: "https://exemplo.com/foto.jpg", source: "cliente" }],
       summary: "",
       confidence: 0.9,
     } as any;

@@ -18,6 +18,8 @@ export interface ClassifiedImage {
   url: string;
   description: string;
   role: ImageRole;
+  /** Origem: só "cliente" pode ser publicada na prévia. */
+  source?: "cliente" | "web";
 }
 
 const REGRAS: Array<{ role: ImageRole; re: RegExp }> = [
@@ -56,7 +58,12 @@ export function classifiedImagery(snapshot?: BrandSnapshot): ClassifiedImage[] {
     const chave = url.split("?")[0];
     if (!urlUsavel(url) || vistos.has(chave)) continue;
     vistos.add(chave);
-    out.push({ url, description: String(img.description || ""), role: classifyImage(url, String(img.description || "")) });
+    out.push({
+      url,
+      description: String(img.description || ""),
+      role: classifyImage(url, String(img.description || "")),
+      source: img.source,
+    });
   }
   return out;
 }
@@ -70,8 +77,22 @@ export interface PreviewImages {
   facade: ClassifiedImage | null;
 }
 
+/**
+ * Só imagem enviada pelo cliente entra na prévia.
+ *
+ * Foto raspada da internet pode ser de outro negócio, de outra pessoa ou estar
+ * simplesmente errada — e uma foto errada destrói a credibilidade da página
+ * inteira. O que a busca encontrou serve para a Vértice entender a marca, nunca
+ * para publicar no link que o lead abre.
+ */
+function doCliente(snapshot?: BrandSnapshot) {
+  return classifiedImagery(snapshot).filter(
+    (img) => img.source === "cliente" || /enviada pelo cliente/i.test(String(img.description || ""))
+  );
+}
+
 export function pickPreviewImages(snapshot?: BrandSnapshot): PreviewImages {
-  const todas = classifiedImagery(snapshot);
+  const todas = doCliente(snapshot);
   const heroOrdem: ImageRole[] = ["retrato", "interior", "produto", "generico"];
   const hero = todas.find((i) => heroOrdem.includes(i.role)) || null;
   const facade = todas.find((i) => i.role === "fachada") || null;

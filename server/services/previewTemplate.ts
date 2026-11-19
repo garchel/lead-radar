@@ -343,6 +343,36 @@ const DESCRICOES: Array<{ re: RegExp; texto: string }> = [
   { re: /acompanhamento|monitor/i, texto: "Retorno combinado para revisar o que está funcionando." },
 ];
 
+/**
+ * O que a versão final tem e a prévia não mostra.
+ *
+ * É o bloco que resolve o dilema da prévia: em vez de nove seções pela metade,
+ * quatro caixas de estrutura com o nome do que vem. Mostra tamanho do projeto
+ * sem inventar depoimento, foto ou resultado de cliente.
+ */
+const PROXIMOS = [
+  {
+    titulo: "Antes e depois",
+    texto: "com as suas fotos",
+    icone: '<path d="M4 5h16v14H4z"/><path d="m8 13 2.5-3 2 2.5L15 10l3 4"/><circle cx="9" cy="8.5" r="1.2"/>',
+  },
+  {
+    titulo: "Depoimentos",
+    texto: "dos seus clientes",
+    icone: '<path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/>',
+  },
+  {
+    titulo: "Equipe e estrutura",
+    texto: "quem atende você",
+    icone: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 11a3 3 0 0 0 0-6"/><path d="M18 20a5 5 0 0 0-3-4.6"/>',
+  },
+  {
+    titulo: "Mapa e horários",
+    texto: "como chegar",
+    icone: '<path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/>',
+  },
+];
+
 const DESCRICOES_GENERICAS = [
   "Fale com a gente para entender como funciona no seu caso.",
   "Atendimento combinado na conversa, com o que faz sentido para você.",
@@ -454,20 +484,18 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   const galeria = imagens.gallery;
   const fachada = imagens.facade;
 
-  // Logo de verdade (a IA descreveu como logo e confiou). Foto pequena no topo,
-  // ainda que "confiante", é o que faz a página parecer amadora.
-  const logoBruto = String(lead.brandSnapshot?.logo?.url || "");
-  const logoConfianca = Number(lead.brandSnapshot?.logo?.confidence ?? 0);
-  const logoPareceLogo = /logo|logotipo|logomarca|monograma/i.test(String(lead.brandSnapshot?.logo?.description || ""));
-  const logo = /^https?:\/\//i.test(logoBruto) && logoConfianca >= 0.55 && logoPareceLogo ? logoBruto : null;
+  // Nada de imagem vinda da internet na prévia: logo errado (ou de outro negócio)
+  // é pior que logo nenhum. O monograma é gerado na cor da marca e nunca mente.
+  const logo: string | null = null;
   const marcaSvg = monogramSvg(name, pal, 36);
 
   const servicosReais = semDuplicata((lead.clientProfile?.services || []).filter(Boolean)).slice(0, 6);
-  // card vazio de texto e seção com 2 itens parecem placeholder: completa com o
-  // repertório do nicho e avisa que a lista é ajustada com o cliente.
-  const completar = servicosReais.length < 4;
+  // Grade sempre cheia: 4 ou 6 cartões. Cinco numa grade de três deixa um buraco
+  // no canto, e buraco lê como descuido — não como "tem mais por vir".
+  const completar = servicosReais.length < 4 || servicosReais.length === 5;
+  const alvo = servicosReais.length >= 5 ? 6 : 4;
   const servicos = ordenaServicos(
-    completar ? semDuplicata([...servicosReais, ...nicho.services]).slice(0, 6) : servicosReais
+    completar ? semDuplicata([...servicosReais, ...nicho.services]).slice(0, alvo) : servicosReais
   );
   const servicosSaoExemplo = completar;
   const diferenciais = nicho.diferenciais;
@@ -483,6 +511,8 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapa)}`;
 
   const heroFoto = heroImg?.url || "";
+  // Cores da marca em faixa: dá a sensação de identidade aplicada mesmo sem foto.
+  const paleta = [pal.accent, pal.accentDeep, pal.ink, pal.accentSoft];
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -596,7 +626,7 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   .servico:hover{border-color:var(--accent-line);box-shadow:var(--shadow);transform:translateY(-2px)}
   .servico .n{font-size:12px;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700;letter-spacing:.06em}
   .servico h3{margin:10px 0 0;font-family:var(--font-display);font-weight:600}
-  .servico p{font-size:14px;color:var(--mute);margin:7px 0 0}
+  .servico p{font-size:14px;color:var(--body);margin:7px 0 0}
 
   .galeria{display:grid;gap:12px;grid-template-columns:1fr 1fr}
   .galeria figure{margin:0;border-radius:var(--r-md);overflow:hidden;background:var(--accent-soft);aspect-ratio:1}
@@ -653,6 +683,9 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   .hero .proof,.hero .place{animation:subir .7s cubic-bezier(.22,.7,.25,1) .2s both}
   .hero .actions{animation:subir .7s cubic-bezier(.22,.7,.25,1) .26s both}
   .hero .shot{animation:aparecer .9s cubic-bezier(.22,.7,.25,1) .12s both}
+  .cover-brand .paleta{display:flex;gap:6px;margin-top:14px;justify-content:center}
+  .cover-brand .paleta i{width:26px;height:6px;border-radius:99px;display:block}
+  .cover-brand em{font-style:normal}
 
   /* Reveal por scroll foi testado e DESCARTADO: com animation-timeline view()
      a seção ficava invisível justamente quando entrava na tela (o progresso do
@@ -698,6 +731,31 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   @media(min-width:1000px){
     .servicos{grid-template-columns:repeat(3,1fr)}
   }
+
+  /* hoje x depois: contraste honesto, sem inventar print do site do cliente */
+  .contraste{padding:0 0 clamp(26px,4vw,40px)}
+  .contraste-in{display:grid;gap:10px;grid-template-columns:1fr}
+  .contraste .lado{border:1px solid var(--line);border-radius:var(--r-md);padding:15px 17px;background:#fff}
+  .contraste .lado.hoje{background:#fbfaf8;border-style:dashed}
+  .contraste .tag{display:block;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--mute);margin-bottom:5px}
+  .contraste b{display:block;font-size:15.5px;color:var(--ink);margin-bottom:3px;letter-spacing:-.01em}
+  .contraste .txt{font-size:13.5px;color:var(--mute)}
+  .contraste .seta{display:none}
+  @media(min-width:860px){
+    .contraste-in{grid-template-columns:1fr auto 1fr;align-items:center;gap:14px}
+    .contraste .seta{display:block;color:var(--accent-deep);font-size:19px;font-weight:700;padding:0 2px}
+  }
+
+  /* o que vem depois: estrutura desenhada, conteúdo nenhum */
+  .proximos{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+  @media(min-width:860px){.proximos{grid-template-columns:repeat(4,1fr)}}
+  .proximo{margin:0}
+  /* ícone, não barra: barra cinza lê como "carregando", ícone lê como "vai existir" */
+  .wire{position:relative;aspect-ratio:4/3;border:1px dashed #cfcdc7;border-radius:var(--r-md);background:var(--wash);display:grid;place-items:center}
+  .wire .ico-wire{width:36px;height:36px;color:var(--accent-deep);opacity:.5}
+  .wire .selo{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);font-size:9px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:#8b8e93;background:#fff;border:1px solid #e3e1db;border-radius:99px;padding:2px 8px}
+  .proximo figcaption{margin-top:7px;font-size:12.5px;color:var(--body);text-align:center;line-height:1.35}
+  .proximo figcaption b{display:block;color:var(--ink);font-size:13px}
 </style>
 </head>
 <body>
@@ -740,10 +798,16 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
           heroFoto
             ? `<img src="${esc(heroFoto)}" alt="${esc(heroImg?.description || name)}" />`
             : `<span class="cover-brand">
-            ${monogramSvg(name, pal, 88)}
+            ${monogramSvg(name, pal, 96)}
             <b>${esc(name)}</b>
             <span>${esc(categoria)}${lead.city ? ` · ${esc(lead.city)}` : ""}</span>
-            <em>Atendimento com hora marcada, direto no WhatsApp.</em>
+            <em>${esc(nicho.headline)}</em>
+            <span class="paleta" aria-hidden="true">
+              ${paleta
+                .slice(0, 4)
+                .map((cor) => `<i style="background:${esc(cor)}"></i>`)
+                .join("")}
+            </span>
           </span>`
         }
         <div class="float">
@@ -752,6 +816,26 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
             <b>Respondemos no WhatsApp</b>
             <span>${horario ? esc(horario) : "Atendimento com hora marcada"}</span>
           </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="contraste">
+    <div class="wrap">
+      <div class="contraste-in">
+        <div class="lado hoje">
+          <span class="tag">Hoje</span>
+          <b>${lead.websiteStatus === "has_website" ? "O site atual" : "Só o perfil no Google"}</b>
+          <span class="txt">${lead.websiteStatus === "has_website"
+            ? "quem chega nele não acha WhatsApp, horário e serviços na mesma tela"
+            : "quem procura encontra o telefone e não tem para onde ir"}</span>
+        </div>
+        <div class="seta" aria-hidden="true">→</div>
+        <div class="lado depois">
+          <span class="tag">Depois</span>
+          <b>Uma página com serviços, horário e WhatsApp</b>
+          <span class="txt">o cliente decide sem precisar ligar</span>
         </div>
       </div>
     </div>
@@ -795,6 +879,27 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
     </div>
   </section>
 
+  <section class="blk" id="depois" style="padding-top:0">
+    <div class="wrap">
+      <div class="blk-head">
+        <p class="eyebrow">O que vem depois</p>
+        <h2>O resto a gente monta com você</h2>
+        <p>Estas partes entram na versão final, com as suas fotos e o seu texto.</p>
+      </div>
+      <div class="proximos">
+        ${PROXIMOS.map(
+          (item) => `<figure class="proximo">
+          <div class="wire" aria-hidden="true">
+            <svg class="ico-wire" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${item.icone}</svg>
+            <span class="selo">em breve</span>
+          </div>
+          <figcaption><b>${esc(item.titulo)}</b>${esc(item.texto)}</figcaption>
+        </figure>`
+        ).join("")}
+      </div>
+    </div>
+  </section>
+
   ${
     galeria.length
       ? `<section class="blk" style="padding-top:0">
@@ -827,7 +932,7 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
     <div class="wrap info">
       <div class="card-info">
         <h3>Onde estamos</h3>
-        <p>${esc(endereco || [lead.neighborhood, lead.city, lead.state].filter(Boolean).join(", ") || "Endereço a confirmar")}</p>
+        <p>${esc(endereco || [lead.neighborhood, lead.city, lead.state].filter(Boolean).join(", ") || "Atendimento na cidade e região")}</p>
         ${fachada ? `<figure class="fachada"><img src="${esc(fachada.url)}" alt="Fachada de ${esc(name)}" loading="lazy" /></figure>` : ""}
         <div style="margin-top:18px">
           <div class="linha">
@@ -841,8 +946,8 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
         </div>
       </div>
       <div class="card-info">
-        <h3>Horário</h3>
-        <p>${horario ? esc(horario) : "Combine o melhor horário pelo WhatsApp."}</p>
+        <h3>${horario ? "Horário" : "Fale com a gente"}</h3>
+        <p>${horario ? esc(horario) : "Manda mensagem no WhatsApp que a gente responde na conversa."}</p>
         <div style="margin-top:18px">${cta("Falar no WhatsApp")}</div>
       </div>
     </div>

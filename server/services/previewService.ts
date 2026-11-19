@@ -25,7 +25,6 @@ import { getDb } from "../store/schema";
 import { renderPreviewHtml, previewPalette, readableOn } from "./previewTemplate";
 import { wordmarkSvg } from "./logoSvg";
 import { cacheSnapshotImages } from "./imageCacheService";
-import { applyPlacePhoto } from "./placePhotoService";
 
 export interface PreviewResult {
   leadId: string;
@@ -235,11 +234,9 @@ export function generateLeadPreview(lead: StoredLead, now = new Date()): Preview
  * foto de fachada pode sair do ar antes do cliente abrir o link.
  */
 export async function generateLeadPreviewCached(lead: StoredLead, now = new Date()): Promise<PreviewResult> {
-  // Sem imagem utilizável (caso clássico: só Instagram, CDN bloqueado), usa a foto
-  // que a própria busca do Google Maps já trouxe — sem gastar cota nova.
-  const comFoto = applyPlacePhoto(lead).lead;
-  const snapshot = await cacheSnapshotImages(comFoto.brandSnapshot);
-  return generateLeadPreview(snapshot ? { ...comFoto, brandSnapshot: snapshot } : comFoto, now);
+  // Só imagem do cliente vira arquivo local; o resto é ignorado pelo template.
+  const snapshot = await cacheSnapshotImages(lead.brandSnapshot);
+  return generateLeadPreview(snapshot ? { ...lead, brandSnapshot: snapshot } : lead, now);
 }
 
 /**

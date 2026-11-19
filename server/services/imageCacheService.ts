@@ -88,6 +88,10 @@ export async function cacheSnapshotImages(snapshot?: BrandSnapshot): Promise<Bra
   const imagery: BrandSnapshot["imagery"] = [];
   for (const img of snapshot.imagery || []) {
     const url = String(img.url || "");
+    // Imagem raspada da internet não é baixada nem publicada: pode ser de outro
+    // negócio. Só a foto que o cliente mandou entra na prévia.
+    const doCliente = img.source === "cliente" || /enviada pelo cliente/i.test(String(img.description || ""));
+    if (!doCliente) continue;
     if (!/^https?:\/\//i.test(url)) {
       imagery.push(img);
       continue;

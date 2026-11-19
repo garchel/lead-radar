@@ -14,7 +14,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { getDb } from "../store/schema";
 import { generateLeadPreview, generateLeadPreviewCached, previewsDir } from "./previewService";
-import { applyPlacePhoto } from "./placePhotoService";
 import { researchLeadBrand } from "./brandResearchService";
 import { getLeadById, getProjectsByLead, getSetting, setLeadBrandSnapshot, setSetting, upsertProject } from "../store/db";
 import { normalizeText } from "./leadIdentity";
@@ -293,10 +292,6 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
   let assets: SimulationAssets = { ok: false, images: 0, colors: 0, confidence: 0, previewUrl: null };
   try {
     const research = await researchLeadBrand(SIMULATION_LEAD_ID, { force: true, maxImages: 6, maxSearches: 2 });
-    // Sem imagem utilizável (só Instagram, CDN bloqueado), aproveita a foto que a
-    // busca do Google Maps já trouxe. Persiste: as próximas gerações usam a mesma.
-    const comFoto = applyPlacePhoto(getLeadById(SIMULATION_LEAD_ID)!);
-    if (comFoto.url && comFoto.lead.brandSnapshot) setLeadBrandSnapshot(SIMULATION_LEAD_ID, comFoto.lead.brandSnapshot);
     const atualizado = getLeadById(SIMULATION_LEAD_ID)!;
     const preview = await generateLeadPreviewCached(atualizado);
     assets = {

@@ -106,8 +106,13 @@ export interface BrandSnapshot {
   tone: string[];
   typography?: { display?: string; body?: string; notes?: string };
   logo?: BrandLogo;
-  /** Referências visuais (URLs públicas) com descrição do que mostram. */
-  imagery: Array<{ url: string; description?: string }>;
+  /**
+   * Referências visuais com descrição do que mostram.
+   *
+   * `source` separa o que o cliente mandou do que foi raspado da internet: a
+   * prévia só publica imagem do cliente (foto de busca pode ser de outro negócio).
+   */
+  imagery: Array<{ url: string; description?: string; source?: "cliente" | "web" }>;
   /** Resumo em 1 parágrafo para entrar no prompt de design. */
   summary: string;
   /** 0–1: confiança geral do snapshot. */

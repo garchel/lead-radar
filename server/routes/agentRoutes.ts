@@ -364,7 +364,10 @@ export function registerAgentRoutes(app: Express) {
         summary: "",
         confidence: 0.5,
       };
-      const imagery = [{ url, description: "Foto enviada pelo cliente" }, ...(snapshot.imagery || [])].slice(0, 8);
+      const imagery = [
+        { url, description: "Foto enviada pelo cliente", source: "cliente" as const },
+        ...(snapshot.imagery || []),
+      ].slice(0, 8);
       const atualizado = upsertLead({ ...lead, brandSnapshot: { ...snapshot, imagery } });
       return res.json({ success: true, totalImagens: imagery.length, brandSnapshot: atualizado?.brandSnapshot });
     } catch (err: any) {

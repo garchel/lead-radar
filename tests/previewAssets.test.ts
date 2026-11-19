@@ -7,7 +7,10 @@ import { fontStylesheetUrl, pickFontPair } from "../server/services/fontPairs";
 import { buildPreviewHtml } from "../server/services/previewService";
 import type { StoredLead } from "../server/store/types";
 
-function leadCom(imagery: Array<{ url: string; description?: string }>, palette: string[] = []): StoredLead {
+function leadCom(
+  imagery: Array<{ url: string; description?: string; source?: "cliente" | "web" }>,
+  palette: string[] = []
+): StoredLead {
   return {
     id: "lead-teste",
     name: "Dra. Carmen Pitol",
@@ -44,11 +47,22 @@ describe("classificação das imagens", () => {
     expect(classifyImage("https://x/6.jpg", "")).toBe("generico");
   });
 
+  it("imagem raspada da internet NÃO entra na prévia (pode ser de outro negócio)", () => {
+    const lead = leadCom([
+      { url: "https://x/retrato.jpg", description: "Retrato profissional", source: "web" },
+      { url: "https://x/fachada.jpg", description: "Fachada da loja", source: "web" },
+    ]);
+    const escolha = pickPreviewImages(lead.brandSnapshot);
+    expect(escolha.hero).toBeNull();
+    expect(escolha.gallery).toHaveLength(0);
+    expect(escolha.facade).toBeNull();
+  });
+
   it("a FACHADA não vira hero: retrato vence, e a fachada vai para localização", () => {
     const lead = leadCom([
-      { url: "https://x/fachada.jpg", description: "Fachada com iluminação quente e fundo neutro" },
-      { url: "https://x/retrato.jpg", description: "Retrato profissional com iluminação suave" },
-      { url: "https://x/sala.jpg", description: "Interior do consultório" },
+      { url: "https://x/fachada.jpg", description: "Fachada com iluminação quente e fundo neutro", source: "cliente" },
+      { url: "https://x/retrato.jpg", description: "Retrato profissional com iluminação suave", source: "cliente" },
+      { url: "https://x/sala.jpg", description: "Interior do consultório", source: "cliente" },
     ]);
     const escolha = pickPreviewImages(lead.brandSnapshot);
     expect(escolha.hero?.url).toBe("https://x/retrato.jpg");
@@ -58,7 +72,7 @@ describe("classificação das imagens", () => {
   });
 
   it("só com fachada disponível, o hero fica sem foto em vez de usar a fachada", () => {
-    const lead = leadCom([{ url: "https://x/fachada.jpg", description: "Fachada da loja" }]);
+    const lead = leadCom([{ url: "https://x/fachada.jpg", description: "Fachada da loja", source: "cliente" }]);
     const escolha = pickPreviewImages(lead.brandSnapshot);
     expect(escolha.hero).toBeNull();
     expect(escolha.facade?.url).toBe("https://x/fachada.jpg");
@@ -66,12 +80,63 @@ describe("classificação das imagens", () => {
 
   it("aceita a cópia local feita pelo cache de imagens", () => {
     const lead = leadCom([
-      { url: "assets/abc123.jpg", description: "Retrato profissional" },
-      { url: "assets/def456.jpg", description: "Fachada da loja" },
+      { url: "assets/abc123.jpg", description: "Retrato profissional", source: "cliente" },
+      { url: "assets/def456.jpg", description: "Fachada da loja", source: "cliente" },
     ]);
     const escolha = pickPreviewImages(lead.brandSnapshot);
     expect(escolha.hero?.url).toBe("assets/abc123.jpg");
     expect(escolha.facade?.url).toBe("assets/def456.jpg");
+  });
+
+  it("prévia não publica NENHUMA imagem da internet (nem logo)", () => {
+    const lead = leadCom(
+      [
+        { url: "https://x/retrato.jpg", description: "Retrato profissional", source: "web" },
+        { url: "https://x/logo.png", description: "Logo da empresa", source: "web" },
+      ],
+      ["#E5D399"]
+    );
+    (lead.brandSnapshot as any).logo = { url: "https://x/logo.png", confidence: 0.9, description: "logo" };
+    const html = buildPreviewHtml(lead);
+    expect(html).not.toMatch(/<img[^>]+src="https?:/i);
+    expect(html).toContain("cover-brand"); // painel de marca ocupa o lugar da foto
+  });
+
+  it("mostra 'hoje x depois' para dar noção do ganho", () => {
+    const html = buildPreviewHtml(leadCom([], ["#E5D399"]));
+    expect(html).toContain('class="contraste"');
+    expect(html).toMatch(/Hoje/);
+    expect(html).toMatch(/Depois/);
+  });
+
+  it("mostra o que vem depois em wireframe, sem inventar conteúdo", () => {
+    const html = buildPreviewHtml(leadCom([], ["#E5D399"]));
+    expect(html).toContain('id="depois"');
+    expect(html).toContain("O resto a gente monta com você");
+    expect(html.match(/class="proximo"/g) || []).toHaveLength(4);
+    expect(html).toContain('class="wire"');
+    // wireframe é estrutura: nada de depoimento ou resultado inventado
+    expect(html).not.toMatch(/depoimento de|nota 5 no Google|resultado comprovado/i);
+  });
+
+  it("grade de serviços sempre cheia: 4 ou 6 cartões", () => {
+    for (const qtd of [0, 1, 3, 4, 5]) {
+      const lead = leadCom([], ["#E5D399"]);
+      (lead as any).clientProfile = { services: Array.from({ length: qtd }, (_, i) => `Serviço ${i + 1}`) };
+      const cartoes = (buildPreviewHtml(lead).match(/class="servico"/g) || []).length;
+      expect([4, 6]).toContain(cartoes);
+    }
+  });
+
+  it("sem horário real não existe cartão de horário", () => {
+    const lead = leadCom([], ["#E5D399"]);
+    (lead as any).clientProfile = { services: ["Consulta", "Retorno", "Avaliação", "Procedimento"] };
+    const html = buildPreviewHtml(lead);
+    expect(html).not.toContain("<h3>Horário</h3>");
+    expect(html).toContain("Fale com a gente");
+    // com horário real, o cartão volta
+    (lead as any).clientProfile.hours = "Seg a sex, 9h às 18h";
+    expect(buildPreviewHtml(lead)).toContain("<h3>Horário</h3>");
   });
 
   it("imagem que não baixa sai do snapshot (melhor sem seção que com imagem quebrada)", async () => {
