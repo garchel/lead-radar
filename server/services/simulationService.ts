@@ -14,6 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { getDb } from "../store/schema";
 import { generateLeadPreview, generateLeadPreviewCached, previewsDir, slugifyPreview } from "./previewService";
+import { publishPreviews } from "./pagesService";
 import { researchLeadBrand } from "./brandResearchService";
 import { getLeadById, getProjectsByLead, getSetting, setLeadBrandSnapshot, setSetting, upsertProject } from "../store/db";
 import { normalizeText } from "./leadIdentity";
@@ -344,6 +345,11 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
     const research = await researchLeadBrand(SIMULATION_LEAD_ID, { force: true, maxImages: 6, maxSearches: 2 });
     const atualizado = getLeadById(SIMULATION_LEAD_ID)!;
     const preview = await generateLeadPreviewCached(atualizado);
+    // Publicar ANTES de mandar o D0: a mensagem diz "a prévia que já preparei", e o
+    // link tem que abrir a página NOVA. Sem isso o Cloudflare servia a versão
+    // anterior daquele endereço (a da empresa da rodada passada).
+    const publicacao = await publishPreviews(previewsDir());
+    if (!publicacao.ok) console.warn(`[simulação] publicação falhou: ${publicacao.error}`);
     assets = {
       ok: true,
       images: atualizado.brandSnapshot?.imagery?.length || 0,
