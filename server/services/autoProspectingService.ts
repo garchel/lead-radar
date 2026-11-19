@@ -549,10 +549,10 @@ export async function autopilotTick(now = new Date(), opts?: { force?: boolean }
   const prospect = await prospectBestLead(settings, state, now);
   if (prospect.sent) state.prospectedToday += 1;
 
-  state.lastSummary = `${search.city}/${search.uf} · ${search.category}: ${search.saved} salvo(s)${
-    search.rejected > 0 ? ` (${search.rejected} fora do padrão)` : ""
-  }${
-    prospect.sent ? ` · D0 → ${prospect.leadName}` : ""
+  state.lastSummary = `${search.city}/${search.uf} · ${search.category}: ${search.saved} ${
+    search.saved === 1 ? "salvo" : "salvos"
+  }${search.rejected > 0 ? ` (${search.rejected} fora do padrão)` : ""}${
+    prospect.sent ? ` · primeiro contato: ${prospect.leadName}` : ""
   }`;
   saveAutopilotState(state);
 
@@ -604,7 +604,9 @@ export async function runAutopilotNow(now = new Date()) {
   next.searchedToday += 1;
   next.collectedToday += search.saved;
   next.lastRunAt = now.toISOString();
-  next.lastSummary = `${search.city}/${search.uf} · ${search.category}: ${search.saved} lead(s) salvo(s)`;
+  next.lastSummary = `${search.city}/${search.uf} · ${search.category}: ${search.saved} ${
+    search.saved === 1 ? "lead salvo" : "leads salvos"
+  }`;
   saveAutopilotState(next);
   return { ran: true, search, summary: next.lastSummary };
 }

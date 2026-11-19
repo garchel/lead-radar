@@ -156,6 +156,16 @@ const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void; dange
   </button>
 );
 
+/** Chaves de alerta que o servidor grava; a tela mostra o que aconteceu. */
+const ALERT_LABEL: Record<string, string> = {
+  ia_falhou: 'IA não escreveu',
+  envio_falhou: 'Envio falhou',
+  resposta_bloqueada: 'Envio bloqueado',
+  bot_cliente: 'Bot do cliente',
+  clara_falhou: 'Clara falhou',
+  relatorio_mensal: 'Relatório mensal',
+};
+
 export const AutomationSettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<AutomationSettings | null>(null);
   const [humanizeStatus, setHumanizeStatus] = useState<HumanizeStatus | null>(null);
@@ -287,7 +297,7 @@ export const AutomationSettingsPage: React.FC = () => {
 
       <SettingsCard
         id="coleta"
-        title="Coleta de leads (SerpAPI)"
+        title="Coleta de leads (Google Maps)"
         icon={<Radar className="w-4 h-4 text-orange-600" />}
         open={!collapsedSections.includes('coleta')}
         onToggle={() => toggleSection('coleta')}
@@ -312,34 +322,38 @@ export const AutomationSettingsPage: React.FC = () => {
           <>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                <div className="text-[11px] font-bold uppercase text-slate-500">Orçamento hoje</div>
+                <div className="text-[11.5px] font-semibold text-slate-600">Orçamento hoje</div>
                 <div className="text-lg font-bold text-slate-900">{auto.budget.usedToday}/{auto.budget.dailyBudget}</div>
                 <div className="text-[11px] text-slate-500">buscas usadas</div>
               </div>
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                <div className="text-[11px] font-bold uppercase text-slate-500">Cota do ciclo</div>
+                <div className="text-[11.5px] font-semibold text-slate-600">Cota do ciclo</div>
                 <div className="text-lg font-bold text-slate-900">{auto.budget.remainingThisMonth}</div>
                 <div className="text-[11px] text-slate-500">
                   de {auto.budget.monthlyQuota}
-                  {auto.budget.keys && auto.budget.keys > 1 ? ` · ${auto.budget.keys} chaves` : ''} · {auto.budget.daysLeftInCycle} dia(s)
+                  {auto.budget.keys && auto.budget.keys > 1 ? ` · ${auto.budget.keys} chaves` : ''} · {auto.budget.daysLeftInCycle} {auto.budget.daysLeftInCycle === 1 ? 'dia' : 'dias'}
                 </div>
               </div>
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                <div className="text-[11px] font-bold uppercase text-slate-500">Intervalo</div>
+                <div className="text-[11.5px] font-semibold text-slate-600">Intervalo</div>
                 <div className="text-lg font-bold text-slate-900">{auto.budget.intervalMinutes} min</div>
                 <div className="text-[11px] text-slate-500">{auto.budget.windowOpen ? 'janela aberta' : 'janela fechada'}</div>
               </div>
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                <div className="text-[11px] font-bold uppercase text-slate-500">Hoje</div>
+                <div className="text-[11.5px] font-semibold text-slate-600">Hoje</div>
                 <div className="text-lg font-bold text-slate-900">{auto.state.collectedToday}</div>
-                <div className="text-[11px] text-slate-500">leads · {auto.state.prospectedToday} D0</div>
+                <div className="text-[11px] text-slate-500">leads · {auto.state.prospectedToday} contatados</div>
               </div>
             </div>
 
             <div className="text-xs text-slate-500 flex flex-wrap gap-x-4 gap-y-1">
-              <span>{auto.armed ? `✅ armado (${auto.state.armedUntil ? new Date(auto.state.armedUntil).toLocaleString('pt-BR') : '-'})` : '⏸️ não armado — abra o app para armar'}</span>
+              <span>
+                {auto.armed
+                  ? `Ativa desde ${auto.state.armedUntil ? new Date(auto.state.armedUntil).toLocaleString('pt-BR') : '-'}`
+                  : 'Pausada. Abra o app para ativar.'}
+              </span>
               <span>{auto.budget.nextRunAt ? `próxima busca: ${new Date(auto.budget.nextRunAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : 'sem próxima busca'}</span>
-              <span>{auto.candidatesReady} lead(s) prontos para D0</span>
+              <span>{auto.candidatesReady} {auto.candidatesReady === 1 ? 'lead pronto' : 'leads prontos'} para contato</span>
               {auto.state.lastSummary && <span className="text-slate-500">último: {auto.state.lastSummary}</span>}
               {auto.state.lastError && <span className="text-amber-600">erro: {auto.state.lastError}</span>}
             </div>
@@ -349,13 +363,13 @@ export const AutomationSettingsPage: React.FC = () => {
                 <div className="text-sm font-semibold text-slate-800">Coleta automática</div>
                 <div className="text-xs text-slate-500">Enquanto o app estiver aberto (armado por 8h), faz uma busca espaçada por vez.</div>
               </div>
-              <Toggle checked={auto.settings.enabled} onChange={(v) => void updateAutopilot({ enabled: v })} label="Coleta automática (autopilot SerpAPI)" />
+              <Toggle checked={auto.settings.enabled} onChange={(v) => void updateAutopilot({ enabled: v })} label="Coleta automática de leads" />
             </div>
 
             <div className="flex items-center justify-between py-2 border-b border-slate-100">
               <div>
                 <div className="text-sm font-semibold text-slate-800">Prospectar os melhores</div>
-                <div className="text-xs text-slate-500">Manda D0 no WhatsApp para o lead de maior score (respeita a humanização e o teto de contatos novos).</div>
+                <div className="text-xs text-slate-500">Manda o primeiro contato no WhatsApp para o lead de maior score (respeita a humanização e o limite de contatos novos por dia).</div>
               </div>
               <Toggle checked={auto.settings.autoProspect} onChange={(v) => void updateAutopilot({ autoProspect: v })} label="Prospectar automaticamente os melhores leads" />
             </div>
@@ -368,7 +382,7 @@ export const AutomationSettingsPage: React.FC = () => {
                   className="w-16 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-normal" />
               </label>
               <label className="text-xs font-bold text-slate-600 flex items-center gap-2">
-                D0 por dia
+                Contatos por dia
                 <input type="number" min={0} max={30} value={auto.settings.dailyNewCap}
                   onChange={(e) => void updateAutopilot({ dailyNewCap: Math.max(0, Math.min(30, Math.floor(Number(e.target.value) || 0))) })}
                   className="w-16 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-normal" />
@@ -432,7 +446,7 @@ export const AutomationSettingsPage: React.FC = () => {
 
       <SettingsCard
         id="whatsapp"
-        title="WhatsApp (webhook e intenção)"
+        title="WhatsApp (recebimento e intenção)"
         icon={<MessageCircle className="w-4 h-4 text-emerald-600" />}
         open={!collapsedSections.includes('whatsapp')}
         onToggle={() => toggleSection('whatsapp')}
@@ -461,7 +475,7 @@ export const AutomationSettingsPage: React.FC = () => {
         <div className="flex items-center justify-between py-2 border-b border-slate-100">
           <div>
             <div className="text-sm font-semibold text-slate-800">Classificar intenção automaticamente</div>
-            <div className="text-xs text-slate-500">Detecta recusa / interesse / preço por regex.</div>
+            <div className="text-xs text-slate-500">Lê a resposta do cliente e marca se ele recusou, se quer saber mais ou se pediu preço.</div>
           </div>
           <Toggle checked={settings.whatsappAutoIntent} onChange={(v) => void update({ whatsappAutoIntent: v })} label="Classificar intenção das mensagens" />
         </div>
@@ -724,7 +738,7 @@ function OwnerAlertCard() {
       </div>
 
       <div className="py-3 border-b border-slate-100 space-y-2">
-        <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+        <label className="block text-[11.5px] font-semibold text-slate-600">
           Meu número (celular pessoal, não o número do bot)
         </label>
         <div className="flex flex-wrap gap-2">
@@ -758,18 +772,18 @@ function OwnerAlertCard() {
 
       {estado?.recent?.length ? (
         <div className="pt-2">
-          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          <div className="mb-1 text-[11.5px] font-semibold text-slate-600">
             Últimos avisos ({estado.sentToday} hoje)
           </div>
           <ul className="space-y-1">
             {estado.recent.slice(0, 5).map((a) => (
               <li key={a.id} className="flex items-start gap-2 text-xs text-slate-600">
                 <span
-                  className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+                  className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10.5px] font-semibold ${
                     a.status === 'sent' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-700'
                   }`}
                 >
-                  {a.kind}
+                  {ALERT_LABEL[a.kind] ?? a.kind}
                 </span>
                 <span className="min-w-0 flex-1 truncate">
                   {a.leadName ? `${a.leadName}: ` : ''}

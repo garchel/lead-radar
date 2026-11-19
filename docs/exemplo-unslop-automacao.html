@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: inherit; color: var(--foreground); margin: 0; font-size: 14px; line-height: 1.5; }
+  .linha { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+  .col { flex: 1 1 380px; min-width: 330px; }
+  .titulo-col { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--muted-foreground); margin: 0 0 8px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+  .h2 { font-size: 13px; font-weight: 700; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .stat { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 9px; }
+  .stat-rot.up { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; }
+  .stat-rot.down { font-size: 11.5px; font-weight: 600; color: #475569; }
+  .stat-num { font-size: 15px; font-weight: 700; margin-top: 1px; }
+  .stat-hint { font-size: 11px; color: #64748b; }
+  .status { font-size: 12px; color: #64748b; margin-top: 10px; }
+  .mar { background: rgba(252,165,165,.3); border-radius: 3px; padding: 0 2px; }
+  .anot { font-size: 12px; color: var(--muted-foreground); margin: 8px 0 0; }
+  .marca { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--border); color: var(--muted-foreground); vertical-align: 1px; margin-right: 5px; }
+  .errado { border-color: #fca5a5; color: #b91c1c; background: rgba(252,165,165,.12); }
+  .certo { border-color: #86efac; color: #15803d; background: rgba(134,239,172,.12); }
+  .bloco { margin-bottom: 14px; }
+  .toggle { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid #f1f5f9; }
+  .tg-nome { font-size: 12.5px; font-weight: 600; }
+  .tg-desc { font-size: 11.5px; color: #64748b; margin-top: 2px; }
+  .sw { width: 30px; height: 16px; border-radius: 99px; background: #7c3aed; flex: none; position: relative; }
+  .sw::after { content: ''; position: absolute; right: 2px; top: 2px; width: 12px; height: 12px; border-radius: 99px; background: #fff; }
+  .sw.off { background: #cbd5e1; }
+  .sw.off::after { right: auto; left: 2px; }
+  .badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; text-transform: uppercase; }
+  .badge.antes { background: #fee2e2; color: #991b1b; }
+  .badge.depois { background: #fee2e2; color: #991b1b; text-transform: none; font-weight: 600; }
+  .sep { height: 1px; background: var(--border); margin: 14px 0 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td { padding: 4px 10px 4px 0; vertical-align: top; color: var(--muted-foreground); }
+  td:first-child { color: var(--foreground); font-weight: 600; white-space: nowrap; }
+</style></head>
+<body>
+
+<div class="linha">
+  <div class="col">
+    <p class="titulo-col">Hoje</p>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="h2">Coleta de leads (SerpAPI)</div>
+        <div class="stats">
+          <div class="stat"><div class="stat-rot up">Orçamento hoje</div><div class="stat-num">41/74</div><div class="stat-hint">buscas usadas</div></div>
+          <div class="stat"><div class="stat-rot up">Cota do ciclo</div><div class="stat-num">225</div><div class="stat-hint">de 500 · 2 chaves · <span class="mar">3 dia(s)</span></div></div>
+        </div>
+        <div class="status"><span class="mar">✅ armado</span> (19/11/2026, 22:08:48) <span class="mar">—</span> 1509 <span class="mar">lead(s) prontos para D0</span></div>
+      </div>
+      <p class="anot"><span class="marca errado">U1</span><span class="marca errado">U11</span><span class="marca errado">U5</span>etiqueta em caixa alta, emoji de semáforo no lugar de texto, plural de template e "D0" três vezes.</p>
+    </div>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="toggle">
+          <div>
+            <div class="tg-nome">Prospectar os melhores</div>
+            <div class="tg-desc">Manda <span class="mar">D0</span> no WhatsApp para o lead de maior score (respeita a humanização e o teto de contatos novos).</div>
+          </div>
+          <span class="sw off"></span>
+        </div>
+        <div class="toggle">
+          <div>
+            <div class="tg-nome">Classificar intenção automaticamente</div>
+            <div class="tg-desc">Detecta recusa / interesse / preço <span class="mar">por regex</span>.</div>
+          </div>
+          <span class="sw"></span>
+        </div>
+      </div>
+      <p class="anot"><span class="marca errado">U5</span>"regex" é como o código funciona. Quem lê quer saber o que ele faz.</p>
+    </div>
+
+    <div class="bloco">
+      <div class="card">
+        <div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:#475569">
+          <span class="badge antes">ia_falhou</span>
+          <span>Clínica X: a IA não entregou texto aceitável</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:#475569;margin-top:6px">
+          <span class="badge antes">resposta_bloqueada</span>
+          <span>Ótica Jade: humanização impediu o envio</span>
+        </div>
+      </div>
+      <p class="anot"><span class="marca errado">U5</span>o histórico de avisos mostrava a chave do banco na tela. São exatamente os dois avisos que você recebeu no WhatsApp.</p>
+    </div>
+  </div>
+
+  <div class="col">
+    <p class="titulo-col">Depois</p>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="h2">Coleta de leads (Google Maps)</div>
+        <div class="stats">
+          <div class="stat"><div class="stat-rot down">Orçamento hoje</div><div class="stat-num">41/74</div><div class="stat-hint">buscas usadas</div></div>
+          <div class="stat"><div class="stat-rot down">Cota do ciclo</div><div class="stat-num">225</div><div class="stat-hint">de 500 · 2 chaves · 3 dias</div></div>
+        </div>
+        <div class="status">Ativa desde 19/11/2026, 22:12 · 1509 leads prontos para contato</div>
+      </div>
+      <p class="anot"><span class="marca certo">ok</span>a mesma informação, sem etiqueta, sem emoji e sem sigla. "SerpAPI" era o fornecedor; o que importa é que a busca vem do Google Maps.</p>
+    </div>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="toggle">
+          <div>
+            <div class="tg-nome">Prospectar os melhores</div>
+            <div class="tg-desc">Manda o primeiro contato no WhatsApp para o lead de maior score (respeita a humanização e o limite de contatos novos por dia).</div>
+          </div>
+          <span class="sw off"></span>
+        </div>
+        <div class="toggle">
+          <div>
+            <div class="tg-nome">Classificar intenção automaticamente</div>
+            <div class="tg-desc">Lê a resposta do cliente e marca se ele recusou, se quer saber mais ou se pediu preço.</div>
+          </div>
+          <span class="sw"></span>
+        </div>
+      </div>
+      <p class="anot"><span class="marca certo">ok</span>nenhum comportamento mudou: o mesmo regex continua rodando por trás.</p>
+    </div>
+
+    <div class="bloco">
+      <div class="card">
+        <div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:#475569">
+          <span class="badge depois">IA não escreveu</span>
+          <span>Clínica X: a IA não entregou texto aceitável</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:#475569;margin-top:6px">
+          <span class="badge depois">Envio bloqueado</span>
+          <span>Ótica Jade: humanização impediu o envio</span>
+        </div>
+      </div>
+      <p class="anot"><span class="marca certo">ok</span>o aviso passa a se identificar sozinho, sem depender de quem sabe o que é <code>resposta_bloqueada</code>.</p>
+    </div>
+  </div>
+</div>
+
+<div class="sep"></div>
+
+<table>
+  <tr><td>Muda</td><td>Quatro indicadores, três textos de toggle, uma linha de status, dois campos e o selo do histórico de avisos.</td></tr>
+  <tr><td>Não muda</td><td>Nenhum toggle liga ou desliga diferente. Teto, cota, intervalo, regex, cadência: tudo igual.</td></tr>
+  <tr><td>Ganho extra</td><td>Os avisos que chegam no seu WhatsApp ("a IA não conseguiu escrever", "envio bloqueado") agora têm o mesmo nome na tela.</td></tr>
+</table>
+
+</body></html>
