@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: inherit; color: var(--foreground); margin: 0; font-size: 14px; line-height: 1.5; }
+  .linha { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+  .col { flex: 1 1 360px; min-width: 320px; }
+  .titulo-col { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--muted-foreground); margin: 0 0 8px; }
+  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+  .kpi-rot { display: flex; align-items: center; gap: 7px; }
+  .kpi-rot.up { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #64748b; }
+  .kpi-rot.down { font-size: 11.5px; font-weight: 600; color: #475569; }
+  .kpi-num { font-size: 24px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .kpi-hint { font-size: 11px; color: #475569; }
+  .ico { width: 14px; height: 14px; color: #ea580c; flex: none; }
+  .filtros { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .sel { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 9px; font-size: 12px; color: var(--foreground); }
+  .sel b { font-weight: 600; }
+  .caixa { background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 8px; font-size: 12px; width: 58px; text-align: center; color: #94a3b8; }
+  .anot { font-size: 12px; color: var(--muted-foreground); margin: 7px 0 0; }
+  .marca { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--border); color: var(--muted-foreground); vertical-align: 1px; margin-right: 5px; }
+  .errado { border-color: #fca5a5; color: #b91c1c; background: rgba(252,165,165,.12); }
+  .certo { border-color: #86efac; color: #15803d; background: rgba(134,239,172,.12); }
+  .bloco { margin-bottom: 16px; }
+  .sep { height: 1px; background: var(--border); margin: 16px 0 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td { padding: 4px 10px 4px 0; vertical-align: top; color: var(--muted-foreground); }
+  td:first-child { color: var(--foreground); font-weight: 600; white-space: nowrap; }
+</style></head>
+<body>
+
+<div class="linha">
+  <div class="col">
+    <p class="titulo-col">Hoje</p>
+
+    <div class="bloco">
+      <div class="kpi">
+        <div class="kpi-rot up"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>Prontos p/ D0</div>
+        <div class="kpi-num">1447</div>
+        <div class="kpi-hint">telefone + score ≥ 60</div>
+      </div>
+      <p class="anot"><span class="marca errado">U1</span><span class="marca errado">U5</span>etiqueta em caixa alta, sigla de etapa do código ("D0") e a regra escrita como fórmula ("score ≥ 60").</p>
+    </div>
+
+    <div class="bloco">
+      <div class="filtros">
+        <span class="sel">Pipeline: todos</span>
+        <span class="sel">Telefone: tanto faz</span>
+        <span class="sel"><span class="caixa">0–100</span> score mín.</span>
+      </div>
+      <p class="anot"><span class="marca errado">U5</span>três rótulos em jargão: "pipeline" em inglês, "tanto faz" como gíria e "score mín." sem dizer que é uma nota de 0 a 100.</p>
+    </div>
+  </div>
+
+  <div class="col">
+    <p class="titulo-col">Depois</p>
+
+    <div class="bloco">
+      <div class="kpi">
+        <div class="kpi-rot down"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>Prontos p/ contato</div>
+        <div class="kpi-num">1447</div>
+        <div class="kpi-hint">com telefone e nota 60 ou mais</div>
+      </div>
+      <p class="anot"><span class="marca certo">ok</span>a mesma informação em palavra de quem vende. O ícone continua no lugar.</p>
+    </div>
+
+    <div class="bloco">
+      <div class="filtros">
+        <span class="sel">Etapa: todas</span>
+        <span class="sel">Telefone: com ou sem</span>
+        <span class="sel"><span class="caixa">0–100</span> nota mín.</span>
+      </div>
+      <p class="anot"><span class="marca certo">ok</span>"etapa" é a palavra que o app inteiro já usa para o funil; "com ou sem" diz o que o filtro faz.</p>
+    </div>
+  </div>
+</div>
+
+<div class="sep"></div>
+
+<table>
+  <tr><td>Muda</td><td>Seis rótulos de KPI saem da caixa alta; D0 vira contato; pipeline vira etapa; tanto faz vira com ou sem; score mín. vira nota mín.</td></tr>
+  <tr><td>Não muda</td><td>Nenhum número, nenhum filtro, nenhuma coluna, nenhum clique. Os cabeçalhos da tabela continuam em caixa alta de propósito: ali é convenção de planilha, não etiqueta.</td></tr>
+  <tr><td>Fica para depois</td><td>Trocar "score" por "nota" em toda a interface. São 4 telas e uma decisão sua, não uma correção isolada.</td></tr>
+</table>
+
+</body></html>

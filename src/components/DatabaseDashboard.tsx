@@ -114,9 +114,9 @@ const Bar: React.FC<{ label: string; total: number; max: number; className?: str
 
 const Kpi: React.FC<{ icon: React.ReactNode; label: string; value: string | number; hint?: string; tone?: string }> = ({ icon, label, value, hint, tone }) => (
   <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+    <div className="flex items-center gap-2">
       <span className={tone || 'text-indigo-500'}>{icon}</span>
-      {label}
+      <span className="text-[11.5px] font-semibold text-slate-600">{label}</span>
     </div>
     <div className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">{value}</div>
     {hint && <div className="text-[11px] text-slate-600">{hint}</div>}
@@ -140,7 +140,7 @@ const Distributions: React.FC<{ stats: Stats }> = ({ stats }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2">
-        <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2"><Layers className="w-4 h-4 text-indigo-600" /> Pipeline</h2>
+        <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2"><Layers className="w-4 h-4 text-indigo-600" /> Leads por etapa</h2>
         {stats.pipeline.map((b) => (
           <Bar key={b.key || b.label} label={b.label} total={b.total} max={maxPipeline} />
         ))}
@@ -346,7 +346,7 @@ export const DatabaseDashboard: React.FC<DatabaseDashboardProps> = ({ onOpenPipe
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
             <Kpi icon={<Database className="w-3.5 h-3.5" />} label="Leads no banco" value={stats.totals.total} hint={`${stats.totals.hoje} hoje · ${stats.totals.ultimos7} em 7 dias`} />
             <Kpi icon={<Globe className="w-3.5 h-3.5" />} label="Sem site" value={stats.totals.semSite} hint={`${stats.totals.soRede} só rede social`} tone="text-emerald-600" />
-            <Kpi icon={<Target className="w-3.5 h-3.5" />} label="Prontos p/ D0" value={stats.totals.prontosParaD0} hint="telefone + score ≥ 60" tone="text-orange-600" />
+            <Kpi icon={<Target className="w-3.5 h-3.5" />} label="Prontos p/ contato" value={stats.totals.prontosParaD0} hint="com telefone e nota 60 ou mais" tone="text-orange-600" />
             <Kpi icon={<Phone className="w-3.5 h-3.5" />} label="Com telefone" value={stats.totals.comFone} hint={`${stats.totals.semFone} sem telefone`} tone="text-sky-600" />
             <Kpi icon={<TrendingUp className="w-3.5 h-3.5" />} label="Score médio" value={stats.totals.scoreMedio || 0} hint={`${stats.totals.comAnalise} com análise de IA`} tone="text-violet-600" />
             <Kpi icon={<PhoneOff className="w-3.5 h-3.5" />} label="Não contatar" value={stats.totals.optOut} hint={`${stats.totals.contactados} já contatados`} tone="text-rose-500" />
@@ -386,7 +386,7 @@ export const DatabaseDashboard: React.FC<DatabaseDashboardProps> = ({ onOpenPipe
         {/* Linha 2 — filtros de coluna */}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
           <select value={pipeline} onChange={(e) => { setPipeline(e.target.value); setPage(1); }} className="px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-            <option value="all">Pipeline: todos</option>
+            <option value="all">Etapa: todas</option>
             {(stats?.pipeline || []).map((b) => <option key={b.key} value={b.key}>{b.label} ({b.total})</option>)}
           </select>
 
@@ -413,16 +413,16 @@ export const DatabaseDashboard: React.FC<DatabaseDashboardProps> = ({ onOpenPipe
           </select>
 
           <select value={hasPhone} onChange={(e) => { setHasPhone(e.target.value as any); setPage(1); }} className="px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-            <option value="">Telefone: tanto faz</option>
+            <option value="">Telefone: com ou sem</option>
             <option value="1">Só com telefone</option>
             <option value="0">Só sem telefone</option>
           </select>
 
           <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 px-2 py-1 min-h-8">
             <input type="number" min={0} max={100} value={scoreMin} onChange={(e) => { setScoreMin(e.target.value); setPage(1); }}
-              title="Mostrar só leads com score maior ou igual a este"
+              title="Mostrar só leads com nota maior ou igual a esta"
               className="w-16 px-2 py-1.5 bg-white border border-slate-300 rounded-lg font-normal text-slate-800 placeholder:text-slate-500 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 outline-none" placeholder="0–100" />
-            score mín.
+            nota mín.
           </label>
 
           <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 min-h-8 px-1">
@@ -430,7 +430,7 @@ export const DatabaseDashboard: React.FC<DatabaseDashboardProps> = ({ onOpenPipe
           </label>
 
           <label className="flex items-center gap-1.5 text-xs font-semibold text-orange-700 min-h-8 px-1">
-            <input type="checkbox" checked={readyOnly} onChange={(e) => { setReadyOnly(e.target.checked); setPage(1); }} /> prontos p/ D0
+            <input type="checkbox" checked={readyOnly} onChange={(e) => { setReadyOnly(e.target.checked); setPage(1); }} /> prontos p/ contato
           </label>
         </div>
 
@@ -452,7 +452,7 @@ export const DatabaseDashboard: React.FC<DatabaseDashboardProps> = ({ onOpenPipe
                 <th className="text-left px-3 py-2 font-bold">Presença</th>
                 <th className="text-left px-3 py-2 font-bold">Telefone</th>
                 <th className="text-left px-3 py-2 font-bold">Google</th>
-                <th className="text-left px-3 py-2 font-bold">Pipeline</th>
+                <th className="text-left px-3 py-2 font-bold">Etapa</th>
                 <th className="text-left px-3 py-2 font-bold">Entrada</th>
                 <th className="px-2 py-2"></th>
               </tr>
