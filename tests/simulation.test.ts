@@ -123,6 +123,110 @@ describe("reset do card de simulação", () => {
     expect(fs.existsSync(velho)).toBe(false);
   });
 
+  it("apaga cartão de paleta e proposta da empresa anterior (são publicados)", async () => {
+    const { previewsDir } = await import("../server/services/previewService");
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+
+    getDb()
+      .prepare("CREATE TABLE IF NOT EXISTS preview_slugs (slug TEXT PRIMARY KEY, lead_id TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL)")
+      .run();
+    getDb()
+      .prepare("INSERT OR REPLACE INTO preview_slugs (slug, lead_id, created_at) VALUES (?, ?, ?)")
+      .run("dra-carmen-pitol", SIMULATION_LEAD_ID, new Date().toISOString());
+
+    const dir = previewsDir();
+    fs.mkdirSync(dir, { recursive: true });
+    const paleta = path.join(dir, "paleta-dra-carmen-pitol-88cb15e5.png");
+    const proposta = path.join(dir, "Proposta-Dra-Carmen-Pitol-2fdf29ff.pdf");
+    const deOutroLead = path.join(dir, "paleta-teste-2-61-8303-7497-abc123.png");
+    for (const f of [paleta, proposta, deOutroLead]) fs.writeFileSync(f, "x", "utf8");
+
+    resetSimulationCard("Empresa Nova");
+
+    expect(fs.existsSync(paleta)).toBe(false);
+    expect(fs.existsSync(proposta)).toBe(false);
+    // artefato de outro lead não é tocado
+    expect(fs.existsSync(deOutroLead)).toBe(true);
+    fs.unlinkSync(deOutroLead);
+  });
+
+  it("apaga imagem solta que nenhuma prévia usa, e mantém a que está em uso", async () => {
+    const { previewsDir } = await import("../server/services/previewService");
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+
+    const dir = previewsDir();
+    const assets = path.join(dir, "assets");
+    fs.mkdirSync(assets, { recursive: true });
+    const usada = path.join(assets, "em-uso.jpg");
+    const solta = path.join(assets, "sobra.jpg");
+    fs.writeFileSync(usada, "x", "utf8");
+    fs.writeFileSync(solta, "x", "utf8");
+    const outraPrevia = path.join(dir, "lead_5858c9e9b7007427d64d.html");
+    fs.writeFileSync(outraPrevia, '<img src="assets/em-uso.jpg">', "utf8");
+
+    resetSimulationCard("Empresa Nova");
+
+    expect(fs.existsSync(solta)).toBe(false);
+    expect(fs.existsSync(usada)).toBe(true);
+    fs.unlinkSync(usada);
+    fs.unlinkSync(outraPrevia);
+  });
+
+  it("apaga o histórico de conversa da empresa anterior (a Clara lê esse thread)", async () => {
+    const { recordCommunication, getCommunicationsByLead, getDb: _getDb } = await import("../server/store/db");
+    const { getDb } = await import("../server/store/schema");
+
+    // interação apontando para a comunicação: é o que quebrava a FK
+    const comm = recordCommunication({
+      leadId: SIMULATION_LEAD_ID,
+      channel: "whatsapp",
+      direction: "outbound",
+      message: "mensagem da empresa anterior",
+      status: "sent",
+    } as any);
+    const { createInteraction } = await import("../server/store/db");
+    createInteraction({
+      leadId: SIMULATION_LEAD_ID,
+      type: "whatsapp",
+      channel: "whatsapp",
+      deliveryStatus: "sent",
+      outcome: "no_response",
+      occurredAt: new Date().toISOString(),
+      communicationId: comm.id,
+    } as any);
+
+    expect(getCommunicationsByLead(SIMULATION_LEAD_ID).length).toBeGreaterThan(0);
+
+    resetSimulationCard("Empresa Nova");
+
+    expect(getCommunicationsByLead(SIMULATION_LEAD_ID)).toHaveLength(0);
+    const restos = getDb().prepare("SELECT COUNT(*) AS n FROM interactions WHERE lead_id = ?").get(SIMULATION_LEAD_ID) as any;
+    expect(restos.n).toBe(0);
+  });
+
+  it("limpa briefing, copy e tipografia herdados da empresa anterior", () => {
+    const db = getDb();
+    db.prepare("UPDATE projects SET brief = ?, copy = ?, design_notes = ?, font_display = ?, font_body = ? WHERE lead_id = ?").run(
+      "BRIEFING DA EMPRESA ANTIGA",
+      "COPY ANTIGA",
+      "DESIGN ANTIGO",
+      "Bricolage Grotesque",
+      "DM Sans",
+      SIMULATION_LEAD_ID
+    );
+
+    resetSimulationCard("Empresa Sem Herança");
+
+    const projeto = getProjectsByLead(SIMULATION_LEAD_ID).find((p) => !p.archived)!;
+    expect(projeto.brief).toBeUndefined();
+    expect(projeto.copy).toBeUndefined();
+    expect(projeto.designNotes).toBeUndefined();
+    expect(projeto.fontDisplay).toBeUndefined();
+    expect(projeto.fontBody).toBeUndefined();
+  });
+
   it("limpa a pasta da LP e o repositório da simulação anterior", () => {
     const db = getDb();
     db.prepare("UPDATE projects SET site_path = ?, github_repo_url = ?, repo_owner = ?, repo_name = ? WHERE lead_id = ?").run(

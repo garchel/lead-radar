@@ -100,11 +100,9 @@ export async function cacheSnapshotImages(snapshot?: BrandSnapshot): Promise<Bra
     if (local) imagery.push({ ...img, url: local });
   }
 
-  let logo = snapshot.logo;
-  if (logo?.url && /^https?:\/\//i.test(logo.url)) {
-    const local = await baixar(logo.url);
-    logo = local ? { ...logo, url: local } : { ...logo, url: undefined };
-  }
+  // Logo da internet não é baixado nem usado: a prévia desenha o monograma. Antes
+  // ele era salvo em `assets/` e virava arquivo órfão publicado sem uso nenhum.
+  const logo = snapshot.logo ? { ...snapshot.logo, url: undefined } : undefined;
 
   return { ...snapshot, imagery, logo };
 }

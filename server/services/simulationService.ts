@@ -13,7 +13,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { getDb } from "../store/schema";
-import { generateLeadPreview, generateLeadPreviewCached, previewsDir } from "./previewService";
+import { generateLeadPreview, generateLeadPreviewCached, previewsDir, slugifyPreview } from "./previewService";
 import { researchLeadBrand } from "./brandResearchService";
 import { getLeadById, getProjectsByLead, getSetting, setLeadBrandSnapshot, setSetting, upsertProject } from "../store/db";
 import { normalizeText } from "./leadIdentity";
@@ -132,6 +132,10 @@ export function resetSimulationCard(
 ): SimulationCard {
   const db = getDb();
   const nome = String(companyName || "").trim().slice(0, 80) || "Simulação";
+  // Nome do negócio que está saindo: o cartão de paleta e a proposta dele levam o
+  // nome bonito no arquivo, não o slug — sem isso ficam publicados com preço e cor
+  // de outra empresa.
+  const nomeAnterior = String(getLeadById(SIMULATION_LEAD_ID)?.name || "").trim();
 
   // O card precisa parecer a empresa simulada por inteiro: nome, categoria e
   // cidade. Sem isso o cartão diz "Dra. Carmen Pitol · Brasília", que denuncia a
@@ -182,6 +186,19 @@ export function resetSimulationCard(
       devMessage: undefined,
       previewUrl: undefined,
       deployUrl: undefined,
+      // Briefing, copy e design notes eram da empresa anterior: se ficam, o painel
+      // mostra o texto de outro negócio e a tipografia escolhida é herdada por
+      // engano (aconteceu com Bricolage+DM Sans de uma rodada anterior).
+      brief: undefined,
+      briefing: [],
+      typeformToken: undefined,
+      copy: undefined,
+      designNotes: undefined,
+      devNotes: undefined,
+      reviewNotes: undefined,
+      wireframeUrl: undefined,
+      fontDisplay: undefined,
+      fontBody: undefined,
       // A pasta da LP e o repositório eram da empresa anterior: se ficam, o painel
       // de assets mostra arquivos de outro negócio (foi o que aconteceu com
       // `sites/marketing/pv-landing` aparecendo num cartão de dentista).
@@ -212,11 +229,17 @@ export function resetSimulationCard(
   // Histórico de conversa da empresa anterior: se fica, a Clara lê mensagens de
   // outro negócio e o painel mostra um thread misturado (aconteceu na simulação
   // Quintal dos Sonhos → Dra. Carmen Pitol).
+  // ORDEM IMPORTA: `interactions.communication_id` referencia `communications`.
+  // Apagar a comunicação primeiro viola a FK, o erro era engolido pelo catch e o
+  // thread inteiro sobrevivia — a Clara lia mensagens de outras empresas.
   try {
-    db.prepare("DELETE FROM communications WHERE lead_id = ?").run(SIMULATION_LEAD_ID);
-    db.prepare("DELETE FROM interactions WHERE lead_id = ?").run(SIMULATION_LEAD_ID);
-  } catch {
-    /* tabela pode não existir em banco antigo: a simulação não pode quebrar por isso */
+    const limpar = db.transaction(() => {
+      db.prepare("DELETE FROM interactions WHERE lead_id = ?").run(SIMULATION_LEAD_ID);
+      db.prepare("DELETE FROM communications WHERE lead_id = ?").run(SIMULATION_LEAD_ID);
+    });
+    limpar();
+  } catch (erro: any) {
+    console.error("[simulação] não consegui limpar o histórico:", erro?.message || erro);
   }
 
   // A prévia antiga é da empresa anterior: se ficar no disco, o cliente abre e vê
@@ -243,8 +266,35 @@ export function resetSimulationCard(
         if (fs.existsSync(arquivo)) fs.unlinkSync(arquivo);
       }
     }
-  } catch {
-    /* best-effort: a próxima geração sobrescreve */
+
+    // Cartão de paleta e proposta em PDF também são do negócio anterior, e os dois
+    // são PUBLICADOS no link público: ficavam acessíveis com preço e cor de outra
+    // empresa. Apaga pelo slug/prefixo do que acabou de sair.
+    const restos = ([slugAnterior, SIMULATION_LEAD_ID, nomeAnterior && slugifyPreview(nomeAnterior)]
+      .filter(Boolean) as string[]).map((n) => n.toLowerCase());
+    for (const arquivo of fs.readdirSync(dir)) {
+      if (!/\.(png|pdf)$/i.test(arquivo)) continue;
+      // compara em minúsculas: a proposta sai com o nome bonito
+      // ("Proposta-Dra-Carmen-Pitol-...") e o slug é todo minúsculo
+      const nome = arquivo.toLowerCase();
+      if (restos.some((alvo) => nome.includes(alvo))) fs.unlinkSync(path.join(dir, arquivo));
+    }
+
+    // Imagens soltas: sobra de coleta do negócio anterior. Apaga só o que nenhuma
+    // prévia restante usa, senão a página de outro lead perde a foto.
+    const assetsDir = path.join(dir, "assets");
+    if (fs.existsSync(assetsDir)) {
+      const emUso = new Set<string>();
+      for (const html of fs.readdirSync(dir).filter((f) => f.endsWith(".html"))) {
+        const conteudo = fs.readFileSync(path.join(dir, html), "utf8");
+        for (const m of conteudo.matchAll(/assets\/([\w.-]+)/g)) emUso.add(m[1]);
+      }
+      for (const img of fs.readdirSync(assetsDir)) {
+        if (!emUso.has(img)) fs.unlinkSync(path.join(assetsDir, img));
+      }
+    }
+  } catch (erro: any) {
+    console.error("[simulação] limpeza de artefatos falhou:", erro?.message || erro);
   }
 
   const lead = getLeadById(SIMULATION_LEAD_ID)!;
