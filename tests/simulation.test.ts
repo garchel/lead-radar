@@ -175,17 +175,17 @@ describe("reset do card de simulação", () => {
   });
 
   it("apaga o histórico de conversa da empresa anterior (a Clara lê esse thread)", async () => {
-    const { recordCommunication, getCommunicationsByLead, getDb: _getDb } = await import("../server/store/db");
+    const { recordCommunication, getCommunicationsByLead } = await import("../server/store/db");
     const { getDb } = await import("../server/store/schema");
 
     // interação apontando para a comunicação: é o que quebrava a FK
-    const comm = recordCommunication({
+    const commId = recordCommunication({
       leadId: SIMULATION_LEAD_ID,
       channel: "whatsapp",
       direction: "outbound",
       message: "mensagem da empresa anterior",
       status: "sent",
-    } as any);
+    } as any) as unknown as string;
     const { createInteraction } = await import("../server/store/db");
     createInteraction({
       leadId: SIMULATION_LEAD_ID,
@@ -194,7 +194,7 @@ describe("reset do card de simulação", () => {
       deliveryStatus: "sent",
       outcome: "no_response",
       occurredAt: new Date().toISOString(),
-      communicationId: comm.id,
+      communicationId: commId,
     } as any);
 
     expect(getCommunicationsByLead(SIMULATION_LEAD_ID).length).toBeGreaterThan(0);

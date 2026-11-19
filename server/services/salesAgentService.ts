@@ -134,6 +134,7 @@ const URL_PATTERN = /(https?:\/\/|www\.|\.com\b|\.com\.br)/i;
  * U+2600–27BF: "★" mora lá e é parte legítima do gancho ("5★ no Google").
  */
 const EMOJI = /[\u{1F000}-\u{1FAFF}]/u;
+const EMOJI_TODOS = /[\u{1F000}-\u{1FAFF}]/gu;
 /**
  * Quantificador que o agente NÃO pode provar. "Muitos clientes desistem" é
  * afirmação sobre o negócio do lead que nenhum dado nosso sustenta — e é o
@@ -217,7 +218,11 @@ export function checkAgentText(
   if (BANNED_OPENERS.test(text)) issues.push("abertura formal (prezado/estimado)");
   if (BANNED_WORDS.test(text)) issues.push("palavra proibida (formalidade ou dizer que é bot/IA)");
   if (URL_PATTERN.test(text)) issues.push("link no corpo da mensagem");
-  if (EMOJI.test(text)) issues.push("emoji");
+  // A regra da casa é "até 3 emojis", não "nenhum". Reprovar qualquer emoji
+  // derrubava resposta boa para o texto de reserva (aconteceu na simulação de
+  // 19/11: a IA escreveu, o portão recusou por "emoji" e o lead ficou esperando).
+  const emojis = (text.match(EMOJI_TODOS) || []).length;
+  if (emojis > 3) issues.push(`emoji demais (${emojis}/3)`);
   if (UNPROVABLE.test(text)) issues.push("quantificador não comprovável (muitos/vários/a maioria)");
 
   for (const value of extractPrices(text)) {

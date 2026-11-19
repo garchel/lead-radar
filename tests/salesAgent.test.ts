@@ -116,8 +116,14 @@ describe("portão de qualidade do texto do agente", () => {
     expect(checkAgentText("Prezado Rafael, sou um assistente virtual. Posso mandar?", base).ok).toBe(false);
   });
 
-  it("reprova emoji", () => {
-    expect(checkAgentText("Posso te mandar a prévia? 🚀", base).ok).toBe(false);
+  it("aceita até 3 emojis (a regra da casa) e reprova exagero", () => {
+    // antes reprovava QUALQUER emoji: a IA escrevia bem, o portão recusava e o lead
+    // ficava sem resposta (aconteceu em 19/11 na simulação do Paulo)
+    expect(checkAgentText("Posso te mandar a prévia? 🚀", base).ok).toBe(true);
+    expect(checkAgentText("Oi 👋 Já montei a prévia ⭐ Quer ver? 🚀", base).ok).toBe(true);
+    const exagero = checkAgentText("Oi 👋😀🎉🚀 Posso mandar a prévia?", base);
+    expect(exagero.ok).toBe(false);
+    expect(exagero.issues.join(" ")).toMatch(/emoji demais/);
   });
 
   it("reprova quantificador que não dá para provar", () => {
@@ -140,6 +146,22 @@ describe("portão de qualidade do texto do agente", () => {
     });
     expect(check.ok).toBe(false);
     expect(check.issues.join(" ")).toMatch(/saudação repetida/);
+
+    // A casa permite até 3 emojis: reprovar qualquer um derrubava resposta boa e
+    // deixava o lead esperando (bug de 19/11 na simulação).
+    const comEmoji = checkAgentText("Oi! Tudo bem? 👋 Já montei a prévia, quer ver?", {
+      kind: "reply",
+      allowedPriceList: ALLOWED,
+      previousOutbound: [],
+    });
+    expect(comEmoji.issues.join(" ")).not.toMatch(/emoji/);
+
+    const exagerado = checkAgentText("Oi 👋😀🎉🚀 pronto, olha aí. Quer ver?", {
+      kind: "reply",
+      allowedPriceList: ALLOWED,
+      previousOutbound: [],
+    });
+    expect(exagerado.issues.join(" ")).toMatch(/emoji demais/);
   });
 
   it("reprova mensagem idêntica à anterior", () => {

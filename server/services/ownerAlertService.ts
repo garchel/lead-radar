@@ -30,6 +30,16 @@ export type OwnerAlertKind =
 export const ALERT_COOLDOWN_MINUTES = 15;
 export const ALERT_DAILY_CAP = 20;
 
+/**
+ * Avisos em voo, por lead+motivo.
+ *
+ * O cooldown do banco só vê linha já gravada. Duas rotinas no MESMO tick (a rede de
+ * segurança e o compositor) liam o histórico antes de qualquer gravação e as duas
+ * mandavam — o Paulo recebeu três avisos iguais em um minuto. Esta trava fecha a
+ * corrida dentro do processo.
+ */
+const emVoo = new Map<string, number>();
+
 export interface OwnerAlertInput {
   kind: OwnerAlertKind;
   /** Uma linha dizendo o que aconteceu. */
@@ -242,6 +252,15 @@ export async function sendOwnerAlert(input: OwnerAlertInput): Promise<OwnerAlert
     if (skip.skip) {
       return { sent: false, deduped: true, detail: `aviso suprimido (${skip.reason})` };
     }
+
+    // corrida entre rotinas: quem chegou primeiro segura o assunto por 15 min
+    const chave = `${input.leadId || "geral"}|${input.kind}`;
+    const agoraMs = Date.now();
+    const anterior = emVoo.get(chave);
+    if (anterior && agoraMs - anterior < ALERT_COOLDOWN_MINUTES * 60_000) {
+      return { sent: false, deduped: true, detail: "aviso suprimido (já avisando agora)" };
+    }
+    emVoo.set(chave, agoraMs);
 
     const texto = formatOwnerAlert(input);
     const db = getDb();

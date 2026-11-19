@@ -40,6 +40,18 @@ function addDays(isoDate: string, days: number): string {
   return new Date(new Date(isoDate).getTime() + days * 24 * 60 * 60 * 1000).toISOString();
 }
 
+/**
+ * A última mensagem da conversa é do lead? Então estamos respondendo, não
+ * abordando — e a janela de recontato não se aplica.
+ */
+export function temMensagemSemResposta(leadId: string): boolean {
+  try {
+    return getCommunicationsByLead(leadId)[0]?.direction === "inbound";
+  } catch {
+    return false;
+  }
+}
+
 export function getContactPolicy(lead: StoredLead, now = new Date()): ContactPolicy {
   if (lead.doNotContact) {
     return { allowed: false, reason: "A empresa solicitou não receber novos contatos." };
@@ -85,10 +97,27 @@ export async function dispatchLeadContact(
   lead: StoredLead,
   options: ContactOptions = {}
 ): Promise<ContactDispatchResult> {
-  // A cadência (D0/D3/D7) já decidiu que é hora do próximo toque; ela só não
-  // pode furar o opt-out LGPD.
+  const channel0 = options.channel || (lead.phone ? "whatsapp" : "email");
+  const to0 = channel0 === "whatsapp" ? String(lead.phone || "").replace(/\D/g, "") : String(lead.email || "");
+  // LGPD vem antes de tudo, inclusive numa resposta.
+  if (lead.doNotContact) {
+    return {
+      channel: channel0,
+      status: "failed",
+      communicationId: "",
+      to: to0,
+      detail: "A empresa solicitou não receber novos contatos.",
+      blocked: true,
+    };
+  }
+
+  // A política de recontato existe para NÃO insistir com quem não respondeu. Ela
+  // não pode barrar resposta a quem acabou de escrever: foi o que deixou a Clara
+  // muda com o lead pedindo a prévia ("Já existe contato registrado sem uma janela
+  // de recontato autorizada"). Conversa aberta e propósito "reply" passam direto.
+  const conversaAberta = temMensagemSemResposta(lead.id);
   const policy: ContactPolicy =
-    options.ignoreCooldown && !lead.doNotContact ? { allowed: true } : getContactPolicy(lead);
+    options.ignoreCooldown || conversaAberta ? { allowed: true } : getContactPolicy(lead);
   const channel = options.channel || (lead.phone ? "whatsapp" : "email");
   const to = channel === "whatsapp" ? String(lead.phone || "").replace(/\D/g, "") : String(lead.email || "");
 
