@@ -151,6 +151,33 @@ describe("reset do card de simulação", () => {
     fs.unlinkSync(deOutroLead);
   });
 
+  it("apaga a ficha do cliente da empresa anterior (fica fora da pasta de prévias)", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+
+    getDb()
+      .prepare("CREATE TABLE IF NOT EXISTS preview_slugs (slug TEXT PRIMARY KEY, lead_id TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL)")
+      .run();
+    getDb()
+      .prepare("INSERT OR REPLACE INTO preview_slugs (slug, lead_id, created_at) VALUES (?, ?, ?)")
+      .run("dra-carmen-pitol", SIMULATION_LEAD_ID, new Date().toISOString());
+
+    const dataDir = process.env.LEADRADAR_DATA_DIR || path.join(process.cwd(), "data");
+    const fichas = path.join(dataDir, "clientes");
+    fs.mkdirSync(fichas, { recursive: true });
+    const daEmpresaAnterior = path.join(fichas, "dra-carmen-pitol-balneario-camboriu.md");
+    const deOutroLead = path.join(fichas, "otica-jade-pato-branco.md");
+    fs.writeFileSync(daEmpresaAnterior, "# ficha antiga", "utf8");
+    fs.writeFileSync(deOutroLead, "# ficha de outro lead", "utf8");
+
+    resetSimulationCard("Empresa Nova");
+
+    expect(fs.existsSync(daEmpresaAnterior)).toBe(false);
+    // ficha de outro lead não é tocada
+    expect(fs.existsSync(deOutroLead)).toBe(true);
+    fs.unlinkSync(deOutroLead);
+  });
+
   it("apaga imagem solta que nenhuma prévia usa, e mantém a que está em uso", async () => {
     const { previewsDir } = await import("../server/services/previewService");
     const fs = await import("node:fs");

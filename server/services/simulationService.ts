@@ -281,6 +281,21 @@ export function resetSimulationCard(
       if (restos.some((alvo) => nome.includes(alvo))) fs.unlinkSync(path.join(dir, arquivo));
     }
 
+    // Ficha do cliente em Markdown: vive em `clientes/`, fora da pasta de prévias,
+    // e por isso escapava do reset. A ficha da empresa anterior ficava no disco e
+    // podia ser lida como se fosse do negócio novo (nome e cidade trocados).
+    const fichasDir = path.join(process.env.LEADRADAR_DATA_DIR || path.join(process.cwd(), "data"), "clientes");
+    if (fs.existsSync(fichasDir)) {
+      const alvos = restos.filter((alvo) => alvo && alvo !== SIMULATION_LEAD_ID);
+      for (const arquivo of fs.readdirSync(fichasDir)) {
+        if (!arquivo.toLowerCase().endsWith(".md")) continue;
+        const nome = arquivo.toLowerCase();
+        if (alvos.some((alvo) => nome.startsWith(alvo) || nome.includes(alvo))) {
+          fs.unlinkSync(path.join(fichasDir, arquivo));
+        }
+      }
+    }
+
     // Imagens soltas: sobra de coleta do negócio anterior. Apaga só o que nenhuma
     // prévia restante usa, senão a página de outro lead perde a foto.
     const assetsDir = path.join(dir, "assets");
