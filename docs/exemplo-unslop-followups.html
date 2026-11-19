@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: inherit; color: var(--foreground); margin: 0; font-size: 14px; line-height: 1.5; }
+  .linha { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+  .col { flex: 1 1 380px; min-width: 330px; }
+  .titulo-col { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--muted-foreground); margin: 0 0 8px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+  .h2 { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .h2 svg { width: 15px; height: 15px; color: #7c3aed; }
+  .p { font-size: 12px; color: #475569; margin: 5px 0 0; }
+  .status { font-size: 12px; color: #64748b; margin: 5px 0 0; display: flex; gap: 5px; align-items: center; }
+  .status svg { width: 13px; height: 13px; color: #10b981; flex: none; }
+  .item { border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-top: 10px; }
+  .item-topo { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: #64748b; }
+  .item-nome { color: var(--foreground); font-weight: 600; }
+  .msg { font-size: 12px; color: #475569; margin: 6px 0 0; }
+  .anot { font-size: 12px; color: var(--muted-foreground); margin: 7px 0 0; }
+  .marca { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--border); color: var(--muted-foreground); vertical-align: 1px; margin-right: 5px; }
+  .errado { border-color: #fca5a5; color: #b91c1c; background: rgba(252,165,165,.12); }
+  .certo { border-color: #86efac; color: #15803d; background: rgba(134,239,172,.12); }
+  .bloco { margin-bottom: 16px; }
+  .sep { height: 1px; background: var(--border); margin: 16px 0 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td { padding: 4px 10px 4px 0; vertical-align: top; color: var(--muted-foreground); }
+  td:first-child { color: var(--foreground); font-weight: 600; white-space: nowrap; }
+  .mar { background: rgba(252,165,165,.25); border-radius: 3px; padding: 0 2px; }
+</style></head>
+<body>
+
+<div class="linha">
+  <div class="col">
+    <p class="titulo-col">Hoje</p>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="h2"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg> Cadência automática D+3 / D+7</div>
+        <p class="p">Quem foi contatado e não respondeu. Respeita <span class="mar">teto diário, cooldown e opt-out</span> — e nunca toca em quem já respondeu.</p>
+        <p class="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Ligada em Automação · <span class="mar">2/60 usadas hoje</span> · 58 restantes · <span class="mar">1 pronta(s) agora</span></p>
+        <div class="item">
+          <div class="item-topo"><span class="item-nome">Isabella Marygni</span><span>D+2 · <span class="mar">prova</span> · vence 24/10</span></div>
+          <p class="msg">Oi Isabella! Vi que a Isabella Marygni aparece no Google mas não tem site próprio…</p>
+        </div>
+      </div>
+      <p class="anot"><span class="marca errado">U5</span>quatro vazamentos na mesma tela: nome de configuração ("cooldown", "opt-out"), fração sem unidade ("2/60"), plural de template ("pronta(s)") e a chave do código ("prova").</p>
+    </div>
+  </div>
+
+  <div class="col">
+    <p class="titulo-col">Depois</p>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="h2"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg> Cadência automática D+3 / D+7</div>
+        <p class="p">Quem foi contatado e não respondeu. Respeita o limite diário, o intervalo mínimo entre contatos e quem pediu para não receber mais. Nunca toca em quem já respondeu.</p>
+        <p class="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Ligada em Automação · 2 de 60 envios hoje · 58 restantes · 1 pronta agora</p>
+        <div class="item">
+          <div class="item-topo"><span class="item-nome">Isabella Marygni</span><span>D+2 · envia a prévia · vence 24/10</span></div>
+          <p class="msg">Oi Isabella! Vi que a Isabella Marygni aparece no Google mas não tem site próprio…</p>
+        </div>
+      </div>
+      <p class="anot"><span class="marca certo">ok</span>o que a automação faz dito em português, número com unidade e o passo explicado pelo que ele faz. A mensagem da Clara não mudou uma vírgula.</p>
+    </div>
+  </div>
+</div>
+
+<div class="sep"></div>
+
+<table>
+  <tr><td>Muda</td><td>Duas frases de explicação, a linha de status, o rótulo do passo e o texto do estado vazio.</td></tr>
+  <tr><td>Não muda</td><td>Cadência D+3/D+7, contadores, candidatos, botões, envio, simulação, nenhuma mensagem enviada ou composta.</td></tr>
+  <tr><td>Por quê</td><td>"Cooldown" e "opt-out" são nomes de configuração. Quem vende precisa entender a regra sem abrir a tela de Automação.</td></tr>
+</table>
+
+</body></html>

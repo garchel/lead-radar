@@ -41,6 +41,12 @@ const fmtDate = (iso: string) => {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 };
 
+/** O serviço chama os passos de "prova" e "prazo"; a tela fala o que eles fazem. */
+const ANGLE_LABEL: Record<string, string> = {
+  prova: 'envia a prévia',
+  prazo: 'lembra o prazo',
+};
+
 export const FollowUpsPage: React.FC = () => {
   const [plan, setPlan] = useState<CadencePlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,7 +84,8 @@ export const FollowUpsPage: React.FC = () => {
       if (data.blockedReason === 'cadence_disabled') {
         setMsg('Cadência desligada em Automação — nada foi enviado.');
       } else if (dryRun) {
-        setMsg(`Simulação: ${data.planned ?? 0} mensagem(ns) pronta(s), nenhum envio real.`);
+        const n = data.planned ?? 0;
+        setMsg(`Simulação: ${n} ${n === 1 ? 'mensagem pronta' : 'mensagens prontas'}, nada foi enviado.`);
       } else {
         setMsg(`Cadência: ${data.sent?.length ?? 0} enviada(s), ${data.failed?.length ?? 0} falha(s).`);
       }
@@ -115,14 +122,18 @@ export const FollowUpsPage: React.FC = () => {
               <Zap className="w-4 h-4 text-violet-600" /> Cadência automática D+3 / D+7
             </h2>
             <p className="text-xs text-slate-600 mt-1">
-              Quem foi contatado e não respondeu. Respeita teto diário, cooldown e opt-out — e nunca toca em quem já respondeu.
+              Quem foi contatado e não respondeu. Respeita o limite diário, o intervalo
+              mínimo entre contatos e quem pediu para não receber mais. Nunca toca em quem
+              já respondeu.
             </p>
             <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
               {plan ? (
                 <>
-                  {plan.enabled ? 'Ligada em Automação' : 'Desligada em Automação'} · {plan.usedToday}/{plan.cap} usadas hoje ·{' '}
-                  {plan.remaining} restantes · {plan.candidates.length} pronta(s) agora
+                  {plan.enabled ? 'Ligada em Automação' : 'Desligada em Automação'} ·{' '}
+                  {plan.usedToday} de {plan.cap} envios hoje · {plan.remaining} restantes ·{' '}
+                  {plan.candidates.length}{' '}
+                  {plan.candidates.length === 1 ? 'pronta agora' : 'prontas agora'}
                 </>
               ) : (
                 'Carregando plano…'
@@ -181,7 +192,8 @@ export const FollowUpsPage: React.FC = () => {
               <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
                 <span className="text-slate-800 font-semibold">{candidate.name}</span>
                 <span className="whitespace-nowrap">
-                  D+{candidate.step} · {candidate.angle} · vence {fmtDate(candidate.dueAt)}
+                  D+{candidate.step} · {ANGLE_LABEL[candidate.angle] ?? candidate.angle} · vence{' '}
+                  {fmtDate(candidate.dueAt)}
                 </span>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">{candidate.message}</p>
@@ -190,7 +202,7 @@ export const FollowUpsPage: React.FC = () => {
           {(plan?.candidates || []).length === 0 && (
             <p className="text-xs text-slate-500">
               {plan?.skipped
-                ? `${plan.skipped} lead(s) aguardando o próximo passo (D+3/D+7) ou bloqueados por cooldown.`
+                ? `${plan.skipped} ${plan.skipped === 1 ? 'lead aguardando' : 'leads aguardando'} o próximo passo ou o intervalo mínimo entre contatos.`
                 : 'Nenhum lead elegível para follow-up agora.'}
             </p>
           )}
