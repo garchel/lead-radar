@@ -294,6 +294,12 @@ function migrateSchema(db: Database.Database) {
     search_category: "TEXT",
     whatsapp_status: "TEXT DEFAULT 'unknown'",
     whatsapp_checked_at: "TEXT",
+    // Dono/responsável: quem responde o WhatsApp da empresa costuma ser
+    // funcionário. Guardado à parte para não perder o número do negócio.
+    dm_name: "TEXT",
+    dm_phone: "TEXT",
+    dm_source: "TEXT",
+    dm_set_at: "TEXT",
   };
   for (const [name, definition] of Object.entries(columnsToAdd)) {
     if (!existingColumns.has(name)) {

@@ -191,6 +191,16 @@ export interface StoredLead {
   estimatedValue?: string;
   /** Número de teste (Paulo e convidados): recebe prospecção na 1ª mensagem. */
   isTest?: boolean;
+  /**
+   * Dono/responsável pelo negócio, quando quem responde o WhatsApp da empresa é
+   * funcionário. Quando existe `dmPhone`, é para lá que a conversa vai: o número
+   * da empresa continua no cadastro, mas não é quem decide.
+   */
+  dmName?: string;
+  dmPhone?: string;
+  /** Como o contato chegou: `funcionario` (o atendente passou) ou `manual`. */
+  dmSource?: string;
+  dmSetAt?: string;
   keyInsights?: string[];
   pipelineStatus: PipelineStatus;
   notes?: string;

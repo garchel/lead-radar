@@ -63,6 +63,10 @@ function rowToLead(row: any): StoredLead {
     siteAudit: row.site_audit_json ? JSON.parse(row.site_audit_json) : undefined,
     brandSnapshot: row.brand_snapshot_json ? JSON.parse(row.brand_snapshot_json) : undefined,
     clientProfile: row.client_profile_json ? JSON.parse(row.client_profile_json) : undefined,
+    dmName: row.dm_name || undefined,
+    dmPhone: row.dm_phone || undefined,
+    dmSource: row.dm_source || undefined,
+    dmSetAt: row.dm_set_at || undefined,
     searchCategory: row.search_category || undefined,
     whatsappStatus: row.whatsapp_status || 'unknown',
     whatsappCheckedAt: row.whatsapp_checked_at || undefined,
@@ -577,6 +581,18 @@ export function searchLeadsByCity(city: string): StoredLead[] {
     .prepare('SELECT * FROM leads WHERE city LIKE ? ORDER BY opportunity_score DESC')
     .all(`%${city}%`);
   return rows.map(rowToLead);
+}
+
+/** Grava o dono/responsável do negócio (a conversa passa a ir para ele). */
+export function updateLeadDecisionMaker(
+  leadId: string,
+  dados: { name?: string; phone: string; source?: string }
+): StoredLead | undefined {
+  const agora = new Date().toISOString();
+  getDb()
+    .prepare("UPDATE leads SET dm_name = ?, dm_phone = ?, dm_source = ?, dm_set_at = ?, updated_at = ? WHERE id = ?")
+    .run(dados.name || null, dados.phone, dados.source || "manual", agora, agora, leadId);
+  return getLeadById(leadId);
 }
 
 export function updateLeadEnrichment(

@@ -1,3 +1,4 @@
+import { telefoneDeEnvio } from "./decisionMakerService";
 import { contactLead, ContactOptions, ContactResult, sendEmail, sendWhatsApp } from "./contactService";
 import {
   createInteraction,
@@ -97,8 +98,8 @@ export async function dispatchLeadContact(
   lead: StoredLead,
   options: ContactOptions = {}
 ): Promise<ContactDispatchResult> {
-  const channel0 = options.channel || (lead.phone ? "whatsapp" : "email");
-  const to0 = channel0 === "whatsapp" ? String(lead.phone || "").replace(/\D/g, "") : String(lead.email || "");
+  const channel0 = options.channel || (telefoneDeEnvio(lead) ? "whatsapp" : "email");
+  const to0 = channel0 === "whatsapp" ? telefoneDeEnvio(lead) : String(lead.email || "");
   // LGPD vem antes de tudo, inclusive numa resposta.
   if (lead.doNotContact) {
     return {
@@ -118,8 +119,8 @@ export async function dispatchLeadContact(
   const conversaAberta = temMensagemSemResposta(lead.id);
   const policy: ContactPolicy =
     options.ignoreCooldown || conversaAberta ? { allowed: true } : getContactPolicy(lead);
-  const channel = options.channel || (lead.phone ? "whatsapp" : "email");
-  const to = channel === "whatsapp" ? String(lead.phone || "").replace(/\D/g, "") : String(lead.email || "");
+  const channel = options.channel || (telefoneDeEnvio(lead) ? "whatsapp" : "email");
+  const to = channel === "whatsapp" ? telefoneDeEnvio(lead) : String(lead.email || "");
 
   // Número que já recusou duas vezes não recebe nova abordagem. A regra existia
   // só dentro do autopilot; aqui vale para TODA porta (UI, cadência, agente),
@@ -193,8 +194,8 @@ export async function dispatchLeadReply(
   lead: StoredLead,
   options: ContactOptions = {}
 ): Promise<ContactDispatchResult> {
-  const channel = options.channel || (lead.phone ? "whatsapp" : "email");
-  const to = channel === "whatsapp" ? String(lead.phone || "").replace(/\D/g, "") : String(lead.email || "");
+  const channel = options.channel || (telefoneDeEnvio(lead) ? "whatsapp" : "email");
+  const to = channel === "whatsapp" ? telefoneDeEnvio(lead) : String(lead.email || "");
 
   if (lead.doNotContact) {
     return {

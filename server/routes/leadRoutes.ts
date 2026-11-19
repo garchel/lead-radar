@@ -1,3 +1,4 @@
+import { salvarDecisor, telefoneDeEnvio } from "../services/decisionMakerService";
 import { Express, Request, Response } from "express";
 import {
   getLeads,
@@ -268,6 +269,30 @@ export function registerLeadRoutes(app: Express) {
       });
     }
     return res.json({ success: true, exists: true, profile: stored.profile, markdown: stored.markdown });
+  });
+
+  /**
+   * Dono/responsável pelo negócio.
+   *
+   * O número que aparece no Google da empresa cai na recepção: quem responde é
+   * funcionário. Este endpoint guarda quem decide (sem apagar o número da empresa)
+   * e, a partir daí, todo envio sai para ele.
+   */
+  app.post("/api/leads/:id/decision-maker", (req: Request, res: Response) => {
+    const resultado = salvarDecisor(req.params.id, {
+      name: req.body?.name,
+      phone: String(req.body?.phone || ""),
+      source: req.body?.source,
+      referredBy: req.body?.referredBy,
+    });
+    if (!resultado.ok) return res.status(400).json({ success: false, error: resultado.erro });
+    const lead = resultado.lead!;
+    return res.json({
+      success: true,
+      decisor: { name: lead.dmName || null, phone: lead.dmPhone, source: lead.dmSource || null },
+      // O número da empresa continua no cadastro; o de envio passa a ser o dele.
+      envioPara: telefoneDeEnvio(lead),
+    });
   });
 
   app.post("/api/leads/:id/client-profile", async (req: Request, res: Response) => {

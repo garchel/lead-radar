@@ -18,7 +18,7 @@ import { getSetting } from "../store/db";
 /*      no webhook, `detectOptOut()` (regex) roda sempre primeiro.      */
 /* ------------------------------------------------------------------ */
 
-export type IntentName = "interesse" | "preco" | "recusa" | "ocupado" | "outro";
+export type IntentName = "interesse" | "preco" | "recusa" | "ocupado" | "indicacao" | "outro";
 
 export type IntentStatus = "negotiating" | "declined" | "contacted";
 
@@ -74,6 +74,24 @@ const RULES: IntentRule[] = [
       /or[çc]amento/i,
       /investimento/i,
       /quais (s[aã]o )?as (condi[çc][õo]es|formas de pagamento)/i,
+    ],
+  },
+  {
+    // Quem responde o WhatsApp de uma empresa quase sempre é funcionário. Essa
+    // intenção existe para a Clara trocar de interlocutor em vez de insistir com
+    // a recepção: ela pede o contato de quem decide e passa a falar com ele.
+    intent: "indicacao",
+    status: "negotiating",
+    confidence: 0.85,
+    patterns: [
+      /n[aã]o sou (eu )?(o |a )?(dono|dona|respons[áa]vel|propriet[áa]ri|gerente|s[óo]cio)/i,
+      /(aqui|aqui quem (fala|responde)) (é|e) (a |o )?(secret[áa]ria|recep[çc][ãa]o|atendente|funcion[áa]ri)/i,
+      /(sou|é|e) (s[óo] |apenas )?(a |o )?(atendente|secret[áa]ria|funcion[áa]ri|recep)/i,
+      /(falar|fala|fale|conversar|converse|negociar) (com|com a|com o) (o |a )?(dono|dona|respons[áa]vel|propriet[áa]ri|gerente)/i,
+      /quem (cuida|responde|decide|toma conta) (disso|de site|do site|sobre)/i,
+      /(te |vou te |posso |j[áa] )?pass(ar|o|ei) (o |os |seu )?(contato|n[úu]mero)/i,
+      /(o|a) (dono|dona|respons[áa]vel) (é|e|se chama)/i,
+      /(ele|ela) (é|e) quem (cuida|decide|resolve)/i,
     ],
   },
   {
@@ -156,6 +174,7 @@ Classifique em UMA das intenções:
 - "preco": perguntou valor, prazo, condições ou orçamento
 - "recusa": disse que não quer, não tem interesse, já tem site/quem cuida
 - "ocupado": pediu para falar depois, sem dizer sim nem não
+- "indicacao": NÃO é o dono/responsável e diz com quem falar, passa o contato de outra pessoa, ou informa que quem cuida disso é o gerente/dono
 - "outro": saudação isolada, pergunta sem relação, mensagem incompreensível
 
 REGRAS
@@ -185,13 +204,16 @@ function parseJsonLoose(text: string): any {
   }
 }
 
-const VALID_INTENTS: IntentName[] = ["interesse", "preco", "recusa", "ocupado", "outro"];
+const VALID_INTENTS: IntentName[] = ["interesse", "preco", "recusa", "ocupado", "indicacao", "outro"];
 
 const STATUS_BY_INTENT: Record<IntentName, IntentStatus | undefined> = {
   interesse: "negotiating",
   preco: "negotiating",
   recusa: "declined",
   ocupado: undefined,
+  // indicar o dono mantém a conversa viva: quem respondeu não decidiu nada,
+  // mas abriu a porta para quem decide.
+  indicacao: "negotiating",
   outro: undefined,
 };
 
