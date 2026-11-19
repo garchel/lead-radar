@@ -82,7 +82,7 @@ const STAGE_ICONS: Record<string, string> = {
 const DEV_STATUS_LABELS: Record<string, string> = {
   aguardando_agente: 'Aguardando o agente',
   em_desenvolvimento: 'Em desenvolvimento (agente codando)',
-  codigo_entregue: 'Código entregue — aguardando revisão humana',
+  codigo_entregue: 'Código entregue, aguardando revisão',
   aprovado: 'Código aprovado pelo humano',
 };
 
@@ -173,7 +173,8 @@ export const AgentsDashboard: React.FC = () => {
               Agentes de Execução
             </h1>
             <p className="text-sm text-slate-600 mt-1">
-              Delegue um bot Hermes por projeto ativo — ele executa via MCP sem precisar ler a codebase.
+              Delegue um agente por projeto em andamento. Ele recebe o briefing e as tarefas
+              prontas, sem precisar abrir a pasta do projeto.
             </p>
           </div>
           <button
@@ -195,8 +196,8 @@ export const AgentsDashboard: React.FC = () => {
 
         {/* Seletor de projeto */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            Projeto ativo (um bot por projeto)
+          <label className="block text-xs font-semibold text-slate-600 mb-2">
+            Projeto ativo (um agente por projeto)
           </label>
           {loadingProjects ? (
             <div className="h-10 bg-slate-100 rounded-lg animate-pulse" />
@@ -213,7 +214,7 @@ export const AgentsDashboard: React.FC = () => {
             >
               {projects.map((p) => (
                 <option key={p.projectId} value={p.projectId}>
-                  {STAGE_ICONS[p.stage] || '📁'} {p.name} — {STAGE_LABELS[p.stage] || p.stage}
+                  {STAGE_ICONS[p.stage] || '📁'} {p.name}, etapa {STAGE_LABELS[p.stage] || p.stage}
                   {p.leadName ? ` (${p.leadName})` : ''}
                 </option>
               ))}
@@ -248,19 +249,19 @@ export const AgentsDashboard: React.FC = () => {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                   <div className="bg-slate-50 rounded-lg p-3">
-                    <div className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Etapa</div>
+                    <div className="text-[10.5px] font-semibold text-slate-500">Etapa</div>
                     <div className="text-sm font-semibold text-slate-800 mt-0.5">
                       {STAGE_ICONS[runbook.projeto.etapa]} {STAGE_LABELS[runbook.projeto.etapa] || runbook.projeto.etapa}
                     </div>
                   </div>
                   <div className="bg-slate-50 rounded-lg p-3">
-                    <div className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">devStatus</div>
+                    <div className="text-[10.5px] font-semibold text-slate-500">Situação do código</div>
                     <div className="text-sm font-semibold text-slate-800 mt-0.5">
                       {DEV_STATUS_LABELS[runbook.projeto.devStatus] || runbook.projeto.devStatus}
                     </div>
                   </div>
                   <div className="bg-slate-50 rounded-lg p-3">
-                    <div className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Briefing</div>
+                    <div className="text-[10.5px] font-semibold text-slate-500">Briefing</div>
                     <div className="text-sm font-semibold text-slate-800 mt-0.5">
                       {runbook.projeto.temBriefingTexto || runbook.projeto.camposBriefing > 0 ? (
                         <span className="text-emerald-600">
@@ -272,7 +273,7 @@ export const AgentsDashboard: React.FC = () => {
                     </div>
                   </div>
                   <div className="bg-slate-50 rounded-lg p-3">
-                    <div className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Tarefas</div>
+                    <div className="text-[10.5px] font-semibold text-slate-500">Tarefas</div>
                     <div className="text-sm font-semibold text-slate-800 mt-0.5">
                       {runbook.projeto.tarefas.feitas}/{runbook.projeto.tarefas.total}
                     </div>
@@ -281,7 +282,7 @@ export const AgentsDashboard: React.FC = () => {
 
                 {runbook.projeto.briefPreview && (
                   <div className="mt-4">
-                    <div className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1">Briefing (prévia)</div>
+                    <div className="text-[10.5px] font-semibold text-slate-500 mb-1">Briefing (prévia)</div>
                     <div className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-lg p-3 whitespace-pre-wrap max-h-32 overflow-y-auto">
                       {runbook.projeto.briefPreview}
                     </div>
@@ -316,7 +317,7 @@ export const AgentsDashboard: React.FC = () => {
             <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm lg:col-span-2">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-4">
                 <ClipboardList className="w-4 h-4 text-indigo-600" />
-                Runbook — etapa atual e seguintes
+                Runbook da etapa atual e das seguintes
               </h3>
               <div className="space-y-4">
                 {runbook.runbook.map((step, i) => (
@@ -324,7 +325,7 @@ export const AgentsDashboard: React.FC = () => {
                     <div className="flex items-center justify-between mb-2">
                       <span className={`text-sm font-bold ${i === 0 ? 'text-indigo-700' : 'text-slate-700'}`}>
                         {STAGE_ICONS[step.etapa]} {STAGE_LABELS[step.etapa] || step.etapa}
-                        {i === 0 && <span className="ml-2 text-[10px] font-bold uppercase tracking-wider bg-indigo-600 text-white px-1.5 py-0.5 rounded">atual</span>}
+                        {i === 0 && <span className="ml-2 rounded bg-indigo-600 px-1.5 py-0.5 text-[10.5px] font-semibold text-white">atual</span>}
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mb-2">{step.objetivo}</p>
@@ -383,7 +384,7 @@ export const AgentsDashboard: React.FC = () => {
             <div className="flex items-center justify-between gap-3 mb-3">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <Rocket className="w-4 h-4 text-indigo-600" />
-                Prompt de spawn — cole no novo chat do bot Hermes
+                Prompt de spawn para colar no chat do bot Hermes
               </h3>
               <button
                 onClick={() => copyToClipboard(runbook.promptDeSpawn, 'spawn')}
@@ -397,7 +398,8 @@ export const AgentsDashboard: React.FC = () => {
               {runbook.promptDeSpawn}
             </pre>
             <p className="text-[11px] text-slate-400 mt-2">
-              O bot chama <code className="font-mono">get_agent_runbook</code> via MCP e recebe o guia completo + estado fresco — não precisa ler a codebase.
+              O agente pede o guia pelo servidor do LeadRadar e recebe tudo pronto:
+              o que fazer agora, as regras da etapa e o estado atual do projeto.
             </p>
           </div>
         )}

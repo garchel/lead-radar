@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: inherit; color: var(--foreground); margin: 0; font-size: 14px; line-height: 1.5; }
+  .linha { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+  .col { flex: 1 1 380px; min-width: 330px; }
+  .titulo-col { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--muted-foreground); margin: 0 0 8px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+  .h1 { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .sub { font-size: 12px; color: #475569; margin: 5px 0 0; }
+  .rot.up { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .06em; }
+  .rot.down { font-size: 12px; font-weight: 600; color: #64748b; }
+  .sel { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; margin-top: 6px; display: flex; justify-content: space-between; gap: 8px; }
+  .mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .mini div { background: #f8fafc; border-radius: 8px; padding: 8px; }
+  .mini .lbl { font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; }
+  .mini .lbl.ok { text-transform: none; font-weight: 600; color: #64748b; }
+  .mini .val { font-size: 12.5px; font-weight: 600; margin-top: 1px; }
+  .mar { background: rgba(252,165,165,.3); border-radius: 3px; padding: 0 2px; }
+  .anot { font-size: 12px; color: var(--muted-foreground); margin: 8px 0 0; }
+  .marca { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--border); color: var(--muted-foreground); vertical-align: 1px; margin-right: 5px; }
+  .errado { border-color: #fca5a5; color: #b91c1c; background: rgba(252,165,165,.12); }
+  .certo { border-color: #86efac; color: #15803d; background: rgba(134,239,172,.12); }
+  .bloco { margin-bottom: 14px; }
+  .titulo-card { font-size: 12.5px; font-weight: 700; display: flex; align-items: center; gap: 5px; }
+  .sep { height: 1px; background: var(--border); margin: 14px 0 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td { padding: 4px 10px 4px 0; vertical-align: top; color: var(--muted-foreground); }
+  td:first-child { color: var(--foreground); font-weight: 600; white-space: nowrap; }
+</style></head>
+<body>
+
+<div class="linha">
+  <div class="col">
+    <p class="titulo-col">Hoje</p>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="h1">🤖 Agentes de Execução</div>
+        <p class="sub">Delegue um bot Hermes por projeto ativo <span class="mar">—</span> ele executa via MCP sem precisar ler a <span class="mar">codebase</span>.</p>
+      </div>
+      <p class="anot"><span class="marca errado">U13</span><span class="marca errado">U5</span>travessão e "codebase", que só faz sentido para quem programa.</p>
+    </div>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="rot up">Projeto ativo (um bot por projeto)</div>
+        <div class="sel"><span>⌨️ Mudanças Valparaíso <span class="mar">—</span> Landing Page <span class="mar">—</span> Desenvolvimento</span><span>▾</span></div>
+        <div class="mini">
+          <div><div class="lbl">Etapa</div><div class="val">⌨️ Desenvolvimento</div></div>
+          <div><div class="lbl">devStatus</div><div class="val">Código entregue <span class="mar">—</span> aguardando revisão humana</div></div>
+        </div>
+      </div>
+      <p class="anot"><span class="marca errado">U5</span>o rótulo do card era o nome da variável no código: <code>devStatus</code>, em camelCase, direto na tela.</p>
+    </div>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="titulo-card">📋 Runbook <span class="mar">—</span> etapa atual e seguintes</div>
+        <div class="titulo-card" style="margin-top:8px">🚀 Prompt de spawn <span class="mar">—</span> cole no novo chat do bot Hermes</div>
+      </div>
+      <p class="anot"><span class="marca errado">U13</span>travessão em dois títulos de card.</p>
+    </div>
+  </div>
+
+  <div class="col">
+    <p class="titulo-col">Depois</p>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="h1">🤖 Agentes de Execução</div>
+        <p class="sub">Delegue um agente por projeto em andamento. Ele recebe o briefing e as tarefas prontas, sem precisar abrir a pasta do projeto.</p>
+      </div>
+      <p class="anot"><span class="marca certo">ok</span>a mesma ideia dita para quem não abre terminal.</p>
+    </div>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="rot down">Projeto ativo (um agente por projeto)</div>
+        <div class="sel"><span>⌨️ Mudanças Valparaíso — Landing Page (etapa Desenvolvimento)</span><span>▾</span></div>
+        <div class="mini">
+          <div><div class="lbl ok">Etapa</div><div class="val">⌨️ Desenvolvimento</div></div>
+          <div><div class="lbl ok">Situação do código</div><div class="val">Código entregue, aguardando revisão</div></div>
+        </div>
+      </div>
+      <p class="anot"><span class="marca certo">ok</span>o dado é o mesmo campo do banco; a etiqueta agora diz o que ele é. O travessão restante vem do nome do projeto, que está gravado assim.</p>
+    </div>
+
+    <div class="bloco">
+      <div class="card">
+        <div class="titulo-card">📋 Runbook da etapa atual e das seguintes</div>
+        <div class="titulo-card" style="margin-top:8px">🚀 Prompt de spawn para colar no chat do bot Hermes</div>
+      </div>
+      <p class="anot"><span class="marca certo">ok</span>mesma função, sem o traço no meio.</p>
+    </div>
+  </div>
+</div>
+
+<div class="sep"></div>
+
+<table>
+  <tr><td>Muda</td><td>Subtitle, rótulo do seletor, cinco mini-rótulos, um nome de variável, dois títulos e dois textos auxiliares.</td></tr>
+  <tr><td>Não muda</td><td>Projetos, etapas, tarefas, briefing, runbook, prompt, botões de copiar.</td></tr>
+  <tr><td>Os emojis ficam</td><td>📋 🎨 ⌨️ 🚀 marcam a etapa e você pediu para manter ícones. Só a caixa alta e os nomes técnicos saíram.</td></tr>
+</table>
+
+</body></html>
