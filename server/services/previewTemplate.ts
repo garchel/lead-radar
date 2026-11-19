@@ -604,7 +604,6 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
          border-radius:var(--r-md);padding:12px 14px;display:flex;align-items:center;gap:11px;box-shadow:0 8px 24px -14px rgba(0,0,0,.4)}
   .float b{display:block;font-size:13.5px;color:var(--ink);line-height:1.2}
   .float span{display:block;font-size:12px;color:var(--mute)}
-  .dot{width:9px;height:9px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.16);flex:none}
 
   /* faixa de confiança */
   .strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--wash)}
@@ -624,7 +623,6 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   .servico{border:1px solid var(--line);border-radius:var(--r-md);padding:22px;background:var(--paper);
            transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}
   .servico:hover{border-color:var(--accent-line);box-shadow:var(--shadow);transform:translateY(-2px)}
-  .servico .n{font-size:12px;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700;letter-spacing:.06em}
   .servico h3{margin:10px 0 0;font-family:var(--font-display);font-weight:600}
   .servico p{font-size:14px;color:var(--body);margin:7px 0 0}
 
@@ -693,9 +691,6 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
      conteúdo é pior que animação nenhuma; no lugar dela, movimento sem risco:
      hover, toque e abertura de pergunta. */
 
-  /* ponto de "online" pulsando devagar */
-  @keyframes pulsar{0%,100%{box-shadow:0 0 0 4px rgba(34,197,94,.16)}50%{box-shadow:0 0 0 7px rgba(34,197,94,.06)}}
-  .dot{animation:pulsar 3.2s ease-in-out infinite}
 
   /* pergunta abrindo aparece suave (não depende de scroll) */
   .faq details[open] p{animation:subir .28s ease both}
@@ -811,7 +806,6 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
           </span>`
         }
         <div class="float">
-          <span class="dot"></span>
           <span>
             <b>Respondemos no WhatsApp</b>
             <span>${horario ? esc(horario) : "Atendimento com hora marcada"}</span>
@@ -861,7 +855,6 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   <section class="blk" id="servicos">
     <div class="wrap">
       <div class="blk-head">
-        <p class="eyebrow">O que fazemos</p>
         <h2>Serviços</h2>
         <p>${servicosSaoExemplo ? "Estes são os serviços mais procurados nesta área; ajustamos a lista com você antes de publicar." : "O que você encontra aqui, explicado de forma direta."}</p>
       </div>
@@ -869,7 +862,6 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
         ${servicos
           .map(
             (s, i) => `<article class="servico">
-          <span class="n">${String(i + 1).padStart(2, "0")}</span>
           <h3>${esc(s)}</h3>
           <p>${esc(descricaoServico(s, i))}</p>
         </article>`
@@ -882,7 +874,6 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   <section class="blk" id="depois" style="padding-top:0">
     <div class="wrap">
       <div class="blk-head">
-        <p class="eyebrow">O que vem depois</p>
         <h2>O resto a gente monta com você</h2>
         <p>Estas partes entram na versão final, com as suas fotos e o seu texto.</p>
       </div>
@@ -905,7 +896,6 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
       ? `<section class="blk" style="padding-top:0">
     <div class="wrap">
       <div class="blk-head">
-        <p class="eyebrow">Por dentro</p>
         <h2>Onde você é atendido</h2>
       </div>
       <div class="galeria">
@@ -919,7 +909,6 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   <section class="blk" style="background:var(--wash)">
     <div class="wrap">
       <div class="blk-head">
-        <p class="eyebrow">Por que aqui</p>
         <h2>O que muda no atendimento</h2>
       </div>
       <ul class="difs">
@@ -956,7 +945,6 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
   <section class="blk faq" id="duvidas" style="padding-top:0">
     <div class="wrap">
       <div class="blk-head">
-        <p class="eyebrow">Dúvidas</p>
         <h2>Perguntas frequentes</h2>
       </div>
       ${faq.map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("")}
