@@ -7,6 +7,10 @@
  *
  * Composição: SVG (texto e layout em código, sem fonte externa) → PNG 1080×1350
  * via sharp. O formato retrato ocupa a tela do celular sem cortar.
+ *
+ * O cartão não escreve o NOME da cor, só a hex: o nome que o código calcula mente
+ * (chamou #D15620 de "vermelho" quando é laranja) e o lead que entende de cor
+ * perde a confiança na hora.
  */
 import sharp from "sharp";
 import type { StoredLead } from "../store/types";
@@ -61,10 +65,7 @@ export function paletteCardSvg(entries: PaletteEntry[], opts: PaletteCardOptions
       return `
     <g>
       <rect x="${M}" y="${y}" width="${largura}" height="${alturaBloco}" rx="26" fill="${cor.hex}" stroke="#e2ded8" stroke-width="2" />
-      <text x="${M + 34}" y="${y + alturaBloco - 78}" fill="${tinta}" font-family="Helvetica Neue, Arial, sans-serif" font-size="34" font-weight="600">${esc(
-        cor.name.charAt(0).toUpperCase() + cor.name.slice(1)
-      )}</text>
-      <text x="${M + 34}" y="${y + alturaBloco - 34}" fill="${tinta}" opacity="0.9" font-family="Menlo, Consolas, monospace" font-size="24" letter-spacing="1.5">${esc(
+      <text x="${M + 34}" y="${y + alturaBloco - 40}" fill="${tinta}" font-family="Menlo, Consolas, monospace" font-size="42" font-weight="500" letter-spacing="2">${esc(
         cor.hex.toUpperCase()
       )}</text>
       <text x="${W - M - 34}" y="${y + 58}" text-anchor="end" fill="${tinta}" opacity="0.8" font-family="Helvetica Neue, Arial, sans-serif" font-size="22" font-weight="600" letter-spacing="2">0${i + 1}</text>
@@ -95,7 +96,6 @@ export function paletteCardSvg(entries: PaletteEntry[], opts: PaletteCardOptions
 
   <line x1="${M}" y1="${H - 132}" x2="${W - M}" y2="${H - 132}" stroke="#e7e5e1" stroke-width="2" />
   <text x="${M}" y="${H - 84}" fill="#54585f" font-family="Helvetica Neue, Arial, sans-serif" font-size="23" font-weight="600">Prévia · Vértice Páginas Web</text>
-  <text x="${W - M}" y="${H - 84}" text-anchor="end" fill="#54585f" font-family="Helvetica Neue, Arial, sans-serif" font-size="23">Envie sua opinião nesta conversa</text>
 </svg>`;
 }
 

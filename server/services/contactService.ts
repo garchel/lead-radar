@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import { StoredLead } from "../store/types";
 import { whatsAppify } from "./messageStyle";
-import { recordCommunication, getSetting } from "../store/db";
+import { recordCommunication, getSetting, getCommunicationsByLead } from "../store/db";
 import { primaryAuditHook } from "./siteAuditService";
 import { effectiveWebsiteStatus } from "./presenceService";
 import { runPaced, type SendPurpose } from "./humanizeService";
@@ -403,6 +403,24 @@ async function sendThroughProvider(provider: WhatsappProvider, to: string, messa
  * registra a comunicação do mesmo jeito — mídia não é atalho para furar regra.
  * Só o provider WhatsMiau tem esse endpoint; nos outros, cai em erro claro.
  */
+/**
+ * A conversa está esperando o lead?
+ *
+ * `true` quando a última mensagem registrada é nossa, ou seja, mandar outra agora
+ * seria duas seguidas. Lê o banco na hora do envio, não o estado que o chamador
+ * tinha quando começou a pensar: foi essa diferença que gerou mensagem dupla numa
+ * simulação (o monitor leu `already_answered: false` e a IA de segurança respondeu
+ * antes do envio).
+ */
+function registroDeImagem(media: { fileName: string }, caption: string): string {
+  return `[imagem] ${media.fileName}\n\n${caption}`;
+}
+
+export function ultimaMensagemEhNossa(leadId: string): boolean {
+  const historico = getCommunicationsByLead(leadId);
+  return historico[0]?.direction === "outbound";
+}
+
 export async function deliverWhatsAppMedia(
   leadId: string,
   to: string,
@@ -411,6 +429,28 @@ export async function deliverWhatsAppMedia(
   hook?: string,
   purpose: SendPurpose = "reply"
 ): Promise<ContactResult> {
+  // Porteiro de direção: imagem também é mensagem. Se a última foi nossa, o lead
+  // ainda não respondeu e esta enviaria duas seguidas (foi o que aconteceu com a
+  // paleta depois de a IA de segurança responder).
+  if (purpose === "reply" && ultimaMensagemEhNossa(leadId)) {
+    const id = recordCommunication({
+      leadId,
+      channel: "whatsapp",
+      status: "failed",
+      toAddress: to,
+      message: registroDeImagem(media, caption),
+      hook,
+      errorDetail: "A última mensagem da conversa é nossa. Espere o lead responder.",
+    });
+    return {
+      channel: "whatsapp",
+      status: "failed",
+      communicationId: id,
+      to,
+      detail: "A última mensagem da conversa é nossa. Espere o lead responder antes de enviar outra.",
+    };
+  }
+
   const { provider, reason } = resolveWhatsappProvider();
   const registro = `[imagem] ${media.fileName}\n\n${caption}`;
 
@@ -578,6 +618,13 @@ export interface ContactOptions {
    * Default: "prospect" (o mais restritivo).
    */
   purpose?: SendPurpose;
+  /**
+   * Envia mesmo com a última mensagem da conversa sendo nossa.
+   *
+   * Existe para ação manual do dono (reforço, correção). O fluxo automático
+   * NUNCA usa: duas mensagens nossas seguidas quebram a conversa e parecem robô.
+   */
+  force?: boolean;
 }
 
 /**

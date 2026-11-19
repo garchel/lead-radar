@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { dispatchLeadContact, getContactPolicy, temMensagemSemResposta } from "../server/services/interactionService";
+import { dispatchLeadContact, dispatchLeadReply, getContactPolicy, temMensagemSemResposta } from "../server/services/interactionService";
 import { getCommunicationsByLead, recordCommunication, setSetting, upsertLead } from "../server/store/db";
 import type { StoredLead } from "../server/store/types";
 
@@ -87,5 +87,58 @@ describe("política de recontato x resposta", () => {
     await dispatchLeadContact({ ...LEAD }, { channel: "whatsapp", message: "Resposta enviada.", purpose: "reply" } as any);
     expect(getCommunicationsByLead(LEAD.id)[0]?.direction).toBe("outbound");
     expect(temMensagemSemResposta(LEAD.id)).toBe(false);
+  });
+});
+
+describe("duas mensagens nossas seguidas", () => {
+  beforeEach(() => {
+    upsertLead({ ...LEAD, id: "lead-dupla-1", name: "Barbearia Dupla Teste", phone: "+55 67 95555-0001" } as StoredLead);
+    setSetting("whatsapp_provider", "");
+    delete process.env.WHATSAPP_PROVIDER;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } }))
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("recusa resposta quando a última mensagem da conversa é nossa", async () => {
+    recordCommunication({
+      leadId: "lead-dupla-1",
+      channel: "whatsapp",
+      direction: "outbound",
+      message: "Fechado, começo a montar agora.",
+      status: "sent",
+    } as any);
+
+    const r = await dispatchLeadReply(
+      { ...LEAD, id: "lead-dupla-1" } as StoredLead,
+      { message: "Segue a paleta", purpose: "reply" }
+    );
+
+    expect(r.status).toBe("failed");
+    expect(r.blocked).toBe(true);
+    expect(r.detail).toMatch(/última mensagem da conversa é nossa/i);
+  });
+
+  it("libera quando o lead respondeu depois da nossa mensagem", async () => {
+    recordCommunication({ leadId: "lead-dupla-1", channel: "whatsapp", direction: "outbound", message: "Oi!", status: "sent" } as any);
+    inbound("lead-dupla-1", "pode mandar a prévia");
+
+    const r = await dispatchLeadReply({ ...LEAD, id: "lead-dupla-1" } as StoredLead, { message: "Segue o link", purpose: "reply" });
+    expect(r.blocked).not.toBe(true);
+  });
+
+  it("forçar libera o envio manual do dono", async () => {
+    recordCommunication({ leadId: "lead-dupla-1", channel: "whatsapp", direction: "outbound", message: "Oi!", status: "sent" } as any);
+
+    const r = await dispatchLeadReply(
+      { ...LEAD, id: "lead-dupla-1" } as StoredLead,
+      { message: "Correção: o link certo é este", purpose: "reply", force: true }
+    );
+    expect(r.blocked).not.toBe(true);
   });
 });

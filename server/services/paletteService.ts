@@ -11,6 +11,7 @@
  * forma de quadradinhos + nome em português + hex. É legível, não depende de API
  * nova e o lead pode responder "gostei" ou "não gosto desse amarelo".
  */
+import { telefoneDeEnvio } from "./decisionMakerService";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -121,12 +122,32 @@ export function paletteMessageText(lead: StoredLead, entries: PaletteEntry[]): s
   const nome = String(lead.name || "").split(" — ")[0];
   const linhas = entries.map((c) => `${c.swatch} ${c.name.charAt(0).toUpperCase()}${c.name.slice(1)} (${c.hex})`);
 
+  // Caminho de TEXTO puro: aqui a lista é a única informação, então nome e hex
+  // aparecem. O envio em imagem usa `paletteCaption`, que não repete nada.
   return [
-    `Ainda estamos trabalhando na prévia, mas já posso te mostrar a paleta que escolhi para a ${nome} 👇`,
+    `Essa é a paleta que peguei da marca da ${nome} 👇`,
     "",
     linhas.join("\n"),
     "",
     "Peguei as cores que aparecem na sua marca e no seu material.",
+    "O que acha?",
+  ]
+    .join("\n")
+    .trim();
+}
+
+/**
+ * Legenda do cartão em imagem.
+ *
+ * As cores já estão na imagem, então a legenda não repete nome nem hex: repetir
+ * faz o lead conferir se o texto bate com o quadradinho, e qualquer divergência
+ * (o nome calculado pelo código chama laranja de vermelho) vira dúvida.
+ */
+export function paletteCaption(lead: StoredLead): string {
+  return [
+    "Essa é a paleta que peguei da sua marca e usei na página 👇",
+    "",
+    "Peguei os tons que aparecem no seu logo e no seu material.",
     "O que acha?",
   ]
     .join("\n")
@@ -252,17 +273,18 @@ export async function sendPalettePreview(
     if (!cartao.publicUrl) {
       return { sent: false, text, colors, detail: "Cartão gerado, mas sem URL pública: o gateway precisa de link para baixar a imagem." };
     }
+    const legenda = paletteCaption(lead);
     const envio = await deliverWhatsAppMedia(
       lead.id,
-      String(lead.phone).replace(/\D/g, ""),
-      text,
+      telefoneDeEnvio(lead),
+      legenda,
       { url: cartao.publicUrl, fileName: cartao.fileName, mimetype: "image/png" },
       undefined,
       "reply"
     );
     return {
       sent: envio.status === "sent",
-      text,
+      text: legenda,
       colors,
       communicationId: envio.communicationId,
       detail: envio.detail,
@@ -274,6 +296,8 @@ export async function sendPalettePreview(
     message: text,
     purpose: "reply",
     ignoreCooldown: Boolean(options.forcar),
+    // `forcar` é ação manual do Paulo: ele já viu a conversa e decidiu mandar.
+    force: Boolean(options.forcar),
   });
 
   return {

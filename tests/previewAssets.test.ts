@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { classifyImage, pickPreviewImages } from "../server/services/brandImagery";
-import { colorName, paletteForLead, paletteMessageText, swatchFor } from "../server/services/paletteService";
+import { colorName, paletteCaption, paletteForLead, paletteMessageText, swatchFor } from "../server/services/paletteService";
 import { monogramOf, monogramSvg, wordmarkSvg } from "../server/services/logoSvg";
 import { paletteCardSvg } from "../server/services/paletteCard";
 import { fontStylesheetUrl, pickFontPair } from "../server/services/fontPairs";
@@ -171,15 +171,25 @@ describe("paleta", () => {
     expect(paleta[0].hex).toBe("#E5D399");
   });
 
-  it("mensagem fala de paleta, promete a prévia e pergunta a opinião", () => {
+  it("texto puro lista nome e hex (é a única informação da mensagem)", () => {
     const lead = leadCom([], ["#E5D399", "#2F2F2F"]);
     const texto = paletteMessageText(lead, paletteForLead(lead));
-    expect(texto).toContain("Ainda estamos trabalhando na prévia");
     expect(texto).toMatch(/dourado/i);
     expect(texto).toContain("#E5D399");
     expect(texto).toMatch(/O que acha\?/);
     expect(texto).not.toContain("—");
-    expect(texto).not.toMatch(/R\$/);
+    // a prévia já está montada: nada de "ainda estamos trabalhando nela"
+    expect(texto).not.toMatch(/ainda estamos trabalhando/i);
+  });
+
+  it("legenda da imagem não repete cor, nome nem hex", () => {
+    const lead = leadCom([], ["#E5D399", "#2F2F2F"]);
+    const legenda = paletteCaption(lead);
+    expect(legenda).toMatch(/paleta/i);
+    expect(legenda).toMatch(/O que acha\?/);
+    expect(legenda).not.toContain("#E5D399");
+    expect(legenda).not.toMatch(/dourado|grafite/i);
+    expect(legenda).not.toContain("—");
   });
 });
 
@@ -280,14 +290,20 @@ describe("cartão da paleta", () => {
     { accent: "#E5D399", onAccent: "#20170a", businessName: "Dra. Carmen Pitol", category: "Clínica odontológica", city: "Balneário Camboriú" }
   );
 
-  it("mostra as três cores com nome e hex, e a assinatura da Vértice", () => {
+  it("mostra as três cores só pela hex, e a assinatura da Vértice", () => {
     const svg = cartao();
     expect(svg).toContain("#E5D399");
     expect(svg).toContain("#2F2F2F");
-    expect(svg).toMatch(/Dourado/);
-    expect(svg).toMatch(/Grafite/);
+    // o nome que o código calcula mente (#D15620 já saiu como "vermelho" sendo laranja)
+    expect(svg).not.toMatch(/Dourado/i);
+    expect(svg).not.toMatch(/Grafite/i);
+    expect(svg).not.toMatch(/Branco/i);
     expect(svg).toContain("Vértice Páginas Web");
     expect(svg).toContain("Dra. Carmen Pitol");
+  });
+
+  it("não pede opinião no rodapé: a conversa já é o lugar da resposta", () => {
+    expect(cartao()).not.toMatch(/Envie sua opini/i);
   });
 
   it("não repete atributo fill (SVG inválido quebra a rasterização)", () => {

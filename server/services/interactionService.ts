@@ -213,11 +213,31 @@ export async function dispatchLeadReply(
   const latest = history[0];
   const hasOpenReply = latest?.direction === "inbound";
 
+  // Duas nossas seguidas quebram a conversa. O chamador pode ter lido o estado
+  // antes de outra rota responder (foi o que gerou mensagem dupla na simulação),
+  // então quem decide é o banco AGORA, não o `already_answered` do monitor.
+  if (latest?.direction === "outbound" && !options.force) {
+    return {
+      channel,
+      status: "failed",
+      communicationId: "",
+      to,
+      detail: "A última mensagem da conversa é nossa. Espere o lead responder antes de enviar outra.",
+      blocked: true,
+    };
+  }
+
   if (!hasOpenReply) {
     // Sem conversa aberta, `dispatchLeadContact` faria uma ABORDAGEM — mas isto
     // veio de `dispatchLeadReply`, então marcamos o propósito como resposta
     // (senão o bloqueio de 2 falhas impediria responder quem nos procurou).
-    return dispatchLeadContact(lead, { ...options, purpose: options.purpose ?? "reply" });
+    return dispatchLeadContact(lead, {
+      ...options,
+      purpose: options.purpose ?? "reply",
+      // Envio manual (`force`) também ignora a janela de recontato: o dono já
+      // olhou a conversa e decidiu mandar.
+      ignoreCooldown: options.ignoreCooldown ?? options.force,
+    });
   }
 
   const message = options.message?.trim();
