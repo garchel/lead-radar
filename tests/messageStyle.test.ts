@@ -143,12 +143,28 @@ describe("buildProspectMessage (D0)", () => {
     expect(msg.trim().endsWith(")")).toBe(true);
   });
 
-  it("cita o nome do negócio e usa no máximo um emoji", () => {
+  it("cita o nome do negócio inteiro e usa dois emojis, um abrindo e um fechando", () => {
     expect(msg).toContain("Pianca Barbearia");
     const emojis = msg.match(/[\u{1F300}-\u{1FAFF}\u{2B50}]/gu) || [];
-    expect(emojis.length).toBe(1);
+    expect(emojis).toEqual(["👋", "😊"]);
     // emoji de venda/alerta saiu do padrão
     expect(msg).not.toMatch(/[\u{1F680}\u{2B50}\u{1F525}\u{1F6A8}]/u);
+  });
+
+  it("não trunca o nome da empresa", () => {
+    const longo = buildProspectMessage({
+      id: "lead-nome-longo",
+      name: "Clínica Dra. Suelen Correia estética avançada",
+      category: "Esteticista",
+      city: "Arujá",
+      state: "SP",
+      websiteStatus: "none",
+      rating: 4.9,
+      reviewsCount: 165,
+      pipelineStatus: "prospect",
+    } as any);
+    expect(longo).toMatch(/Clínica Dra\. Suelen Correia est[ée]tica avançada/i);
+    expect(longo).not.toContain("…");
   });
 
   it("pitch da IA passa pelo mesmo estilo", () => {

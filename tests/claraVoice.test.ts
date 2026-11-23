@@ -19,9 +19,13 @@ describe("conferirEstilo", () => {
     expect(conferirEstilo(APROVADA)).toEqual([]);
   });
 
-  it("reclama de dois emojis na mesma mensagem", () => {
+  it("reclama de dois emojis numa resposta curta", () => {
     const avisos = conferirEstilo("Oi! 👋 Já montei a prévia 👇");
-    expect(avisos.some((a) => a.regra === "um emoji por mensagem")).toBe(true);
+    expect(avisos.some((a) => a.regra === "emoji demais")).toBe(true);
+  });
+
+  it("aceita dois emojis na abordagem longa, um abrindo e um fechando", () => {
+    expect(conferirEstilo(APROVADA)).toEqual([]);
   });
 
   it("reclama de emoji de anúncio", () => {

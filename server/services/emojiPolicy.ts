@@ -69,9 +69,19 @@ export function conferirEmojis(texto: string): EmojiAviso[] {
     });
   }
 
+  // Mensagem longa (abordagem) comporta dois: um abre, outro fecha. Resposta curta
+  // com dois já parece enfeite.
+  const paragrafos = msg.split(/\n\s*\n/).filter((b) => b.trim()).length;
+  const limite = paragrafos >= 3 ? 2 : 1;
   const permitidos = encontrados.filter((e) => EMOJIS_PERMITIDOS.has(e));
-  if (permitidos.length > 1) {
-    avisos.push({ regra: "um emoji por mensagem", detalhe: `achei ${permitidos.length}: ${permitidos.join(" ")}` });
+  if (permitidos.length > limite) {
+    avisos.push({
+      regra: "emoji demais",
+      detalhe:
+        limite === 1
+          ? `achei ${permitidos.length}: ${permitidos.join(" ")}. Resposta curta usa um.`
+          : `achei ${permitidos.length}: ${permitidos.join(" ")}. Mensagem longa usa dois, um abrindo e um fechando.`,
+    });
   }
 
   for (const bloco of msg.split(/\n\s*\n/)) {

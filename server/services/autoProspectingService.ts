@@ -361,6 +361,20 @@ export function displayBusinessName(name: string, maxLength = 48): string {
    return base.length > maxLength ? `${base.slice(0, maxLength).trim()}…` : base;
  }
 
+ /**
+  * Nome do negócio para a mensagem do WhatsApp: SEM truncar.
+  *
+  * O corte em 40 caracteres existe para assunto de e-mail e título de card, mas na
+  * abordagem ele entregava "Clínica Dra. Suelen Correia Estética Ava…" ao próprio
+  * dono. Nome cortado em conversa com o dono parece robô que não leu o cadastro.
+  * O separador ainda sai (o Google costuma colar descritor), o resto fica inteiro.
+  */
+ export function businessNameForMessage(raw?: string): string {
+   const full = displayBusinessName(raw);
+   const cut = full.split(/\s+[-|–—]\s+/)[0].trim();
+   return (cut.length >= 6 ? cut : full).trim();
+ }
+
  /** Mensagem de D0.
  *
  * Formato pedido pelo Paulo: blocos curtos (uma ideia por linha), sem travessão,
@@ -374,9 +388,9 @@ export function buildProspectMessage(lead: StoredLead, opts: { previewPronta?: b
     return whatsAppify(boldFirstOccurrence(pitch, lead.name));
   }
 
-  // Nome curto: o Google costuma colar descritor ("Buffet Don Pepe Kids - Buffet
-  // Infantil e Eventos"); no WhatsApp isso estoura a linha e cansa a leitura.
-  const biz = shortBusinessName(lead.name);
+  // Nome inteiro: truncar o nome da empresa com quem se está falando parece robô.
+  // Só o descritor colado depois de separador sai.
+  const biz = businessNameForMessage(lead.name);
   const nota = typeof lead.rating === "number" ? String(lead.rating).replace(".", ",") : "";
   const reviews = typeof lead.reviewsCount === "number" && lead.reviewsCount > 0 ? lead.reviewsCount : 0;
 
@@ -398,8 +412,10 @@ export function buildProspectMessage(lead: StoredLead, opts: { previewPronta?: b
   const previaFrase = "montei uma prévia gratuita de como ficaria uma página profissional pra vocês (com botão direto pro WhatsApp).";
   // A pergunta e a nota do porteiro dividem o mesmo parágrafo, entre parênteses:
   // é o jeito aprovado pelo Paulo, e o convite não perde força por virar frase solta.
+  // Dois emojis na abordagem: 👋 abre e 😊 fecha. Mensagem longa sem nenhum calor
+  // no fim soa a comunicado, não a conversa.
   const pergunta =
-    "Posso te mandar o link pra você dar uma olhada sem compromisso? (Se não for você que resolve isso por aí, me avisa com quem eu falo!)";
+    "Posso te mandar o link pra você dar uma olhada sem compromisso? 😊 (Se não for você que resolve isso por aí, me avisa com quem eu falo!)";
 
   // Conversa já migrada para o dono: abrir com "achei vocês no Google" faria ele
   // não saber de onde veio. A primeira linha diz quem passou o contato.
