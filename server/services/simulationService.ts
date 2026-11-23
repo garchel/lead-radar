@@ -30,6 +30,21 @@ import type { BrandSnapshot, Project, ProjectStage, StoredLead } from "../store/
  * código antigo seguia em frente mesmo assim: o D0 prometia uma prévia pronta e o
  * lead abria um 404. Publique, confira e, se falhar, tente mais uma vez.
  */
+/** O link já responde? (sem publicar nada) */
+async function confirmarNoAr(url: string | null): Promise<boolean> {
+  if (!url) return false;
+  for (let tentativa = 0; tentativa < 3; tentativa += 1) {
+    try {
+      const res = await fetch(url, { method: "HEAD", cache: "no-store" as any });
+      if (res.ok) return true;
+    } catch {
+      /* segue tentando: o deploy leva alguns segundos */
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+  return false;
+}
+
 async function publicarEConfirmar(url: string | null): Promise<boolean> {
   const confere = async (): Promise<boolean> => {
     if (!url) return false;
@@ -434,8 +449,14 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
   }
 
   const paulo = getLeadById(SIMULATION_LEAD_ID)!;
-  // A prévia já foi montada acima com o que a busca trouxe (fotos + paleta), então
-  // o D0 pode oferecer o link em vez de prometer que vai montar.
+  // A pesquisa de marca pode falhar (SerpAPI, cota da IA) DEPOIS de a prévia já
+  // existir no disco: nesse caso o catch não marca `previewNoAr` e a mensagem
+  // voltava a dizer "posso montar", como se a página não estivesse pronta. Se o
+  // link responde, a prévia está pronta, ponto.
+  if (!previewNoAr && assets.previewUrl) {
+    previewNoAr = await confirmarNoAr(assets.previewUrl);
+  }
+
   const mensagem = buildProspectMessage(candidato, { previewPronta: previewNoAr });
 
   const dispatch = await dispatchLeadReply(paulo, {
