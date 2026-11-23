@@ -12,6 +12,7 @@
  * Nada aqui inventa número: tudo sai do banco (conversas, janela de horário,
  * configuração ativa). Se não há dado, a resposta diz que não há.
  */
+import { pickSimulationCandidates, startProspectionSimulation } from "./simulationService";
 import { getDb } from "../store/schema";
 import { getSetting, setSetting, recordCommunication } from "../store/db";
 import type { StoredLead } from "../store/types";
@@ -63,6 +64,8 @@ const COMANDOS_CONHECIDOS = new Set([
   "ajuda",
   "help",
   "comandos",
+  "simulacao",
+  "simular",
 ]);
 
 /**
@@ -226,6 +229,7 @@ const AJUDA = [
   "/fora — mensagens que chegaram fora do horário",
   "/lead nome — ficha rápida de um lead",
   "/status — como está a automação",
+  "/simulacao — roda uma simulação nova no meu número (ou /simulacao <cidade ou nome>)",
   "/pausar e /retomar — liga/desliga as respostas automáticas",
 ].join("\n");
 
@@ -263,6 +267,41 @@ function respostaFora(): string {
     "",
     "Eu respondo todas a partir das 7h.",
   ].join("\n");
+}
+
+/**
+ * Simulação disparada pelo dono no WhatsApp.
+ *
+ * Devolve a confirmação na hora e roda a simulação em segundo plano: ela pesquisa
+ * a marca, publica a prévia e envia o D0, o que leva ~40s. Segurar o webhook do
+ * WhatsApp esse tempo todo é o caminho curto para o gateway desistir.
+ */
+function escolherLeadDaSimulacao(argumento: string): { lead?: StoredLead; erro?: string } {
+  const termo = String(argumento || "").trim();
+  const candidatos = pickSimulationCandidates(12);
+
+  if (!termo) {
+    const primeiro = candidatos[0];
+    return primeiro ? { lead: primeiro } : { erro: "Nenhum lead bom disponível para simular (sem site, nota e avaliações suficientes)." };
+  }
+
+  const alvo = normalizar(termo);
+  const achado = candidatos.find(
+    (l) => normalizar(l.name).includes(alvo) || normalizar(`${l.city}/${l.state}`).includes(alvo) || normalizar(l.city || "").includes(alvo)
+  );
+  if (!achado) {
+    const exemplos = candidatos.slice(0, 3).map((l) => l.name).join(", ");
+    return { erro: `Não achei "${termo}" entre os leads prontos para simular.${exemplos ? `\n\nDisponíveis: ${exemplos}.` : ""}` };
+  }
+  return { lead: achado };
+}
+
+function normalizar(valor: string): string {
+  return valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 function respostaStatus(): string {
@@ -363,6 +402,30 @@ export async function handleOwnerCommand(
     case "lead":
       reply = respostaLead(argumento);
       break;
+    case "simulacao":
+    case "simular":
+    case "simulação": {
+      const escolha = escolherLeadDaSimulacao(argumento);
+      if (escolha.erro) {
+        reply = escolha.erro;
+        break;
+      }
+      const alvo = escolha.lead!;
+      if (opcoes.enviar === false) {
+        reply = `Simulação (ensaio): ${alvo.name}.`;
+        break;
+      }
+      // Em segundo plano: o envio do D0 é da própria simulação.
+      void startProspectionSimulation({ leadId: alvo.id })
+        .then((r) => {
+          if (r.dispatch?.status !== "sent") {
+            console.error(`[comando /simulacao] envio não saiu: ${r.dispatch?.detail || "sem detalhe"}`);
+          }
+        })
+        .catch((erro: any) => console.error("[comando /simulacao]", erro?.message || erro));
+      reply = `Rodando a simulação com *${alvo.name}*.\n\nEm instantes chega o primeiro contato da Clara aqui na conversa.`;
+      break;
+    }
     case "pausar":
     case "parar":
       // `automation_agent_enabled` cala o agente interno; `automation_clara_paused`

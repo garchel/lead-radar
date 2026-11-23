@@ -84,3 +84,28 @@ describe("comando do dono pelo WhatsApp", () => {
     expect(Array.isArray(hoje.pendentes)).toBe(true);
   });
 });
+
+describe("comando /simulacao", () => {
+  it("entra na ajuda", () => {
+    expect(isOwnerCommand("/simulacao")).toBe(true);
+    expect(isOwnerCommand("/simular")).toBe(true);
+  });
+
+  it("no ensaio diz qual lead usaria, sem disparar nada", async () => {
+    const r = await handleOwnerCommand(leadDono, "/simulacao", { enviar: false });
+    expect(r.handled).toBe(true);
+    expect(r.comando).toBe("simulacao");
+    // banco de teste pode não ter candidato: os dois desfechos são válidos
+    expect(r.reply).toMatch(/Simulação \(ensaio\)|Nenhum lead bom disponível/);
+  });
+
+  it("aceita cidade ou nome como filtro e avisa quando não acha", async () => {
+    const achou = await handleOwnerCommand(leadDono, "/simulacao cachoeirinha", { enviar: false });
+    expect(achou.handled).toBe(true);
+    // ou mostra o ensaio do lead daquela cidade, ou explica que não há candidato
+    expect(achou.reply).toMatch(/Simulação \(ensaio\)|Não achei/);
+
+    const nada = await handleOwnerCommand(leadDono, "/simulacao zzz-inexistente", { enviar: false });
+    expect(nada.reply).toMatch(/Não achei "zzz-inexistente"/);
+  });
+});

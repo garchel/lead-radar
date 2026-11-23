@@ -65,6 +65,10 @@ async function publicarEConfirmar(url: string | null): Promise<boolean> {
     if (!primeira.ok) console.warn(`[simulação] publicação falhou: ${primeira.error}`);
     if (await confere()) return true;
 
+    // O Cloudflare recusa um deploy enquanto o anterior está em andamento. Se a
+    // primeira tentativa não confirmou, espera o deploy assentar antes de repetir
+    // (sem isso a segunda batia na mesma recusa e a mensagem saía "posso montar").
+    await new Promise((resolve) => setTimeout(resolve, 15000));
     const segunda = await publishPreviews(previewsDir());
     if (!segunda.ok) console.warn(`[simulação] segunda publicação falhou: ${segunda.error}`);
     return await confere();
@@ -463,6 +467,11 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
     channel: "whatsapp",
     message: mensagem,
     hook: "sem_site",
+    // Simulação é pedido explícito do dono (inclusive pelo comando /simulacao, cuja
+    // confirmação acabou de sair). A trava de "duas mensagens seguidas" existe para
+    // o fluxo automático, não para isto: o reset já limpou o thread e o D0 é a
+    // continuação combinada.
+    force: true,
   });
 
   return {
