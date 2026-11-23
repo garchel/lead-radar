@@ -268,3 +268,22 @@ export function previewExists(leadOrId: StoredLead | string): boolean {
     return false;
   }
 }
+
+/**
+ * Espera a URL pública responder. Deploy no Cloudflare leva alguns segundos e,
+ * durante a troca, o endereço responde 404 — mandar o link nessa janela queima o
+ * lead ("a página não existe").
+ */
+export async function confirmarUrlNoAr(url: string | null, tentativas = 6, esperaMs = 4000): Promise<boolean> {
+  if (!url) return false;
+  for (let i = 0; i < tentativas; i += 1) {
+    try {
+      const res = await fetch(url, { method: "HEAD", cache: "no-store" as any });
+      if (res.ok) return true;
+    } catch {
+      /* segue tentando */
+    }
+    await new Promise((r) => setTimeout(r, esperaMs));
+  }
+  return false;
+}

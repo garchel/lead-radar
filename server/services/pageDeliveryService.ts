@@ -3,7 +3,7 @@ import { eventHub } from "../events/eventHub";
 import { dispatchLeadReply } from "./interactionService";
 import { gerarPaginaUnica } from "./aiPreviewService";
 import { pagesConfigured, publishPreviews } from "./pagesService";
-import { previewExists, previewsDir, resolvePreviewUrl } from "./previewService";
+import { confirmarUrlNoAr, previewExists, previewsDir, resolvePreviewUrl } from "./previewService";
 import { whatsAppify } from "./messageStyle";
 
 /**
@@ -55,6 +55,11 @@ export async function entregarPaginaDoLead(leadId: string): Promise<EntregaPagin
 
   if (!url) {
     return { ok: false, motivo: "sem base pública: o link não abriria", origem: gerada.origem };
+  }
+
+  // Link que responde 404 no primeiro clique é pior que link nenhum.
+  if (!(await confirmarUrlNoAr(url))) {
+    return { ok: false, motivo: "o link ainda não responde depois da publicação", url, origem: gerada.origem };
   }
 
   const envio = await dispatchLeadReply(lead, {

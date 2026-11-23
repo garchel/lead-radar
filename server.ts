@@ -19,6 +19,12 @@ import { registerGrowthRoutes } from "./server/routes/growthRoutes";
 import { registerOutboxRoutes } from "./server/routes/outboxRoutes";
 import { registerActionItemsRoutes } from "./server/routes/actionItemsRoutes";
 import { registerAutopilotRoutes } from "./server/routes/autopilotRoutes";
+import { registerBotRoutes } from "./server/routes/botRoutes";
+import { registerMediaRoutes } from "./server/routes/mediaRoutes";
+import { registerAlertRoutes } from "./server/routes/alertRoutes";
+import { registerSimulationRoutes } from "./server/routes/simulationRoutes";
+import { resolvePublicBaseUrl } from "./server/services/previewService";
+import { registerTunnelRoutes } from "./server/routes/tunnelRoutes";
 import { registerAgentRoutes } from "./server/routes/agentRoutes";
 import { registerDatabaseRoutes } from "./server/routes/databaseRoutes";
 import { scheduleBackups } from "./server/backup/backupService";
@@ -45,6 +51,11 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 app.use(cors());
+
+// Upload de imagem da prévia: precisa do corpo CRU, então é registrado antes do
+// parser JSON (que limita o corpo a 100kb, insuficiente para foto).
+registerMediaRoutes(app);
+
 app.use(express.json({
   limit: "100kb",
   verify: (req: any, _res, buf) => { req.rawBody = buf.toString("utf8"); },
@@ -81,11 +92,15 @@ registerGrowthRoutes(app);
 registerOutboxRoutes(app);
 registerActionItemsRoutes(app);
 registerAutopilotRoutes(app);
+registerBotRoutes(app);
+registerAlertRoutes(app);
+registerSimulationRoutes(app);
+registerTunnelRoutes(app);
 registerAgentRoutes(app);
 registerDatabaseRoutes(app);
 
 app.get("/api/health", (_req, res) => {
-  let hasSerpApiKey = Boolean((process.env.SERPAPI_API_KEY || "").trim());
+  let hasSerpApiKey = Boolean((process.env.SERPAPI_KEY || "").trim());
   try {
     if (!hasSerpApiKey) hasSerpApiKey = listSerpApiKeys().length > 0;
   } catch {}
@@ -100,6 +115,14 @@ app.get("/api/health", (_req, res) => {
     hasGoogleMapsKey: Boolean(process.env.GOOGLE_MAPS_PLATFORM_KEY),
     hasSerpApiKey,
     prospectingProvider: provider,
+    // Base usada nos links de prévia enviados ao cliente (env ou IP da rede local).
+    publicBaseUrl: (() => {
+      try {
+        return resolvePublicBaseUrl();
+      } catch {
+        return { baseUrl: null, source: "none" as const };
+      }
+    })(),
   });
 });
 
@@ -387,6 +410,30 @@ async function startServer() {
     const { previewsDir } = await import("./server/services/previewService");
     const previewsPath = previewsDir();
     fs.mkdirSync(previewsPath, { recursive: true });
+    // Link amigável: /p/<slug-do-negocio> (o que vai para o cliente).
+    app.get("/p/:slug", (req, res) => {
+      const slug = String(req.params.slug || "").replace(/[^a-z0-9-]/gi, "");
+      if (!slug) return res.status(404).send("Prévia não encontrada.");
+      const arquivo = path.join(previewsPath, `${slug}.html`);
+      if (!fs.existsSync(arquivo)) {
+        return res.status(404).type("html").send(
+          "<meta charset='utf-8'><p style='font-family:sans-serif;padding:24px'>Esta prévia não está mais disponível. Peça um link novo para a Vértice Páginas Web.</p>"
+        );
+      }
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
+      return res.sendFile(arquivo);
+    });
+
+    app.use(
+      "/assets",
+      express.static(path.join(previewsPath, "assets"), {
+        maxAge: "1h",
+        fallthrough: true,
+        setHeaders: (res) => res.setHeader("X-Robots-Tag", "noindex, nofollow"),
+      })
+    );
+
     app.use(
       "/previews",
       express.static(previewsPath, {
@@ -439,6 +486,37 @@ async function startServer() {
 
   const httpServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`LeadRadar AI disponível em http://localhost:${PORT}`);
+
+    // Descobre o subdomínio do Pages uma vez, para o resolvedor de URL (síncrono)
+    // já sair com a base certa.
+    void (async () => {
+      try {
+        const { pagesBaseUrl } = await import("./server/services/pagesService");
+        const base = await pagesBaseUrl();
+        if (base) console.log(`[previa] link publico (Cloudflare Pages): ${base}`);
+      } catch {
+        /* sem Pages, cai no tunel/rede local */
+      }
+    })();
+
+    // Sem domínio configurado, sobe o túnel para a prévia ter link público — o
+    // cliente abre de qualquer rede, não só do Wi-Fi daqui.
+    if (process.env.NODE_ENV !== "test" && !(process.env.PUBLIC_BASE_URL || "").trim()) {
+      if (process.env.TUNNEL_AUTO_START === "false") {
+        console.log("[tunel] auto-start desligado (TUNNEL_AUTO_START=false)");
+      } else {
+        void (async () => {
+          try {
+            const { startTunnel } = await import("./server/services/tunnelService");
+            const status = await startTunnel();
+            if (status.running && status.url) console.log(`[tunel] prévias públicas em ${status.url}`);
+            else console.warn(`[tunel] não subiu: ${status.error || "sem URL"}`);
+          } catch (e: any) {
+            console.warn(`[tunel] falhou: ${e?.message || e}`);
+          }
+        })();
+      }
+    }
   });
 
   // Rede de segurança do atendimento: se o bot Clara não respondeu (pausado,
