@@ -14,7 +14,7 @@
  *   5. Se o melhor trecho não passa do limite, ou a IA responde `NAO_SEI`,
  *      escala para o dono em vez de inventar.
  */
-import { GoogleGenAI } from "@google/genai";
+import { comDeepSeek, getAiClient } from "./aiClient";
 import { getDb } from "../store/schema";
 import { gatewayRequest, sendGatewayText } from "./whatsappGateway";
 import { getSetting, setSetting } from "../store/db";
@@ -341,10 +341,12 @@ export function decideAnswer(input: {
 /*  Embeddings                                                         */
 /* ------------------------------------------------------------------ */
 
-function getAi(): GoogleGenAI | null {
+function getAi(): ReturnType<typeof getAiClient> | null {
   const apiKey = process.env.GEMINI_API_KEY;
+  // Embeddings continuam exclusivamente no Gemini; o resto do arquivo usa o
+  // mesmo cliente e cai no DeepSeek quando há chave.
   if (!apiKey) return null;
-  return new GoogleGenAI({ apiKey });
+  return getAiClient(apiKey);
 }
 
 async function embedAll(texts: string[], clientId?: string): Promise<number[][]> {
@@ -508,12 +510,14 @@ export async function answerWithRag(
   try {
     // Um modelo só é ponto único de falha: um 503 do provedor virava escalada e o
     // cliente final recebia "vou confirmar" com a resposta na base. Tenta em fila.
-    const modelos = [
-      process.env.GEMINI_MODEL || "gemini-flash-latest",
-      ...(process.env.GEMINI_BOT_FALLBACK_MODEL || "gemini-3-flash-preview,gemini-3.1-flash-lite").split(","),
-    ]
-      .map((m) => m.trim())
-      .filter(Boolean);
+    const modelos = comDeepSeek(
+      [
+        process.env.GEMINI_MODEL || "gemini-flash-latest",
+        ...(process.env.GEMINI_BOT_FALLBACK_MODEL || "gemini-3-flash-preview,gemini-3.1-flash-lite").split(","),
+      ]
+        .map((m) => m.trim())
+        .filter(Boolean),
+    );
 
     const prompt = buildGroundedPrompt(client, question, hits.map((h) => h.content));
     let res: any = null;

@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { comDeepSeek, chaveDeepSeek, getAiClient } from "./aiClient";
 import { getGeminiModel } from "../config";
 import { getSetting } from "../store/db";
 
@@ -227,16 +227,16 @@ export async function classifyWithAI(input: { text: string; businessName?: strin
   if (text.length < 2) return null;
 
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey && !chaveDeepSeek()) return null;
 
   const primary = getGeminiModel();
   const fallbacks = (process.env.GEMINI_PROFILE_FALLBACK_MODEL || process.env.GEMINI_VISION_FALLBACK_MODEL || "gemini-3.1-flash-lite")
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-  const models = Array.from(new Set([primary, ...fallbacks]));
+  const models = comDeepSeek(Array.from(new Set([primary, ...fallbacks])));
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = getAiClient(apiKey);
 
   for (const model of models) {
     try {

@@ -11,7 +11,7 @@
  *   o agente NUNCA deixa de responder por causa da IA.
  */
 
-import { GoogleGenAI } from "@google/genai";
+import { comDeepSeek, getAiClient } from "./aiClient";
 import { recordAiUsage, usageFromResponse } from "./aiUsageService";
 import { getGeminiModel } from "../config";
 import { getCommunicationsByLead, getSetting } from "../store/db";
@@ -77,7 +77,7 @@ function modelList(): string[] {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-  return Array.from(new Set([primary, ...fallbacks]));
+  return comDeepSeek(Array.from(new Set([primary, ...fallbacks])));
 }
 
 function isCapacityError(message: string): boolean {
@@ -94,7 +94,7 @@ async function generateText(prompt: string, opts: { temperature?: number } = {})
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = getAiClient(apiKey);
   for (const model of modelList()) {
     try {
       const response = await ai.models.generateContent({

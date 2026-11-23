@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { GoogleGenAI } from "@google/genai";
+import { chaveDeepSeek, comDeepSeek, getAiClient } from "./aiClient";
 import { getGeminiModel } from "../config";
 import { getLeadById, getProjectsByLead, setLeadClientProfile } from "../store/db";
 import type { ClientProfile, StoredLead } from "../store/types";
@@ -330,9 +330,11 @@ function parseJsonLoose(text: string): any {
 
 async function extractWithGemini(lead: StoredLead, corpus: string): Promise<{ raw: RawExtraction; model: string }> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY não configurada — a ficha do cliente precisa do Gemini.");
+  if (!apiKey && !chaveDeepSeek()) {
+    throw new Error("Sem chave de IA configurada (OPENCODE_API_KEY ou GEMINI_API_KEY) — a ficha do cliente precisa de uma delas.");
+  }
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = getAiClient(apiKey);
   const primary = getGeminiModel();
   // Mesmo padrão da pesquisa visual: um modelo mais leve como reserva quando o
   // principal está sobrecarregado (503) ou lento.
@@ -340,7 +342,7 @@ async function extractWithGemini(lead: StoredLead, corpus: string): Promise<{ ra
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-  const models = Array.from(new Set([primary, ...fallbacks]));
+  const models = comDeepSeek(Array.from(new Set([primary, ...fallbacks])));
 
   let lastError = "Falha ao analisar as fontes com a IA.";
   for (const model of models) {

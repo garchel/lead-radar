@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { chaveDeepSeek, comDeepSeek, getAiClient } from "./aiClient";
 import { getGeminiModel } from "../config";
 import { getLeadById, setLeadBrandSnapshot } from "../store/db";
 import { BrandColor, BrandColorRole, BrandSnapshot, StoredLead } from "../store/types";
@@ -410,13 +410,13 @@ function isGeminiQuotaError(message: string): boolean {
  * Chama o Gemini vision com fallback de modelo para 503/429 (alta demanda).
  * Erros permanentes e timeouts sobem com mensagem amigável.
  */
-async function generateVision(ai: GoogleGenAI, parts: any[]): Promise<string> {
+async function generateVision(ai: ReturnType<typeof getAiClient>, parts: any[]): Promise<string> {
   const primary = getGeminiModel();
   const fallbacks = (process.env.GEMINI_VISION_FALLBACK_MODEL || "gemini-3.1-flash-lite")
     .split(",")
     .map((model) => model.trim())
     .filter(Boolean);
-  const models = Array.from(new Set([primary, ...fallbacks]));
+  const models = comDeepSeek(Array.from(new Set([primary, ...fallbacks])));
 
   let lastMessage = "";
   for (const model of models) {
@@ -556,7 +556,7 @@ export async function researchLeadBrand(
   }
 
   // 4) Gemini vision → JSON estrito.
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = getAiClient(apiKey);
   const parts: any[] = [{ text: buildVisionPrompt(lead, downloaded) }];
   downloaded.forEach((item, index) => {
     parts.push({ text: `Imagem ${index}: ${item.image.title || "(sem título)"}` });
