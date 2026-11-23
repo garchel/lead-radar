@@ -184,7 +184,21 @@ async function captureImagesOnly(lead: StoredLead): Promise<BrandSnapshot | null
  */
 export function resetSimulationCard(
   companyName: string,
-  origem?: { category?: string; city?: string; state?: string }
+  origem?: {
+    category?: string;
+    city?: string;
+    state?: string;
+    /** Identidade do negócio novo. Sem isso a ficha do card fica a da empresa anterior. */
+    rating?: number;
+    reviewsCount?: number;
+    websiteStatus?: string;
+    address?: string;
+    neighborhood?: string;
+    email?: string;
+    instagramHandle?: string;
+    googlePlaceId?: string;
+    opportunityScore?: number;
+  }
 ): SimulationCard {
   const db = getDb();
   const nome = String(companyName || "").trim().slice(0, 80) || "Simulação";
@@ -213,6 +227,21 @@ export function resetSimulationCard(
             brand_snapshot_json = NULL,
             client_profile_json = NULL,
             site_audit_json = NULL,
+            -- Identidade da empresa NOVA: sem isso o card guardava nota, avaliações,
+            -- endereço e e-mail do negócio anterior (o e-mail do dono, inclusive).
+            rating = ?,
+            reviews_count = ?,
+            website_status = COALESCE(?, website_status),
+            address = ?,
+            neighborhood = ?,
+            email = ?,
+            instagram_handle = ?,
+            google_place_id = ?,
+            opportunity_score = COALESCE(?, opportunity_score),
+            -- Análise e insights eram da empresa anterior: o pitch de WhatsApp que
+            -- vem dentro dela seria reaproveitado palavra por palavra.
+            analysis = NULL,
+            key_insights = NULL,
             -- Dono/responsável era da empresa anterior: sem isso a mensagem da
             -- empresa nova sairia para o número de quem decidia na anterior.
             dm_name = NULL,
@@ -228,6 +257,15 @@ export function resetSimulationCard(
     origem?.city || null,
     origem?.state || null,
     origem?.city ? normalizeText(origem.city) : null,
+    origem?.rating ?? null,
+    origem?.reviewsCount ?? null,
+    origem?.websiteStatus || null,
+    origem?.address || null,
+    origem?.neighborhood || null,
+    origem?.email || null,
+    origem?.instagramHandle || null,
+    origem?.googlePlaceId || null,
+    origem?.opportunityScore ?? null,
     new Date().toISOString(),
     SIMULATION_LEAD_ID
   );
@@ -412,6 +450,15 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
     category: candidato.category,
     city: candidato.city,
     state: candidato.state,
+    rating: candidato.rating,
+    reviewsCount: candidato.reviewsCount,
+    websiteStatus: candidato.websiteStatus,
+    address: candidato.address,
+    neighborhood: candidato.neighborhood,
+    email: candidato.email,
+    instagramHandle: candidato.instagramHandle,
+    googlePlaceId: candidato.googlePlaceId,
+    opportunityScore: candidato.opportunityScore,
   });
 
   // Assets do cliente: pesquisa a identidade visual com o nome NOVO (o card já é a

@@ -151,6 +151,32 @@ describe("reset do card de simulação", () => {
     fs.unlinkSync(deOutroLead);
   });
 
+  it("copia a identidade do negócio novo e esquece a análise da empresa anterior", () => {
+    getDb()
+      .prepare("UPDATE leads SET analysis = ?, email = ?, rating = 1, reviews_count = 2 WHERE id = ?")
+      .run(JSON.stringify({ customPitchWhatsApp: "Olá Paulo, acompanhei seu trabalho com LPs em Brasília" }), "dono@exemplo.com", SIMULATION_LEAD_ID);
+
+    resetSimulationCard("Clínica Nova", {
+      category: "Clínica odontológica",
+      city: "Arujá",
+      state: "SP",
+      rating: 4.9,
+      reviewsCount: 165,
+      websiteStatus: "none",
+      address: "R. das Flores, 10",
+      opportunityScore: 96,
+    });
+
+    const lead = getLeadById(SIMULATION_LEAD_ID)!;
+    expect(lead.rating).toBe(4.9);
+    expect(lead.reviewsCount).toBe(165);
+    expect(lead.address).toBe("R. das Flores, 10");
+    // o pitch da empresa anterior reapareceria palavra por palavra no WhatsApp
+    expect(lead.analysis).toBeUndefined();
+    // e-mail do dono não pode ficar no cartão da empresa simulada
+    expect(lead.email).toBeUndefined();
+  });
+
   it("esquece o dono/responsável da empresa anterior", () => {
     getDb()
       .prepare("UPDATE leads SET dm_name = ?, dm_phone = ?, dm_source = 'funcionario' WHERE id = ?")
