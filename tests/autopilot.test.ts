@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Estes testes avançam o relógio e tocam coletores/banco: sob a suíte inteira em
+// paralelo passam de 20s por contenção, não por defeito.
+vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 });
 import { getDb } from "../server/store/schema";
 import { getLeadById, getLeads, upsertLead, ensureCategoriesSeeded, ensureCitiesLoaded } from "../server/store/db";
 

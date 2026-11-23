@@ -129,7 +129,14 @@ REGRAS DURAS (violar invalida a entrega):
 11. NÃO REPITA informação: o nome do negócio aparece no máximo duas vezes na página inteira (cabeçalho e título); nota e número de avaliações aparecem UMA vez, num bloco só; a cidade aparece no máximo duas vezes.
 12. Concordância e português corretos ("avaliações" no plural quando o número é maior que 1). Nada de linha órfã com uma palavra sozinha no fim do parágrafo.
 13. A página precisa parecer feita para ESTE negócio: o texto fala da categoria e da cidade dele, a paleta vem da marca dele, e existe pelo menos UM elemento gráfico autoral em SVG (forma, recorte, marca d'água tipográfica) que não se repetiria em outra empresa.
-13b. Arte em SVG é ABSTRATA e usa SÓ as cores da paleta. Proibido desenhar casas, prédios, janelas, soles, plantas ou qualquer cena figurativa: vira clip-art e destrói a percepção de qualidade. Prefira geometria, tipografia grande, linhas e recortes.
+13b. NADA DE ILUSTRAÇÃO. Proibido desenhar casas, prédios, pessoas, plantas, sol, objetos ou qualquer cena figurativa — inclusive em SVG. Clip-art destrói a percepção de qualidade.
+
+13c. No lugar de ilustração, marque ONDE A FOTO VAI ENTRAR. Cada espaço de imagem é um bloco assim:
+  <figure class="media-slot" data-slot="hero" aria-label="Espaço reservado para foto do projeto">
+    ... (fundo em tom suave da paleta, proporção fixa via aspect-ratio, um ícone de imagem simples e discreto em SVG, e uma legenda curta em texto pequeno)
+  </figure>
+  Regras do espaço reservado: proporção definida (16/9, 4/3 ou 3/4), canto suave, fundo levemente tingido com a cor da marca, legenda curta do tipo "Espaço para foto do projeto" ou "Foto do espaço", e um ícone de moldura/imagem desenhado com 2 ou 3 traços. Ele precisa parecer intencional e elegante, nunca um retângulo cinza de erro.
+13d. Use de 1 a 3 espaços reservados: um no hero (se a página pedir imagem) e, se fizer sentido, um na seção de serviços ou de portfólio.
 13c. Cor de destaque nunca em texto pequeno sobre fundo claro: use a cor da marca em fundo escuro ou em elementos grandes.
 14. Página enxuta: até 18 KB e no máximo 2.800px de altura no celular. Corte enfeite que não ajuda a ler nem a decidir: cada bloco precisa justificar o espaço que ocupa.
 15. NADA de conteúdo escondido esperando JavaScript. Se usar animação, ela precisa partir de um estado visível (@keyframes com animation-fill-mode), nunca deixar elemento em opacity:0 — sem JS a página tem que aparecer inteira.
@@ -247,6 +254,10 @@ export function validarPagina(html: string, lead: StoredLead): VereditoPagina {
   const linksWhats = (bruto.match(/wa\.me\//g) || []).length;
   if (linksWhats === 0) criticos.push("nenhum link de WhatsApp");
   if (linksWhats > 2) avisos.push(`tem ${linksWhats} links de WhatsApp (o ideal é 2)`);
+
+  if (!/data-slot=["'][^"']+["']/i.test(bruto)) {
+    criticos.push("sem espaço reservado para imagem (figure.media-slot com data-slot)");
+  }
 
   // Conteúdo escondido por opacidade some quando o JS não roda (aconteceu: o item
   // 01 da lista nunca aparecia e a página ia para o cliente com a numeração torta).
