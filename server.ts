@@ -57,7 +57,10 @@ app.use(cors());
 registerMediaRoutes(app);
 
 app.use(express.json({
-  limit: "100kb",
+  // 100kb bastava para texto, mas o gateway manda foto em base64 no webhook — e
+  // uma imagem de 140 KB vira ~190 KB de corpo. Com o limite antigo a mensagem
+  // com foto era recusada (413) e o lead ficava sem resposta.
+  limit: "6mb",
   verify: (req: any, _res, buf) => { req.rawBody = buf.toString("utf8"); },
 }));
 app.use(express.urlencoded({ extended: true, limit: "100kb" }));

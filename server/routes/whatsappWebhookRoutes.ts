@@ -11,6 +11,12 @@ import { fetchGatewayInstanceState, getGatewayConfig } from "../services/whatsap
 import { getHumanizeStatus } from "../services/humanizeService";
 import { buildClientProfile } from "../services/clientProfileService";
 import { entregarPaginaDoLead } from "../services/pageDeliveryService";
+import { dispatchLeadReply } from "../services/interactionService";
+import { whatsAppify } from "../services/messageStyle";
+import { aplicarFotoPendente, baixarMidia, escolherSlotPorTexto, fotoPendente, registrarFotoPendente } from "../services/whatsappMediaIntake";
+import { pagesConfigured, publishPreviews } from "../services/pagesService";
+import { previewsDir, resolvePreviewUrl } from "../services/previewService";
+import { previewSlug } from "../services/previewService";
 import { agentEnabled, answerLead } from "../services/salesAgentService";
 import { pitchTestLeadOnFirstMessage, shouldPitchTestLead } from "../services/testLeadService";
 import { handleOwnerCommand, isOwnerCommand, isOwnerPhone } from "../services/ownerCommandService";
@@ -43,6 +49,41 @@ import { eventHub } from "../events/eventHub";
  */
 
 /** Extrai a primeira mensagem de texto de um payload Evolution. */
+/** Mídia (foto/documento) que veio na mensagem, no formato que o gateway manda. */
+function extrairMidia(m: any): {
+  tipo: "imagem" | "documento";
+  mimetype?: string;
+  base64?: string;
+  url?: string;
+  fileName?: string;
+  caption?: string;
+} | null {
+  const img = m?.imageMessage;
+  const doc = m?.documentMessage;
+  const alvo = img || doc;
+  if (!alvo) return null;
+
+  const mimetype = String(alvo.mimetype || "");
+  const ehImagem = Boolean(img) || /^image\//i.test(mimetype);
+  const ehPdf = /pdf/i.test(mimetype);
+  if (!ehImagem && !ehPdf && !doc) return null;
+
+  const base64 =
+    m?.base64 ||
+    alvo?.base64 ||
+    m?.message?.base64 ||
+    (typeof alvo?.jpegThumbnail === "string" && alvo.jpegThumbnail.startsWith("/9j") ? alvo.jpegThumbnail : undefined);
+
+  return {
+    tipo: ehImagem ? "imagem" : "documento",
+    mimetype: mimetype || (ehImagem ? "image/jpeg" : undefined),
+    base64,
+    url: alvo?.url || m?.mediaUrl || undefined,
+    fileName: alvo?.fileName || doc?.fileName || undefined,
+    caption: alvo?.caption || doc?.caption || undefined,
+  };
+}
+
 function extractInbound(req: Request): {
   from: string;
   text: string;
@@ -51,6 +92,15 @@ function extractInbound(req: Request): {
   messageId?: string;
   stanzaId?: string;
   isEdit?: boolean;
+  midia?: {
+    tipo: "imagem" | "documento";
+    mimetype?: string;
+    base64?: string;
+    url?: string;
+    fileName?: string;
+    caption?: string;
+  } | null;
+  messageIdBruto?: string;
 } | null {
   const body = req.body || {};
 
@@ -73,12 +123,17 @@ function extractInbound(req: Request): {
     m.documentMessage?.caption ||
     "";
 
-  if (!text.trim()) return null;
+  // Foto/documento sem legenda é comum ("olha o que eu mandei") e antes era
+  // descartado aqui mesmo: o lead mandava a imagem e o app nunca sabia.
+  const midia = extrairMidia(m);
+  if (!String(text).trim() && !midia) return null;
   const pushName = data.pushName || key.pushName || body.pushName || "";
   const messageType = data.messageType || m.type || "";
   return {
     from,
-    text: text.trim(),
+    text: String(text).trim(),
+    midia,
+    messageIdBruto: key.id || data.id || undefined,
     instance: body.instance || "",
     pushName: pushName || undefined,
     messageId: key.id || data.id || undefined,
@@ -349,7 +404,9 @@ export function registerWhatsAppWebhook(app: Express) {
       /* ack sempre */
     }
 
-    const inbound = extractInbound(req) || extractInboundMeta(req);
+    // União de dois formatos (gateway Evolution e Meta Cloud API): o Meta não
+    // traz mídia, então tratamos como any aqui e checamos `inbound.midia` adiante.
+    const inbound: any = extractInbound(req) || extractInboundMeta(req);
     if (!inbound) {
       // Eco do próprio número de um cliente com bot: dono digitando ou mensagem
       // nossa voltando do gateway.
@@ -430,6 +487,65 @@ export function registerWhatsAppWebhook(app: Express) {
       } catch (e: any) {
         console.error(`[whatsapp] Falha ao criar lead a partir do inbound ${normalized}: ${e?.message}`);
         return;
+      }
+    }
+
+    // FOTO PELO WHATSAPP: o lead manda a imagem; ela fica pendente até ele dizer
+    // para que serve e autorizar o uso. Não entra na página sem esse "sim".
+    if (inbound.midia) {
+      void (async () => {
+        try {
+          const baixada = await baixarMidia({ ...inbound.midia, messageId: (inbound as any).messageIdBruto } as any);
+          if (!baixada.ok || !baixada.bytes) {
+            console.warn(`[midia] ${lead.id}: ${baixada.motivo}`);
+            await dispatchLeadReply(lead, {
+              channel: "whatsapp",
+              message: whatsAppify("Recebi seu arquivo, mas não consegui abrir aqui. Consegue mandar de novo como foto? 😊"),
+              hook: "midia",
+              // A foto é a mensagem recebida: responder aqui não é "duas seguidas".
+              force: true,
+            });
+            return;
+          }
+          const registro = registrarFotoPendente(lead.id, baixada.bytes, {
+            mimetype: inbound.midia.mimetype,
+            caption: inbound.midia.caption,
+          });
+          const temPagina = Boolean(resolvePreviewUrl(previewSlug(lead)));
+          const resposta = temPagina
+            ? "Recebi a foto! 😊 Posso usar na página de vocês? Me diz o que ela mostra: fachada, espaço ou um projeto."
+            : "Recebi a foto! 😊 A página ainda está sendo montada — já deixo essa imagem guardada pra quando ela ficar pronta.";
+          console.log(`[midia] ${lead.id}: foto guardada (${registro.slots.join(", ") || "sem slot ainda"})`);
+          await dispatchLeadReply(lead, { channel: "whatsapp", message: whatsAppify(resposta), hook: "midia", force: true });
+        } catch (e: any) {
+          console.warn(`[midia] ${lead.id}: ${e?.message}`);
+        }
+      })();
+      return;
+    }
+
+    // Resposta sobre a foto pendente: "pode, é a fachada" aplica e republica.
+    const pendente = fotoPendente(lead.id);
+    if (pendente.existe && /pode|sim|claro|isso|autoriz|uso|manda|fachada|espa[çc]o|projeto|equipe|interior|logo/i.test(inbound.text)) {
+      const slots = (await import("../services/mediaService")).slotsDaPagina(lead.id);
+      const slot = escolherSlotPorTexto(inbound.text, slots);
+      if (slot) {
+        const aplicada = await aplicarFotoPendente(lead.id, { slot, pushName: inbound.pushName, texto: inbound.text });
+        if (aplicada.ok) {
+          let publicou = false;
+          if (pagesConfigured()) {
+            const r = await publishPreviews(previewsDir(), { timeoutMs: 240_000 });
+            publicou = r.ok;
+          }
+          const link = aplicada.publicUrl;
+          const msg = publicou && link
+            ? `Coloquei a foto na página 👇\n\n${link}\n\nSe quiser trocar por outra, é só mandar.`
+            : "Coloquei a foto na página. Assim que ela estiver no ar eu te mando o link.";
+          await dispatchLeadReply(lead, { channel: "whatsapp", message: whatsAppify(msg), hook: "midia", force: true });
+          eventHub.emit("foto_aplicada", { leadId: lead.id, slot, url: link || null });
+          return;
+        }
+        console.warn(`[midia] ${lead.id}: não apliquei (${aplicada.motivo})`);
       }
     }
 
