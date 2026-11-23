@@ -19,14 +19,24 @@ describe("conferirEstilo", () => {
     expect(conferirEstilo(APROVADA)).toEqual([]);
   });
 
-  it("reclama de dois emojis", () => {
-    const avisos = conferirEstilo(`${APROVADA}\n\n⭐ prévia grátis`);
-    expect(avisos.some((a) => a.regra === "um emoji")).toBe(true);
+  it("reclama de dois emojis na mesma mensagem", () => {
+    const avisos = conferirEstilo("Oi! 👋 Já montei a prévia 👇");
+    expect(avisos.some((a) => a.regra === "um emoji por mensagem")).toBe(true);
   });
 
-  it("reclama de emoji de venda", () => {
+  it("reclama de emoji de anúncio", () => {
     const avisos = conferirEstilo("Oi! 🚀 Já montei a prévia, quer ver?");
-    expect(avisos.some((a) => a.regra === "emoji de venda/alerta")).toBe(true);
+    expect(avisos.some((a) => a.regra === "emoji de anúncio")).toBe(true);
+  });
+
+  it("reclama de emoji fora da lista curada", () => {
+    const avisos = conferirEstilo("Oi! 🐴 Já montei a prévia, quer ver?");
+    expect(avisos.some((a) => a.regra === "emoji fora da lista")).toBe(true);
+  });
+
+  it("aceita 👇 em quem aponta o link e 😊 em quem fecha com calor", () => {
+    expect(conferirEstilo("Perfeito! Segue a prévia 👇\n\nhttps://exemplo.com\n\nDeixei o botão de WhatsApp no topo. O que você achou?")).toEqual([]);
+    expect(conferirEstilo("Fico à disposição. Qualquer dúvida me chama 😊")).toEqual([]);
   });
 
   it("reclama de travessão", () => {

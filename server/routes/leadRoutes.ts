@@ -272,7 +272,8 @@ export function registerLeadRoutes(app: Express) {
       success: true,
       regras: [
         "Até 4 blocos curtos, 1 a 2 linhas cada.",
-        "Um emoji por mensagem (👋 😊 👍). Nunca ⭐ 🚀 🔥 🚨.",
+        "Um emoji por mensagem, pela função: 👋 na saudação, 👇 antes do link, ✅ ao confirmar, 😊 ao fechar com calor, 🙏 ao agradecer.",
+        "Nunca emoji de anúncio: ⭐ 🌟 🚀 🔥 🚨 📦 💰 🎯. Nunca dois na mesma mensagem nem no mesmo parágrafo.",
         "Sem travessão. Use vírgula ou ponto.",
         "Sem enchimento: 'sem custo nenhum', 'incrível', 'oportunidade única'.",
         "Comentário de lado vai entre parênteses, na mesma linha.",

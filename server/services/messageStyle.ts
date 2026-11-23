@@ -11,6 +11,7 @@
  * Tudo que sai para o lead passa por aqui, inclusive o pitch que a IA escreveu.
  */
 
+import { conferirEmojis } from "./emojiPolicy";
 import type { CommercialPackage, CommercialPolicy } from "./commercialPolicy";
 
 const AI_DASHES = /[\u2014\u2013]/g; // — e –
@@ -195,11 +196,8 @@ export function conferirEstilo(texto: string, opts: { palavraPessoa?: string } =
   const avisos: EstiloAviso[] = [];
   const msg = String(texto || "");
 
-  const emojis = msg.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/gu) || [];
-  if (emojis.length > 1) avisos.push({ regra: "um emoji", detalhe: `achei ${emojis.length}: ${emojis.join(" ")}` });
-
-  const proibidos = msg.match(/[\u{1F680}\u{2B50}\u{1F525}\u{1F6A8}]/gu) || [];
-  if (proibidos.length) avisos.push({ regra: "emoji de venda/alerta", detalhe: `${proibidos.join(" ")} não combina com o tom` });
+  // Emoji é conferido pela política (um por mensagem, lista curta, sem enfeite).
+  avisos.push(...conferirEmojis(msg));
 
   if (/[\u2014\u2013]/.test(msg)) avisos.push({ regra: "sem travessão", detalhe: "use vírgula ou ponto" });
 
@@ -218,7 +216,10 @@ export function conferirEstilo(texto: string, opts: { palavraPessoa?: string } =
   const negritos = msg.match(/\*[^*\n]+\*/g) || [];
   if (negritos.length > 2) avisos.push({ regra: "negrito em 2 trechos", detalhe: `achei ${negritos.length}` });
 
-  if (paragrafos.length && !/[?!）)]\s*$/.test(msg.trim())) {
+  // "quase todas" terminam com pergunta: fechamento cordial (agradecimento, "fico
+  // à disposição") não precisa virar interrogatório.
+  const fechamentoCordial = /obrigad|disposi[cç][aã]o|qualquer d[uú]vida|at[eé] (logo|mais)|abra[cç]o|fico (aqui|no aguardo)/i.test(msg);
+  if (!msg.includes("?") && !fechamentoCordial) {
     avisos.push({ regra: "terminar com pergunta", detalhe: "a conversa continua se você perguntar algo" });
   }
 
