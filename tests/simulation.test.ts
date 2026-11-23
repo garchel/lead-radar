@@ -151,6 +151,18 @@ describe("reset do card de simulação", () => {
     fs.unlinkSync(deOutroLead);
   });
 
+  it("esquece o dono/responsável da empresa anterior", () => {
+    getDb()
+      .prepare("UPDATE leads SET dm_name = ?, dm_phone = ?, dm_source = 'funcionario' WHERE id = ?")
+      .run("Maria Souza", "5567988881111", SIMULATION_LEAD_ID);
+
+    resetSimulationCard("Empresa Nova");
+
+    const lead = getLeadById(SIMULATION_LEAD_ID)!;
+    expect(lead.dmName).toBeUndefined();
+    expect(lead.dmPhone).toBeUndefined();
+  });
+
   it("apaga a ficha do cliente da empresa anterior (fica fora da pasta de prévias)", async () => {
     const fs = await import("node:fs");
     const path = await import("node:path");

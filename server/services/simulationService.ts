@@ -23,6 +23,42 @@ import { dispatchLeadReply } from "./interactionService";
 import { searchSerpApiImages } from "./serpApi";
 import type { BrandSnapshot, Project, ProjectStage, StoredLead } from "../store/types";
 
+/**
+ * Publica a pasta de prévias e confirma que o endereço responde de verdade.
+ *
+ * Deploy do Cloudflare às vezes é recusado por já existir outro em andamento, e o
+ * código antigo seguia em frente mesmo assim: o D0 prometia uma prévia pronta e o
+ * lead abria um 404. Publique, confira e, se falhar, tente mais uma vez.
+ */
+async function publicarEConfirmar(url: string | null): Promise<boolean> {
+  const confere = async (): Promise<boolean> => {
+    if (!url) return false;
+    for (let tentativa = 0; tentativa < 6; tentativa += 1) {
+      try {
+        const res = await fetch(url, { method: "HEAD", cache: "no-store" as any });
+        if (res.ok) return true;
+      } catch {
+        /* segue tentando: o deploy leva alguns segundos */
+      }
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+    }
+    return false;
+  };
+
+  try {
+    const primeira = await publishPreviews(previewsDir());
+    if (!primeira.ok) console.warn(`[simulação] publicação falhou: ${primeira.error}`);
+    if (await confere()) return true;
+
+    const segunda = await publishPreviews(previewsDir());
+    if (!segunda.ok) console.warn(`[simulação] segunda publicação falhou: ${segunda.error}`);
+    return await confere();
+  } catch (erro: any) {
+    console.error("[simulação] publicação:", erro?.message || erro);
+    return false;
+  }
+}
+
 /** Lead que faz o papel de Paulo nas simulações. */
 export const SIMULATION_LEAD_ID = "pv-landing-1";
 /** Etapa inicial do Kanban de Projetos. */
@@ -158,6 +194,12 @@ export function resetSimulationCard(
             brand_snapshot_json = NULL,
             client_profile_json = NULL,
             site_audit_json = NULL,
+            -- Dono/responsável era da empresa anterior: sem isso a mensagem da
+            -- empresa nova sairia para o número de quem decidia na anterior.
+            dm_name = NULL,
+            dm_phone = NULL,
+            dm_source = NULL,
+            dm_set_at = NULL,
             updated_at = ?
       WHERE id = ?`
   ).run(
@@ -356,6 +398,10 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
   // Assets do cliente: pesquisa a identidade visual com o nome NOVO (o card já é a
   // empresa simulada) e regenera a prévia com a foto e a cor da marca.
   let assets: SimulationAssets = { ok: false, images: 0, colors: 0, confidence: 0, previewUrl: null };
+  // A mensagem só promete link se o link estiver NO AR. Publicar pode falhar (o
+  // Cloudflare recusa um deploy enquanto outro está em andamento), e aí o D0 saía
+  // dizendo "a prévia que já preparei" com um endereço que respondia 404.
+  let previewNoAr = false;
   try {
     const research = await researchLeadBrand(SIMULATION_LEAD_ID, { force: true, maxImages: 6, maxSearches: 2 });
     const atualizado = getLeadById(SIMULATION_LEAD_ID)!;
@@ -363,8 +409,7 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
     // Publicar ANTES de mandar o D0: a mensagem diz "a prévia que já preparei", e o
     // link tem que abrir a página NOVA. Sem isso o Cloudflare servia a versão
     // anterior daquele endereço (a da empresa da rodada passada).
-    const publicacao = await publishPreviews(previewsDir());
-    if (!publicacao.ok) console.warn(`[simulação] publicação falhou: ${publicacao.error}`);
+    previewNoAr = await publicarEConfirmar(preview.publicUrl);
     assets = {
       ok: true,
       images: atualizado.brandSnapshot?.imagery?.length || 0,
@@ -391,7 +436,7 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
   const paulo = getLeadById(SIMULATION_LEAD_ID)!;
   // A prévia já foi montada acima com o que a busca trouxe (fotos + paleta), então
   // o D0 pode oferecer o link em vez de prometer que vai montar.
-  const mensagem = buildProspectMessage(candidato, { previewPronta: assets.ok && Boolean(assets.previewUrl) });
+  const mensagem = buildProspectMessage(candidato, { previewPronta: previewNoAr });
 
   const dispatch = await dispatchLeadReply(paulo, {
     channel: "whatsapp",
