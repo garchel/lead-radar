@@ -387,19 +387,19 @@ export function buildProspectMessage(lead: StoredLead, opts: { previewPronta?: b
       ? "vocês ainda não têm um site por lá."
       : "o site de vocês está só em rede social ou marketplace.";
 
-  // Elogio com dado real (nota e avaliações), nunca adjetivo solto: "reputação
-  // ótima" sozinho é elogio de catálogo, com número ao lado é prova.
-  const reputacao = nota
-    ? reviews
-      ? `Como vocês têm uma reputação ótima (${nota}★ com ${reviews} avaliações), `
-      : `Como vocês têm uma reputação ótima (${nota}★ no Google), `
-    : "Como o trabalho de vocês é bem avaliado, ";
+  const notaNumero = typeof lead.rating === "number" ? lead.rating : 0;
+  // "reputação ótima" só quando o dado sustenta; abaixo disso o elogio vira
+  // "bem avaliado", que é verdade sem inventar.
+  const reputacao =
+    notaNumero >= 4.5 && reviews >= 20
+      ? "Como vocês já têm uma reputação ótima, "
+      : "Como o trabalho de vocês é bem avaliado, ";
 
-  const previaFrase = "montei uma prévia gratuita de como ficaria uma página profissional pra vocês, com botão direto pro WhatsApp.";
-  const pergunta = "Posso te mandar o link pra você dar uma olhada sem compromisso?";
-  // Nota final em itálico (padrão do WhatsApp) para quem atende não ser confundido
-  // com quem decide. Some quando a conversa já é com o dono.
-  const notaPorteiro = "_Se não for você que resolve isso por aí, me avisa com quem eu falo!_";
+  const previaFrase = "montei uma prévia gratuita de como ficaria uma página profissional pra vocês (com botão direto pro WhatsApp).";
+  // A pergunta e a nota do porteiro dividem o mesmo parágrafo, entre parênteses:
+  // é o jeito aprovado pelo Paulo, e o convite não perde força por virar frase solta.
+  const pergunta =
+    "Posso te mandar o link pra você dar uma olhada sem compromisso? (Se não for você que resolve isso por aí, me avisa com quem eu falo!)";
 
   // Conversa já migrada para o dono: abrir com "achei vocês no Google" faria ele
   // não saber de onde veio. A primeira linha diz quem passou o contato.
@@ -413,8 +413,10 @@ export function buildProspectMessage(lead: StoredLead, opts: { previewPronta?: b
       `${indicacao} Notei que ${gap}`,
       "",
       prontaDono
-        ? `${reputacao}${previaFrase} ${pergunta}`
-        : `${reputacao}posso montar uma prévia gratuita de como ficaria uma página profissional pra vocês, com botão direto pro WhatsApp. ${pergunta}`,
+        ? `${reputacao}${previaFrase}`
+        : `${reputacao}posso montar uma prévia gratuita de como ficaria uma página profissional pra vocês (com botão direto pro WhatsApp).`,
+      "",
+      pergunta,
     ];
     return whatsAppify(linhasDono.filter((line, index) => !(line === "" && linhasDono[index - 1] === "")).join("\n"));
   }
@@ -425,16 +427,18 @@ export function buildProspectMessage(lead: StoredLead, opts: { previewPronta?: b
   const lines: string[] = [
     "Oi, tudo bem? 👋 Aqui é a Clara, da Vértice.",
     "",
-    `Vi ${biz} no Google e notei que ${gap}`,
+    // "Vi a <empresa>" é o formato aprovado. Nome que já começa com artigo
+    // ("A Quintal dos Sonhos") perde o artigo próprio para não sair "Vi a A".
+    `Vi a ${biz.replace(/^(a|o|as|os)\s+/i, "")} no Google e notei que ${gap}`,
     "",
     // Com a prévia já montada (simulação e autopilot geram antes do D0), a frase
     // fala no passado e a pergunta oferece algo que existe. Sem prévia, "montei"
     // seria mentira e o lead cobraria o link na hora.
     pronta
-      ? `${reputacao}${previaFrase} ${pergunta}`
-      : `${reputacao}posso montar uma prévia gratuita de como ficaria uma página profissional pra vocês, com botão direto pro WhatsApp. ${pergunta}`,
+      ? `${reputacao}${previaFrase}`
+      : `${reputacao}posso montar uma prévia gratuita de como ficaria uma página profissional pra vocês (com botão direto pro WhatsApp).`,
     "",
-    notaPorteiro,
+    pergunta,
   ];
 
   return whatsAppify(lines.filter((line, index) => !(line === "" && lines[index - 1] === "")).join("\n"));

@@ -161,7 +161,9 @@ describe("autopilot de coleta", () => {
     expect(msg).not.toMatch(/Oi, CLINICA/);
     expect(msg).not.toContain("Oi, Clinica");
     expect(msg).toContain("Clinica Odonto Vida");
-    expect(msg).toContain("4,8★");
+    // o formato aprovado não despeja nota/avaliações no texto: elogio sem número
+    expect(msg).toMatch(/reputação ótima|bem avaliado/);
+    expect(msg).not.toMatch(/★/);
   });
 
   it("mensagem de D0 personalizada usa o pitch da análise quando existe", () => {

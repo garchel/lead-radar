@@ -139,9 +139,8 @@ describe("buildProspectMessage (D0)", () => {
   it("oferece a prévia já montada e pede permissão para mandar o link", () => {
     expect(msg).toMatch(/montei uma pr[ée]via|posso montar uma pr[ée]via/i);
     expect(msg).toMatch(/Posso te mandar o link/i);
-    // o convite é a última coisa antes da nota de porteiro
-    const semNota = msg.replace(/_Se n[ãa]o for voc[êe][^_]*_/i, "").trim();
-    expect(semNota.endsWith("?")).toBe(true);
+    // o convite e a nota do porteiro fecham o mesmo parágrafo
+    expect(msg.trim().endsWith(")")).toBe(true);
   });
 
   it("cita o nome do negócio e usa no máximo um emoji", () => {

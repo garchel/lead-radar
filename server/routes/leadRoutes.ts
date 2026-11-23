@@ -1,3 +1,5 @@
+import { conferirEstilo } from "../services/messageStyle";
+import { vocabularioDoNicho } from "../services/vocabularyService";
 import { salvarDecisor, telefoneDeEnvio } from "../services/decisionMakerService";
 import { Express, Request, Response } from "express";
 import {
@@ -247,10 +249,67 @@ export function registerLeadRoutes(app: Express) {
       if (result.status !== "sent") {
         return res.status(502).json({ success: false, error: result.detail, ...result });
       }
-      return res.json({ success: true, ...result });
+      // Conferência de estilo: não bloqueia (a mensagem já saiu), mas devolve os
+      // desvios para a Clara corrigir o tom no turno seguinte.
+      const estilo = conferirEstilo(message, {
+        palavraPessoa: vocabularioDoNicho(lead.searchCategory, lead.category, lead.name).singular,
+      });
+      return res.json({ success: true, ...result, estilo });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err?.message || "Falha ao responder o lead." });
     }
+  });
+
+  /**
+   * Voz da Clara: regras de estilo e exemplos aprovados.
+   *
+   * A IA copia tom de exemplo muito melhor do que de adjetivo ("seja humana").
+   * Este endpoint é a fonte única: o prompt aponta para cá e a resposta do envio
+   * devolve os desvios de estilo.
+   */
+  app.get("/api/agent/style", (_req: Request, res: Response) => {
+    return res.json({
+      success: true,
+      regras: [
+        "Até 4 blocos curtos, 1 a 2 linhas cada.",
+        "Um emoji por mensagem (👋 😊 👍). Nunca ⭐ 🚀 🔥 🚨.",
+        "Sem travessão. Use vírgula ou ponto.",
+        "Sem enchimento: 'sem custo nenhum', 'incrível', 'oportunidade única'.",
+        "Comentário de lado vai entre parênteses, na mesma linha.",
+        "Terminar com pergunta leve, quase sempre.",
+        "Vocabulário do nicho: cliente, paciente, aluno ou pessoa conforme o negócio.",
+      ],
+      exemplos: [
+        {
+          situacao: "primeiro contato",
+          texto:
+            "Oi, tudo bem? 👋 Aqui é a Clara, da Vértice.\n\n" +
+            "Vi a Rede Amor À Vida Cachoeirinha no Google e notei que vocês ainda não têm um site por lá.\n\n" +
+            "Como vocês já têm uma reputação ótima, montei uma prévia gratuita de como ficaria uma página profissional pra vocês (com botão direto pro WhatsApp).\n\n" +
+            "Posso te mandar o link pra você dar uma olhada sem compromisso? (Se não for você que resolve isso por aí, me avisa com quem eu falo!)",
+        },
+        {
+          situacao: "mandando o link da prévia",
+          texto:
+            "Perfeito! Segue a prévia 👇\n\nhttps://vertice-paginas.pages.dev/dicore-barbearia\n\n" +
+            "Deixei o botão de WhatsApp no topo, pra quem abrir falar com vocês direto. O que você achou?",
+        },
+        {
+          situacao: "objeção de preço",
+          texto:
+            "Faz total sentido pensar no investimento antes de decidir.\n\n" +
+            "A prévia não custa nada, então você vê a página pronta primeiro e só depois escolhe se faz sentido. Quer que eu te mande os pacotes com o que cada um inclui?",
+        },
+        {
+          situacao: "não é o dono",
+          texto: "Perfeito, obrigada! Você consegue me passar o WhatsApp de quem cuida do site de vocês? Eu falo direto com essa pessoa e não te ocupo mais.",
+        },
+        {
+          situacao: "lead sumiu (retomada 24-48h)",
+          texto: "Oi, tudo bem? Passando só pra saber se conseguiu dar uma olhada na prévia que montei pra vocês 😊",
+        },
+      ],
+    });
   });
 
   // Ficha do cliente (fatos + marca) — base da primeira versão do site.

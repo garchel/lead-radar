@@ -178,3 +178,49 @@ export function freePreviewLine(policy: CommercialPolicy): string {
   if (!policy.previewFree) return "";
   return `⭐ ${bold("A prévia é grátis")}, sem custo nenhum: eu monto a primeira tela e você vê como fica antes de decidir qualquer coisa.`;
 }
+
+/**
+ * Voz da Clara — conferência de estilo antes do envio.
+ *
+ * As regras abaixo são as que o Paulo aprovou (nov/2026). O texto é conferido, não
+ * reescrito: quem escreve é a IA, e um "aviso" na resposta do endpoint deixa ela
+ * corrigir sozinha no turno seguinte, sem o servidor adivinhar o que ela quis dizer.
+ */
+export interface EstiloAviso {
+  regra: string;
+  detalhe: string;
+}
+
+export function conferirEstilo(texto: string, opts: { palavraPessoa?: string } = {}): EstiloAviso[] {
+  const avisos: EstiloAviso[] = [];
+  const msg = String(texto || "");
+
+  const emojis = msg.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/gu) || [];
+  if (emojis.length > 1) avisos.push({ regra: "um emoji", detalhe: `achei ${emojis.length}: ${emojis.join(" ")}` });
+
+  const proibidos = msg.match(/[\u{1F680}\u{2B50}\u{1F525}\u{1F6A8}]/gu) || [];
+  if (proibidos.length) avisos.push({ regra: "emoji de venda/alerta", detalhe: `${proibidos.join(" ")} não combina com o tom` });
+
+  if (/[\u2014\u2013]/.test(msg)) avisos.push({ regra: "sem travessão", detalhe: "use vírgula ou ponto" });
+
+  // 4 blocos é o formato aprovado (saudação, descoberta, prévia, convite).
+  const paragrafos = msg.split(/\n\s*\n/).filter((b) => b.trim());
+  if (paragrafos.length > 4) avisos.push({ regra: "até 4 parágrafos", detalhe: `achei ${paragrafos.length}` });
+
+  const enchimento = msg.match(/sem custo nenhum|incr[ií]vel|oportunidade [uú]nica|n[aã]o perca|imperd[ií]vel/gi) || [];
+  if (enchimento.length) avisos.push({ regra: "sem enchimento", detalhe: enchimento.join(", ") });
+
+  const palavra = opts.palavraPessoa;
+  if (palavra && palavra !== "cliente" && /\bclientes?\b/i.test(msg)) {
+    avisos.push({ regra: "vocabulário do nicho", detalhe: `aqui se diz "${palavra}", não "cliente"` });
+  }
+
+  const negritos = msg.match(/\*[^*\n]+\*/g) || [];
+  if (negritos.length > 2) avisos.push({ regra: "negrito em 2 trechos", detalhe: `achei ${negritos.length}` });
+
+  if (paragrafos.length && !/[?!）)]\s*$/.test(msg.trim())) {
+    avisos.push({ regra: "terminar com pergunta", detalhe: "a conversa continua se você perguntar algo" });
+  }
+
+  return avisos;
+}
