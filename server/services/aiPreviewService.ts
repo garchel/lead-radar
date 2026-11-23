@@ -118,7 +118,8 @@ REGRAS DURAS (violar invalida a entrega):
 2. Nenhuma imagem externa. Não use <img src="http..."> nem background-image com URL remota. Use SVG, gradientes, formas e tipografia para criar o visual.
 3. Fontes: no máximo duas, via Google Fonts (<link>), mais uma de sistema para o corpo se quiser.
 4. Mobile-first de verdade: a página tem que ficar impecável em 360px de largura. Teste mentalmente cada bloco nessa largura.
-5. WhatsApp: no máximo DOIS acessos na página inteira — um botão principal dentro do hero e um botão fixo no rodapé (só em telas pequenas). Nada de terceiro botão no topo competindo com o nome.
+5. WhatsApp: EXATAMENTE DOIS acessos na página inteira, com o MESMO rótulo curto (ex: "Falar no WhatsApp") — um no hero e um no fim. Rótulos diferentes para a mesma ação passam impressão de página montada às pressas.
+5b. Nada de botão flutuando em cima de ilustração ou de imagem: o botão fica no fluxo, com respiro antes e depois.
 6. No celular os botões ficam empilhados e com largura total; nunca lado a lado abaixo de 480px. Área de toque mínima de 44px de altura.
 7. Contraste AA em TODO texto, inclusive microtexto: se o fundo é escuro, o texto pequeno tem que ser claro de verdade (nada de cinza ou bege com opacidade baixa). Dá para conferir mentalmente: se parece apagado, está errado.
 8. Reserva 96px de padding no fim da página para o botão fixo não cobrir conteúdo.
@@ -128,7 +129,9 @@ REGRAS DURAS (violar invalida a entrega):
 11. NÃO REPITA informação: o nome do negócio aparece no máximo duas vezes na página inteira (cabeçalho e título); nota e número de avaliações aparecem UMA vez, num bloco só; a cidade aparece no máximo duas vezes.
 12. Concordância e português corretos ("avaliações" no plural quando o número é maior que 1). Nada de linha órfã com uma palavra sozinha no fim do parágrafo.
 13. A página precisa parecer feita para ESTE negócio: o texto fala da categoria e da cidade dele, a paleta vem da marca dele, e existe pelo menos UM elemento gráfico autoral em SVG (forma, recorte, marca d'água tipográfica) que não se repetiria em outra empresa.
-14. Página enxuta: até 18 KB. Corte enfeite que não ajuda a ler nem a decidir.
+13b. Arte em SVG é ABSTRATA e usa SÓ as cores da paleta. Proibido desenhar casas, prédios, janelas, soles, plantas ou qualquer cena figurativa: vira clip-art e destrói a percepção de qualidade. Prefira geometria, tipografia grande, linhas e recortes.
+13c. Cor de destaque nunca em texto pequeno sobre fundo claro: use a cor da marca em fundo escuro ou em elementos grandes.
+14. Página enxuta: até 18 KB e no máximo 2.800px de altura no celular. Corte enfeite que não ajuda a ler nem a decidir: cada bloco precisa justificar o espaço que ocupa.
 15. NADA de conteúdo escondido esperando JavaScript. Se usar animação, ela precisa partir de um estado visível (@keyframes com animation-fill-mode), nunca deixar elemento em opacity:0 — sem JS a página tem que aparecer inteira.
 16. Se numerar itens, a numeração começa em 01 e é sequencial.
 

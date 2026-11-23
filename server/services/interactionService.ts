@@ -190,7 +190,43 @@ export async function dispatchLeadContact(
  * bloqueando sempre. Quando não há conversa aberta, delega para
  * `dispatchLeadContact` (portanto mantém a política anti-duplicidade).
  */
+/**
+ * Envios em andamento por lead.
+ *
+ * O envio tem espera de digitação (segundos), então duas tentativas que começam
+ * juntas — o monitor respondendo duas mensagens seguidas e a entrega automática da
+ * página, por exemplo — liam o histórico ANTES de qualquer uma gravar. As duas
+ * viam "última mensagem é do lead", as duas passavam pelo guarda e o lead recebia
+ * duas respostas nossas seguidas. Esta trava fecha essa janela.
+ */
+const enviandoPorLead = new Set<string>();
+
 export async function dispatchLeadReply(
+  lead: StoredLead,
+  options: ContactOptions = {}
+): Promise<ContactDispatchResult> {
+  if (!options.force) {
+    if (enviandoPorLead.has(lead.id)) {
+      return {
+        channel: options.channel || (telefoneDeEnvio(lead) ? "whatsapp" : "email"),
+        status: "failed",
+        communicationId: "",
+        to: options.channel === "email" ? String(lead.email || "") : telefoneDeEnvio(lead),
+        detail: "Já existe uma resposta nossa sendo enviada para este lead.",
+        blocked: true,
+      };
+    }
+    enviandoPorLead.add(lead.id);
+    try {
+      return await dispatchLeadReplyInterno(lead, options);
+    } finally {
+      enviandoPorLead.delete(lead.id);
+    }
+  }
+  return dispatchLeadReplyInterno(lead, options);
+}
+
+async function dispatchLeadReplyInterno(
   lead: StoredLead,
   options: ContactOptions = {}
 ): Promise<ContactDispatchResult> {

@@ -415,7 +415,7 @@ export function buildProspectMessage(lead: StoredLead, opts: { previewPronta?: b
   // Dois emojis na abordagem: 👋 abre e 😊 fecha. Mensagem longa sem nenhum calor
   // no fim soa a comunicado, não a conversa.
   const pergunta =
-    "Posso te mandar o link pra você dar uma olhada sem compromisso? 😊 (Se não for você que resolve isso por aí, me avisa com quem eu falo!)";
+    "Posso te mandar o link pra você dar uma olhada sem compromisso? 😊 (Se não for você que resolve isso por aí, me avisa com quem eu falo, por favor!)";
 
   // Conversa já migrada para o dono: abrir com "achei vocês no Google" faria ele
   // não saber de onde veio. A primeira linha diz quem passou o contato.
@@ -424,7 +424,7 @@ export function buildProspectMessage(lead: StoredLead, opts: { previewPronta?: b
     const dono = String(lead.dmName || "").trim();
     const prontaDono = opts.previewPronta ?? previewExists(lead);
     const linhasDono: string[] = [
-      `Oi${dono ? `, ${dono.split(" ")[0]}` : ""}, tudo bem? 👋 Aqui é a Clara, da Vértice.`,
+      `Oi${dono ? `, ${dono.split(" ")[0]}` : ""}, tudo bem? 👋 Aqui é a Clara, da Vértice Páginas Web.`,
       "",
       `${indicacao} Notei que ${gap}`,
       "",
@@ -441,7 +441,7 @@ export function buildProspectMessage(lead: StoredLead, opts: { previewPronta?: b
   // mostra a prévia, e só depois oferece os pacotes (ver packagesInviteLine).
   const pronta = opts.previewPronta ?? previewExists(lead);
   const lines: string[] = [
-    "Oi, tudo bem? 👋 Aqui é a Clara, da Vértice.",
+    "Oi, tudo bem? 👋 Aqui é a Clara, da Vértice Páginas Web.",
     "",
     // "Vi a <empresa>" é o formato aprovado. Nome que já começa com artigo
     // ("A Quintal dos Sonhos") perde o artigo próprio para não sair "Vi a A".

@@ -71,7 +71,7 @@ export function buildTestPitchMessage(pushName?: string, lead?: StoredLead): str
 
   const nome = firstName(pushName);
   const lines = [
-    nome ? `Oi, ${nome}, tudo bem? 👋 Aqui é a Clara, da Vértice.` : "Oi, tudo bem? 👋 Aqui é a Clara, da Vértice.",
+    nome ? `Oi, ${nome}, tudo bem? 👋 Aqui é a Clara, da Vértice Páginas Web.` : "Oi, tudo bem? 👋 Aqui é a Clara, da Vértice Páginas Web.",
     "",
     "Montei uma prévia gratuita de como ficaria uma página profissional pro seu negócio, com botão direto pro WhatsApp.",
     "",

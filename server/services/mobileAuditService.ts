@@ -122,6 +122,11 @@ const MEDIDOR = `(() => {
     criticos.push(ilegiveis.length + ' bloco(s) de texto com fonte abaixo de 11px');
   }
 
+  const altura = Math.max(doc.scrollHeight, document.body.scrollHeight);
+  if (altura > 3400) {
+    avisos.push('página muito longa no celular (' + altura + 'px): encurte espaçamento e blocos');
+  }
+
   const fixos = [...document.querySelectorAll('body *')].filter((e) => getComputedStyle(e).position === 'fixed');
   for (const f of fixos) {
     const r = f.getBoundingClientRect();
