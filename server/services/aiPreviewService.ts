@@ -1,6 +1,7 @@
 import type { StoredLead } from "../store/types";
 import { chaveDeepSeek, getAiClient, modelosDeepSeek } from "./aiClient";
 import { buildPreviewHtml, whatsappLink, writePreviewFiles, type PreviewResult } from "./previewService";
+import { auditarPaginaMobile, auditoriaDisponivel, type MedidaViewport } from "./mobileAuditService";
 
 /**
  * Gerador de página única por lead.
@@ -22,6 +23,8 @@ export interface PaginaGerada {
   tentativas: number;
   /** Erros do portão que foram corrigidos na segunda tentativa. */
   avisos: string[];
+  /** Medidas de celular quando a auditoria rodou (360 e 390px). */
+  medidas?: MedidaViewport[];
 }
 
 export interface FalhaGeracao {
@@ -119,6 +122,7 @@ REGRAS DURAS (violar invalida a entrega):
 6. No celular os botões ficam empilhados e com largura total; nunca lado a lado abaixo de 480px. Área de toque mínima de 44px de altura.
 7. Contraste AA em TODO texto, inclusive microtexto: se o fundo é escuro, o texto pequeno tem que ser claro de verdade (nada de cinza ou bege com opacidade baixa). Dá para conferir mentalmente: se parece apagado, está errado.
 8. Reserva 96px de padding no fim da página para o botão fixo não cobrir conteúdo.
+8b. Números de celular: corpo de texto 15 a 17px; rótulos em caixa alta no mínimo 12px; e TODO link ou botão precisa de área de toque de 44x44px (aumente o padding, não o texto). Link de telefone e de Instagram contam.
 9. Use SOMENTE os fatos fornecidos. Proibido inventar preço, anos de experiência, prêmio, convênio, endereço, horário ou qualquer número. Se um dado não existe, escreva a seção sem ele.
 10. Proibido "R$", nome de plano, emoji no texto da página, "lorem ipsum", placeholder entre colchetes e frases genéricas de agência ("soluções inovadoras", "transformamos sonhos").
 11. NÃO REPITA informação: o nome do negócio aparece no máximo duas vezes na página inteira (cabeçalho e título); nota e número de avaliações aparecem UMA vez, num bloco só; a cidade aparece no máximo duas vezes.
@@ -181,48 +185,73 @@ function semKeyframes(html: string): string {
   return saida;
 }
 
-export function validarPagina(html: string, lead: StoredLead): string[] {
-  const erros: string[] = [];
+export interface VereditoPagina {
+  criticos: string[];
+  avisos: string[];
+}
+
+/**
+ * Portão estático. `criticos` quebram a página (não publica); `avisos` são
+ * polimento — viram dica para a próxima tentativa, mas não derrubam uma página
+ * boa. Reprovar por aviso foi o que fez uma geração inteira cair no template.
+ */
+export function validarPagina(html: string, lead: StoredLead): VereditoPagina {
+  const criticos: string[] = [];
+  const avisos: string[] = [];
   const bruto = String(html || "");
   const minusculo = bruto.toLowerCase();
 
-  if (bruto.length < TAMANHO_MIN) erros.push(`página curta demais (${bruto.length} bytes)`);
-  if (bruto.length > TAMANHO_MAX) erros.push(`página grande demais (${bruto.length} bytes)`);
-  if (!/^\s*<!doctype html/i.test(bruto)) erros.push("não começa com <!doctype html>");
-  if (!/<meta[^>]+name=["']viewport["']/i.test(bruto)) erros.push("sem meta viewport (quebra no celular)");
-  if (!/<style/i.test(bruto)) erros.push("sem CSS embutido");
+  if (bruto.length < TAMANHO_MIN) criticos.push(`página curta demais (${bruto.length} bytes)`);
+  if (bruto.length > TAMANHO_MAX) avisos.push(`página grande (${bruto.length} bytes)`);
+  if (!/^\s*<!doctype html/i.test(bruto)) criticos.push("não começa com <!doctype html>");
+  if (!/<meta[^>]+name=["']viewport["']/i.test(bruto)) criticos.push("sem meta viewport (quebra no celular)");
+  if (!/<style/i.test(bruto)) criticos.push("sem CSS embutido");
 
   const h1 = bruto.match(/<h1[^>]*>([\s\S]*?)<\/h1>/gi) || [];
-  if (h1.length !== 1) erros.push(`deve ter exatamente um <h1> (tem ${h1.length})`);
+  if (h1.length !== 1) criticos.push(`deve ter exatamente um <h1> (tem ${h1.length})`);
 
   const link = whatsappLink((lead as any).dmPhone || lead.phone);
-  if (link && !bruto.includes(link)) erros.push("não tem o botão de WhatsApp com o link do negócio");
+  if (link && !bruto.includes(link)) criticos.push("não tem o botão de WhatsApp com o link do negócio");
 
-  if (/<img[^>]+src=["']https?:/i.test(bruto)) erros.push("usa imagem externa (proibido)");
-  if (/background-image:\s*url\(\s*["']?https?:/i.test(bruto)) erros.push("usa imagem de fundo externa (proibido)");
-  if (/<script[^>]+src=["']https?:/i.test(bruto)) erros.push("carrega script externo");
-  if (/lorem ipsum/i.test(bruto)) erros.push("contém lorem ipsum");
-  if (/R\$\s*\d/.test(bruto)) erros.push("cita preço (preço só na proposta)");
-  if (/\[[a-zà-ú ]{3,30}\]/i.test(bruto)) erros.push("deixou placeholder entre colchetes");
+  if (/<img[^>]+src=["']https?:/i.test(bruto)) criticos.push("usa imagem externa (proibido)");
+  if (/background-image:\s*url\(\s*["']?https?:/i.test(bruto)) criticos.push("usa imagem de fundo externa (proibido)");
+  if (/<script[^>]+src=["']https?:/i.test(bruto)) criticos.push("carrega script externo");
+  if (/lorem ipsum/i.test(bruto)) criticos.push("contém lorem ipsum");
+  if (/R\$\s*\d/.test(bruto)) criticos.push("cita preço (preço só na proposta)");
+  // Só o HTML: dentro de <style> o fechamento de media query gera "}}" legítimo.
+  const semEstilo = bruto.replace(/<style[\s\S]*?<\/style>/gi, " ");
+  for (const token of ["{{", "undefined", "NaN"]) {
+    if (semEstilo.includes(token)) criticos.push(`contém "${token}"`);
+  }
+  if (/\[[a-zà-ú ]{3,30}\]/i.test(bruto)) avisos.push("deixou placeholder entre colchetes");
   if (/solu[çc][õo]es inovadoras|transformamos sonhos|excelência em atendimento/i.test(minusculo)) {
-    erros.push("usa frase genérica de agência");
+    avisos.push("usa frase genérica de agência");
+  }
+
+  // Repetição e número de CTAs são questão de acabamento, não de funcionamento.
+  const texto = bruto.replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  const nomeLimpo = String(lead.name || "").trim();
+  if (nomeLimpo.length > 3) {
+    const vezes = (texto.match(new RegExp(nomeLimpo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi")) || []).length;
+    if (vezes > 4) avisos.push(`repete o nome ${vezes} vezes`);
+  }
+  const nota = lead.rating != null ? String(lead.rating).replace(".", ",") : "";
+  if (nota) {
+    const vezesNota = (texto.match(new RegExp(nota.replace(",", "[.,]"), "g")) || []).length;
+    if (vezesNota > 3) avisos.push(`repete a nota ${vezesNota} vezes`);
   }
 
   const linksWhats = (bruto.match(/wa\.me\//g) || []).length;
-  if (linksWhats === 0) erros.push("nenhum link de WhatsApp");
-  if (linksWhats > 2) erros.push(`tem ${linksWhats} links de WhatsApp (máximo 2)`);
+  if (linksWhats === 0) criticos.push("nenhum link de WhatsApp");
+  if (linksWhats > 2) avisos.push(`tem ${linksWhats} links de WhatsApp (o ideal é 2)`);
 
   // Conteúdo escondido por opacidade some quando o JS não roda (aconteceu: o item
   // 01 da lista nunca aparecia e a página ia para o cliente com a numeração torta).
   if (/opacity\s*:\s*0(?![.\d])/i.test(semKeyframes(bruto))) {
-    erros.push("esconde conteúdo com opacity:0 (some sem JS)");
+    criticos.push("esconde conteúdo com opacity:0 (some sem JS)");
   }
 
-  for (const token of ["{{", "}}", "undefined", "NaN"]) {
-    if (bruto.includes(token)) erros.push(`contém "${token}"`);
-  }
-
-  return erros;
+  return { criticos, avisos };
 }
 
 function limparCercas(texto: string): string {
@@ -284,7 +313,27 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
         });
 
         const html = limparCercas(resposta.text);
-        const erros = validarPagina(html, lead);
+        const veredito = validarPagina(html, lead);
+        const erros = [...veredito.criticos];
+        const dicasEstaticas = [...veredito.avisos];
+
+        // Portão estático passou: agora mede no navegador, do jeito que o lead vai
+        // ver. Só publica página que se comporta em 360 e 390px de largura.
+        let medidas: MedidaViewport[] | undefined;
+        let dicasMobile: string[] = [];
+        if (!erros.length && auditoriaDisponivel()) {
+          const auditoria = await auditarPaginaMobile(html);
+          medidas = auditoria.medidas;
+          if (auditoria.pulada) {
+            console.warn(`[previa-ia] auditoria pulada: ${auditoria.motivoPulada}`);
+          }
+          // Crítico quebra a página e reprova; o resto é polimento: vira dica na
+          // próxima tentativa (sem reprovar, senão link de 40px derruba a página boa).
+          if (!auditoria.ok) erros.push(...auditoria.criticos);
+          dicasMobile = auditoria.avisos;
+          if (dicasMobile.length) console.log(`[previa-ia] polimento mobile: ${dicasMobile.join("; ")}`);
+        }
+
         if (!erros.length) {
           return {
             ok: true,
@@ -293,12 +342,13 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
               conceito: conceitoDe(html) || conceito,
               modelo: (resposta as any).modelVersion || modelo,
               tentativas: tentativa,
-              avisos,
+              avisos: [...avisos, ...dicasEstaticas, ...dicasMobile],
+              medidas,
             },
           };
         }
-        errosAnteriores = erros;
-        console.warn(`[previa-ia] ${modelo} reprovado (tentativa ${tentativa}): ${erros.join("; ")}`);
+        errosAnteriores = [...erros, ...dicasEstaticas, ...dicasMobile];
+        console.warn(`[previa-ia] ${modelo} reprovado (tentativa ${tentativa}): ${errosAnteriores.join("; ")}`);
       } catch (err: any) {
         const msg = String(err?.message || err);
         errosAnteriores = [`falha na chamada: ${msg.slice(0, 160)}`];
@@ -322,6 +372,7 @@ export interface ResultadoPaginaUnica {
   modelo?: string;
   conceito?: string;
   tentativas?: number;
+  medidas?: MedidaViewport[];
   motivoFallback?: string;
 }
 
@@ -342,6 +393,7 @@ export async function gerarPaginaUnica(
       modelo: gerada.pagina.modelo,
       conceito: gerada.pagina.conceito,
       tentativas: gerada.pagina.tentativas,
+      medidas: gerada.pagina.medidas,
     };
   }
   const falha: FalhaGeracao = gerada as FalhaGeracao;
