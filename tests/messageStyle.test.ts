@@ -122,9 +122,10 @@ describe("buildProspectMessage (D0)", () => {
     expect(msg).not.toMatch(/[\u2014\u2013]/);
   });
 
-  it("diz que a prévia é grátis e sem custo", () => {
-    expect(msg).toMatch(/gr[áa]tis/i);
-    expect(msg).toMatch(/sem custo/i);
+  it("diz que a prévia é gratuita, sem encher de sinônimo", () => {
+    expect(msg).toMatch(/pr[ée]via gratuita/i);
+    // "grátis sem custo nenhum" é enchimento: uma palavra basta
+    expect(msg).not.toMatch(/sem custo nenhum/i);
   });
 
   it("NÃO fala de pacote nem de preço no primeiro contato", () => {
@@ -135,14 +136,20 @@ describe("buildProspectMessage (D0)", () => {
     expect(msg).not.toMatch(/R\$/);
   });
 
-  it("promete a prévia grátis e termina com convite leve", () => {
-    expect(msg).toMatch(/prepare|preparar|monto/i);
-    expect(msg.trim().endsWith("?")).toBe(true);
+  it("oferece a prévia já montada e pede permissão para mandar o link", () => {
+    expect(msg).toMatch(/montei uma pr[ée]via|posso montar uma pr[ée]via/i);
+    expect(msg).toMatch(/Posso te mandar o link/i);
+    // o convite é a última coisa antes da nota de porteiro
+    const semNota = msg.replace(/_Se n[ãa]o for voc[êe][^_]*_/i, "").trim();
+    expect(semNota.endsWith("?")).toBe(true);
   });
 
-  it("usa negrito no nome do negócio e pelo menos um emoji", () => {
-    expect(msg).toContain(`*${"Pianca Barbearia"}*`);
-    expect(/[\u{1F300}-\u{1FAFF}\u{2B50}]/u.test(msg)).toBe(true);
+  it("cita o nome do negócio e usa no máximo um emoji", () => {
+    expect(msg).toContain("Pianca Barbearia");
+    const emojis = msg.match(/[\u{1F300}-\u{1FAFF}\u{2B50}]/gu) || [];
+    expect(emojis.length).toBe(1);
+    // emoji de venda/alerta saiu do padrão
+    expect(msg).not.toMatch(/[\u{1F680}\u{2B50}\u{1F525}\u{1F6A8}]/u);
   });
 
   it("pitch da IA passa pelo mesmo estilo", () => {

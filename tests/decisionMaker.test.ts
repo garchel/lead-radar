@@ -89,8 +89,9 @@ describe("primeiro contato com portaria", () => {
 
     const msg = buildProspectMessage(getLeadById("lead-teste-dm-5")!);
     expect(msg).toMatch(/n[ãa]o for voc[êe]/i);
-    // a pergunta de fechamento continua sendo a última coisa lida
-    expect(msg.trim().endsWith("?")).toBe(true);
+    // nota final em itálico, com a pergunta de fechamento antes dela
+    expect(msg).toMatch(/_Se n[ãa]o for voc[êe][^_]*_/);
+    expect(msg).toMatch(/Posso te mandar o link/i);
   });
 
   it("quando já fala com o dono, abre dizendo quem passou o contato", () => {

@@ -382,57 +382,59 @@ export function buildProspectMessage(lead: StoredLead, opts: { previewPronta?: b
 
   // Sem artigo antes do nome: o gênero do nome do negócio é imprevisível
   // ("a Quintal dos Sonhos" soa errado), então a frase é neutra.
-  const prova = nota
-    ? reviews
-      ? `Achei ${bold(biz)} no Google: ${nota}★ com ${reviews} avaliações`
-      : `Achei ${bold(biz)} no Google: ${nota}★`
-    : `Achei ${bold(biz)} no Google Maps`;
-
   const gap =
     lead.websiteStatus === "none"
-      ? "e reparei que vocês ainda não têm um site próprio."
-      : "e vi que a presença de vocês está só em rede social ou marketplace, sem site próprio.";
+      ? "vocês ainda não têm um site por lá."
+      : "o site de vocês está só em rede social ou marketplace.";
+
+  // Elogio com dado real (nota e avaliações), nunca adjetivo solto: "reputação
+  // ótima" sozinho é elogio de catálogo, com número ao lado é prova.
+  const reputacao = nota
+    ? reviews
+      ? `Como vocês têm uma reputação ótima (${nota}★ com ${reviews} avaliações), `
+      : `Como vocês têm uma reputação ótima (${nota}★ no Google), `
+    : "Como o trabalho de vocês é bem avaliado, ";
+
+  const previaFrase = "montei uma prévia gratuita de como ficaria uma página profissional pra vocês, com botão direto pro WhatsApp.";
+  const pergunta = "Posso te mandar o link pra você dar uma olhada sem compromisso?";
+  // Nota final em itálico (padrão do WhatsApp) para quem atende não ser confundido
+  // com quem decide. Some quando a conversa já é com o dono.
+  const notaPorteiro = "_Se não for você que resolve isso por aí, me avisa com quem eu falo!_";
 
   // Conversa já migrada para o dono: abrir com "achei vocês no Google" faria ele
   // não saber de onde veio. A primeira linha diz quem passou o contato.
   const indicacao = aberturaPorIndicacao(lead);
   if (indicacao) {
     const dono = String(lead.dmName || "").trim();
+    const prontaDono = opts.previewPronta ?? previewExists(lead);
     const linhasDono: string[] = [
-      `Oi${dono ? `, ${dono.split(" ")[0]}` : ""}! Tudo bem? 👋 Aqui é a Clara, da Vértice Páginas Web.`,
+      `Oi${dono ? `, ${dono.split(" ")[0]}` : ""}, tudo bem? 👋 Aqui é a Clara, da Vértice.`,
       "",
-      `${indicacao} Falei com eles e vi que ${gap.replace(/^e /, "")}`,
+      `${indicacao} Notei que ${gap}`,
       "",
-      "A gente monta uma página bonita, rápida e funcional, com botão de WhatsApp levando o cliente direto pra você.",
-      "",
-      freePreviewLine(policy),
-      "",
-      opts.previewPronta ?? previewExists(lead) ? "Quer ver a prévia que já preparei para vocês?" : "Quer que eu prepare a de vocês?",
+      prontaDono
+        ? `${reputacao}${previaFrase} ${pergunta}`
+        : `${reputacao}posso montar uma prévia gratuita de como ficaria uma página profissional pra vocês, com botão direto pro WhatsApp. ${pergunta}`,
     ];
     return whatsAppify(linhasDono.filter((line, index) => !(line === "" && linhasDono[index - 1] === "")).join("\n"));
   }
 
   // Primeiro contato NÃO fala de pacote nem de preço: conversa primeiro,
   // mostra a prévia, e só depois oferece os pacotes (ver packagesInviteLine).
+  const pronta = opts.previewPronta ?? previewExists(lead);
   const lines: string[] = [
-    "Olá! Tudo bem? 👋 Aqui é a Clara, da Vértice Páginas Web.",
+    "Oi, tudo bem? 👋 Aqui é a Clara, da Vértice.",
     "",
-    `${prova} ${gap}`,
+    `Vi ${biz} no Google e notei que ${gap}`,
     "",
-    "A gente monta uma página bonita, rápida e funcional, com botão de WhatsApp levando o cliente direto pra você.",
+    // Com a prévia já montada (simulação e autopilot geram antes do D0), a frase
+    // fala no passado e a pergunta oferece algo que existe. Sem prévia, "montei"
+    // seria mentira e o lead cobraria o link na hora.
+    pronta
+      ? `${reputacao}${previaFrase} ${pergunta}`
+      : `${reputacao}posso montar uma prévia gratuita de como ficaria uma página profissional pra vocês, com botão direto pro WhatsApp. ${pergunta}`,
     "",
-    freePreviewLine(policy),
-    "",
-    // Quem atende o WhatsApp de empresa é funcionário. A saída fica ANTES da
-    // pergunta: se o dono não é ele, a conversa migra; se for, ele segue direto
-    // para o convite, que continua sendo a última coisa que ele lê.
-    "Se quem cuida do site não for você, me passa o contato da pessoa que eu falo direto com ela.",
-    "",
-    // Com a prévia já montada (é o caso da simulação e do autopilot que gera
-    // antes do D0), a pergunta oferece algo que existe. Sem prévia, prometer
-    // "já preparei" seria mentira e o lead cobraria o link na hora.
-    opts.previewPronta ?? previewExists(lead) ? "Quer ver a prévia que já preparei para vocês?" : "Quer que eu prepare a de vocês?",
-    "",
+    notaPorteiro,
   ];
 
   return whatsAppify(lines.filter((line, index) => !(line === "" && lines[index - 1] === "")).join("\n"));
