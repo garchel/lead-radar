@@ -188,10 +188,18 @@ export function resolvePublicBaseUrl(): {
 
 /** Gera (ou regenera) o arquivo da prévia e devolve as URLs. */
 export function generateLeadPreview(lead: StoredLead, now = new Date()): PreviewResult {
+  return writePreviewFiles(lead, buildPreviewHtml(lead, now), now);
+}
+
+/**
+ * Grava o HTML já pronto (venha ele do template ou do gerador por IA).
+ * Separado para que a página escrita pela IA use exatamente a mesma convenção de
+ * nomes de arquivo, slug, logo e URL pública.
+ */
+export function writePreviewFiles(lead: StoredLead, html: string, now = new Date()): PreviewResult {
   const dir = previewsDir();
   fs.mkdirSync(dir, { recursive: true });
   const filePath = path.join(dir, `${lead.id}.html`);
-  const html = buildPreviewHtml(lead, now);
   fs.writeFileSync(filePath, html, "utf8");
   // cópia com o slug amigável: é esta que vai no WhatsApp
   const slug = previewSlug(lead);

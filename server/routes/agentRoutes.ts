@@ -25,6 +25,7 @@ import {
   composeReplyMessage,
 } from "../services/salesAgentService";
 import { generateLeadPreview, generateLeadPreviewCached, previewExists, previewSlug, previewsDir, resolvePreviewUrl, resolvePublicBaseUrl } from "../services/previewService";
+import { gerarPaginaUnica } from "../services/aiPreviewService";
 import { pagesConfigured, publishPreviews } from "../services/pagesService";
 import { buildPalettePreview, publishPaletteCard, sendPalettePreview } from "../services/paletteService";
 import { generateProposalPdf, proposalFileName, publishProposal } from "../services/proposalService";
@@ -423,7 +424,10 @@ export function registerAgentRoutes(app: Express) {
     const lead = getLeadById(req.params.id);
     if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
     try {
-      const preview = await generateLeadPreviewCached(lead);
+      // Página única por lead: a IA escreve do zero; se o portão reprovar, cai
+      // no template fixo para não entregar página quebrada ao dono.
+      const gerada = await gerarPaginaUnica(lead);
+      const preview = gerada.preview;
 
       // Publica no Pages quando configurado: o link precisa estar no ar ANTES de
       // ir para o cliente, senão ele abre um 404.
@@ -436,6 +440,10 @@ export function registerAgentRoutes(app: Express) {
       return res.json({
         success: true,
         preview: { ...preview, publicUrl },
+        origem: gerada.origem,
+        conceito: gerada.conceito || null,
+        modelo: gerada.modelo || null,
+        avisoGeracao: gerada.motivoFallback || null,
         publicação,
         aviso: publicUrl
           ? null
