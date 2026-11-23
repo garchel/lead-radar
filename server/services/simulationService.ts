@@ -116,15 +116,41 @@ export interface SimulationResult {
   dispatch: { status: string; detail: string; communicationId: string };
 }
 
-/** Candidatos bons para a simulação (dor real, telefone válido, fora da lista de teste). */
-export function pickSimulationCandidates(limit = 12): StoredLead[] {
-  // Evita repetir a mesma empresa em simulações seguidas: guarda a última usada.
-  let ultimoId = "";
+/**
+ * Candidatos bons para a simulação (dor real, telefone válido, fora da lista de teste).
+ *
+ * Antes isto era `ORDER BY score DESC LIMIT 1` excluindo só a ÚLTIMA empresa: com
+ * 342 candidatos e notas todas entre 93 e 96, a simulação caía sempre nas mesmas
+ * duas ou três do topo. Agora sorteia entre as 40 melhores e ignora as 6 últimas
+ * usadas, para o dono ver empresas diferentes sem cair em lead ruim.
+ */
+const RECENTES_CHAVE = "simulation_recent_lead_ids";
+const RECENTES_MAX = 6;
+const POOL_SORTEIO = 40;
+
+function recentes(): string[] {
   try {
-    ultimoId = String(getSetting("last_simulation_lead_id") || "");
+    const bruto = String(getSetting(RECENTES_CHAVE) || "");
+    const lista = bruto ? JSON.parse(bruto) : [];
+    return Array.isArray(lista) ? lista.filter((x) => typeof x === "string") : [];
   } catch {
-    ultimoId = "";
+    return [];
   }
+}
+
+function guardarRecente(id: string): void {
+  try {
+    const lista = [id, ...recentes().filter((x) => x !== id)].slice(0, RECENTES_MAX);
+    setSetting(RECENTES_CHAVE, JSON.stringify(lista));
+  } catch {
+    /* best-effort: só serve para variar a próxima simulação */
+  }
+}
+
+export function pickSimulationCandidates(limit = 12): StoredLead[] {
+  const usados = new Set(recentes());
+  const ultimo = String(getSetting("last_simulation_lead_id") || "");
+  if (ultimo) usados.add(ultimo);
 
   const rows = getDb()
     .prepare(
@@ -135,12 +161,25 @@ export function pickSimulationCandidates(limit = 12): StoredLead[] {
           AND COALESCE(do_not_contact, 0) = 0
           AND COALESCE(is_test, 0) = 0
           AND id != ?
-          AND id != ?
         ORDER BY opportunity_score DESC, reviews_count DESC
         LIMIT ?`
     )
-    .all(SIMULATION_LEAD_ID, ultimoId, Math.max(1, limit)) as { id: string }[];
-  return rows.map((r) => getLeadById(r.id)).filter((l): l is StoredLead => Boolean(l));
+    .all(SIMULATION_LEAD_ID, POOL_SORTEIO) as { id: string }[];
+
+  const pool = rows.filter((r) => !usados.has(r.id));
+  // Pool esgotado (base pequena): libera o histórico em vez de não simular.
+  const escolhidos = pool.length ? pool : rows;
+
+  const embaralhado = [...escolhidos];
+  for (let i = embaralhado.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [embaralhado[i], embaralhado[j]] = [embaralhado[j], embaralhado[i]];
+  }
+
+  return embaralhado
+    .slice(0, Math.max(1, limit))
+    .map((r) => getLeadById(r.id))
+    .filter((l): l is StoredLead => Boolean(l));
 }
 
 /**
@@ -442,6 +481,7 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
 
   try {
     setSetting("last_simulation_lead_id", candidato.id);
+    guardarRecente(candidato.id);
   } catch {
     /* best-effort: só serve para variar a próxima simulação */
   }

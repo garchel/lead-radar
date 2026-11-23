@@ -292,7 +292,10 @@ export async function publishPreviews(
   dir: string,
   opts: { timeoutMs?: number; force?: boolean } = {}
 ): Promise<PagesPublishResult> {
-  const timeoutMs = opts.timeoutMs ?? 90_000;
+  // 90s não bastava: sem wrangler local o npx baixa o pacote antes de subir, e o
+  // deploy era morto no meio — o projeto ficava sem deployment válido e as prévias
+  // respondiam 404 (aconteceu nesta sessão). 240s dá folga para o download frio.
+  const timeoutMs = opts.timeoutMs ?? 240_000;
   const cfg = pagesConfig();
   if (!cfg) return { ok: false, url: null, error: "Cloudflare Pages não configurado (token, conta ou projeto)." };
   ensureCacheHeaders(dir);
