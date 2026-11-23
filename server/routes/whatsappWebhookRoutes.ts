@@ -10,6 +10,7 @@ import { detectOptOut } from "../services/optOutService";
 import { fetchGatewayInstanceState, getGatewayConfig } from "../services/whatsappGateway";
 import { getHumanizeStatus } from "../services/humanizeService";
 import { buildClientProfile } from "../services/clientProfileService";
+import { entregarPaginaDoLead } from "../services/pageDeliveryService";
 import { agentEnabled, answerLead } from "../services/salesAgentService";
 import { pitchTestLeadOnFirstMessage, shouldPitchTestLead } from "../services/testLeadService";
 import { handleOwnerCommand, isOwnerCommand, isOwnerPhone } from "../services/ownerCommandService";
@@ -637,6 +638,15 @@ export function registerWhatsAppWebhook(app: Express) {
               });
             })
             .catch((e: any) => console.warn(`[whatsapp] Ficha (IA) falhou para ${lead.id}: ${e?.message}`));
+
+          // Interesse = hora de escrever a página deste lead. Ela é gerada do
+          // zero, publicada e só então o link é enviado. Roda em paralelo com a
+          // ficha porque são chamadas independentes.
+          void entregarPaginaDoLead(lead.id)
+            .then((entrega) => {
+              if (!entrega.ok) console.log(`[pagina] ${lead.id}: ${entrega.motivo}`);
+            })
+            .catch((e: any) => console.warn(`[whatsapp] Página única falhou para ${lead.id}: ${e?.message}`));
 
           eventHub.emit("whatsapp_inbound", {
             leadId: lead.id,

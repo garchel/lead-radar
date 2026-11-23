@@ -464,51 +464,35 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
   // Assets do cliente: pesquisa a identidade visual com o nome NOVO (o card já é a
   // empresa simulada) e regenera a prévia com a foto e a cor da marca.
   let assets: SimulationAssets = { ok: false, images: 0, colors: 0, confidence: 0, previewUrl: null };
-  // A mensagem só promete link se o link estiver NO AR. Publicar pode falhar (o
-  // Cloudflare recusa um deploy enquanto outro está em andamento), e aí o D0 saía
-  // dizendo "a prévia que já preparei" com um endereço que respondia 404.
+  // A página NÃO é mais montada antes da abordagem: ela é escrita na hora em que
+  // o lead demonstra interesse (ver pageDeliveryService). Por isso o D0 sempre
+  // sai oferecendo a prévia, nunca dizendo que ela já existe.
   let previewNoAr = false;
   try {
     const research = await researchLeadBrand(SIMULATION_LEAD_ID, { force: true, maxImages: 6, maxSearches: 2 });
     const atualizado = getLeadById(SIMULATION_LEAD_ID)!;
-    const preview = await generateLeadPreviewCached(atualizado);
-    // Publicar ANTES de mandar o D0: a mensagem diz "a prévia que já preparei", e o
-    // link tem que abrir a página NOVA. Sem isso o Cloudflare servia a versão
-    // anterior daquele endereço (a da empresa da rodada passada).
-    previewNoAr = await publicarEConfirmar(preview.publicUrl);
     assets = {
       ok: true,
       images: atualizado.brandSnapshot?.imagery?.length || 0,
       colors: research.snapshot.palette?.length || 0,
       confidence: Number(research.snapshot.confidence || 0),
-      previewUrl: preview.publicUrl,
+      previewUrl: null,
       notes: research.snapshot.notes,
     };
   } catch (error: any) {
     assets.error = String(error?.message || error).slice(0, 220);
-    // Análise visual depende de IA (cota). Sem ela, ainda vale guardar as fotos
-    // públicas encontradas: a prévia mostra a capa e o cliente vê o negócio dele.
+    // Sem pesquisa de marca o D0 continua válido: a paleta cai no padrão do nicho
+    // e a página é gerada depois, com o que houver.
     const capturado = await captureImagesOnly(candidato);
     if (capturado) {
-      const atualizado = getLeadById(SIMULATION_LEAD_ID)!;
-      const preview = generateLeadPreview(atualizado);
       assets.ok = true;
       assets.images = capturado.imagery.length;
       assets.confidence = capturado.confidence;
-      assets.previewUrl = preview.publicUrl;
     }
   }
 
   const paulo = getLeadById(SIMULATION_LEAD_ID)!;
-  // A pesquisa de marca pode falhar (SerpAPI, cota da IA) DEPOIS de a prévia já
-  // existir no disco: nesse caso o catch não marca `previewNoAr` e a mensagem
-  // voltava a dizer "posso montar", como se a página não estivesse pronta. Se o
-  // link responde, a prévia está pronta, ponto.
-  if (!previewNoAr && assets.previewUrl) {
-    previewNoAr = await confirmarNoAr(assets.previewUrl);
-  }
-
-  const mensagem = buildProspectMessage(candidato, { previewPronta: previewNoAr });
+  const mensagem = buildProspectMessage(candidato, { previewPronta: false });
 
   const dispatch = await dispatchLeadReply(paulo, {
     channel: "whatsapp",
