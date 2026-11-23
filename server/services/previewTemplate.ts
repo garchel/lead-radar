@@ -13,6 +13,7 @@
  *   o texto é ajustado com o cliente no rodapé;
  * - sem JS: FAQ usa `<details>`, o resto é CSS.
  */
+import { quemDecide, vocabularioDoNicho, type Vocabulario } from "./vocabularyService";
 import type { StoredLead } from "../store/types";
 import { prettyName } from "./briefingService";
 import { pickPreviewImages } from "./brandImagery";
@@ -350,7 +351,7 @@ const DESCRICOES: Array<{ re: RegExp; texto: string }> = [
  * quatro caixas de estrutura com o nome do que vem. Mostra tamanho do projeto
  * sem inventar depoimento, foto ou resultado de cliente.
  */
-const PROXIMOS = [
+const proximosDe = (vocab: Vocabulario) => [
   {
     titulo: "Antes e depois",
     texto: "com as suas fotos",
@@ -358,7 +359,7 @@ const PROXIMOS = [
   },
   {
     titulo: "Depoimentos",
-    texto: "dos seus clientes",
+    texto: vocab.possessivo,
     icone: '<path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/>',
   },
   {
@@ -456,6 +457,8 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
     (lead.brandSnapshot?.palette || []).map((c) => String(c.hex || "")).find((h) => /^#[0-9a-f]{6}$/i.test(h))
   );
   const nicho = nicheFor(lead);
+  // "cliente" numa clínica de psicologia soa a varejo: cada ramo tem a sua palavra.
+  const vocab = vocabularioDoNicho(lead.searchCategory, lead.category, lead.name, nicho.headline, nicho.sub);
   // Tipografia: display com personalidade + texto discreto, escolhidos pelo tom
   // da marca. Sem a fonte, o fallback do CSS mantém a página legível.
   // Tipografia escolhida no painel do projeto manda; sem escolha, o tom decide.
@@ -829,7 +832,7 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
         <div class="lado depois">
           <span class="tag">Depois</span>
           <b>Uma página com serviços, horário e WhatsApp</b>
-          <span class="txt">o cliente decide sem precisar ligar</span>
+          <span class="txt">${quemDecide(vocab)}</span>
         </div>
       </div>
     </div>
@@ -878,7 +881,7 @@ export function renderPreviewHtml(lead: StoredLead, now: Date = new Date()): str
         <p>Estas partes entram na versão final, com as suas fotos e o seu texto.</p>
       </div>
       <div class="proximos">
-        ${PROXIMOS.map(
+        ${proximosDe(vocab).map(
           (item) => `<figure class="proximo">
           <div class="wire" aria-hidden="true">
             <svg class="ico-wire" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${item.icone}</svg>
