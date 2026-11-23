@@ -242,6 +242,10 @@ export function registerLeadRoutes(app: Express) {
         channel: req.body?.channel === "email" ? "email" : "whatsapp",
         message,
         hook: req.body?.hook,
+        // `force` existe para o dono continuar uma conversa que ficou sem resposta
+        // (ex.: o lead pediu o link e a última mensagem é nossa). O fluxo automático
+        // nunca manda isso.
+        force: req.body?.force === true,
       });
       if (result.blocked) {
         return res.status(409).json({ success: false, error: result.detail, ...result });
