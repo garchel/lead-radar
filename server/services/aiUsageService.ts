@@ -47,6 +47,9 @@ export function priceTable(model: string): PriceTable {
   }
   const m = String(model || "").toLowerCase();
   if (m.includes("embedding")) return { inPerMillion: 0.15, outPerMillion: 0 };
+  // Sem esta linha o DeepSeek caía no preço padrão do Gemini (0,30/2,50) e o
+  // painel de consumo mostrava até 4x o custo real da saída.
+  if (m.includes("deepseek")) return { inPerMillion: 0.15, outPerMillion: 0.6 };
   if (m.includes("pro")) return { inPerMillion: 1.25, outPerMillion: 10 };
   // flash / flash-latest / lite
   return { inPerMillion: 0.3, outPerMillion: 2.5 };

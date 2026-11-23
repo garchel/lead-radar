@@ -18,6 +18,15 @@ describe("custo de IA", () => {
     expect(estimateCostUsd("gemini-embedding-001", 1_000_000, 999_999)).toBeCloseTo(0.15, 4);
   });
 
+  it("DeepSeek cobra 0,15/0,60 e não o preço padrão do Gemini", () => {
+    expect(priceTable("deepseek-v4.1-flash")).toEqual({ inPerMillion: 0.15, outPerMillion: 0.6 });
+    expect(estimateCostUsd("deepseek-v4.1-flash", 1_000_000, 1_000_000)).toBeCloseTo(0.75, 4);
+    // era o bug: sem a faixa própria caía em flash (0,30/2,50) = 2,80
+    expect(estimateCostUsd("deepseek-v4.1-flash", 1_000_000, 1_000_000)).toBeLessThan(
+      estimateCostUsd("gemini-flash-latest", 1_000_000, 1_000_000),
+    );
+  });
+
   it("modelo pro custa mais que flash", () => {
     expect(estimateCostUsd("gemini-pro", 100_000, 10_000)).toBeGreaterThan(
       estimateCostUsd("gemini-flash-latest", 100_000, 10_000)
