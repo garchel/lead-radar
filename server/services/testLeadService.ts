@@ -11,9 +11,11 @@
  */
 import { getCommunicationsByLead } from "../store/db";
 import type { StoredLead } from "../store/types";
-import { getCommercialPolicy } from "./commercialPolicy";
+import { buildProspectMessage } from "./autoProspectingService";
 import { dispatchLeadReply } from "./interactionService";
-import { freePreviewLine, whatsAppify } from "./messageStyle";
+import { previewExists } from "./previewService";
+import { whatsAppify } from "./messageStyle";
+import { SIMULATION_LEAD_ID } from "./simulationService";
 
 /** Este lead é um número de teste? */
 export function isTestLead(lead: Pick<StoredLead, "isTest"> | null | undefined): boolean {
@@ -36,6 +38,10 @@ export function hasPriorOutbound(leadId: string): boolean {
 
 /** Deve disparar a prospecção automática agora? */
 export function shouldPitchTestLead(lead: StoredLead): boolean {
+  // O lead de simulação tem fluxo próprio: quem manda o D0 é a simulação, com o
+  // nome da empresa escolhida. Deixar o gancho de número de teste entrar aqui já
+  // gerou duas mensagens nossas seguidas e um texto fora do padrão aprovado.
+  if (lead.id === SIMULATION_LEAD_ID) return false;
   return isTestLead(lead) && !lead.doNotContact && !hasPriorOutbound(lead.id);
 }
 
@@ -55,23 +61,24 @@ function firstName(pushName?: string): string | null {
  * Mesmo tom e mesmas regras de estilo do primeiro contato real: blocos curtos,
  * sem travessão, prévia grátis explícita e nenhuma menção a preço ou pacote.
  */
-export function buildTestPitchMessage(pushName?: string): string {
-  const nome = firstName(pushName);
-  const policy = getCommercialPolicy();
+export function buildTestPitchMessage(pushName?: string, lead?: StoredLead): string {
+  // Número de teste que já tem cara de empresa (nome, categoria, cidade) recebe a
+  // mesma abordagem aprovada dos leads reais. Sem isso ele recebia uma versão
+  // antiga, com ⭐ e "sem custo nenhum", que não existe mais em lugar nenhum.
+  if (lead && (lead.category || lead.city)) {
+    return buildProspectMessage(lead, { previewPronta: previewExists(lead) });
+  }
 
+  const nome = firstName(pushName);
   const lines = [
-    nome
-      ? `Olá, ${nome}! Tudo bem? 👋 Aqui é a Clara, da Vértice Páginas Web.`
-      : "Olá! Tudo bem? 👋 Aqui é a Clara, da Vértice Páginas Web.",
+    nome ? `Oi, ${nome}, tudo bem? 👋 Aqui é a Clara, da Vértice.` : "Oi, tudo bem? 👋 Aqui é a Clara, da Vértice.",
     "",
-    "A gente monta uma página bonita, rápida e funcional, com botão de WhatsApp levando o cliente direto pra você.",
+    "Montei uma prévia gratuita de como ficaria uma página profissional pro seu negócio, com botão direto pro WhatsApp.",
     "",
-    freePreviewLine(policy),
-    "",
-    "Quer ver a prévia que já preparei para você?",
+    "Posso te mandar o link pra você dar uma olhada sem compromisso? 😊",
   ];
 
-  return whatsAppify(lines.filter((line, i) => line !== "" || i > 0).join("\n"));
+  return whatsAppify(lines.join("\n"));
 }
 
 /**
@@ -88,7 +95,7 @@ export async function pitchTestLeadOnFirstMessage(
     return { sent: false, detail: "não é a primeira mensagem do número de teste" };
   }
 
-  const message = buildTestPitchMessage(pushName);
+  const message = buildTestPitchMessage(pushName, lead);
   const dispatch = await dispatchLeadReply(lead, { message, channel: "whatsapp", hook: "teste" });
 
   return {

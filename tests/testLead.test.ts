@@ -42,20 +42,21 @@ describe("mensagem enviada ao número de teste", () => {
   const msg = buildTestPitchMessage("Maria Silva");
 
   it("cumprimenta pelo primeiro nome", () => {
-    expect(msg.startsWith("Olá, Maria!")).toBe(true);
+    expect(msg.startsWith("Oi, Maria, tudo bem?")).toBe(true);
     expect(msg).not.toContain("Silva");
   });
 
-  it("usa o texto novo, sem a palavra 'simples'", () => {
-    expect(msg).toContain("página bonita, rápida e funcional");
-    expect(msg).toContain("botão de WhatsApp levando o cliente direto pra você");
-    expect(msg).not.toMatch(/páginas?\s+simples/i);
+  it("usa o tom aprovado, sem ⭐ e sem 'sem custo nenhum'", () => {
+    expect(msg).toContain("prévia gratuita");
+    expect(msg).not.toContain("⭐");
+    expect(msg).not.toMatch(/sem custo nenhum/i);
   });
 
-  it("fala da prévia grátis e não vaza preço nem pacote", () => {
-    expect(msg).toContain("A prévia é grátis");
+  it("não vaza preço nem pacote", () => {
     expect(msg).not.toMatch(/R\$/);
-    expect(msg).not.toMatch(/Essencial|Profissional/i);
+    expect(msg).not.toMatch(/p[aá]cote/i);
+    // "profissional" aqui é adjetivo de página, então a checagem olha o pacote
+    expect(msg).not.toMatch(/\*\s*(Essencial|Profissional|Premium)\s*·/i);
   });
 
   it("vem em blocos curtos, sem travessão", () => {
@@ -65,19 +66,39 @@ describe("mensagem enviada ao número de teste", () => {
     expect(blocos[0].length).toBeLessThan(90);
   });
 
-  it("termina com uma pergunta", () => {
-    expect(msg.trim().endsWith("?")).toBe(true);
+  it("pede permissão para mandar o link", () => {
+    expect(msg).toMatch(/Posso te mandar o link/i);
   });
 
   it("sem nome do perfil, começa sem nome e sem vírgula solta", () => {
     const semNome = buildTestPitchMessage();
-    expect(semNome.startsWith("Olá! Tudo bem?")).toBe(true);
-    expect(semNome).not.toContain("Olá, !");
+    expect(semNome.startsWith("Oi, tudo bem?")).toBe(true);
+    expect(semNome).not.toContain("Oi, ,");
   });
 
   it("ignora pushName que não é nome (emoji, número, muito comprido)", () => {
     for (const ruim of ["🔥 Promo", "1234", "a".repeat(30)]) {
-      expect(buildTestPitchMessage(ruim).startsWith("Olá! Tudo bem?")).toBe(true);
+      expect(buildTestPitchMessage(ruim).startsWith("Oi, tudo bem?")).toBe(true);
     }
+  });
+
+  it("número de teste com cara de empresa recebe a abordagem aprovada", () => {
+    const comEmpresa = buildTestPitchMessage("Paulo", {
+      id: "lead-teste-empresa",
+      name: "Dicore Barbearia",
+      category: "Barbearia",
+      city: "Três Lagoas",
+      state: "MS",
+      websiteStatus: "none",
+      rating: 5,
+      reviewsCount: 100,
+      pipelineStatus: "prospect",
+      isTest: true,
+    } as any);
+    expect(comEmpresa).toContain("Vi a Dicore Barbearia no Google");
+  });
+
+  it("o lead de simulação nunca dispara o gancho de número de teste", () => {
+    expect(shouldPitchTestLead({ id: "pv-landing-1", isTest: true, pipelineStatus: "prospect" } as any)).toBe(false);
   });
 });
