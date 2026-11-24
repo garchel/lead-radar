@@ -2,6 +2,7 @@ import { Express, Request, Response } from "express";
 import { startTunnel, stopTunnel, tunnelStatus, cloudflaredAvailable } from "../services/tunnelService";
 import { previewsDir, resolvePublicBaseUrl } from "../services/previewService";
 import { pagesConfigured, pagesStatus, publishPreviews } from "../services/pagesService";
+import { entregarPaginaDoLead, listarEntregasPendentes } from "../services/pageDeliveryService";
 
 /**
  * Link público das prévias.
@@ -20,6 +21,34 @@ export function registerTunnelRoutes(app: Express) {
       return res.json({ success: true, base, pages, tunnel: tunnelStatus() });
     } catch (error: any) {
       return res.status(500).json({ success: false, error: error?.message || "Falha ao ler o link público." });
+    }
+  });
+
+  /**
+   * Entregas que o app NÃO conseguiu concluir.
+   *
+   * O app é o dono da entrega: só ele sabe se a página existe, se o link responde
+   * 200 e se a última mensagem da conversa é nossa. Quando algum desses passos
+   * falha, a entrega fica aqui — e é a única situação em que o agente pode mandar
+   * o link por conta própria.
+   */
+  app.get("/api/previews/deliveries", (_req: Request, res: Response) => {
+    try {
+      const pendentes = listarEntregasPendentes();
+      return res.json({ success: true, total: pendentes.length, pendentes });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao listar entregas." });
+    }
+  });
+
+  /** Nova tentativa de entrega (o app tenta de novo, respeitando o guarda). */
+  app.post("/api/previews/deliveries/:leadId/retry", async (req: Request, res: Response) => {
+    try {
+      // Sem aviso novo: o lead já foi avisado antes; aqui é só a segunda tentativa.
+      const resultado = await entregarPaginaDoLead(String(req.params.leadId), { aviso: false });
+      return res.status(resultado.ok ? 200 : 409).json({ success: resultado.ok, ...resultado });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao entregar." });
     }
   });
 

@@ -1,10 +1,12 @@
-import { getLeadById } from "../store/db";
+import { getCommunicationsByLead, getLeadById } from "../store/db";
 import { eventHub } from "../events/eventHub";
 import { dispatchLeadReply } from "./interactionService";
 import { gerarPaginaUnica } from "./aiPreviewService";
 import { pagesConfigured, publishPreviews } from "./pagesService";
-import { confirmarUrlNoAr, previewExists, previewsDir, resolvePreviewUrl } from "./previewService";
+import { confirmarUrlNoAr, previewExists, previewSlug, previewsDir, resolvePreviewUrl } from "./previewService";
 import { whatsAppify } from "./messageStyle";
+import { getDb } from "../store/schema";
+import { prettyName } from "./briefingService";
 
 /**
  * Entrega da página única no momento do interesse.
@@ -22,29 +24,159 @@ export interface EntregaPagina {
   comunicacao?: string | null;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Entrega pendente: quando o app não consegue enviar                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * O app é o dono da entrega porque é o único que sabe o estado: página gerada,
+ * publicada, 200 confirmado e última mensagem da conversa. Quando algum desses
+ * passos falha, a entrega NÃO vira mensagem do agente por conta própria — vira
+ * um registro aqui, e o agente só age sobre o que está nesta lista.
+ */
+export interface EntregaPendente {
+  leadId: string;
+  nome: string;
+  url: string | null;
+  motivo: string;
+  criadoEm: string;
+  resolvidoEm?: string | null;
+}
+
+function garantirTabela(): void {
+  getDb().exec(`
+    CREATE TABLE IF NOT EXISTS preview_deliveries (
+      lead_id     TEXT PRIMARY KEY,
+      nome        TEXT NOT NULL,
+      url         TEXT,
+      motivo      TEXT NOT NULL,
+      created_at  TEXT NOT NULL,
+      resolved_at TEXT
+    );
+  `);
+}
+
+export function registrarEntregaPendente(leadId: string, nome: string, url: string | null, motivo: string): void {
+  garantirTabela();
+  getDb()
+    .prepare(
+      `INSERT INTO preview_deliveries (lead_id, nome, url, motivo, created_at, resolved_at)
+       VALUES (?, ?, ?, ?, ?, NULL)
+       ON CONFLICT(lead_id) DO UPDATE SET nome = excluded.nome, url = excluded.url,
+         motivo = excluded.motivo, created_at = excluded.created_at, resolved_at = NULL`,
+    )
+    .run(leadId, nome, url, motivo, new Date().toISOString());
+}
+
+export function resolverEntregaPendente(leadId: string): void {
+  garantirTabela();
+  getDb()
+    .prepare("UPDATE preview_deliveries SET resolved_at = ? WHERE lead_id = ? AND resolved_at IS NULL")
+    .run(new Date().toISOString(), leadId);
+}
+
+export function listarEntregasPendentes(): EntregaPendente[] {
+  garantirTabela();
+  const linhas = getDb()
+    .prepare("SELECT lead_id, nome, url, motivo, created_at FROM preview_deliveries WHERE resolved_at IS NULL ORDER BY created_at ASC")
+    .all() as any[];
+  return linhas.map((l) => ({
+    leadId: l.lead_id,
+    nome: l.nome,
+    url: l.url,
+    motivo: l.motivo,
+    criadoEm: l.created_at,
+  }));
+}
+
+/** Semente estável: mesma empresa recebe sempre a mesma abertura. */
+function semente(nome: string): number {
+  let h = 0;
+  for (const ch of String(nome || "")) h = (h * 31 + ch.charCodeAt(0)) % 100000;
+  return h;
+}
+
 export function mensagemDaPagina(nome: string, url: string): string {
-  const primeiro = String(nome || "").split(/\s+/)[0] || "";
-  const abertura = primeiro ? `Prontinho, ${primeiro}!` : "Prontinho!";
+  // O primeiro nome aparece SEMPRE: é o que separa mensagem de disparo em massa.
+  // Três aberturas naturais, escolhidas por hash, para não sair sempre igual.
+  // "PIANCA BARBEARIA" vira "Pianca": gritar em caixa alta na abertura é o
+  // oposto de conversa.
+  const primeiro = String(prettyName(nome || "", 40)).split(/\s+/)[0] || "";
+  const aberturas = primeiro
+    ? [`Prontinho, ${primeiro}!`, `Saiu, ${primeiro}!`, `${primeiro}, ficou pronto!`]
+    : ["Prontinho!", "Saiu!", "Ficou pronto!"];
+  const fechamentos = [
+    "Deixei o botão de WhatsApp no topo, pra quem abrir falar direto com vocês. O que você achou?",
+    "O botão de WhatsApp fica no topo, pra quem abrir já falar com vocês. Me diz o que você mudaria.",
+    "Tem botão de WhatsApp no topo pra facilitar. Dá uma olhada e me conta o que achou?",
+  ];
+  const s = semente(nome);
   return whatsAppify(
     [
-      `${abertura} Montei a página de vocês 👇`,
+      `${aberturas[s % aberturas.length]} Montei a página de vocês 👇`,
       url,
-      "Deixei o botão de WhatsApp no topo, pra quem abrir falar direto com vocês. O que você achou?",
+      fechamentos[Math.floor(s / 7) % fechamentos.length],
     ].join("\n\n"),
   );
 }
 
-export async function entregarPaginaDoLead(leadId: string): Promise<EntregaPagina> {
+/**
+ * Entrega em andamento por lead. A geração leva minutos; sem esta reserva, dois
+ * gatilhos (webhook + retry) escrevem a mesma página duas vezes e mandam dois links.
+ */
+const entregando = new Set<string>();
+
+/** Aviso curto que toma o turno: sem ele, o agente responde antes da página ficar pronta. */
+export function mensagemDeEspera(): string {
+  return whatsAppify("Perfeito! Dá um minutinho que eu já te mando o link 👇");
+}
+
+export async function entregarPaginaDoLead(
+  leadId: string,
+  opts: { aviso?: boolean } = {},
+): Promise<EntregaPagina> {
+  if (entregando.has(leadId)) return { ok: false, motivo: "já existe uma entrega em andamento para este lead" };
+  entregando.add(leadId);
+  try {
+    return await entregarInterno(leadId, opts);
+  } finally {
+    entregando.delete(leadId);
+  }
+}
+
+async function entregarInterno(leadId: string, opts: { aviso?: boolean }): Promise<EntregaPagina> {
   const lead = getLeadById(leadId);
   if (!lead) return { ok: false, motivo: "lead não encontrado" };
-  if (lead.doNotContact) return { ok: false, motivo: "lead pediu para não ser contatado" };
+  if (lead.doNotContact) {
+    registrarEntregaPendente(leadId, lead.name, null, "a empresa pediu para não ser contatada");
+    return { ok: false, motivo: "lead pediu para não ser contatado" };
+  }
 
-  // Página já entregue não é reescrita: cada geração custa chamada de IA e o
-  // dono já viu aquela.
-  if (previewExists(lead)) return { ok: false, motivo: "página já existe" };
+  // Toma o turno ANTES de gerar. A geração leva minutos e, nesse intervalo, o
+  // agente do WhatsApp respondia primeiro — a entrega então batia na trava de duas
+  // seguidas e a página ficava pendente. O aviso resolve a posse da conversa.
+  if (opts.aviso !== false) {
+    const historico = getCommunicationsByLead(lead.id);
+    if (historico[0]?.direction === "inbound") {
+      await dispatchLeadReply(lead, {
+        channel: "whatsapp",
+        message: mensagemDeEspera(),
+        hook: "pagina_aviso",
+      });
+    }
+  }
 
-  const gerada = await gerarPaginaUnica(lead);
-  const url = resolvePreviewUrl(gerada.preview.slug);
+  // Página que já existe é reaproveitada: reescrever custa chamada de IA e o dono
+  // já viu aquela. Se ela nunca chegou ao cliente, entrega agora.
+  let url: string | null = null;
+  let origem: "ia" | "template" = "ia";
+  if (previewExists(lead)) {
+    url = resolvePreviewUrl(previewSlug(lead));
+  } else {
+    const gerada = await gerarPaginaUnica(lead);
+    origem = gerada.origem;
+    url = resolvePreviewUrl(gerada.preview.slug);
+  }
 
   if (pagesConfigured()) {
     const publicado = await publishPreviews(previewsDir());
@@ -54,20 +186,26 @@ export async function entregarPaginaDoLead(leadId: string): Promise<EntregaPagin
   }
 
   if (!url) {
-    return { ok: false, motivo: "sem base pública: o link não abriria", origem: gerada.origem };
+    registrarEntregaPendente(leadId, lead.name, null, "sem base pública: o link não abriria");
+    return { ok: false, motivo: "sem base pública: o link não abriria", origem };
   }
 
   // Link que responde 404 no primeiro clique é pior que link nenhum.
   if (!(await confirmarUrlNoAr(url))) {
-    return { ok: false, motivo: "o link ainda não responde depois da publicação", url, origem: gerada.origem };
+    registrarEntregaPendente(leadId, lead.name, url, "o link não respondeu 200 depois da publicação");
+    return { ok: false, motivo: "o link ainda não responde depois da publicação", url, origem };
   }
 
+  // App é o dono da entrega: passa pela trava de duas seguidas como qualquer
+  // resposta. Se outra coisa respondeu no meio do caminho, a entrega fica
+  // pendente — e é a ÚNICA situação em que o agente pode mandar o link.
+  // Continuação do aviso que o próprio app mandou há segundos: é a promessa sendo
+  // cumprida, não uma segunda resposta independente. Só o app gera e entrega esta
+  // página (a reserva acima garante isso), então o `force` aqui não abre corrida.
   const envio = await dispatchLeadReply(lead, {
     channel: "whatsapp",
     message: mensagemDaPagina(lead.name, url),
     hook: "pagina_unica",
-    // A última mensagem costuma ser nossa (o agente já respondeu o interesse).
-    // Esta é a continuação prometida, então passa pela trava de propósito.
     force: true,
   });
 
@@ -75,15 +213,21 @@ export async function entregarPaginaDoLead(leadId: string): Promise<EntregaPagin
     leadId: lead.id,
     name: lead.name,
     url,
-    origem: gerada.origem,
-    conceito: gerada.conceito || null,
-    modelo: gerada.modelo || null,
+    origem,
+    conceito: null,
+    modelo: null,
     enviada: envio.status === "sent",
   });
 
   if (envio.status !== "sent") {
-    return { ok: false, motivo: `mensagem não enviada: ${envio.detail || envio.status}`, url, origem: gerada.origem };
+    const motivo = envio.blocked
+      ? `entrega bloqueada: ${envio.detail || "última mensagem da conversa é nossa"}`
+      : `mensagem não enviada: ${envio.detail || envio.status}`;
+    console.warn(`[pagina] ${motivo}`);
+    registrarEntregaPendente(leadId, lead.name, url, motivo);
+    return { ok: false, motivo, url, origem };
   }
 
-  return { ok: true, url, origem: gerada.origem, comunicacao: envio.communicationId || null };
+  resolverEntregaPendente(leadId);
+  return { ok: true, url, origem, comunicacao: envio.communicationId || null };
 }
