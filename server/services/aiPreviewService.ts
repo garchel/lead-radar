@@ -4,6 +4,10 @@ import { buildPreviewHtml, whatsappLink, writePreviewFiles, type PreviewResult }
 import { auditarPaginaMobile, auditoriaDisponivel, type MedidaViewport } from "./mobileAuditService";
 import { repararPagina } from "./previewRepair";
 import { perfilCombinaComNegocio } from "./brandResearchService";
+import { julgarPaginaVisualmente, juizVisualAtivo, notaMinima } from "./previewVisionService";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 /**
  * Gerador de página única por lead.
@@ -27,6 +31,8 @@ export interface PaginaGerada {
   avisos: string[];
   /** Medidas de celular quando a auditoria rodou (360 e 390px). */
   medidas?: MedidaViewport[];
+  /** Nota do juiz visual (0 a 10) quando ele rodou. */
+  notaVisual?: number;
 }
 
 export interface FalhaGeracao {
@@ -191,6 +197,34 @@ ANTÍTESE DO GENÉRICO (evite o visual de página feita por IA):
 - nada de emoji como ícone de seção;
 - a tipografia do título deve ter personalidade e tamanho grande.
 
+8b. O <h1> diz O QUE É e ONDE: precisa conter o tipo de negócio (barbearia,
+   clínica, arquiteto, restaurante…) ou a cidade. Frase poética é subtítulo, nunca
+   título principal. "Corte feito com calma" não serve como h1; "Barbearia no Centro
+   de Linhares" serve, com a frase poética logo abaixo.
+8c. Sem foto do cliente, a página tem que parecer pronta. Se precisar de um espaço
+   para a foto que ele vai mandar, ele é DISCRETO: uma faixa fina (máximo 180px de
+   altura) com ícone e a frase "Foto do espaço" ou "Foto do trabalho" — nunca um
+   retângulo grande, nunca na primeira dobra, nunca o elemento mais visível.
+   O resto do visual se resolve com cor, padrão em CSS/SVG e tipografia.
+8d. Proibido enfileirar três cards idênticos numerados 01/02/03. Serviços podem ser
+   lista com fio entre itens, tabela de duas colunas ou blocos de tamanhos diferentes.
+8e. O subtítulo do hero não repete o título com outras palavras: ele acrescenta
+   informação (o que acontece no atendimento, o diferencial, o tempo médio).
+
+9. ESCALA FIXA (não invente tamanhos soltos; use esta escada):
+   - título principal: clamp(30px, 7vw, 56px), entrelinha 1,05, espaçamento entre letras -0,02em
+   - título de seção: clamp(22px, 4vw, 34px), entrelinha 1,15
+   - subtítulo de apoio: 17px, entrelinha 1,5
+   - corpo: 16px, entrelinha 1,6
+   - rótulo caixa-alta: 12px, letter-spacing 0,12em, peso 600
+   - Nada abaixo de 13px. Nada de 6 tamanhos diferentes de título.
+10. RITMO VERTICAL: seções com padding de 56px em cima e embaixo no celular (72px no
+   desktop). Espaço entre título e texto: 16px. Entre texto e botão: 24px. Os
+   intervalos vêm da mesma escada — 8, 16, 24, 32, 48, 56, 72 —, não de valores
+   aleatórios como 13px ou 37px.
+11. CONTRASTE: texto de corpo precisa de 4,5:1 com o fundo; título grande, 3:1. Se a
+   paleta é clara, escureça o texto em vez de confiar em cinza médio sobre creme.
+
 ESTRUTURA MÍNIMA (pode reorganizar e nomear como quiser, mas o conteúdo precisa existir):
 hero com nome e uma frase concreta · serviços ou o que o negócio faz · prova social usando nota e número de avaliações reais · onde fica e como falar · chamada final para o WhatsApp.
 
@@ -296,6 +330,21 @@ export function validarPagina(html: string, lead: StoredLead): VereditoPagina {
 
   // Erro de grafia em palavra do próprio negócio ("barberia" no lugar de "barbearia")
   // saiu numa página publicada e destrói a credibilidade na hora.
+  // Um h1 puramente poético ("Corte feito com calma") não diz o que o negócio faz
+  // nem onde fica — péssimo para quem chega de fora e para o Google.
+  const h1Bruto = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  const h1Texto = normalizarTexto(String(h1Bruto?.[1] || "").replace(/<[^>]+>/g, " "));
+  if (h1Texto) {
+    const pistas = [lead.city, lead.state, (lead as any).searchCategory, lead.category, lead.name]
+      .filter(Boolean)
+      .join(" ");
+    const palavras = normalizarTexto(pistas)
+      .split(/[^a-z0-9]+/)
+      .filter((p) => p.length >= 4);
+    const dizOQueE = palavras.some((p) => h1Texto.includes(p));
+    if (!dizOQueE) criticos.push("o <h1> não diz o que o negócio faz nem onde fica");
+  }
+
   const errosDeGrafia = grafiasErradas(texto);
   if (errosDeGrafia.length) criticos.push(`palavra escrita errada: ${errosDeGrafia.join(", ")}`);
 
@@ -303,9 +352,9 @@ export function validarPagina(html: string, lead: StoredLead): VereditoPagina {
   if (linksWhats === 0) criticos.push("nenhum link de WhatsApp");
   if (linksWhats > 2) avisos.push(`tem ${linksWhats} links de WhatsApp (o ideal é 2)`);
 
-  if (!/data-slot=["'][^"']+["']/i.test(bruto)) {
-    criticos.push("sem espaço reservado para imagem (figure.media-slot com data-slot)");
-  }
+  // Espaço reservado deixou de ser obrigatório: moldura vazia na primeira dobra
+  // derrubava a nota visual de toda página sem foto. Quando o cliente manda a
+  // imagem, o serviço de mídia insere a figura na seção certa.
 
   // Conteúdo escondido por opacidade some quando o JS não roda (aconteceu: o item
   // 01 da lista nunca aparecia e a página ia para o cliente com a numeração torta).
@@ -322,6 +371,10 @@ export function validarPagina(html: string, lead: StoredLead): VereditoPagina {
  * conhecidos — heurística de distância de edição marcava plural e feminino como
  * erro ("barbearias" x "barbearia"), então foi descartada.
  */
+function normalizarTexto(v: string): string {
+  return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 const GRAFIAS_ERRADAS: Record<string, string> = {
   barberia: "barbearia",
   barberaria: "barbearia",
@@ -378,15 +431,26 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
   let errosAnteriores: string[] = [];
   const avisos: string[] = [];
   const tentativas = Math.max(1, Number(process.env.PREVIEW_AI_ATTEMPTS || 4));
-  // Guarda a melhor tentativa: se nenhuma passar limpa, entrega a menos problemática
-  // (consertada) em vez de jogar tudo no template.
-  let melhor: { html: string; criticos: string[]; medidas?: MedidaViewport[]; modelo: string; tentativa: number } | null = null;
+
+  // Toda tentativa aprovada no portão técnico vira candidata. Quem escolhe é a
+  // nota do juiz visual — antes, a primeira que passava nos testes era publicada,
+  // mesmo quando era feia.
+  interface Candidata {
+    html: string;
+    criticos: string[];
+    medidas?: MedidaViewport[];
+    modelo: string;
+    tentativa: number;
+    notaVisual: number;
+    dicas: string[];
+  }
+  const candidatas: Candidata[] = [];
 
   for (let tentativa = 1; tentativa <= tentativas; tentativa++) {
     const correcao =
       tentativa === 1
         ? ""
-        : `\n\nA tentativa anterior foi reprovada pelo portão de qualidade por: ${errosAnteriores.join("; ")}. Corrija exatamente isso e entregue a página completa de novo.`;
+        : `\n\nA tentativa anterior foi reprovada por: ${errosAnteriores.join("; ")}. Corrija exatamente isso e entregue a página completa de novo.`;
 
     for (const modelo of modelos) {
       try {
@@ -414,10 +478,15 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
         const criticos = [...veredito.criticos];
         const dicasEstaticas = [...veredito.avisos];
 
+        // O print precisa sair da MESMA execução do Chrome que mede a página.
+        const printPath = juizVisualAtivo()
+          ? path.join(os.tmpdir(), `previa-juiz-${Date.now()}-${tentativa}.png`)
+          : undefined;
+
         let medidas: MedidaViewport[] | undefined;
         let dicasMobile: string[] = [];
         if (!criticos.length && auditoriaDisponivel()) {
-          const auditoria = await auditarPaginaMobile(html);
+          const auditoria = await auditarPaginaMobile(html, printPath ? { print: printPath } : {});
           medidas = auditoria.medidas;
           if (auditoria.pulada) {
             console.warn(`[previa-ia] auditoria pulada: ${auditoria.motivoPulada}`);
@@ -427,7 +496,7 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
             // Segunda chance no reparo, agora com os problemas MEDIDOS.
             const segundo = repararPagina(html, auditoria.criticos);
             if (segundo.reparos.length) {
-              const reauditoria = await auditarPaginaMobile(segundo.html);
+              const reauditoria = await auditarPaginaMobile(segundo.html, printPath ? { print: printPath } : {});
               if (reauditoria.ok) {
                 html = segundo.html;
                 medidas = reauditoria.medidas;
@@ -445,26 +514,65 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
           if (dicasMobile.length) console.log(`[previa-ia] polimento mobile: ${dicasMobile.join("; ")}`);
         }
 
-        if (!criticos.length) {
-          if (correcoes.length) console.log(`[previa-ia] reparos aplicados: ${correcoes.join(" | ")}`);
+        const dicas = [...dicasEstaticas, ...dicasMobile];
+        const modeloUsado = (resposta as any).modelVersion || modelo;
+
+        if (criticos.length) {
+          candidatas.push({ html, criticos, medidas, modelo: modeloUsado, tentativa, notaVisual: 0, dicas: [] });
+          errosAnteriores = [...criticos, ...dicas];
+          console.warn(`[previa-ia] ${modelo} reprovado (tentativa ${tentativa}): ${errosAnteriores.join("; ")}`);
+          continue;
+        }
+
+        // Passou no portão técnico. Agora o olho: hierarquia, contraste, densidade.
+        let notaVisual = 10;
+        let problemasVisuais: string[] = [];
+        if (printPath) {
+          const juizo = await julgarPaginaVisualmente(printPath, {
+            nome: lead.name,
+            segmento: (lead as any).searchCategory || lead.category,
+            cidade: [lead.city, lead.state].filter(Boolean).join("/"),
+          });
+          if (juizo) {
+            notaVisual = juizo.nota;
+            problemasVisuais = juizo.problemas;
+          }
+          try { fs.unlinkSync(printPath); } catch { /* já foi */ }
+        }
+
+        candidatas.push({
+          html,
+          criticos: [],
+          medidas,
+          modelo: modeloUsado,
+          tentativa,
+          notaVisual,
+          dicas: [...correcoes, ...dicas],
+        });
+
+        if (correcoes.length) console.log(`[previa-ia] reparos aplicados: ${correcoes.join(" | ")}`);
+
+        const minimo = notaMinima();
+        if (notaVisual >= minimo) {
           return {
             ok: true,
             pagina: {
               html,
               conceito: conceitoDe(bruto) || "",
-              modelo: (resposta as any).modelVersion || modelo,
+              modelo: modeloUsado,
               tentativas: tentativa,
-              avisos: [...avisos, ...dicasEstaticas, ...dicasMobile, ...correcoes],
+              avisos: [...avisos, ...dicas, ...correcoes],
               medidas,
+              notaVisual,
             },
           };
         }
 
-        if (!melhor || criticos.length < melhor.criticos.length) {
-          melhor = { html, criticos, medidas, modelo: (resposta as any).modelVersion || modelo, tentativa };
-        }
-        errosAnteriores = [...criticos, ...dicasEstaticas, ...dicasMobile];
-        console.warn(`[previa-ia] ${modelo} reprovado (tentativa ${tentativa}): ${errosAnteriores.join("; ")}`);
+        console.warn(`[previa-ia] nota visual ${notaVisual} abaixo de ${minimo} (tentativa ${tentativa})`);
+        errosAnteriores = problemasVisuais.length
+          ? problemasVisuais.map((p) => `juiz visual: ${p}`)
+          : [`o juiz visual deu nota ${notaVisual} (mínimo ${minimo}): melhore hierarquia, respiro e acabamento`];
+        if (dicas.length) errosAnteriores.push(...dicas.slice(0, 2));
       } catch (err: any) {
         const msg = String(err?.message || err);
         errosAnteriores = [`falha na chamada: ${msg.slice(0, 160)}`];
@@ -474,18 +582,31 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
     if (errosAnteriores.length) avisos.push(...errosAnteriores);
   }
 
-  // Nenhuma passou limpa: entrega a melhor, consertada, e diz o que sobrou.
-  if (melhor) {
-    console.warn(`[previa-ia] nenhuma tentativa passou limpa; usando a melhor (${melhor.criticos.length} pendência(s))`);
+  // Nada atingiu a nota mínima: entrega a melhor candidata (limpa primeiro, depois
+  // a de maior nota) e diz o que ficou pendente.
+  if (candidatas.length) {
+    const limpas = candidatas.filter((c) => !c.criticos.length);
+    const escolhida = limpas.length
+      ? limpas.reduce((a, b) => (b.notaVisual > a.notaVisual ? b : a))
+      : candidatas.reduce((a, b) => (b.criticos.length < a.criticos.length ? b : a));
+    console.warn(
+      `[previa-ia] nenhuma tentativa atingiu a nota mínima; usando a de nota ${escolhida.notaVisual} (${escolhida.criticos.length} pendência(s))`,
+    );
     return {
       ok: true,
       pagina: {
-        html: melhor.html,
-        conceito: conceitoDe(melhor.html),
-        modelo: melhor.modelo,
-        tentativas: melhor.tentativa,
-        avisos: [...avisos, ...melhor.criticos.map((c) => `pendente: ${c}`)],
-        medidas: melhor.medidas,
+        html: escolhida.html,
+        conceito: conceitoDe(escolhida.html),
+        modelo: escolhida.modelo,
+        tentativas: escolhida.tentativa,
+        avisos: [
+          ...avisos,
+          ...(escolhida.notaVisual < notaMinima() ? [`juiz visual: nota ${escolhida.notaVisual} (mínimo ${notaMinima()})`] : []),
+          ...escolhida.criticos.map((c) => `pendente: ${c}`),
+          ...escolhida.dicas,
+        ],
+        medidas: escolhida.medidas,
+        notaVisual: escolhida.notaVisual,
       },
     };
   }
@@ -505,6 +626,8 @@ export interface ResultadoPaginaUnica {
   conceito?: string;
   tentativas?: number;
   medidas?: MedidaViewport[];
+  /** Nota do juiz visual (0 a 10), quando ele rodou. */
+  notaVisual?: number;
   motivoFallback?: string;
 }
 
@@ -530,6 +653,7 @@ export async function gerarPaginaUnica(
       conceito: gerada.pagina.conceito,
       tentativas: gerada.pagina.tentativas,
       medidas: gerada.pagina.medidas,
+      notaVisual: gerada.pagina.notaVisual,
     };
   }
   const falha: FalhaGeracao = gerada as FalhaGeracao;

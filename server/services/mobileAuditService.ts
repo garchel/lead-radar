@@ -165,6 +165,66 @@ const MEDIDOR = `(() => {
     }
   }
 
+  // Contraste real (WCAG): cor do texto contra o primeiro fundo opaco acima dele.
+  const paraRgb = (cor) => {
+    const m = String(cor).match(/rgba?\(([^)]+)\)/);
+    if (!m) return null;
+    const p = m[1].split(',').map((v) => parseFloat(v));
+    return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 };
+  };
+  const luminancia = (c) => {
+    const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+  };
+  const fundoDe = (e) => {
+    let n = e;
+    while (n && n !== document.documentElement) {
+      const c = paraRgb(getComputedStyle(n).backgroundColor || '');
+      if (c && c.a > 0.85) return c;
+      n = n.parentElement;
+    }
+    return { r: 255, g: 255, b: 255, a: 1 };
+  };
+  const razao = (a, b) => {
+    const l1 = luminancia(a);
+    const l2 = luminancia(b);
+    const [x, y] = l1 > l2 ? [l1, l2] : [l2, l1];
+    return (x + 0.05) / (y + 0.05);
+  };
+  const baixoContraste = [];
+  for (const e of document.querySelectorAll('p, li, span, a, h1, h2, h3, h4, small, strong, em, button, figcaption')) {
+    const temTexto = [...e.childNodes].some((n) => n.nodeType === 3 && (n.textContent || '').trim().length > 2);
+    if (!temTexto) continue;
+    const r = e.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) continue;
+    const s = getComputedStyle(e);
+    if (parseFloat(s.opacity) < 0.5) continue;
+    const fg = paraRgb(s.color);
+    if (!fg) continue;
+    const bg = fundoDe(e);
+    // Texto com alfa: mistura com o fundo antes de medir.
+    const misturado = fg.a >= 1 ? fg : {
+      r: fg.r * fg.a + bg.r * (1 - fg.a),
+      g: fg.g * fg.a + bg.g * (1 - fg.a),
+      b: fg.b * fg.a + bg.b * (1 - fg.a),
+      a: 1,
+    };
+    const tamanho = parseFloat(s.fontSize) || 16;
+    const negrito = (parseInt(s.fontWeight, 10) || 400) >= 700;
+    const minimo = (tamanho >= 24 || (negrito && tamanho >= 19)) ? 3 : 4.5;
+    const valor = razao(misturado, bg);
+    if (valor < minimo) {
+      baixoContraste.push({ texto: (e.textContent || '').trim().slice(0, 28), razao: Math.round(valor * 10) / 10, minimo });
+    }
+  }
+  if (baixoContraste.length) {
+    const descrever = (lista) => lista.slice(0, 3).map((c) => '"' + c.texto + '" ' + c.razao + ':1 (minimo ' + c.minimo + ':1)').join(' | ');
+    const graves = baixoContraste.filter((c) => c.razao < 3);
+    const medios = baixoContraste.filter((c) => c.razao >= 3);
+    if (graves.length) criticos.push('texto quase invisivel: ' + descrever(graves));
+    else if (medios.length) avisos.push('contraste abaixo do minimo: ' + descrever(medios));
+  }
+
   return JSON.stringify({
     largura: larg,
     scrollWidth: Math.max(doc.scrollWidth, document.body.scrollWidth),
@@ -274,7 +334,7 @@ async function medirDesktop(chrome: string, arquivoUrl: string, porta: number): 
   }
 }
 
-async function medirEm(chrome: string, arquivoUrl: string, largura: number, porta: number): Promise<MedidaViewport | null> {
+async function medirEm(chrome: string, arquivoUrl: string, largura: number, porta: number, pngPath?: string): Promise<MedidaViewport | null> {
   const perfil = fs.mkdtempSync(path.join(os.tmpdir(), "audit-"));
   const proc = spawn(chrome, [
     "--headless=new",
@@ -351,6 +411,26 @@ async function medirEm(chrome: string, arquivoUrl: string, largura: number, port
         `no fim da página a barra fixa cobre o conteúdo (${achados.slice(0, 2).join(" | ")}) — aumente o padding-bottom do body`,
       );
     }
+    // Print da primeira dobra: é o que o juiz visual precisa ver para julgar
+    // hierarquia, contraste e densidade. Escala 1 para não estourar o tamanho.
+    if (pngPath) {
+      try {
+        await cdp("Emulation.setDeviceMetricsOverride", {
+          width: largura, height: 900, deviceScaleFactor: 1, mobile: true,
+        });
+        await cdp("Runtime.evaluate", { expression: "window.scrollTo(0, 0)" });
+        await dormir(400);
+        const alturaPrint = Math.min(medida.alturaPagina || 1600, 1900);
+        const shot = await cdp("Page.captureScreenshot", {
+          format: "png",
+          captureBeyondViewport: true,
+          clip: { x: 0, y: 0, width: largura, height: alturaPrint, scale: 1 },
+        });
+        if (shot?.data) fs.writeFileSync(pngPath, Buffer.from(shot.data, "base64"));
+      } catch (erro: any) {
+        console.warn(`[auditoria] print falhou: ${erro?.message || erro}`);
+      }
+    }
     return medida;
   } catch (erro: any) {
     console.warn(`[auditoria] largura ${largura}: ${erro?.message || erro}`);
@@ -367,7 +447,10 @@ async function medirEm(chrome: string, arquivoUrl: string, largura: number, port
  * Roda a auditoria em cada largura. `html` é gravado num arquivo temporário para
  * que a página seja medida exatamente como vai ao ar (mesmo arquivo, mesma origem).
  */
-export async function auditarPaginaMobile(html: string, opts: { larguras?: number[] } = {}): Promise<AuditoriaMobile> {
+export async function auditarPaginaMobile(
+  html: string,
+  opts: { larguras?: number[]; print?: string } = {},
+): Promise<AuditoriaMobile> {
   const chrome = acharChrome();
   if (!chrome) {
     return { ok: true, pulada: true, motivoPulada: "Chrome não encontrado na máquina", medidas: [], criticos: [], avisos: [] };
@@ -387,7 +470,7 @@ export async function auditarPaginaMobile(html: string, opts: { larguras?: numbe
   let porta = 9400 + Math.floor(Math.random() * 300);
   try {
     for (const largura of larguras) {
-      const medida = await medirEm(chrome, arquivoUrl, largura, porta);
+      const medida = await medirEm(chrome, arquivoUrl, largura, porta, largura === 390 ? opts.print : undefined);
       porta += 1;
       if (!medida) continue;
       medidas.push(medida);

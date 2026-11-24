@@ -94,7 +94,9 @@ export function repararPagina(html: string, problemas: string[] = []): Resultado
   }
 
   // 2) slot de imagem obrigatório
-  if (!/data-slot=["'][^"']+["']/i.test(saida)) {
+  // Só insere moldura quando a própria página pediu uma (tem <figure> de mídia sem
+  // data-slot). Página sem foto não ganha retângulo vazio.
+  if (/<figure[^>]*class=["'][^"']*media-slot/i.test(saida) && !/data-slot=["'][^"']+["']/i.test(saida)) {
     // Onde encaixar: depois da primeira seção; se a página não usa <section>,
     // depois do <h1>; e, na falta dos dois, logo na abertura do <body>.
     const marcas = ["</section>", "</header>", "</main>", "</h1>"];

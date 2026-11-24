@@ -99,7 +99,24 @@ export function injetarImagemNoHtml(html: string, slot: string, urlImagem: strin
     "i",
   );
   const achou = re.test(html);
-  if (!achou) return { html, achou };
+  if (!achou) {
+    // Página sem moldura (gerada sem foto): cria uma faixa de imagem antes do
+    // último bloco, para a foto do cliente não se perder.
+    const figura =
+      `<figure class="media-slot" data-slot="${slot}" data-filled="true" ` +
+      `style="margin:0;width:100%;overflow:hidden;border-radius:8px">` +
+      `<img src="${urlImagem}" alt="${alt.replace(/"/g, "&quot;")}" loading="lazy" ` +
+      `style="width:100%;height:100%;object-fit:cover;display:block" /></figure>`;
+    const secao =
+      `<section style="padding:32px 0"><div style="max-width:1120px;margin:0 auto;padding:0 20px">` +
+      `${figura}</div></section>`;
+    const alvos = ["</main>", "<footer", "</body>"];
+    for (const alvo of alvos) {
+      const pos = html.lastIndexOf(alvo);
+      if (pos > 0) return { achou: false, html: html.slice(0, pos) + secao + html.slice(pos) };
+    }
+    return { achou: false, html: html.replace("</body>", secao + "</body>") };
+  }
 
   return {
     achou,

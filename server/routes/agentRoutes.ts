@@ -443,6 +443,8 @@ export function registerAgentRoutes(app: Express) {
         origem: gerada.origem,
         conceito: gerada.conceito || null,
         modelo: gerada.modelo || null,
+        tentativas: gerada.tentativas ?? null,
+        notaVisual: gerada.notaVisual ?? null,
         avisoGeracao: gerada.motivoFallback || null,
         publicação,
         aviso: publicUrl

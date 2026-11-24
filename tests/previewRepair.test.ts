@@ -49,10 +49,17 @@ describe("reparo da página gerada", () => {
     expect(dois.html.match(/id="reparos-previa"/g)?.length).toBe(1);
   });
 
-  it("cria o espaço reservado quando a página esqueceu", () => {
+  it("não inventa moldura vazia em página sem foto", () => {
+    // Moldura vazia na primeira dobra derrubava a nota visual de toda página sem
+    // imagem. A página tem que parecer pronta sem foto.
     const r = repararPagina(base, ["sem espaço reservado para imagem"]);
+    expect(r.html).not.toContain('data-slot="hero"');
+  });
+
+  it("marca o slot quando a página já trouxe uma figura de mídia", () => {
+    const comFigura = base.replace("</body>", '<figure class="media-slot"><span>foto</span></figure></body>');
+    const r = repararPagina(comFigura, []);
     expect(r.html).toContain('data-slot="hero"');
-    expect(r.reparos.some((x) => x.problema.includes("sem espaço reservado"))).toBe(true);
   });
 
   it("some com opacity:0 fora de keyframes e preserva a animação", () => {
