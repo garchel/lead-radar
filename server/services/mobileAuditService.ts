@@ -142,6 +142,16 @@ const MEDIDOR = `(() => {
     criticos.push(ilegiveis.length + ' bloco(s) de texto com fonte abaixo de 9px');
   }
 
+  // Espaço reservado ocupando meia tela logo no topo deixa a página com cara de
+  // wireframe vazio. É dica (não reprova), mas entra no retorno para o gerador.
+  const slot = document.querySelector('[data-slot]');
+  if (slot) {
+    const r = slot.getBoundingClientRect();
+    if (r.height > window.innerHeight * 0.45) {
+      avisos.push('espaço de imagem com ' + Math.round((r.height / window.innerHeight) * 100) + '% da altura da tela (máximo 40%)');
+    }
+  }
+
   const altura = Math.max(doc.scrollHeight, document.body.scrollHeight);
   if (altura > 3400) {
     avisos.push('página muito longa no celular (' + altura + 'px): encurte espaçamento e blocos');

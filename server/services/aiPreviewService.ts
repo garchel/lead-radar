@@ -35,6 +35,38 @@ export interface FalhaGeracao {
   erros: string[];
 }
 
+
+/** DDD por estado (tabela enxuta, cobre o país inteiro). */
+const DDD_UF: Record<string, string> = {
+  "11": "SP", "12": "SP", "13": "SP", "14": "SP", "15": "SP", "16": "SP", "17": "SP", "18": "SP", "19": "SP",
+  "21": "RJ", "22": "RJ", "24": "RJ", "27": "ES", "28": "ES",
+  "31": "MG", "32": "MG", "33": "MG", "34": "MG", "35": "MG", "37": "MG", "38": "MG",
+  "41": "PR", "42": "PR", "43": "PR", "44": "PR", "45": "PR", "46": "PR",
+  "47": "SC", "48": "SC", "49": "SC",
+  "51": "RS", "53": "RS", "54": "RS", "55": "RS",
+  "61": "DF", "62": "GO", "64": "GO", "63": "TO", "65": "MT", "66": "MT", "67": "MS",
+  "68": "AC", "69": "RO", "71": "BA", "73": "BA", "74": "BA", "75": "BA", "77": "BA",
+  "79": "SE", "81": "PE", "87": "PE", "82": "AL", "83": "PB", "84": "RN", "85": "CE", "88": "CE",
+  "86": "PI", "89": "PI", "91": "PA", "93": "PA", "94": "PA", "92": "AM", "97": "AM",
+  "95": "RR", "96": "AP", "98": "MA", "99": "MA",
+};
+
+/**
+ * Telefone com DDD de outro estado numa página local parece template comprado.
+ * Quando o DDD não bate com o estado do negócio, a página não mostra o número
+ * (o botão de WhatsApp continua, que é o que importa).
+ */
+function telefoneCombinaComEstado(telefone: string, estado?: string): boolean {
+  const uf = String(estado || "").toUpperCase().trim();
+  if (!uf) return true;
+  const digitos = String(telefone || "").replace(/\D/g, "");
+  if (digitos.length < 10) return true;
+  const semPais = digitos.startsWith("55") && digitos.length > 11 ? digitos.slice(2) : digitos;
+  const ddd = semPais.slice(0, 2);
+  const esperado = DDD_UF[ddd];
+  return !esperado || esperado === uf;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Direção de arte: semente estável por lead                          */
 /* ------------------------------------------------------------------ */
@@ -99,7 +131,8 @@ function fatos(lead: StoredLead) {
     endereco: lead.address || "",
     nota: lead.rating ?? null,
     avaliacoes: lead.reviewsCount ?? null,
-    telefone: lead.phone || "",
+    // Número de outro DDD numa página local passa impressão de template.
+    telefone: telefoneCombinaComEstado(lead.phone || "", lead.state) ? lead.phone || "" : "",
     whatsapp: whatsappLink((lead as any).dmPhone || lead.phone) || "",
     // Perfil só entra se combinar com o nome: snapshots antigos guardaram o @ de
     // outra clínica e a página saía com o Instagram errado.
@@ -144,7 +177,7 @@ REGRAS DURAS (violar invalida a entrega):
     ... (fundo em tom suave da paleta, proporção fixa via aspect-ratio, um ícone de imagem simples e discreto em SVG, e uma legenda curta em texto pequeno)
   </figure>
   Regras do espaço reservado: proporção definida (16/9, 4/3 ou 3/4), canto suave, fundo levemente tingido com a cor da marca, legenda curta do tipo "Espaço para foto do projeto" ou "Foto do espaço", e um ícone de moldura/imagem desenhado com 2 ou 3 traços. Ele precisa parecer intencional e elegante, nunca um retângulo cinza de erro.
-13d. Use de 1 a 3 espaços reservados: um no hero (se a página pedir imagem) e, se fizer sentido, um na seção de serviços ou de portfólio.
+13d. Use 1 ou 2 espaços reservados, NUNCA como o primeiro bloco depois do título. O hero é tipográfico; o espaço de imagem entra depois de uma seção de conteúdo (serviços, prova social) ou antes do CTA final, e ocupa no máximo 40% da altura da tela.
 13c. Cor de destaque nunca em texto pequeno sobre fundo claro: use a cor da marca em fundo escuro ou em elementos grandes.
 14. Página enxuta: até 18 KB e no máximo 2.800px de altura no celular. Corte enfeite que não ajuda a ler nem a decidir: cada bloco precisa justificar o espaço que ocupa.
 15. NADA de conteúdo escondido esperando JavaScript. Se usar animação, ela precisa partir de um estado visível (@keyframes com animation-fill-mode), nunca deixar elemento em opacity:0 — sem JS a página tem que aparecer inteira.
@@ -255,9 +288,15 @@ export function validarPagina(html: string, lead: StoredLead): VereditoPagina {
   }
   const nota = lead.rating != null ? String(lead.rating).replace(".", ",") : "";
   if (nota) {
+    // Nota grande + estrelas + "nota 5" repetem o MESMO dado três vezes.
     const vezesNota = (texto.match(new RegExp(nota.replace(",", "[.,]"), "g")) || []).length;
-    if (vezesNota > 3) avisos.push(`repete a nota ${vezesNota} vezes`);
+    if (vezesNota > 2) avisos.push(`repete a nota ${vezesNota} vezes (mostre uma vez só)`);
   }
+
+  // Erro de grafia em palavra do próprio negócio ("barberia" no lugar de "barbearia")
+  // saiu numa página publicada e destrói a credibilidade na hora.
+  const errosDeGrafia = grafiasErradas(texto);
+  if (errosDeGrafia.length) criticos.push(`palavra escrita errada: ${errosDeGrafia.join(", ")}`);
 
   const linksWhats = (bruto.match(/wa\.me\//g) || []).length;
   if (linksWhats === 0) criticos.push("nenhum link de WhatsApp");
@@ -274,6 +313,30 @@ export function validarPagina(html: string, lead: StoredLead): VereditoPagina {
   }
 
   return { criticos, avisos };
+}
+
+/**
+ * Grafia errada da própria categoria ("barberia" no lugar de "barbearia") já foi
+ * publicada e destrói a credibilidade na hora. Lista curta e explícita de erros
+ * conhecidos — heurística de distância de edição marcava plural e feminino como
+ * erro ("barbearias" x "barbearia"), então foi descartada.
+ */
+const GRAFIAS_ERRADAS: Record<string, string> = {
+  barberia: "barbearia",
+  barberaria: "barbearia",
+  barbeariia: "barbearia",
+  odontológia: "odontologia",
+  odondologia: "odontologia",
+  estettic: "estética",
+  estetíca: "estética",
+  fisioterapiaa: "fisioterapia",
+};
+
+function grafiasErradas(texto: string): string[] {
+  const alvo = String(texto || "").toLowerCase();
+  return Object.entries(GRAFIAS_ERRADAS)
+    .filter(([errada]) => new RegExp(`\\b${errada}\\b`, "i").test(alvo))
+    .map(([errada, certa]) => `${errada} (deveria ser ${certa})`);
 }
 
 function limparCercas(texto: string): string {
