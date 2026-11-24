@@ -690,6 +690,16 @@ export function registerWhatsAppWebhook(app: Express) {
           }
         })
         .catch((e: any) => console.warn(`[whatsapp] Ficha do cliente falhou para ${lead.id}: ${e?.message}`));
+
+      // Interesse reconhecido pela REGRA também entrega a página. Antes só o
+      // caminho da IA entregava: quando o regex entendia "pode mandar sim", a
+      // página era gerada e ninguém mandava o link. A reserva por lead dentro de
+      // entregarPaginaDoLead impede disparo duplo com o outro caminho.
+      void entregarPaginaDoLead(lead.id)
+        .then((entrega) => {
+          if (!entrega.ok) console.log(`[pagina] ${lead.id}: ${entrega.motivo}`);
+        })
+        .catch((e: any) => console.warn(`[whatsapp] Página única falhou para ${lead.id}: ${e?.message}`));
     }
 
     // 2ª passada (só quando o regex não entendeu): a IA classifica frases curtas
