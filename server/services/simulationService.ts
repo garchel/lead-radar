@@ -444,7 +444,16 @@ export function resetSimulationCard(
         for (const m of conteudo.matchAll(/assets\/([\w.-]+)/g)) emUso.add(m[1]);
       }
       for (const img of fs.readdirSync(assetsDir)) {
-        if (!emUso.has(img)) fs.unlinkSync(path.join(assetsDir, img));
+        if (emUso.has(img)) continue;
+        const caminho = path.join(assetsDir, img);
+        try {
+          // O serviço de mídia guarda cada lead em subpasta (assets/<slug>/):
+          // unlinkSync numa pasta estoura EPERM e derrubava a limpeza inteira.
+          if (fs.statSync(caminho).isDirectory()) fs.rmSync(caminho, { recursive: true, force: true });
+          else fs.unlinkSync(caminho);
+        } catch (erro: any) {
+          console.warn(`[simulação] não consegui remover ${img}: ${erro?.message || erro}`);
+        }
       }
     }
   } catch (erro: any) {
