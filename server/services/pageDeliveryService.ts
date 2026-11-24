@@ -126,6 +126,20 @@ export function mensagemDaPagina(nome: string, url: string): string {
  */
 const entregando = new Set<string>();
 
+/** Espera no máximo `ms` e devolve o fallback — nada de espera infinita na entrega. */
+async function comTeto<T>(promessa: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const teto = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms);
+    if (typeof timer.unref === "function") timer.unref();
+  });
+  try {
+    return await Promise.race([promessa, teto]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 /** Aviso curto que toma o turno: sem ele, o agente responde antes da página ficar pronta. */
 export function mensagemDeEspera(): string {
   return whatsAppify("Perfeito! Dá um minutinho que eu já te mando o link 👇");
@@ -158,11 +172,12 @@ async function entregarInterno(leadId: string, opts: { aviso?: boolean }): Promi
   if (opts.aviso !== false) {
     const historico = getCommunicationsByLead(lead.id);
     if (historico[0]?.direction === "inbound") {
-      await dispatchLeadReply(lead, {
+      const aviso = await dispatchLeadReply(lead, {
         channel: "whatsapp",
         message: mensagemDeEspera(),
         hook: "pagina_aviso",
       });
+      console.log(`[pagina] aviso de espera: ${aviso.status}${aviso.detail ? ` (${aviso.detail})` : ""}`);
     }
   }
 
@@ -178,10 +193,20 @@ async function entregarInterno(leadId: string, opts: { aviso?: boolean }): Promi
     url = resolvePreviewUrl(gerada.preview.slug);
   }
 
+  // Publicação tem teto próprio. Sem isto, um deploy que entra em retentativa trava
+  // a entrega em silêncio: o link nunca sai, nada entra na fila de pendências e o
+  // agente do WhatsApp preenche o vácuo com o texto errado (aconteceu).
   if (pagesConfigured()) {
-    const publicado = await publishPreviews(previewsDir());
+    const inicio = Date.now();
+    const publicado = await comTeto(
+      publishPreviews(previewsDir()),
+      180_000,
+      { ok: false, url: null, error: "publicação não terminou em 180s" } as any,
+    );
     if (!publicado.ok) {
-      console.warn(`[pagina] publicação falhou: ${publicado.error || "sem detalhe"}`);
+      console.warn(`[pagina] publicação falhou em ${Math.round((Date.now() - inicio) / 1000)}s: ${publicado.error || "sem detalhe"}`);
+    } else {
+      console.log(`[pagina] publicação ok em ${Math.round((Date.now() - inicio) / 1000)}s${(publicado as any).skipped ? " (sem mudanças)" : ""}`);
     }
   }
 
