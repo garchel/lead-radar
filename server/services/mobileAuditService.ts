@@ -201,6 +201,79 @@ const SOBREPOSICAO = `(() => {
   return JSON.stringify(achados);
 })()`;
 
+/** No desktop a página tem que usar a tela; 640px no meio de 1280 é página de celular. */
+const MEDIDOR_DESKTOP = `(() => {
+  const larg = window.innerWidth;
+  const candidatos = [...document.querySelectorAll('body > *, main, .wrap, .container, .page, section')]
+    .filter((e) => e.getBoundingClientRect().height > 80);
+  const larguras = candidatos.map((e) => Math.round(e.getBoundingClientRect().width));
+  const conteudo = larguras.length ? Math.max(...larguras) : larg;
+  return JSON.stringify({ viewport: larg, conteudo, proporcao: Math.round((conteudo / larg) * 100) });
+})()`;
+
+async function medirDesktop(chrome: string, arquivoUrl: string, porta: number): Promise<{ viewport: number; conteudo: number; proporcao: number } | null> {
+  const perfil = fs.mkdtempSync(path.join(os.tmpdir(), "audit-desk-"));
+  const proc = spawn(chrome, [
+    "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
+    "--no-default-browser-check", "--disable-extensions", "--disable-background-networking",
+    `--remote-debugging-port=${porta}`, `--user-data-dir=${perfil}`, "about:blank",
+  ], { stdio: "ignore" });
+
+  let ws: WebSocket | null = null;
+  try {
+    let alvo: string | null = null;
+    for (let i = 0; i < 30 && !alvo; i++) {
+      await dormir(200);
+      try {
+        const lista = await fetch(`http://127.0.0.1:${porta}/json/list`).then((r) => r.json());
+        alvo = (lista as any[]).find((t) => t.type === "page")?.webSocketDebuggerUrl || null;
+      } catch { /* subindo */ }
+    }
+    if (!alvo) return null;
+
+    ws = new WebSocket(alvo);
+    await new Promise<void>((ok, falha) => {
+      ws!.onopen = () => ok();
+      ws!.onerror = () => falha(new Error("websocket falhou"));
+      setTimeout(() => falha(new Error("timeout websocket")), 8000);
+    });
+
+    let seq = 0;
+    const pendentes = new Map<number, (m: any) => void>();
+    ws.onmessage = (ev: MessageEvent) => {
+      const msg = JSON.parse(String(ev.data));
+      if (msg.id && pendentes.has(msg.id)) {
+        pendentes.get(msg.id)!(msg);
+        pendentes.delete(msg.id);
+      }
+    };
+    const cdp = (method: string, params: Record<string, unknown> = {}) =>
+      new Promise<any>((ok, falha) => {
+        const id = ++seq;
+        pendentes.set(id, (m) => (m.error ? falha(new Error(m.error.message)) : ok(m.result)));
+        ws!.send(JSON.stringify({ id, method, params }));
+        setTimeout(() => falha(new Error(`${method} sem resposta`)), 20000);
+      });
+
+    await cdp("Page.enable");
+    await cdp("Runtime.enable");
+    await cdp("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+    await cdp("Page.navigate", { url: arquivoUrl });
+    await dormir(1500);
+    const res = await cdp("Runtime.evaluate", { expression: MEDIDOR_DESKTOP, returnByValue: true });
+    const valor = res?.result?.value;
+    return valor ? JSON.parse(valor) : null;
+  } catch (erro: any) {
+    console.warn(`[auditoria] desktop: ${erro?.message || erro}`);
+    return null;
+  } finally {
+    try { ws?.close(); } catch { /* ok */ }
+    try { proc.kill(); } catch { /* ok */ }
+    await dormir(300);
+    try { fs.rmSync(perfil, { recursive: true, force: true }); } catch { /* travado */ }
+  }
+}
+
 async function medirEm(chrome: string, arquivoUrl: string, largura: number, porta: number): Promise<MedidaViewport | null> {
   const perfil = fs.mkdtempSync(path.join(os.tmpdir(), "audit-"));
   const proc = spawn(chrome, [
@@ -310,8 +383,9 @@ export async function auditarPaginaMobile(html: string, opts: { larguras?: numbe
   const criticos: string[] = [];
   const avisos: string[] = [];
 
+  // A medida de desktop precisa acontecer ANTES de apagar o arquivo temporário.
+  let porta = 9400 + Math.floor(Math.random() * 300);
   try {
-    let porta = 9400 + Math.floor(Math.random() * 300);
     for (const largura of larguras) {
       const medida = await medirEm(chrome, arquivoUrl, largura, porta);
       porta += 1;
@@ -319,6 +393,15 @@ export async function auditarPaginaMobile(html: string, opts: { larguras?: numbe
       medidas.push(medida);
       for (const p of medida.criticos || []) criticos.push(`${largura}px: ${p}`);
       for (const p of medida.avisos || []) avisos.push(`${largura}px: ${p}`);
+    }
+
+    if (medidas.length) {
+      const desktop = await medirDesktop(chrome, arquivoUrl, porta + 10);
+      if (desktop && desktop.proporcao < 65) {
+        avisos.push(
+          `no computador (1280px) o conteúdo ocupa ${desktop.proporcao}% da largura (${desktop.conteudo}px) — parece página de celular`,
+        );
+      }
     }
   } finally {
     try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* ok */ }

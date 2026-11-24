@@ -133,5 +133,20 @@ export function repararPagina(html: string, problemas: string[] = []): Resultado
     });
   }
 
+  // 4) container de celular no desktop: página com 640px de largura e o resto da
+  // tela em branco. Sobe a largura dos containers que estão abaixo de 900px.
+  const antesLargura = saida;
+  saida = saida.replace(
+    /((?:^|\})\s*(?:body|main|\.wrap|\.container|\.page|\.site|\.content|\.wrapper)[^{]{0,80}\{[^}]*?)max-width\s*:\s*(\d{2,4})px/gi,
+    (trecho, inicio, valor) => {
+      const px = Number(valor);
+      if (!Number.isFinite(px) || px >= 900) return trecho;
+      return `${inicio}max-width: 1120px`;
+    },
+  );
+  if (saida !== antesLargura) {
+    reparos.push({ problema: "container limitado à largura de celular", correcao: "largura do container elevada para 1120px" });
+  }
+
   return { html: saida, reparos };
 }
