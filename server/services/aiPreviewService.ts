@@ -2,6 +2,8 @@ import type { StoredLead } from "../store/types";
 import { chaveDeepSeek, getAiClient, modelosDeepSeek } from "./aiClient";
 import { buildPreviewHtml, whatsappLink, writePreviewFiles, type PreviewResult } from "./previewService";
 import { auditarPaginaMobile, auditoriaDisponivel, type MedidaViewport } from "./mobileAuditService";
+import { repararPagina } from "./previewRepair";
+import { perfilCombinaComNegocio } from "./brandResearchService";
 
 /**
  * Gerador de página única por lead.
@@ -99,7 +101,13 @@ function fatos(lead: StoredLead) {
     avaliacoes: lead.reviewsCount ?? null,
     telefone: lead.phone || "",
     whatsapp: whatsappLink((lead as any).dmPhone || lead.phone) || "",
-    instagram: marca?.profiles?.instagram || "",
+    // Perfil só entra se combinar com o nome: snapshots antigos guardaram o @ de
+    // outra clínica e a página saía com o Instagram errado.
+    instagram: (() => {
+      const perfil = marca?.profiles?.instagram || "";
+      if (!perfil) return "";
+      return perfilCombinaComNegocio(perfil, lead.name) ? perfil : "";
+    })(),
     paleta: paleta.map((p) => ({ hex: p.hex, papel: p.role })),
     tom: marca.tone || [],
     tipografia: marca.typography || null,
@@ -304,10 +312,13 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
   const timeoutMs = opts.timeoutMs ?? Number(process.env.PREVIEW_AI_TIMEOUT_MS || 90000);
 
   let errosAnteriores: string[] = [];
-  let conceito = "";
   const avisos: string[] = [];
+  const tentativas = Math.max(1, Number(process.env.PREVIEW_AI_ATTEMPTS || 4));
+  // Guarda a melhor tentativa: se nenhuma passar limpa, entrega a menos problemática
+  // (consertada) em vez de jogar tudo no template.
+  let melhor: { html: string; criticos: string[]; medidas?: MedidaViewport[]; modelo: string; tentativa: number } | null = null;
 
-  for (let tentativa = 1; tentativa <= 2; tentativa++) {
+  for (let tentativa = 1; tentativa <= tentativas; tentativa++) {
     const correcao =
       tentativa === 1
         ? ""
@@ -327,42 +338,68 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
           },
         });
 
-        const html = limparCercas(resposta.text);
+        // Reparo determinístico ANTES de julgar: alvo de toque, fonte miúda,
+        // transbordo e rodapé atrás da barra fixa têm conserto em CSS. Antes, cada
+        // detalhe desses custava uma geração inteira e, na segunda, o template.
+        const bruto = limparCercas(resposta.text);
+        const reparo = repararPagina(bruto, errosAnteriores);
+        let html = reparo.html;
+        const correcoes = reparo.reparos.map((r) => `${r.problema} → ${r.correcao}`);
+
         const veredito = validarPagina(html, lead);
-        const erros = [...veredito.criticos];
+        const criticos = [...veredito.criticos];
         const dicasEstaticas = [...veredito.avisos];
 
-        // Portão estático passou: agora mede no navegador, do jeito que o lead vai
-        // ver. Só publica página que se comporta em 360 e 390px de largura.
         let medidas: MedidaViewport[] | undefined;
         let dicasMobile: string[] = [];
-        if (!erros.length && auditoriaDisponivel()) {
+        if (!criticos.length && auditoriaDisponivel()) {
           const auditoria = await auditarPaginaMobile(html);
           medidas = auditoria.medidas;
           if (auditoria.pulada) {
             console.warn(`[previa-ia] auditoria pulada: ${auditoria.motivoPulada}`);
           }
-          // Crítico quebra a página e reprova; o resto é polimento: vira dica na
-          // próxima tentativa (sem reprovar, senão link de 40px derruba a página boa).
-          if (!auditoria.ok) erros.push(...auditoria.criticos);
-          dicasMobile = auditoria.avisos;
+
+          if (!auditoria.ok) {
+            // Segunda chance no reparo, agora com os problemas MEDIDOS.
+            const segundo = repararPagina(html, auditoria.criticos);
+            if (segundo.reparos.length) {
+              const reauditoria = await auditarPaginaMobile(segundo.html);
+              if (reauditoria.ok) {
+                html = segundo.html;
+                medidas = reauditoria.medidas;
+                correcoes.push(...segundo.reparos.map((r) => `${r.problema} → ${r.correcao}`));
+                dicasMobile = reauditoria.avisos;
+              } else {
+                criticos.push(...reauditoria.criticos);
+              }
+            } else {
+              criticos.push(...auditoria.criticos);
+            }
+          } else {
+            dicasMobile = auditoria.avisos;
+          }
           if (dicasMobile.length) console.log(`[previa-ia] polimento mobile: ${dicasMobile.join("; ")}`);
         }
 
-        if (!erros.length) {
+        if (!criticos.length) {
+          if (correcoes.length) console.log(`[previa-ia] reparos aplicados: ${correcoes.join(" | ")}`);
           return {
             ok: true,
             pagina: {
               html,
-              conceito: conceitoDe(html) || conceito,
+              conceito: conceitoDe(bruto) || "",
               modelo: (resposta as any).modelVersion || modelo,
               tentativas: tentativa,
-              avisos: [...avisos, ...dicasEstaticas, ...dicasMobile],
+              avisos: [...avisos, ...dicasEstaticas, ...dicasMobile, ...correcoes],
               medidas,
             },
           };
         }
-        errosAnteriores = [...erros, ...dicasEstaticas, ...dicasMobile];
+
+        if (!melhor || criticos.length < melhor.criticos.length) {
+          melhor = { html, criticos, medidas, modelo: (resposta as any).modelVersion || modelo, tentativa };
+        }
+        errosAnteriores = [...criticos, ...dicasEstaticas, ...dicasMobile];
         console.warn(`[previa-ia] ${modelo} reprovado (tentativa ${tentativa}): ${errosAnteriores.join("; ")}`);
       } catch (err: any) {
         const msg = String(err?.message || err);
@@ -370,10 +407,26 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
         console.warn(`[previa-ia] ${modelo} falhou: ${msg.slice(0, 160)}`);
       }
     }
-    avisos.push(...errosAnteriores);
+    if (errosAnteriores.length) avisos.push(...errosAnteriores);
   }
 
-  return { ok: false, motivo: "portão reprovou a página nas duas tentativas", erros: errosAnteriores };
+  // Nenhuma passou limpa: entrega a melhor, consertada, e diz o que sobrou.
+  if (melhor) {
+    console.warn(`[previa-ia] nenhuma tentativa passou limpa; usando a melhor (${melhor.criticos.length} pendência(s))`);
+    return {
+      ok: true,
+      pagina: {
+        html: melhor.html,
+        conceito: conceitoDe(melhor.html),
+        modelo: melhor.modelo,
+        tentativas: melhor.tentativa,
+        avisos: [...avisos, ...melhor.criticos.map((c) => `pendente: ${c}`)],
+        medidas: melhor.medidas,
+      },
+    };
+  }
+
+  return { ok: false, motivo: "nenhuma tentativa produziu uma página utilizável", erros: errosAnteriores };
 }
 
 /* ------------------------------------------------------------------ */
@@ -392,8 +445,12 @@ export interface ResultadoPaginaUnica {
 }
 
 /**
- * Escreve a página do lead: IA quando passa no portão, template quando não.
- * Nunca lança por falha de IA — prévia é material de venda e precisa existir.
+ * Escreve a página do lead.
+ *
+ * A página agora SEMPRE vem da IA: quando nenhuma tentativa passa limpa, usamos a
+ * melhor delas (já consertada pelo reparador). O template sobrou só para o caso
+ * extremo de nenhuma chamada ter devolvido HTML — quando não há página nenhuma,
+ * um template honesto é melhor que link morto.
  */
 export async function gerarPaginaUnica(
   lead: StoredLead,

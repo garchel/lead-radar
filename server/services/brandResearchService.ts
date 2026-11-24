@@ -108,6 +108,47 @@ function extractProfileUrl(link: string | undefined, network: "instagram" | "fac
     : `https://facebook.com/${handle}`;
 }
 
+/**
+ * O perfil encontrado é mesmo deste negócio?
+ *
+ * A pesquisa pegava o primeiro perfil do Instagram que aparecesse numa imagem ou
+ * resultado — e a página da Jovi Odontologia saiu com o @ de OUTRA clínica. Aqui a
+ * gente exige que o handle compartilhe uma palavra significativa com o nome do
+ * negócio; sem isso, é melhor não mostrar perfil nenhum.
+ */
+const PALAVRAS_GENERICAS = new Set([
+  "clinica", "odontologia", "odontologica", "odontologico", "odonto", "dental", "estetica",
+  "estetico", "barbearia", "salao", "beleza", "excelencia", "premium",
+  "centro", "studio", "estudio", "consultorio", "saude", "advocacia", "advogado", "ltda",
+  "eireli", "servico", "servicos", "comercio", "loja", "grupo", "oficial", "brasil",
+  "academia", "pilates", "fisioterapia", "psicologia", "arquiteto", "arquitetura",
+]);
+
+function normalizarTexto(valor: string): string {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+export function perfilCombinaComNegocio(perfil: string | undefined, nomeNegocio: string): boolean {
+  if (!perfil) return false;
+  const handle = normalizarTexto(perfil.split("/").pop() || "").replace(/[^a-z0-9]/g, "");
+  const nome = normalizarTexto(nomeNegocio);
+  if (!handle) return false;
+
+  const palavras = nome
+    .split(/[^a-z0-9]+/)
+    .filter((p) => p.length >= 4 && !PALAVRAS_GENERICAS.has(p));
+  // Nome sem palavra distintiva ("Clínica Odontologia"): não dá para julgar.
+  if (!palavras.length) return true;
+
+  // Só palavra inteira conta. A heurística de "primeiros 6 caracteres" aprovava
+  // @odontoexcellencebc para a Jovi Odontologia, porque o prefixo vinha de
+  // "odontológica" — categoria, não marca.
+  return palavras.some((p) => handle.includes(p));
+}
+
 /** Aceita "@conta", "conta" ou uma URL completa e devolve a URL do perfil. */
 export function normalizeInstagramProfile(raw?: string): string | undefined {
   if (!raw) return undefined;
@@ -517,7 +558,8 @@ export async function researchLeadBrand(
   let instagram = normalizeInstagramProfile(lead.instagramHandle);
   let facebook: string | undefined;
   for (const image of images) {
-    instagram = instagram || extractProfileUrl(image.sourceUrl, "instagram");
+    const doInstagram = extractProfileUrl(image.sourceUrl, "instagram");
+    if (doInstagram && perfilCombinaComNegocio(doInstagram, lead.name)) instagram = instagram || doInstagram;
     facebook = facebook || extractProfileUrl(image.sourceUrl, "facebook");
   }
 
@@ -528,9 +570,11 @@ export async function researchLeadBrand(
     });
     searchesUsed += 1;
     for (const result of profiles) {
-      instagram = instagram || extractProfileUrl(result.link, "instagram");
+      const doInstagram = extractProfileUrl(result.link, "instagram");
+      if (doInstagram && perfilCombinaComNegocio(doInstagram, lead.name)) instagram = instagram || doInstagram;
       facebook = facebook || extractProfileUrl(result.link, "facebook");
     }
+    if (!instagram) console.log(`[marca] perfil do Instagram descartado: não corresponde a "${lead.name}"`);
   }
 
   // 3) Baixa as imagens (preferindo miniaturas, menores e mais estáveis).
