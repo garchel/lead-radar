@@ -276,8 +276,9 @@ function limparCercas(texto: string): string {
 }
 
 function conceitoDe(html: string): string {
-  const titulo = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim() || "";
-  const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1]?.replace(/<[^>]+>/g, "").trim() || "";
+  const limpa = (v: string) => String(v || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const titulo = limpa(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "");
+  const h1 = limpa(html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1] || "");
   return [titulo, h1].filter(Boolean).join(" · ").slice(0, 140);
 }
 

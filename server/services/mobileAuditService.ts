@@ -92,19 +92,38 @@ const MEDIDOR = `(() => {
     const r = e.getBoundingClientRect();
     return (e.textContent || e.getAttribute('aria-label') || e.tagName).trim().slice(0, 24) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height);
   }).join(' | ');
-  const minusculos = alvos.filter((e) => {
+
+  // Botão de verdade tem fundo ou borda. Link de texto no cabeçalho/rodapé não é
+  // alvo de toque primário: 26px de altura ali é normal e já reprovou página boa.
+  const ehBotao = (e) => {
+    const s = getComputedStyle(e);
+    const fundo = s.backgroundColor && s.backgroundColor !== 'rgba(0, 0, 0, 0)' && s.backgroundColor !== 'transparent';
+    const borda = parseFloat(s.borderTopWidth || '0') > 0 || parseFloat(s.borderBottomWidth || '0') > 0;
+    return Boolean(e.closest('button')) || e.getAttribute('role') === 'button' || fundo || borda;
+  };
+  const botoes = alvos.filter(ehBotao);
+  const links = alvos.filter((e) => !ehBotao(e));
+
+  const botoesMinusculos = botoes.filter((e) => {
     const r = e.getBoundingClientRect();
     return r.height < 32 || r.width < 32;
   });
-  if (minusculos.length) {
-    criticos.push(minusculos.length + ' alvo(s) de toque abaixo de 32px (' + amostraDe(minusculos) + ')');
+  if (botoesMinusculos.length) {
+    criticos.push(botoesMinusculos.length + ' botão(ões) abaixo de 32px de toque (' + amostraDe(botoesMinusculos) + ')');
   }
-  const apertados = alvos.filter((e) => {
+  const botoesApertados = botoes.filter((e) => {
     const r = e.getBoundingClientRect();
-    return !minusculos.includes(e) && (r.height < 44 || r.width < 44);
+    return !botoesMinusculos.includes(e) && (r.height < 44 || r.width < 44);
   });
-  if (apertados.length) {
-    avisos.push(apertados.length + ' alvo(s) de toque entre 32 e 44px (' + amostraDe(apertados) + ')');
+  if (botoesApertados.length) {
+    avisos.push(botoesApertados.length + ' botão(ões) entre 32 e 44px (' + amostraDe(botoesApertados) + ')');
+  }
+  const linksApertados = links.filter((e) => {
+    const r = e.getBoundingClientRect();
+    return r.height < 24;
+  });
+  if (linksApertados.length) {
+    avisos.push(linksApertados.length + ' link(s) de texto com menos de 24px de altura (' + amostraDe(linksApertados) + ')');
   }
 
   const textos = [...document.querySelectorAll('p, li, span, small, a, div')].filter((e) => {
@@ -115,11 +134,12 @@ const MEDIDOR = `(() => {
   });
   const miudos = textos.filter((e) => parseFloat(getComputedStyle(e).fontSize) < 13);
   if (miudos.length > 5) {
-    avisos.push(miudos.length + ' blocos de texto com fonte entre 11 e 13px');
+    avisos.push(miudos.length + ' blocos de texto com fonte abaixo de 13px');
   }
-  const ilegiveis = textos.filter((e) => parseFloat(getComputedStyle(e).fontSize) < 11);
+  // 11px é apertado, mas rotulo de marca costuma viver aí e não quebra a página.
+  const ilegiveis = textos.filter((e) => parseFloat(getComputedStyle(e).fontSize) < 9);
   if (ilegiveis.length) {
-    criticos.push(ilegiveis.length + ' bloco(s) de texto com fonte abaixo de 11px');
+    criticos.push(ilegiveis.length + ' bloco(s) de texto com fonte abaixo de 9px');
   }
 
   const altura = Math.max(doc.scrollHeight, document.body.scrollHeight);
