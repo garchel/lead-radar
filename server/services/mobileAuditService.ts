@@ -24,6 +24,12 @@ export interface MedidaViewport {
   criticos: string[];
   /** Polimento (alvo de toque 40px, fonte 11-13px): vira dica, não reprova. */
   avisos: string[];
+  /** Quadros por segundo durante 1,2s de rolagem real. */
+  fps?: number;
+  /** Bytes de JavaScript embutido na página. */
+  jsBytes?: number;
+  /** Requisições externas (script, fonte, imagem): quanto mais, pior no 4G. */
+  externos?: number;
 }
 
 export interface AuditoriaMobile {
@@ -235,6 +241,31 @@ const MEDIDOR = `(() => {
   });
 })()`;
 
+/**
+ * Desempenho medido de verdade: rola a página por 1,2s contando frames.
+ * Print nenhum mostra engasgo — só a medição mostra.
+ */
+const MEDIDOR_PERF = `(async () => {
+  const alvo = Math.max(1, document.body.scrollHeight - window.innerHeight);
+  const inicio = performance.now();
+  let frames = 0;
+  await new Promise((resolve) => {
+    const passo = () => {
+      const p = Math.min(1, (performance.now() - inicio) / 1200);
+      window.scrollTo(0, alvo * p);
+      frames += 1;
+      if (p < 1) requestAnimationFrame(passo);
+      else resolve();
+    };
+    requestAnimationFrame(passo);
+  });
+  const duracao = (performance.now() - inicio) / 1000;
+  window.scrollTo(0, 0);
+  const jsBytes = [...document.scripts].reduce((soma, s) => soma + (s.src ? 0 : (s.textContent || "").length), 0);
+  const externos = [...document.querySelectorAll("script[src], link[rel=stylesheet], img[src^='http']")].length;
+  return JSON.stringify({ fps: Math.round(frames / duracao), duracao, jsBytes, externos });
+})()`;
+
 /** Botão fixo cobrindo texto é o defeito que mais faz a página parecer quebrada. */
 const SOBREPOSICAO = `(() => {
   const fixos = [...document.querySelectorAll('body *')].filter((e) => getComputedStyle(e).position === 'fixed');
@@ -340,6 +371,7 @@ async function medirEm(chrome: string, arquivoUrl: string, largura: number, port
     "--headless=new",
     "--disable-gpu",
     "--hide-scrollbars",
+    "--enable-unsafe-swiftshader",
     "--no-first-run",
     "--no-default-browser-check",
     "--disable-extensions",
@@ -368,6 +400,7 @@ async function medirEm(chrome: string, arquivoUrl: string, largura: number, port
       setTimeout(() => falha(new Error("timeout abrindo websocket")), 8000);
     });
 
+    let perfDaPagina: { fps?: number; jsBytes?: number; externos?: number; software?: boolean } = {};
     let seq = 0;
     const pendentes = new Map<number, (m: any) => void>();
     ws.onmessage = (ev: MessageEvent) => {
@@ -393,6 +426,35 @@ async function medirEm(chrome: string, arquivoUrl: string, largura: number, port
     await cdp("Page.navigate", { url: arquivoUrl });
     await dormir(1800);
 
+    // Desempenho primeiro: a medição precisa acontecer com a página "fria", antes
+    // de qualquer rolagem da auditoria aquecer o cache de layout.
+    try {
+      const perf = await cdp("Runtime.evaluate", { expression: MEDIDOR_PERF, awaitPromise: true, returnByValue: true });
+      const dados = perf?.result?.value ? JSON.parse(perf.result.value) : null;
+      if (dados) {
+        perfDaPagina = { fps: dados.fps, jsBytes: dados.jsBytes, externos: dados.externos, software: dados.software };
+        await dormir(400);
+      }
+    } catch (erro: any) {
+      console.warn(`[auditoria] desempenho não medido: ${erro?.message || erro}`);
+    }
+
+    // Rolagem em degraus antes de medir: com animação de revelação, o que está
+    // abaixo da dobra só existe depois de aparecer. Medir sem rolar acusava
+    // "conteúdo invisível" em página boa.
+    try {
+      await cdp("Runtime.evaluate", {
+        expression:
+          "(async()=>{const h=Math.max(1,document.body.scrollHeight-window.innerHeight);" +
+          "for(let i=1;i<=6;i++){window.scrollTo(0,h*i/6);await new Promise(r=>setTimeout(r,130));}" +
+          "window.scrollTo(0,0);await new Promise(r=>setTimeout(r,260));return 'ok';})()",
+        awaitPromise: true,
+        returnByValue: true,
+      });
+    } catch {
+      /* sem revelação não faz falta */
+    }
+
     const res = await cdp("Runtime.evaluate", { expression: MEDIDOR, returnByValue: true });
     const valor = res?.result?.value;
     if (!valor) return null;
@@ -411,6 +473,11 @@ async function medirEm(chrome: string, arquivoUrl: string, largura: number, port
         `no fim da página a barra fixa cobre o conteúdo (${achados.slice(0, 2).join(" | ")}) — aumente o padding-bottom do body`,
       );
     }
+    if (perfDaPagina.fps !== undefined) medida.fps = perfDaPagina.fps;
+    if (perfDaPagina.jsBytes !== undefined) medida.jsBytes = perfDaPagina.jsBytes;
+    if (perfDaPagina.externos !== undefined) medida.externos = perfDaPagina.externos;
+    if (perfDaPagina.software !== undefined) (medida as any).software = perfDaPagina.software;
+
     // Print da primeira dobra: é o que o juiz visual precisa ver para julgar
     // hierarquia, contraste e densidade. Escala 1 para não estourar o tamanho.
     if (pngPath) {
@@ -476,6 +543,25 @@ export async function auditarPaginaMobile(
       medidas.push(medida);
       for (const p of medida.criticos || []) criticos.push(`${largura}px: ${p}`);
       for (const p of medida.avisos || []) avisos.push(`${largura}px: ${p}`);
+    }
+
+    // Portão de desempenho: página bonita que engasga no celular é pior que
+    // página simples que rola liso. Abaixo de 40fps avisa; abaixo de 30 reprova.
+    const referencia = medidas.find((m) => m.largura === 390) || medidas[0];
+    // FPS medido em renderização por software não representa celular: vira
+    // informação, não reprovação.
+    const software = medidas.some((m) => (m as any).software);
+    if (referencia?.fps !== undefined && !software) {
+      if (referencia.fps < 30) criticos.push(`${referencia.fps}fps na rolagem: a página engasga no celular`);
+      else if (referencia.fps < 45) avisos.push(`${referencia.fps}fps na rolagem (ideal acima de 50)`);
+    } else if (referencia?.fps !== undefined) {
+      avisos.push(`${referencia.fps}fps medidos em renderização por software (não considera GPU real)`);
+    }
+    if (referencia?.jsBytes && referencia.jsBytes > 14_000) {
+      avisos.push(`${Math.round(referencia.jsBytes / 1024)} KB de JavaScript embutido (orçamento: 14 KB)`);
+    }
+    if (referencia?.externos) {
+      criticos.push(`${referencia.externos} requisição(ões) externa(s): a prévia não deve depender de rede`);
     }
 
     if (medidas.length) {

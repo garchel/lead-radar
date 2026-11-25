@@ -5,6 +5,7 @@ import { auditarPaginaMobile, auditoriaDisponivel, type MedidaViewport } from ".
 import { repararPagina } from "./previewRepair";
 import { perfilCombinaComNegocio } from "./brandResearchService";
 import { julgarPaginaVisualmente, juizVisualAtivo, notaMinima } from "./previewVisionService";
+import { aprimorarPagina } from "./previewEnhance";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -41,6 +42,17 @@ export interface FalhaGeracao {
   erros: string[];
 }
 
+
+/** Cores da marca para o shader (3 no máximo; completa com neutros). */
+function coresParaShader(lead: StoredLead): string[] {
+  const marca: any = (lead as any).brandSnapshot || {};
+  const cores = Array.isArray(marca.palette)
+    ? marca.palette.map((p: any) => String(p?.hex || "")).filter((h: string) => /^#[0-9a-f]{6}$/i.test(h))
+    : [];
+  const base = cores.slice(0, 3);
+  while (base.length < 3) base.push(["#101418", "#d9d2c5", "#6b4f2a"][base.length]);
+  return base;
+}
 
 /** DDD por estado (tabela enxuta, cobre o país inteiro). */
 const DDD_UF: Record<string, string> = {
@@ -163,6 +175,8 @@ ${direcao.brief}
 REGRAS DURAS (violar invalida a entrega):
 1. Um único arquivo HTML completo, começando em <!doctype html>, com CSS embutido em <style>. JavaScript é permitido se servir à página, sempre embutido.
 2. Nenhuma imagem externa. Não use <img src="http..."> nem background-image com URL remota. Use SVG, gradientes, formas e tipografia para criar o visual.
+
+2b. NÃO escreva <script> nem <canvas>. O movimento da página (fundo animado, revelação ao rolar, microinteração) é injetado pelo sistema depois, com orçamento de bytes e respeito a quem pediu menos movimento. Você entrega HTML e CSS; a única coisa que precisa fazer é deixar o primeiro bloco limpo e profundo (espaço para o fundo respirar atrás do título).
 3. Fontes: no máximo duas, via Google Fonts (<link>), mais uma de sistema para o corpo se quiser.
 4. Mobile-first de verdade: a página tem que ficar impecável em 360px de largura. Teste mentalmente cada bloco nessa largura.
 4b. Mas NÃO é uma página de celular: no computador ela ocupa a tela. O container é fluido e chega a 1120px em telas largas (nunca limite a menos de 900px) e, a partir de @media (min-width: 900px), a composição muda: hero em duas colunas, lista de serviços em grade, seções com largura total. Página com coluna estreita e sobra de espaço branco nas laterais é proibida.
@@ -474,9 +488,22 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
         let html = reparo.html;
         const correcoes = reparo.reparos.map((r) => `${r.problema} → ${r.correcao}`);
 
+
+        // O portão vê só o que o MODELO escreveu: o kit de movimento entra depois,
+        // senão a própria animação (opacity:0 no CSS de revelação) reprovaria a
+        // página, e os números do script contaminariam contagem de nota e nome.
         const veredito = validarPagina(html, lead);
         const criticos = [...veredito.criticos];
         const dicasEstaticas = [...veredito.avisos];
+
+        const fase = Number(process.env.PREVIEW_ENHANCE_PHASE ?? 3) as 1 | 2 | 3 | 0;
+        if (!criticos.length && fase > 0 && !/fx-canvas/.test(html)) {
+          const aprimorada = aprimorarPagina(html, { fase: fase as 1 | 2 | 3, cores: coresParaShader(lead) });
+          if (aprimorada.features.length) {
+            html = aprimorada.html;
+            correcoes.push(`movimento → ${aprimorada.features.join(", ")}`);
+          }
+        }
 
         // O print precisa sair da MESMA execução do Chrome que mede a página.
         const printPath = juizVisualAtivo()
