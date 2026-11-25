@@ -59,6 +59,20 @@ h1, h2, .display {
 p, li, blockquote { text-wrap: pretty; }
 h3, h4 { letter-spacing: -0.01em; }
 
+/* UM sistema de botão só: o cabeçalho tinha pílula com contorno e o herói um
+   retângulo chapado — duas linguagens na mesma tela lê como colagem. */
+header a[href*="wa.me"], header a[href*="whatsapp"] {
+  background: transparent !important; color: inherit !important;
+  border: 1px solid currentColor !important; padding: 10px 16px !important;
+  border-radius: 999px !important; font-size: 13px !important;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+
+/* Título no celular: 44px em 360px quebra em quatro linhas e deixa "em" sozinho. */
+@media (max-width: 520px) {
+  h1 { font-size: clamp(32px, 8.2vw, 40px) !important; line-height: 1.02 !important; }
+}
+
 /* Botão refinado: sem sombra pesada, com fio interno e respiro real. */
 a[href*="wa.me"], a[href*="whatsapp"], .botao, .btn, button {
   letter-spacing: 0.01em;

@@ -97,9 +97,13 @@ export function repararPagina(html: string, problemas: string[] = []): Resultado
   // data-slot, só MARCA essa figura. Antes o reparador inseria OUTRO bloco de
   // imagem — a página ficava com dois retângulos cinzas e o dono via "esqueleto
   // inacabado" no meio do conteúdo.
-  if (/<figure[^>]*class=["'][^"']*media-slot/i.test(saida) && !/data-slot=["'][^"']+["']/i.test(saida)) {
-    saida = saida.replace(/(<figure[^>]*class=["'][^"']*media-slot[^>]*)(>)/i, '$1 data-slot="meio"$2');
-    reparos.push({ problema: "moldura de mídia sem identificação", correcao: "marcada com data-slot (sem bloco extra)" });
+  // Sem foto do cliente, moldura é o maior sinal de "página inacabada": o
+  // avaliador chamou de wireframe. A arte abstrata resolve o visual; então a
+  // moldura sai de cena.
+  const semMoldura = saida.replace(/<figure[^>]*class=["'][^"']*media-slot[\s\S]*?<\/figure>/gi, "");
+  if (semMoldura !== saida) {
+    saida = semMoldura;
+    reparos.push({ problema: "moldura de foto vazia", correcao: "removida (arte abstrata ocupa o espaço)" });
   }
 
   // 3) CSS de segurança: transbordo, toque, texto miúdo, rodapé atrás da barra fixa
