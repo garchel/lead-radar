@@ -304,7 +304,7 @@ REGRAS DURAS (violar invalida a entrega):
   <figure class="media-slot" data-slot="hero" aria-label="Espaço reservado para foto do projeto">
     ... (fundo em tom suave da paleta, proporção fixa via aspect-ratio, um ícone de imagem simples e discreto em SVG, e uma legenda curta em texto pequeno)
   </figure>
-  Regras do espaço reservado: proporção definida (16/9, 4/3 ou 3/4), canto suave, fundo levemente tingido com a cor da marca, legenda curta do tipo "Espaço para foto do projeto" ou "Foto do espaço", e um ícone de moldura/imagem desenhado com 2 ou 3 traços. Ele precisa parecer intencional e elegante, nunca um retângulo cinza de erro.
+  Regras do espaço reservado: proporção definida (16/9, 4/3 ou 3/4), canto suave, fundo levemente tingido com a cor da marca e, se houver texto, uma legenda curta em corpo 12px do tipo "Foto do espaço". PROIBIDO: ícone de imagem, borda tracejada, hachura diagonal, efeito de esqueleto de carregamento — tudo isso lê como página inacabada. A alternativa mais elegante é resolver a área só com cor e tipografia grande, sem moldura nenhuma.
 13d. Use 1 ou 2 espaços reservados, NUNCA como o primeiro bloco depois do título. O hero é tipográfico; o espaço de imagem entra depois de uma seção de conteúdo (serviços, prova social) ou antes do CTA final, e ocupa no máximo 40% da altura da tela.
 13c. Cor de destaque nunca em texto pequeno sobre fundo claro: use a cor da marca em fundo escuro ou em elementos grandes.
 14. Página enxuta: até 18 KB e no máximo 2.800px de altura no celular. Corte enfeite que não ajuda a ler nem a decidir: cada bloco precisa justificar o espaço que ocupa.
@@ -324,11 +324,14 @@ ANTÍTESE DO GENÉRICO (evite o visual de página feita por IA):
    de Linhares" serve, com a frase poética logo abaixo.
 8c. Sem foto do cliente, a página tem que parecer pronta. Se precisar de um espaço
    para a foto que ele vai mandar, ele é DISCRETO: uma faixa fina (máximo 180px de
-   altura) com ícone e a frase "Foto do espaço" ou "Foto do trabalho" — nunca um
+   altura), sem ícone, com a frase "Foto do espaço" ou "Foto do trabalho" em 12px — nunca um
    retângulo grande, nunca na primeira dobra, nunca o elemento mais visível.
    O resto do visual se resolve com cor, padrão em CSS/SVG e tipografia.
 8d. Proibido enfileirar três cards idênticos numerados 01/02/03. Serviços podem ser
    lista com fio entre itens, tabela de duas colunas ou blocos de tamanhos diferentes.
+8f. Sangria e corte na borda servem para palavra decorativa, número ou símbolo — NUNCA
+   para o nome do negócio ou da pessoa: "Gabriela" cortado para "briela" parece defeito
+   de renderização, não ousadia.
 8e. O subtítulo do hero não repete o título com outras palavras: ele acrescenta
    informação (o que acontece no atendimento, o diferencial, o tempo médio).
 
@@ -829,6 +832,9 @@ function conferirMovimento(html: string, js: string, direcao: DirecaoDeArte): st
   if (assinatura === "pilha-cartoes" && !usaSticky) problema.push("a assinatura é pilha de cartões e não há position: sticky");
   if (assinatura === "shader-scroll" && !usaThree) problema.push("a assinatura é shader ligado ao scroll e o JS não importa three");
   if (intensidade === "cinematografico" && !usaScroll) problema.push("a direção pede movimento cinematográfico e nada está ligado ao scroll");
+
+  const esqueleto = /border[^;]*dashed|repeating-linear-gradient/i.test(html);
+  if (esqueleto) problema.push("o espaço de foto usa borda tracejada ou hachura, que parece carregamento inacabado: use só cor de fundo e uma legenda de 12px, sem ícone");
 
   if (!problema.length) return null;
   return `${problema.join("; ")}. Use scroll() do motion (ou sticky no CSS) para o movimento acompanhar a rolagem.`;

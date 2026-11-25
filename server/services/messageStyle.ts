@@ -263,15 +263,40 @@ function normalizarParaComparar(valor: string): string {
  * "Mais, ficou pronto!" — como se o dono se chamasse Mais. Só usamos nome próprio
  * quando existe decisor identificado (dmName) e ele não é a própria empresa.
  */
+const PALAVRAS_QUE_NAO_SAO_NOME = new Set([
+  "mais", "voce", "você", "tudo", "bem", "tio", "tia", "casa", "grupo", "rede",
+  "center", "studio", "estudio", "espaço", "espaco", "clinica", "clínica",
+  "barbearia", "salao", "salão", "loja", "padaria", "restaurante", "lanchonete",
+  "advocacia", "consultorio", "consultório", "academia", "pet", "auto", "oficina",
+  "odontologia", "estetica", "estética", "pilates", "farmacia", "farmácia",
+]);
+
+const CATEGORIAS = /(barbearia|cl[ií]nica|est[eé]tica|odontolog|advocacia|psic[oó]log|consult[oó]rio|academia|loja|padaria|restaurante|sal[aã]o|studio|grupo|rede|center)/i;
+
+/** Nome da empresa que na verdade é nome de gente: "Gabriela Castro - Psicóloga". */
+function nomeProprioDaEmpresa(nome: string): string {
+  const limpo = String(nome || "").split(/[-–|,(]/)[0].trim();
+  const palavras = limpo.split(/\s+/).filter(Boolean);
+  if (palavras.length < 2) return "";
+  const duas = palavras.slice(0, 2);
+  const capitalizadas = duas.every((x) => /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ]/.test(x));
+  const bloqueada = duas.some((x) => PALAVRAS_QUE_NAO_SAO_NOME.has(x.toLowerCase()));
+  const temCategoria = duas.some((x) => CATEGORIAS.test(x));
+  if (!capitalizadas || bloqueada || temCategoria) return "";
+  return duas[0];
+}
+
 export function comoChamar(lead: { name?: string; dmName?: string } | null | undefined): string {
-  const dono = String(lead?.dmName || "").trim();
-  if (!dono) return "";
-  const primeiro = dono.split(/\s+/)[0] || "";
-  if (primeiro.length < 3) return "";
   const empresa = String(lead?.name || "").toLowerCase();
-  const normalizado = primeiro.toLowerCase();
-  if (empresa.includes(normalizado)) return "";
-  return primeiro.charAt(0).toUpperCase() + primeiro.slice(1);
+  const dono = String(lead?.dmName || "").trim();
+  if (dono) {
+    const primeiro = dono.split(/\s+/)[0] || "";
+    if (primeiro.length >= 3 && !empresa.includes(primeiro.toLowerCase())) {
+      return primeiro.charAt(0).toUpperCase() + primeiro.slice(1);
+    }
+    return "";
+  }
+  return nomeProprioDaEmpresa(String(lead?.name || ""));
 }
 
 export function conferirEstilo(texto: string, opts: { palavraPessoa?: string } = {}): EstiloAviso[] {
