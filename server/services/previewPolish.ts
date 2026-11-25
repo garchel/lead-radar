@@ -53,6 +53,19 @@ const CSS = (fonte: string, peso: string) => `
   max-height: none !important;
 }
 [data-fx-host] > * { min-height: 0 !important; }
+
+/* Respiro simétrico no herói: antes o padding de baixo (88px) somava com o de cima
+   da seção seguinte (96px) e o CTA ficava flutuando num vão de 184px. */
+[data-fx-host] { padding-block: clamp(40px, 6vw, 72px) !important; }
+[data-fx-host] + section, [data-fx-host] + figure, [data-fx-host] + div {
+  padding-top: clamp(24px, 4vw, 48px) !important;
+  margin-top: 0 !important;
+}
+
+/* O modelo quebra o título em um <span> por palavra (display:block), e isso força
+   "no Santos / Dumont." com a última palavra órfã. Em título, span é inline. */
+h1 span { display: inline !important; }
+h1 br { display: none !important; }
 [data-fx-host] > .fx-arte, [data-fx-host] > .fx-canvas {
   position: absolute !important;
   inset: 0;
