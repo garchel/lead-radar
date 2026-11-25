@@ -1,6 +1,6 @@
 import type { StoredLead } from "../store/types";
 import { chaveDeepSeek, getAiClient, modelosDeepSeek } from "./aiClient";
-import { previewsDir, whatsappLink, writePreviewFiles, type PreviewResult } from "./previewService";
+import { previewsDir, previewSlug, whatsappLink, writePreviewFiles, type PreviewResult } from "./previewService";
 import { auditarPaginaMobile, auditoriaDisponivel, type MedidaViewport } from "./mobileAuditService";
 import { repararPagina } from "./previewRepair";
 import { perfilCombinaComNegocio } from "./brandResearchService";
@@ -9,6 +9,7 @@ import { aprimorarPagina } from "./previewEnhance";
 import { enfeitarPagina } from "./previewArt";
 import { refinarPagina } from "./previewPolish";
 import { PERFIS, entrelinhaPara, medirTitulo, perfilDoLead } from "./publicoService";
+import { fotosDeBancoAtivas, inserirFotos, obterFotos } from "./stockPhotoService";
 import { avisoDePeso, empacotarJs, extrairBlocos, montarPagina } from "./previewBundleService";
 import fs from "node:fs";
 import os from "node:os";
@@ -723,6 +724,21 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
           if (refinada.features.length) {
             html = refinada.html;
             correcoes.push(`acabamento → ${refinada.features.join(", ")}`);
+          }
+          // Fotos de banco LICENCIADO (decisão do dono: pode, com crédito). Entram
+          // como faixa depois do herói, com aviso de ilustrativa — a foto do espaço
+          // real só chega quando o cliente manda.
+          if (fotosDeBancoAtivas()) {
+            try {
+              const arquivos = await obterFotos({ ...lead, category: fatos(lead).categoria }, previewsDir(), previewSlug(lead));
+              const comFotos = inserirFotos(html, arquivos, `Foto ilustrativa de ${fatos(lead).categoria || "ambiente"}`);
+              if (comFotos.features.length) {
+                html = comFotos.html;
+                correcoes.push(`fotos → ${comFotos.features.join(", ")}`);
+              }
+            } catch (erro: any) {
+              console.warn(`[previa-ia] foto de banco falhou: ${erro?.message || erro}`);
+            }
           }
           if (fase > 0 && !/fx-canvas/.test(html)) {
             const aprimorada = aprimorarPagina(html, { fase: fase as 1 | 2 | 3, cores: coresParaShader(lead) });

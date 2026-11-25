@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
+import { previewsDir } from "./previewService";
 import os from "node:os";
 import path from "node:path";
 
@@ -624,6 +625,19 @@ export async function auditarPaginaMobile(
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "previa-audit-"));
   const arquivo = path.join(dir, "pagina.html");
   fs.writeFileSync(arquivo, html, "utf8");
+
+  // Imagens locais (foto de banco, logo) precisam estar ao lado do HTML, senão a
+  // captura mostra imagem quebrada e o juiz visual reprova a página por um defeito
+  // que só existe no diretório temporário.
+  try {
+    const referencias = [...html.matchAll(/src=["'](?!https?:|data:|\/)([^"']+\.(?:jpg|jpeg|png|webp|svg))["']/gi)].map((m) => m[1]);
+    for (const nome of new Set(referencias)) {
+      const origem = path.join(previewsDir(), nome);
+      if (fs.existsSync(origem)) fs.copyFileSync(origem, path.join(dir, path.basename(nome)));
+    }
+  } catch {
+    /* sem assets, segue sem eles */
+  }
   const arquivoUrl = "file:///" + arquivo.replace(/\\/g, "/");
 
   const larguras = opts.larguras?.length ? opts.larguras : LARGURAS;
