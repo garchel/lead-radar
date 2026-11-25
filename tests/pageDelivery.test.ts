@@ -16,11 +16,23 @@ import {
 describe("mensagem de entrega da página", () => {
   const url = "https://vertice-paginas.pages.dev/pianca-barbearia";
 
-  it("sempre leva o link e chama a pessoa pelo primeiro nome", () => {
-    const texto = mensagemDaPagina("PIANCA BARBEARIA", url);
+  it("não chama o dono pelo nome da empresa", () => {
+    // Bug real: "Mais Você Estética" virava "Mais, ficou pronto!"
+    const texto = mensagemDaPagina("Mais Você Estética Facial e Corporal", url);
     expect(texto).toContain(url);
     expect(texto).toContain("Montei a página de vocês");
-    expect(texto).toContain("Pianca");
+    expect(texto).not.toMatch(/Mais,/);
+    expect(texto).not.toContain("Mais,");
+  });
+
+  it("usa o nome do decisor quando ele existe", () => {
+    const texto = mensagemDaPagina("Mais Você Estética Facial e Corporal", url, "Suelen Correia");
+    expect(texto).toContain("Suelen");
+  });
+
+  it("ignora decisor que é a própria empresa", () => {
+    const texto = mensagemDaPagina("Pianca Barbearia", url, "Pianca");
+    expect(texto).not.toContain("Pianca,");
   });
 
   it("nunca chama a página de rascunho (foi o erro do agente)", () => {

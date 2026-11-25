@@ -255,6 +255,25 @@ function normalizarParaComparar(valor: string): string {
     .toLowerCase();
 }
 
+
+/**
+ * Como chamar a pessoa na mensagem.
+ *
+ * O primeiro nome da EMPRESA não é nome de gente: "Mais Você Estética" virava
+ * "Mais, ficou pronto!" — como se o dono se chamasse Mais. Só usamos nome próprio
+ * quando existe decisor identificado (dmName) e ele não é a própria empresa.
+ */
+export function comoChamar(lead: { name?: string; dmName?: string } | null | undefined): string {
+  const dono = String(lead?.dmName || "").trim();
+  if (!dono) return "";
+  const primeiro = dono.split(/\s+/)[0] || "";
+  if (primeiro.length < 3) return "";
+  const empresa = String(lead?.name || "").toLowerCase();
+  const normalizado = primeiro.toLowerCase();
+  if (empresa.includes(normalizado)) return "";
+  return primeiro.charAt(0).toUpperCase() + primeiro.slice(1);
+}
+
 export function conferirEstilo(texto: string, opts: { palavraPessoa?: string } = {}): EstiloAviso[] {
   const avisos: EstiloAviso[] = [];
   const msg = String(texto || "");

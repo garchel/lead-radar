@@ -4,7 +4,7 @@ import { dispatchLeadContact } from "./interactionService";
 import { effectiveWebsiteStatus, presenceLabel } from "./presenceService";
 import { getHumanizeSettings, getHumanizeUsage } from "./humanizeService";
 import { composeCadenceMessage } from "./salesAgentService";
-import { whatsAppify } from "./messageStyle";
+import { comoChamar, whatsAppify } from "./messageStyle";
 
 /**
  * Cadência de follow-up D0 / D3 / D7.
@@ -52,8 +52,10 @@ export interface CadencePlan {
   remaining: number;
 }
 
-function firstName(name: string): string {
-  return String(name || "").trim().split(/\s+/)[0] || "tudo bem";
+/** Saudação: nome do decisor quando existe; nunca o primeiro nome da empresa. */
+function saudacao(lead: StoredLead): string {
+  const pessoa = comoChamar(lead);
+  return pessoa ? `Oi ${pessoa}, tudo bem?` : "Oi, tudo bem?";
 }
 
 function daysBetween(fromIso: string, now: Date): number {
@@ -103,7 +105,6 @@ function previaJaEnviada(leadId: string): boolean {
  *   controle a quem lê em vez de cobrar resposta.
  */
 function buildCadenceRaw(lead: StoredLead, step: CadenceStep): string {
-  const name = firstName(lead.name);
   const audit = lead.siteAudit;
   const headline = audit?.headline?.replace(/\.$/, "");
   const status = effectiveWebsiteStatus(lead);
@@ -113,7 +114,7 @@ function buildCadenceRaw(lead: StoredLead, step: CadenceStep): string {
   // Pergunta de dor: serve tanto para quem já viu a página quanto para quem só
   // recebeu a abordagem. Não afirma nada sobre o negócio dele, só pergunta.
   const perguntaDeDor = [
-    `Oi ${name}, tudo bem? Deixa eu te perguntar uma coisa do dia a dia aí:`,
+    `${saudacao(lead)} Deixa eu te perguntar uma coisa do dia a dia aí:`,
     `quando alguém acha vocês no Google e chama no WhatsApp, geralmente já chega sabendo o que quer ou vem só perguntando preço?`,
   ];
 
@@ -122,7 +123,7 @@ function buildCadenceRaw(lead: StoredLead, step: CadenceStep): string {
 
     if (hasSite && audit) {
       return [
-        `Oi ${name}! Semana passada te mandei o diagnóstico do site da ${lead.name}${headline ? ` (${headline.toLowerCase()})` : ""}.`,
+        `Oi ${comoChamar(lead) || "você"}! Semana passada te mandei o diagnóstico do site da ${lead.name}${headline ? ` (${headline.toLowerCase()})` : ""}.`,
         `Montei uma prévia de como ficaria a página de vocês, já com botão direto pro WhatsApp.`,
         `Quer ver como ficou?`,
       ].join("\n");
@@ -130,13 +131,13 @@ function buildCadenceRaw(lead: StoredLead, step: CadenceStep): string {
     if (status === "marketplace_only") {
       const platform = presenceLabel(lead.websiteUrl) || "marketplace";
       return [
-        `Oi ${name}! Vi que a ${lead.name} vende pelo ${platform} mas não tem site próprio.`,
+        `Oi ${comoChamar(lead) || "você"}! Vi que a ${lead.name} vende pelo ${platform} mas não tem site próprio.`,
         `Fiz uma prévia de página com os serviços, botão de WhatsApp e pedido direto, sem depender de comissão de marketplace.`,
         `Quer ver como ficou?`,
       ].join("\n");
     }
     return [
-      `Oi ${name}! Vi que a ${lead.name} aparece no Google mas não tem site próprio.`,
+      `Oi ${comoChamar(lead) || "você"}! Vi que a ${lead.name} aparece no Google mas não tem site próprio.`,
       `Fiz uma prévia de como ficaria a página de ${lead.category || "apresentação"} pra vocês, com botão de WhatsApp.`,
       `Quer ver como ficou?`,
     ].join("\n");
@@ -146,7 +147,7 @@ function buildCadenceRaw(lead: StoredLead, step: CadenceStep): string {
   // e sem "alguma novidade?" — que ativa culpa e garante silêncio.
   const objeto = jaViu ? "a página que montei" : "esse assunto";
   return [
-    `Oi ${name}, tudo bem? Pra eu não ficar te mandando mensagem à toa:`,
+    `Oi ${comoChamar(lead) || "você"}, tudo bem? Pra eu não ficar te mandando mensagem à toa:`,
     `${objeto} ficou pra outro momento ou ainda faz sentido a gente retomar?`,
   ].join("\n");
 }

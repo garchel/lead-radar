@@ -7,7 +7,7 @@ import { pagesConfigured, publishPreviews } from "./pagesService";
 import { confirmarUrlNoAr, previewExists, previewSlug, previewsDir, resolvePreviewUrl } from "./previewService";
 import { whatsAppify } from "./messageStyle";
 import { getDb } from "../store/schema";
-import { prettyName } from "./briefingService";
+import { comoChamar } from "./messageStyle";
 
 /**
  * Entrega da página única no momento do interesse.
@@ -97,14 +97,13 @@ function semente(nome: string): number {
   return h;
 }
 
-export function mensagemDaPagina(nome: string, url: string): string {
-  // O primeiro nome aparece SEMPRE: é o que separa mensagem de disparo em massa.
-  // Três aberturas naturais, escolhidas por hash, para não sair sempre igual.
-  // "PIANCA BARBEARIA" vira "Pianca": gritar em caixa alta na abertura é o
-  // oposto de conversa.
-  const primeiro = String(prettyName(nome || "", 40)).split(/\s+/)[0] || "";
-  const aberturas = primeiro
-    ? [`Prontinho, ${primeiro}!`, `Saiu, ${primeiro}!`, `${primeiro}, ficou pronto!`]
+export function mensagemDaPagina(nome: string, url: string, dono?: string): string {
+  // Nome próprio só quando existe decisor identificado. O primeiro nome da empresa
+  // ("Mais Você Estética") virava "Mais, ficou pronto!" — falando com o dono por um
+  // nome que não é dele.
+  const pessoa = comoChamar({ name: nome, dmName: dono });
+  const aberturas = pessoa
+    ? [`Prontinho, ${pessoa}!`, `Saiu, ${pessoa}!`, `${pessoa}, ficou pronto!`]
     : ["Prontinho!", "Saiu!", "Ficou pronto!"];
   const fechamentos = [
     "Deixei o botão de WhatsApp no topo, pra quem abrir falar direto com vocês. O que você achou?",
@@ -241,7 +240,7 @@ async function entregarInterno(leadId: string, opts: { aviso?: boolean }): Promi
   // página (a reserva acima garante isso), então o `force` aqui não abre corrida.
   const envio = await dispatchLeadReply(lead, {
     channel: "whatsapp",
-    message: mensagemDaPagina(lead.name, url),
+    message: mensagemDaPagina(lead.name, url, (lead as any).dmName),
     hook: "pagina_unica",
     force: true,
   });
