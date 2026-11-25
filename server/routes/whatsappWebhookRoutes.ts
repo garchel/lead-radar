@@ -7,6 +7,7 @@ import { normalizePhone, phoneVariants, buildStableLeadId } from "../services/le
 import { resolveWhatsappProvider, type WhatsappProviderChoice } from "../services/contactService";
 import { handleAckEvent, recordInboundIfNew, reconcileLeadMessages } from "../services/whatsappInboundService";
 import { detectOptOut } from "../services/optOutService";
+import { detectarAutoResposta } from "../services/autoReplyService";
 import { fetchGatewayInstanceState, getGatewayConfig } from "../services/whatsappGateway";
 import { getHumanizeStatus } from "../services/humanizeService";
 import { buildClientProfile } from "../services/clientProfileService";
@@ -603,6 +604,22 @@ export function registerWhatsAppWebhook(app: Express) {
     // Webhook reentregue: a mensagem já existe — não duplica interação/pipeline.
     if (!recorded.created) return;
 
+    // Atendente eletrônico do lead ("digite 1 para...", "fora do horário") não é
+    // resposta humana: registrar sim, entregar prévia não. Antes, um menu
+    // automático podia disparar geração e publicação de página para um robô.
+    const autoResposta = detectarAutoResposta(inbound.text);
+    const humano = !autoResposta.automatica;
+    if (!humano) {
+      console.log(`[whatsapp] ${lead.name}: ${autoResposta.motivo} — prévia não disparada`);
+      if (recorded.communicationId) {
+        try {
+          setCommunicationIntent(recorded.communicationId, { intent: "outro", source: "regex", confidence: 1 });
+        } catch {
+          /* auditoria best-effort */
+        }
+      }
+    }
+
     // COMANDO DO DONO ("/hoje", "/fora"...): só vale vindo do número do Paulo.
     // Responde e encerra — comando não é conversa de lead: não move pipeline, não
     // cria follow-up e não acorda a Clara (o monitor ignora intent comando_dono).
@@ -673,7 +690,7 @@ export function registerWhatsAppWebhook(app: Express) {
     // Interesse/prévia = hora de montar a ficha do cliente (fatos + marca) que
     // vira a base da primeira versão do site. Roda em segundo plano: o webhook
     // já respondeu e a coleta (SerpAPI + Gemini) leva dezenas de segundos.
-    if (intent === "interesse" || intent === "preco") {
+    if (humano && (intent === "interesse" || intent === "preco")) {
       void buildClientProfile(lead.id)
         .then((result) => {
           console.log(
@@ -705,7 +722,7 @@ export function registerWhatsAppWebhook(app: Express) {
     // 2ª passada (só quando o regex não entendeu): a IA classifica frases curtas
     // que são a resposta mais comum na prática — "pode mandar", "manda sim",
     // "claro". Roda depois do ACK; se falhar, nada muda (fica `outro`).
-    if (autoIntentEnabled && rulesDecision.intent === "outro") {
+    if (humano && autoIntentEnabled && rulesDecision.intent === "outro") {
       void classifyWithAI({ text: inbound.text, businessName: lead.name })
         .then((ai) => {
           if (!ai || ai.intent === "outro" || ai.intent === "recusa") return; // recusa/opt-out só por regex

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conferirEstilo } from "../server/services/messageStyle";
+import { conferirEstilo, jargoesNoTexto } from "../server/services/messageStyle";
 
 /**
  * A voz da Clara virou contrato verificável. O endpoint de envio devolve os
@@ -17,6 +17,26 @@ Posso te mandar o link pra você dar uma olhada sem compromisso? (Se não for vo
 describe("conferirEstilo", () => {
   it("aprova a mensagem aprovada pelo Paulo", () => {
     expect(conferirEstilo(APROVADA)).toEqual([]);
+  });
+
+  it("pega jargão de marketing e devolve a troca", () => {
+    const avisos = conferirEstilo("Vamos alavancar seu negócio com uma solução inovadora e sinergia total.");
+    const jargao = avisos.find((a) => a.regra === "sem jargão");
+    expect(jargao).toBeTruthy();
+    expect(jargao?.detalhe).toContain("alavancar");
+    expect(jargao?.detalhe).toContain("trazer mais cliente pronto para fechar");
+  });
+
+  it("pega escassez falsa", () => {
+    const avisos = conferirEstilo("Últimas vagas só hoje, não perca essa chance!");
+    const jargao = avisos.find((a) => a.regra === "sem jargão");
+    expect(jargao?.detalhe).toMatch(/últimas vagas|só hoje|não perca essa chance/);
+  });
+
+  it("não acusa jargão em texto normal", () => {
+    expect(jargoesNoTexto("Montei a página de vocês com botão direto pro WhatsApp. Quer ver?")).toEqual([]);
+    // "solução" sozinha não é jargão; só as expressões prontas da lista.
+    expect(jargoesNoTexto("A solução que vocês usam hoje funciona?")).toEqual([]);
   });
 
   it("reclama de dois emojis numa resposta curta", () => {

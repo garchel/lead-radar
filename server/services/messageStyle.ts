@@ -192,6 +192,69 @@ export interface EstiloAviso {
   detalhe: string;
 }
 
+
+/**
+ * Jargão de marketing e vício de SDR. Importado da revisão do playbook de
+ * prospecção: a lista substitui adjetivo por instrução, porque "evite jargão" o
+ * modelo ignora, mas "alavancar → trazer mais cliente pronto para fechar" ele
+ * obedece.
+ */
+export const JARGOES_BANIDOS: Record<string, string> = {
+  alavancar: "trazer mais cliente pronto para fechar",
+  "transformação digital": "organizar como o cliente encontra e fala com vocês",
+  sinergia: "(corte fora)",
+  ecossistema: "(corte fora)",
+  disruptivo: "(corte fora)",
+  "escalar resultados": "vender mais sem contratar mais gente",
+  "virada de chave": "(corte fora)",
+  "próximo nível": "(corte fora)",
+  "solução inovadora": "estrutura simples que funciona no dia a dia",
+  "solução completa": "tudo o que ele precisa em um lugar só",
+  "solução sob medida": "feito para o jeito de vocês trabalharem",
+  "parceria estratégica": "(corte fora, diga o que vocês fazem)",
+  maximizar: "aumentar",
+  potencializar: "melhorar",
+  "otimização 360": "(corte fora)",
+  "alta performance": "(corte fora)",
+  "jornada do cliente": "o caminho de quem procura vocês",
+  "agregar valor": "evitar que cliente bom compare só preço e suma",
+  "dor latente": "(corte fora, pergunte a dor)",
+  "ticket médio": "(corte fora, fale de valor)",
+  "espero que este e-mail o encontre bem": "(corte fora)",
+  "gostaria de apresentar": "(corte fora, comece pelo fato)",
+  "somos líderes no mercado": "(corte fora)",
+  "sem compromisso algum": "(corte fora, já está implícito)",
+  "posso roubar 2 minutos": "posso te mandar em 3 linhas por aqui?",
+  "últimas vagas": "(corte fora, é escassez falsa)",
+  "só hoje": "(corte fora, é escassez falsa)",
+  "promoção relâmpago": "(corte fora, é escassez falsa)",
+  "não perca essa chance": "(corte fora, é escassez falsa)",
+  "condição imperdível": "(corte fora, é escassez falsa)",
+  "última chamada": "(corte fora, é escassez falsa)",
+  "escopo fechado": "(corte fora)",
+  "entregável": "o que você recebe",
+};
+
+/** Jargões encontrados no texto, com a troca sugerida. */
+export function jargoesNoTexto(texto: string): Array<{ termo: string; troca: string }> {
+  const alvo = normalizarParaComparar(texto);
+  const achados: Array<{ termo: string; troca: string }> = [];
+  for (const [termo, troca] of Object.entries(JARGOES_BANIDOS)) {
+    const alvoTermo = normalizarParaComparar(termo);
+    if (!alvoTermo) continue;
+    const padrao = new RegExp(`(^|[^a-z0-9])${alvoTermo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`);
+    if (padrao.test(alvo)) achados.push({ termo, troca });
+  }
+  return achados;
+}
+
+function normalizarParaComparar(valor: string): string {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
 export function conferirEstilo(texto: string, opts: { palavraPessoa?: string } = {}): EstiloAviso[] {
   const avisos: EstiloAviso[] = [];
   const msg = String(texto || "");
@@ -207,6 +270,16 @@ export function conferirEstilo(texto: string, opts: { palavraPessoa?: string } =
 
   const enchimento = msg.match(/sem custo nenhum|incr[ií]vel|oportunidade [uú]nica|n[aã]o perca|imperd[ií]vel/gi) || [];
   if (enchimento.length) avisos.push({ regra: "sem enchimento", detalhe: enchimento.join(", ") });
+
+  // Jargão é o tell mais óbvio de texto automático. A lista traz a troca junto
+  // para o agente não ter que inventar a reescrita no meio da conversa.
+  const jargoes = jargoesNoTexto(msg);
+  if (jargoes.length) {
+    avisos.push({
+      regra: "sem jargão",
+      detalhe: jargoes.map((j) => `${j.termo} → ${j.troca}`).join(" | "),
+    });
+  }
 
   const palavra = opts.palavraPessoa;
   if (palavra && palavra !== "cliente" && /\bclientes?\b/i.test(msg)) {
