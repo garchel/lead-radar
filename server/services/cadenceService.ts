@@ -82,53 +82,72 @@ export function buildCadenceMessage(lead: StoredLead, step: CadenceStep): string
   return whatsAppify(buildCadenceRaw(lead, step));
 }
 
+/** A prévia já foi entregue ao lead? Muda o que o toque pode oferecer. */
+function previaJaEnviada(leadId: string): boolean {
+  try {
+    return getCommunicationsByLead(leadId).some((c) => c.hook === "pagina_unica" && c.direction === "outbound");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Monta a mensagem do toque. Determinística e gratuita (sem IA): a
+ * personalização vem do gancho real (auditoria/sem site), não de IA genérica.
+ *
+ * Regras que vieram da revisão do fluxo:
+ * - nada de escassez inventada ("vou fechar a agenda na sexta") — é mentira e o
+ *   dono percebe;
+ * - nada de oferecer prévia que o lead JÁ recebeu;
+ * - uma pergunta por mensagem, e de preferência orientada ao "não", que devolve
+ *   controle a quem lê em vez de cobrar resposta.
+ */
 function buildCadenceRaw(lead: StoredLead, step: CadenceStep): string {
   const name = firstName(lead.name);
   const audit = lead.siteAudit;
   const headline = audit?.headline?.replace(/\.$/, "");
-  const bullet = audit?.bullets?.[0];
   const status = effectiveWebsiteStatus(lead);
   const hasSite = status === "has_website";
+  const jaViu = previaJaEnviada(lead.id);
+
+  // Pergunta de dor: serve tanto para quem já viu a página quanto para quem só
+  // recebeu a abordagem. Não afirma nada sobre o negócio dele, só pergunta.
+  const perguntaDeDor = [
+    `Oi ${name}, tudo bem? Deixa eu te perguntar uma coisa do dia a dia aí:`,
+    `quando alguém acha vocês no Google e chama no WhatsApp, geralmente já chega sabendo o que quer ou vem só perguntando preço?`,
+  ];
 
   if (step.angle === "prova") {
+    if (jaViu) return [perguntaDeDor[0], "", perguntaDeDor[1]].join("\n");
+
     if (hasSite && audit) {
       return [
         `Oi ${name}! Semana passada te mandei o diagnóstico do site da ${lead.name}${headline ? ` (${headline.toLowerCase()})` : ""}.`,
-        `Montei uma prévia de como ficaria a primeira tela — mais rápida e com botão de WhatsApp direto.`,
-        `Quer que eu te mande aqui pra você ver?`,
+        `Montei uma prévia de como ficaria a página de vocês, já com botão direto pro WhatsApp.`,
+        `Quer ver como ficou?`,
       ].join("\n");
     }
     if (status === "marketplace_only") {
       const platform = presenceLabel(lead.websiteUrl) || "marketplace";
       return [
         `Oi ${name}! Vi que a ${lead.name} vende pelo ${platform} mas não tem site próprio.`,
-        `Fiz um esboço de uma página simples com cardápio/serviços, botão de WhatsApp e pedido direto — sem depender de comissão de marketplace.`,
-        `Posso te mandar a prévia?`,
+        `Fiz uma prévia de página com os serviços, botão de WhatsApp e pedido direto, sem depender de comissão de marketplace.`,
+        `Quer ver como ficou?`,
       ].join("\n");
     }
     return [
       `Oi ${name}! Vi que a ${lead.name} aparece no Google mas não tem site próprio.`,
-      `Fiz um esboço de como ficaria uma página de ${lead.category || "apresentação"} pra vocês, com botão de WhatsApp e formulário de orçamento.`,
-      `Posso te mandar a prévia?`,
+      `Fiz uma prévia de como ficaria a página de ${lead.category || "apresentação"} pra vocês, com botão de WhatsApp.`,
+      `Quer ver como ficou?`,
     ].join("\n");
   }
 
-  // ângulo "prazo"
-  const date = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-  });
-  if (bullet) {
-    return [
-      `Oi ${name}, tudo bem? Vou fechar a agenda de sites na sexta (${date}).`,
-      `O ponto principal do site da ${lead.name} continua sendo ${bullet.toLowerCase()}.`,
-      `Consigo encaixar vocês essa semana — prefere que eu te ligue hoje ou amanhã?`,
-    ].join("\n");
-  }
+  // Último toque: pergunta de saída honesta. Sem prazo inventado, sem pressão,
+  // e sem "alguma novidade?" — que ativa culpa e garante silêncio.
+  const objeto = jaViu ? "a página que montei" : "esse assunto";
   return [
-    `Oi ${name}, tudo bem? Vou fechar a agenda de sites na sexta (${date}).`,
-    `Consigo encaixar a ${lead.name} ainda essa semana.`,
-    `Prefere que eu te ligue hoje ou amanhã?`,
+    `Oi ${name}, tudo bem? Pra eu não ficar te mandando mensagem à toa:`,
+    `${objeto} ficou pra outro momento ou ainda faz sentido a gente retomar?`,
   ].join("\n");
 }
 

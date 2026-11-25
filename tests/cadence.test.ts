@@ -94,13 +94,31 @@ describe("buildCadenceMessage", () => {
     expect(message).toMatch(/prévia/i);
   });
 
-  it("toque 3 traz prazo e pergunta fechada", () => {
+  it("toque 3 não inventa prazo nem escassez", () => {
     const message = buildCadenceMessage(
       seed("cad_m3", { websiteStatus: "has_website", websiteUrl: "https://c.com", siteAudit: audit }),
       step3
     );
-    expect(message).toMatch(/fechar a agenda/i);
-    expect(message).toMatch(/hoje ou amanhã/i);
+    // Escassez inventada ("vou fechar a agenda na sexta") é mentira que o dono
+    // percebe, e oferecer ligação antes de qualquer diagnóstico não fecha nada.
+    expect(message).not.toMatch(/fechar a agenda|sexta|hoje ou amanhã|vaga/i);
+    expect(message).toMatch(/pra outro momento ou ainda faz sentido/i);
+    expect(message).not.toMatch(/alguma novidade|conseguiu ver|passando/i);
+  });
+
+  it("toque 2 não oferece prévia que o lead já recebeu", () => {
+    const lead = seed("cad_m4", { websiteStatus: "none" });
+    recordCommunication({
+      leadId: lead.id,
+      channel: "whatsapp",
+      direction: "outbound",
+      status: "sent",
+      message: "Prontinho! Montei a página de vocês",
+      hook: "pagina_unica",
+    });
+    const message = buildCadenceMessage(lead, step2);
+    expect(message).not.toMatch(/prévia|quer ver como ficou/i);
+    expect(message).toMatch(/já chega sabendo o que quer ou vem só perguntando preço/i);
   });
 });
 

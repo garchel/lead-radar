@@ -312,7 +312,14 @@ export function registerLeadRoutes(app: Express) {
         },
         {
           situacao: "lead sumiu (retomada 24-48h)",
-          texto: "Oi, tudo bem? Passando só pra saber se conseguiu dar uma olhada na prévia que montei pra vocês 😊",
+          // Pergunta orientada ao "não": devolve controle a quem lê. "Passando
+          // pra saber se conseguiu dar uma olhada" ativa culpa e garante silêncio.
+          texto:
+            "Oi, tudo bem? Você chegou a desistir de organizar essa entrada de clientes agora ou só ficou corrido por aí?",
+        },
+        {
+          situacao: "lead sumiu (5 a 7 dias, encerramento)",
+          texto: "Oi, tudo bem? Pra eu não ficar te mandando mensagem à toa: esse assunto ficou pra outro momento ou ainda faz sentido a gente retomar?",
         },
       ],
     });

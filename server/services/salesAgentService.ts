@@ -310,7 +310,7 @@ function cadencePrompt(ctx: AgentContext, angle: "prova" | "prazo"): string {
   const { briefing } = ctx;
   const task =
     angle === "prova"
-      ? `Este é o SEGUNDO toque (ele não respondeu). Traga algo concreto: a prévia gratuita da primeira tela, já que você viu o negócio dele no Google. Nada de "passando para saber se viu".`
+      ? `Este é o SEGUNDO toque (ele não respondeu). Traga algo concreto: a prévia gratuita já publicada, já que você viu o negócio dele no Google. Nada de "passando para saber se viu". Se a prévia JÁ foi enviada no histórico, não ofereça de novo: faça UMA pergunta curta sobre como chegam os contatos dele hoje (se chegam sabendo o que querem ou só perguntando preço).`
       : `Este é o TERCEIRO e ÚLTIMO toque. Faça uma pergunta de saída honesta: reconheça que talvez não seja prioridade agora e pergunte se pode encerrar o contato. Zero pressão, zero prazo inventado, zero escassez.`;
   return `Você é um vendedor experiente de páginas web para pequenos negócios, no WhatsApp.
 
@@ -343,11 +343,11 @@ export function fallbackApproachMessage(briefing: LeadBriefing, angle: "abertura
   if (angle === "prova") {
     return whatsAppify(
       [
-        `Oi, ${name}! Montei uma prévia de como ficaria a primeira tela da página de vocês 👀`,
+        `Oi, ${name}! Fiz uma prévia de como ficaria a página de vocês 👀`,
         "",
         "Já vem com botão de WhatsApp e formulário de orçamento.",
         "",
-        "É *grátis*, sem custo nenhum. Posso mandar aqui?",
+        "É grátis. Quer ver como ficou?",
       ].join("\n")
     );
   }
@@ -366,7 +366,7 @@ export function fallbackApproachMessage(briefing: LeadBriefing, angle: "abertura
       "",
       `${fact.replace(/\.$/, "")}, e ${loss}.`,
       "",
-      "A gente monta uma página bonita, rápida e funcional, com botão de WhatsApp levando o cliente direto pra você. A *prévia é grátis*, sem custo nenhum.",
+      "A gente monta uma página bonita, rápida e funcional, com botão de WhatsApp levando o cliente direto pra você. A prévia é grátis.",
       "",
       "Posso te mandar?",
     ].join("\n")
