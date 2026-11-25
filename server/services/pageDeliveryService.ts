@@ -1,4 +1,5 @@
 import { getCommunicationsByLead, getLeadById } from "../store/db";
+import { sendOwnerAlert } from "./ownerAlertService";
 import { eventHub } from "../events/eventHub";
 import { dispatchLeadReply } from "./interactionService";
 import { gerarPaginaUnica } from "./aiPreviewService";
@@ -181,16 +182,27 @@ async function entregarInterno(leadId: string, opts: { aviso?: boolean }): Promi
     }
   }
 
-  // Página que já existe é reaproveitada: reescrever custa chamada de IA e o dono
-  // já viu aquela. Se ela nunca chegou ao cliente, entrega agora.
+  // Toda entrega é página nova. Reaproveitar página antiga entregava ao cliente
+  // um site escrito antes de a conversa existir — e travava melhoria.
+  const origem = "ia" as const;
   let url: string | null = null;
-  let origem: "ia" | "template" = "ia";
-  if (previewExists(lead)) {
-    url = resolvePreviewUrl(previewSlug(lead));
-  } else {
+  try {
     const gerada = await gerarPaginaUnica(lead);
-    origem = gerada.origem;
     url = resolvePreviewUrl(gerada.preview.slug);
+  } catch (erro: any) {
+    // Sem template de reserva: se a página não saiu, o cliente não recebe nada e
+    // o Paulo é avisado no WhatsApp para decidir (nova tentativa, ajuste, manual).
+    const motivo = String(erro?.message || erro).slice(0, 300);
+    console.warn(`[pagina] geração falhou para ${lead.name}: ${motivo}`);
+    registrarEntregaPendente(leadId, lead.name, null, `geração falhou: ${motivo}`);
+    await sendOwnerAlert({
+      kind: "ia_falhou",
+      detail: `A prévia de ${lead.name} não foi gerada e NADA foi enviado ao cliente. Motivo: ${motivo}`,
+      leadId,
+      leadName: lead.name,
+      leadPhone: lead.phone,
+    } as any).catch(() => undefined);
+    return { ok: false, motivo: `geração falhou: ${motivo}`, origem };
   }
 
   // Publicação tem teto próprio. Sem isto, um deploy que entra em retentativa trava

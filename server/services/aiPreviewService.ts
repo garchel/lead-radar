@@ -90,38 +90,94 @@ function telefoneCombinaComEstado(telefone: string, estado?: string): boolean {
 /*  Direção de arte: semente estável por lead                          */
 /* ------------------------------------------------------------------ */
 
-const DIRECOES = [
-  {
-    nome: "editorial",
-    brief:
-      "Editorial de revista: título grande ocupando a largura, muito espaço em branco, tipografia com personalidade (serifada ou display), fio fino separando seções, uma faixa de cor cheia em um ponto só. Nada de card com sombra.",
-  },
-  {
-    nome: "contraste",
-    brief:
-      "Bloco escuro dominante com tipografia clara e grande, cor de destaque em detalhes pequenos e precisos. Assimetria: conteúdo puxado para um lado, respiro no outro. Sensação de marca premium, sem luxo exagerado.",
-  },
-  {
-    nome: "gesto",
-    brief:
-      "Composição com um elemento gráfico forte feito em SVG ou CSS (arco, recorte, linha que atravessa a página, forma orgânica) que amarra a identidade. Tipografia sans com bastante peso no título e texto curto.",
-  },
-  {
-    nome: "calmo",
-    brief:
-      "Fundo em tom suave derivado da paleta, cartões sem borda dura, tipografia humanista, muito respiro vertical. Transmite cuidado e tranquilidade — combina com saúde, beleza e serviços pessoais.",
-  },
-  {
-    nome: "direto",
-    brief:
-      "Estilo utilitário bem resolvido: hierarquia clara, blocos bem separados, informação escaneável, botão de WhatsApp sempre visível. Nada de enfeite que atrapalhe a leitura no celular.",
-  },
-  {
-    nome: "textura",
-    brief:
-      "Textura sutil (grão, linhas finas, padrão geométrico discreto em SVG) sobre cor sólida, tipografia condensada no título, seções com numeração. Dá caráter sem depender de foto.",
-  },
+/**
+ * Direção de arte em EIXOS, não em parágrafo de clima.
+ *
+ * "Editorial, muito espaço em branco, tipografia com personalidade" é adjetivo:
+ * cada lead recebe a mesma interpretação e as páginas convergem. Aqui cada eixo
+ * tem opções com instrução técnica (medida, comportamento, o que é proibido), e a
+ * combinação é escolhida por hash do negócio — nome + cidade.
+ *
+ * 4 × 4 × 4 × 3 × 4 × 3 = 2.304 combinações. Duas empresas quase nunca coincidem,
+ * e a mesma empresa sempre recebe a mesma direção.
+ */
+interface Opcao { nome: string; instrucao: string }
+
+const EIXO_COMPOSICAO: Opcao[] = [
+  { nome: "assimétrico", instrucao: "Hero em duas áreas desiguais (7/5 no desktop): título e CTA de um lado, painel de cor sólida do outro. No celular empilha, texto primeiro. Nada centralizado." },
+  { nome: "tipográfico", instrucao: "Hero tipográfico puro: título ocupando 90% da largura em 2 ou 3 linhas, alinhado à esquerda, com respiro embaixo. Sem imagem, sem cartão, sem badge." },
+  { nome: "faixa-cheia", instrucao: "Primeiro bloco em cor cheia de ponta a ponta, com o título dentro dele e o resto da página em fundo claro. Contraste de faixa, não de cartão." },
+  { nome: "recorte", instrucao: "Composição com um recorte diagonal ou arco em SVG que atravessa a divisa entre dois blocos, amarrando hero e conteúdo. O recorte é estrutural, não enfeite." },
 ];
+
+const EIXO_TIPOGRAFIA: Opcao[] = [
+  { nome: "editorial", instrucao: "Display serifada de alto contraste no título (peso 500, não 700), corpo em sans humanista 16px. Título em caixa alta só na primeira palavra. Entrelinha do título 1,02." },
+  { nome: "geométrica", instrucao: "Sans geométrica com peso 600 no título, entrelinha 1,1, letter-spacing -0,02em. Corpo na mesma família em 16px/1,6. Sem serifada em lugar nenhum." },
+  { nome: "condensada", instrucao: "Família condensada ou com letter-spacing negativo no título, ocupando 4 linhas curtas (nunca uma linha longa). Corpo em sans neutra. Números grandes para nota e contagem." },
+  { nome: "mista", instrucao: "Serifada só no título principal e nas citações; todo o resto em sans. O contraste entre as duas é o que dá caráter — use-o em no máximo 2 pontos da página." },
+];
+
+const EIXO_COR: Opcao[] = [
+  { nome: "monocromático", instrucao: "Um tom só da paleta em três intensidades (fundo, texto, detalhe). A cor de destaque aparece em no máximo 3 elementos na página inteira." },
+  { nome: "duotone", instrucao: "Dois tons da paleta em contraste direto: um domina fundos, o outro só texto e detalhe. Nunca os dois no mesmo bloco com o mesmo peso." },
+  { nome: "neutro-acento", instrucao: "Fundo neutro (creme, areia, cinza claro), texto quase preto e a cor da marca reservada para o botão e um único detalhe gráfico por seção." },
+  { nome: "escuro", instrucao: "Fundo escuro com texto claro, cor de destaque em elementos pequenos e precisos. Texto de apoio nunca em cinza translúcido: use cor sólida com contraste 4,5:1." },
+];
+
+const EIXO_MOVIMENTO: Opcao[] = [
+  { nome: "seco", instrucao: "Revelação curta (0,35s, ease-out) subindo 12px, escalonada por bloco. Sem parallax, sem shader. O movimento serve à leitura, não chama atenção." },
+  { nome: "fluido", instrucao: "Revelação de 0,7s com mola leve no título palavra por palavra, parallax de 12px na imagem e barra de progresso no topo. Nada além disso." },
+  { nome: "ambiente", instrucao: "Fundo WebGL lento (shader com as cores da marca) atrás do hero, revelação discreta no resto. O fundo respira em 30-60s, nunca pisca." },
+];
+
+const EIXO_DETALHE: Opcao[] = [
+  { nome: "fio-e-numero", instrucao: "Fios de 1px separando blocos e lista numerada 01-04 em corpo 12px, caixa alta, letter-spacing 0,12em. Nenhum card com sombra." },
+  { nome: "grão", instrucao: "Textura de grão fina (SVG feTurbulence, opacidade 0,15) sobre a cor de fundo, e nenhuma borda em cartão. O grão é o único ornamento." },
+  { nome: "forma-recortada", instrucao: "Uma forma orgânica em SVG (arco, meia-lua, recorte) repetida em escala diferente em 2 pontos da página, como assinatura visual do negócio." },
+  { nome: "marca-dagua", instrucao: "O nome do negócio em tipografia enorme (clamp 80-160px) como marca d'água de baixo contraste atrás de um bloco, cortada pelas bordas. Só um ponto da página." },
+];
+
+const EIXO_DENSIDADE: Opcao[] = [
+  { nome: "arejada", instrucao: "72px entre seções no desktop, 56px no celular, e no máximo 3 blocos de conteúdo por tela de celular." },
+  { nome: "compacta", instrucao: "48px entre seções no desktop, 40px no celular, com fios separando tudo. Informação densa e escaneável, sem parecer apertada." },
+  { nome: "editorial", instrucao: "Alterna blocos muito arejados (96px) com blocos densos de texto curto. O contraste de respiro é a composição." },
+];
+
+const EIXOS = [EIXO_COMPOSICAO, EIXO_TIPOGRAFIA, EIXO_COR, EIXO_MOVIMENTO, EIXO_DETALHE, EIXO_DENSIDADE];
+const NOMES_EIXOS = ["Composição", "Tipografia", "Cor", "Movimento", "Detalhe autoral", "Densidade"];
+
+export interface DirecaoDeArte {
+  nome: string;
+  brief: string;
+  eixos: Array<{ eixo: string; opcao: string }>;
+}
+
+/** Parâmetros que valem para TODA página, independentes da direção. */
+export const PARAMETROS_DE_QUALIDADE = [
+  "Linha de texto entre 60 e 72 caracteres: acima disso o olho perde a linha.",
+  "Escala tipográfica com razão de 1,25 entre níveis; no máximo 4 tamanhos visíveis.",
+  "Contraste mínimo 4,5:1 no corpo e 3:1 em título grande. Nenhum texto em cinza translúcido.",
+  "Uma cor de destaque por área visível: se o botão é de destaque, o título não é.",
+  "Um único <h1>. Seções com <h2>. Nunca pular nível.",
+  "Alvo de toque de 44x44px em todo link e botão.",
+  "Nenhum bloco começa invisível: se houver animação, ela parte do estado visível.",
+  "No máximo 2 famílias tipográficas e 1 peso extra.",
+  "Nenhuma imagem de fora: arte é SVG, canvas ou tipografia.",
+  "O primeiro bloco responde em 2 segundos: o que o negócio faz e onde fica.",
+];
+
+function direcaoPorSemente(lead: StoredLead): DirecaoDeArte {
+  let h = 0;
+  const base = `${lead.name}|${lead.city}|${lead.state}`;
+  for (const ch of base) h = (h * 31 + ch.charCodeAt(0)) % 1_000_003;
+  const escolhidas = EIXOS.map((opcoes, i) => {
+    const indice = Math.floor(h / Math.pow(7, i)) % opcoes.length;
+    return { eixo: NOMES_EIXOS[i], opcao: opcoes[indice].nome, instrucao: opcoes[indice].instrucao };
+  });
+  const nome = escolhidas.slice(0, 3).map((e) => e.opcao).join(" · ");
+  const brief = escolhidas.map((e) => `${e.eixo}: ${e.instrucao}`).join("\n");
+  return { nome, brief, eixos: escolhidas.map((e) => ({ eixo: e.eixo, opcao: e.opcao })) };
+}
 
 function semente(lead: StoredLead): number {
   const base = `${lead.id}|${lead.name}|${lead.city}`;
@@ -130,8 +186,8 @@ function semente(lead: StoredLead): number {
   return h;
 }
 
-export function direcaoDeArte(lead: StoredLead) {
-  return DIRECOES[semente(lead) % DIRECOES.length];
+export function direcaoDeArte(lead: StoredLead): DirecaoDeArte {
+  return direcaoPorSemente(lead);
 }
 
 /* ------------------------------------------------------------------ */
@@ -170,8 +226,11 @@ function promptDeSistema(lead: StoredLead): string {
   const direcao = direcaoDeArte(lead);
   return `Você é diretor de arte e desenvolvedor front-end. Cria a página web de um negócio real, do zero, para ser enviada ao dono como prévia gratuita.
 
-DIREÇÃO DE ARTE DESTA PÁGINA: ${direcao.nome.toUpperCase()}
+DIREÇÃO DE ARTE DESTA PÁGINA (gerada para este negócio — siga os seis eixos, não invente outros):
 ${direcao.brief}
+
+PARÂMETROS DE QUALIDADE (valem para toda página e o portão confere):
+${PARAMETROS_DE_QUALIDADE.map((p) => `- ${p}`).join("\n")}
 
 REGRAS DURAS (violar invalida a entrega):
 1. FORMATO DA ENTREGA: exatamente três blocos de código, nesta ordem, cada um com sua cerca:
@@ -708,8 +767,8 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
 
 export interface ResultadoPaginaUnica {
   preview: PreviewResult;
-  /** "ia" quando a página veio do gerador; "template" quando caiu na reserva. */
-  origem: "ia" | "template";
+  /** Sempre "ia": a página é sempre escrita para o lead. */
+  origem: "ia";
   modelo?: string;
   conceito?: string;
   tentativas?: number;
@@ -744,11 +803,10 @@ export async function gerarPaginaUnica(
       notaVisual: gerada.pagina.notaVisual,
     };
   }
+  // Sem template de reserva: página que não foi escrita para ESTE negócio não vai
+  // para o cliente. Quem decide o que fazer é quem chamou (registra pendência e
+  // avisa o dono no WhatsApp), em vez de publicar um site genérico no nome dele.
   const falha: FalhaGeracao = gerada as FalhaGeracao;
-  console.warn(`[previa-ia] caindo no template: ${falha.motivo} ${falha.erros.join("; ")}`);
-  return {
-    preview: writePreviewFiles(lead, buildPreviewHtml(lead, now), now),
-    origem: "template",
-    motivoFallback: `${falha.motivo}${falha.erros.length ? ` (${falha.erros.slice(0, 3).join("; ")})` : ""}`,
-  };
+  console.warn(`[previa-ia] geração falhou: ${falha.motivo} ${falha.erros.join("; ")}`);
+  throw new Error(`não foi possível gerar a página: ${falha.motivo}${falha.erros.length ? ` (${falha.erros.slice(0, 2).join("; ")})` : ""}`);
 }
