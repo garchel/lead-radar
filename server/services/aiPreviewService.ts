@@ -8,6 +8,7 @@ import { julgarPaginaVisualmente, juizVisualAtivo, notaMinima } from "./previewV
 import { aprimorarPagina } from "./previewEnhance";
 import { enfeitarPagina } from "./previewArt";
 import { refinarPagina } from "./previewPolish";
+import { PERFIS, entrelinhaPara, medirTitulo, perfilDoLead } from "./publicoService";
 import { avisoDePeso, empacotarJs, extrairBlocos, montarPagina } from "./previewBundleService";
 import fs from "node:fs";
 import os from "node:os";
@@ -359,8 +360,14 @@ ANTÍTESE DO GENÉRICO (evite o visual de página feita por IA):
    em tudo lê como lista. Espaço entre título e texto: 20px. Entre texto e botão: 28px.
    Escada de espaçamento: 8, 16, 24, 32, 48, 72, 96, 120, 160. Nada de 13px ou 37px.
 
-10b. CORPO DE TEXTO: 16px FIXO no celular (não use clamp nem vw no corpo — vw em tela
-   de 360px produz 13-14px), 17-18px no desktop, entrelinha 1,6. Parágrafo de
+10b. CORPO DE TEXTO: use EXATAMENTE o tamanho do bloco "MEDIDAS DESTE PÚBLICO" abaixo.
+   Fixo, sem clamp e sem vw (vw em 360px produz 13-14px). Entrelinha pela fórmula
+   1,1 + 0,4 × (corpo ÷ tamanho), calculada no mesmo bloco.
+
+10e. TÍTULO POR CONTA, NÃO POR GOSTO: o h1 tem no máximo 8 palavras. Para caber em 3
+   linhas com 328px de largura útil:
+     tamanho ≤ (328 × 3) ÷ (nº de caracteres × 0,52 × 1,15)
+   Se a conta der menos de 32px, o problema é a FRASE, não a letra: encurte o título. Parágrafo de
    16px com 12px é o que faz a página parecer amadora — nunca desça disso. Rótulo em
    caixa alta pode ter 12px; nada mais abaixo de 14px.
 
@@ -387,8 +394,21 @@ SAÍDA: apenas o HTML, sem cercas de código, sem comentário antes ou depois, s
 function promptDeUsuario(lead: StoredLead): string {
   const d = fatos(lead);
   const ideias = repertorioDoNicho(d.nome, d.categoria);
+  const perfil = perfilDoLead(d.categoria, d.nome);
+  const m = PERFIS[perfil];
+  const medidas = `MEDIDAS DESTE PÚBLICO (perfil "${perfil}" — ${m.porque}):
+- corpo de texto: ${m.corpo}px fixo no celular, entrelinha ${entrelinhaPara(m.corpo, m.corpo, perfil)}
+- menor texto da página: ${m.minimo}px (só rótulo em caixa alta)
+- área de toque mínima: ${m.alvo}x${m.alvo}px
+- contraste mínimo do texto: ${m.contraste}:1 ${m.contraste >= 7 ? "(AAA)" : "(AA)"}
+- no máximo ${m.opcoes} opções visíveis por tela
+- movimento: ${m.movimento}
+- títulos: entrelinha ${entrelinhaPara(40, m.corpo, perfil)} em corpo 40px, ${entrelinhaPara(64, m.corpo, perfil)} em corpo 64px`;
+
   return `DADOS REAIS DO NEGÓCIO (única fonte de verdade):
 ${JSON.stringify(d, null, 2)}
+
+${medidas}
 
 HIPÓTESES DE SEÇÃO PARA O NICHO "${d.categoria || "não informado"}" (descarte o que não couber, invente o que faltar — isto NÃO é uma lista para cumprir):
 ${ideias.map((x) => `- ${x}`).join("\n")}
@@ -719,7 +739,9 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
         let medidas: MedidaViewport[] | undefined;
         let dicasMobile: string[] = [];
         if (!criticos.length && auditoriaDisponivel()) {
-          const auditoria = await auditarPaginaMobile(html, printPath ? { print: printPath } : {});
+          const perfilDoTexto = PERFIS[perfilDoLead(fatos(lead).categoria, lead.name)];
+          const limites = { corpo: perfilDoTexto.corpo, alvo: perfilDoTexto.alvo, contraste: perfilDoTexto.contraste };
+          const auditoria = await auditarPaginaMobile(html, { ...(printPath ? { print: printPath } : {}), limites });
           medidas = auditoria.medidas;
           if (auditoria.pulada) {
             console.warn(`[previa-ia] auditoria pulada: ${auditoria.motivoPulada}`);
@@ -729,7 +751,7 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
             // Segunda chance no reparo, agora com os problemas MEDIDOS.
             const segundo = repararPagina(html, auditoria.criticos);
             if (segundo.reparos.length) {
-              const reauditoria = await auditarPaginaMobile(segundo.html, printPath ? { print: printPath } : {});
+              const reauditoria = await auditarPaginaMobile(segundo.html, { ...(printPath ? { print: printPath } : {}), limites });
               if (reauditoria.ok) {
                 html = segundo.html;
                 medidas = reauditoria.medidas;

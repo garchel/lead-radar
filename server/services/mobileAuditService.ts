@@ -64,8 +64,16 @@ export function auditoriaDisponivel(): boolean {
 
 const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+export interface LimitesDoPublico {
+  corpo: number;
+  alvo: number;
+  contraste: number;
+}
+
+const LIMITES_PADRAO: LimitesDoPublico = { corpo: 17, alvo: 44, contraste: 4.5 };
+
 /** Script que roda DENTRO da página e devolve as medidas em JSON. */
-const MEDIDOR = `(() => {
+const medidorComLimites = (lim: LimitesDoPublico) => `(() => {
   const larg = window.innerWidth;
   const doc = document.documentElement;
   const criticos = [];
@@ -119,7 +127,7 @@ const MEDIDOR = `(() => {
   }
   const botoesApertados = botoes.filter((e) => {
     const r = e.getBoundingClientRect();
-    return !botoesMinusculos.includes(e) && (r.height < 44 || r.width < 44);
+    return !botoesMinusculos.includes(e) && (r.height < ${lim.alvo} || r.width < ${lim.alvo});
   });
   if (botoesApertados.length) {
     avisos.push(botoesApertados.length + ' botão(ões) entre 32 e 44px (' + amostraDe(botoesApertados) + ')');
@@ -154,8 +162,10 @@ const MEDIDOR = `(() => {
   const paragrafos = [...document.querySelectorAll('p')].filter((e) => (e.textContent || '').trim().length > 40);
   if (paragrafos.length) {
     const menor = Math.min(...paragrafos.map((e) => parseFloat(getComputedStyle(e).fontSize) || 16));
-    if (menor < 15) {
-      criticos.push('corpo de texto em ' + menor + 'px: no celular o mínimo é 15px e o confortável é 16-17px');
+    if (menor < ${lim.corpo - 2}) {
+      criticos.push('corpo de texto em ' + menor + 'px: para este público o tamanho é ${"${lim.corpo}"}px');
+    } else if (menor < ${lim.corpo}) {
+      avisos.push('corpo de texto em ' + menor + 'px (o ideal para este público é ${"${lim.corpo}"}px)');
     }
     const entrelinhas = paragrafos
       .map((e) => { const c = getComputedStyle(e); const f = parseFloat(c.fontSize); const l = parseFloat(c.lineHeight); return f ? l / f : NaN; })
@@ -289,7 +299,7 @@ const MEDIDOR = `(() => {
     };
     const tamanho = parseFloat(s.fontSize) || 16;
     const negrito = (parseInt(s.fontWeight, 10) || 400) >= 700;
-    const minimo = (tamanho >= 24 || (negrito && tamanho >= 19)) ? 3 : 4.5;
+    const minimo = (tamanho >= 24 || (negrito && tamanho >= 19)) ? Math.min(3, ${lim.contraste}) : ${lim.contraste};
     const valor = razao(misturado, bg);
     if (valor < minimo) {
       baixoContraste.push({ texto: (e.textContent || '').trim().slice(0, 28), razao: Math.round(valor * 10) / 10, minimo });
@@ -441,7 +451,14 @@ async function medirDesktop(chrome: string, arquivoUrl: string, porta: number): 
   }
 }
 
-async function medirEm(chrome: string, arquivoUrl: string, largura: number, porta: number, pngPath?: string): Promise<MedidaViewport | null> {
+async function medirEm(
+  chrome: string,
+  arquivoUrl: string,
+  largura: number,
+  porta: number,
+  pngPath?: string,
+  limites: LimitesDoPublico = LIMITES_PADRAO,
+): Promise<MedidaViewport | null> {
   const perfil = fs.mkdtempSync(path.join(os.tmpdir(), "audit-"));
   const proc = spawn(chrome, [
     "--headless=new",
@@ -532,7 +549,7 @@ async function medirEm(chrome: string, arquivoUrl: string, largura: number, port
       /* sem revelação não faz falta */
     }
 
-    const res = await cdp("Runtime.evaluate", { expression: MEDIDOR, returnByValue: true });
+    const res = await cdp("Runtime.evaluate", { expression: medidorComLimites(limites), returnByValue: true });
     const valor = res?.result?.value;
     if (!valor) return null;
     const medida = JSON.parse(valor) as MedidaViewport;
@@ -596,8 +613,9 @@ async function medirEm(chrome: string, arquivoUrl: string, largura: number, port
  */
 export async function auditarPaginaMobile(
   html: string,
-  opts: { larguras?: number[]; print?: string } = {},
+  opts: { larguras?: number[]; print?: string; limites?: Partial<LimitesDoPublico> } = {},
 ): Promise<AuditoriaMobile> {
+  const limites: LimitesDoPublico = { ...LIMITES_PADRAO, ...(opts.limites || {}) };
   const chrome = acharChrome();
   if (!chrome) {
     return { ok: true, pulada: true, motivoPulada: "Chrome não encontrado na máquina", medidas: [], criticos: [], avisos: [] };
@@ -617,7 +635,7 @@ export async function auditarPaginaMobile(
   let porta = 9400 + Math.floor(Math.random() * 300);
   try {
     for (const largura of larguras) {
-      const medida = await medirEm(chrome, arquivoUrl, largura, porta, largura === 390 ? opts.print : undefined);
+      const medida = await medirEm(chrome, arquivoUrl, largura, porta, largura === 390 ? opts.print : undefined, limites);
       porta += 1;
       if (!medida) continue;
       medidas.push(medida);
