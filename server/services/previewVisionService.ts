@@ -23,11 +23,13 @@ Dê uma nota de 0 a 10 pensando no que um cliente pagaria para ter.
 
 Critérios, todos com o mesmo peso:
 1. Hierarquia: dá para entender em 2 segundos o que o negócio faz e qual é a ação?
-2. Tipografia: a escala é coerente, os títulos têm presença, o corpo é legível?
+2. Tipografia: a escala é coerente, os títulos têm presença, o corpo é legível? Título grande de verdade (40px+ no celular) conta a favor; título tímido conta contra.
 3. Cor: a paleta parece escolhida ou parece sorteada? Texto tem contraste?
-4. Composição: existe ritmo, ou é um bloco atrás do outro sem respiro?
+4. Composição: existe ritmo, ou é um bloco atrás do outro sem respiro? Assimetria, sobreposição e quebra de grade contam a favor.
 5. Densidade: falta conteúdo (vazio) ou sobra (apertado)?
 6. Acabamento: algo parece rascunho, provisório ou automático?
+7. Profundidade: existe camada (grão, forma desfocada, tipografia sobre cor), ou tudo está no mesmo plano chapado?
+8. Movimento com intenção: o que aparece no print sugere movimento ligado à rolagem (seção presa, elemento cortado na borda, faixa em marquise), ou a página parece estática?
 
 Desconte com força:
 - espaço reservado para imagem DOMINANDO a dobra (uma faixa fina e discreta dizendo

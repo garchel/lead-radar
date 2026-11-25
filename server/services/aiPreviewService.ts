@@ -125,9 +125,19 @@ const EIXO_COR: Opcao[] = [
 ];
 
 const EIXO_MOVIMENTO: Opcao[] = [
-  { nome: "seco", instrucao: "Revelação curta (0,35s, ease-out) subindo 12px, escalonada por bloco. Sem parallax, sem shader. O movimento serve à leitura, não chama atenção." },
-  { nome: "fluido", instrucao: "Revelação de 0,7s com mola leve no título palavra por palavra, parallax de 12px na imagem e barra de progresso no topo. Nada além disso." },
-  { nome: "ambiente", instrucao: "Fundo WebGL lento (shader com as cores da marca) atrás do hero, revelação discreta no resto. O fundo respira em 30-60s, nunca pisca." },
+  { nome: "contido", instrucao: "Duração 0,5s a 0,7s, curva cubic-bezier(.22,1,.36,1), deslocamento de 16px, escalonamento de 60ms entre blocos. Parallax máximo de 16px em um único elemento." },
+  { nome: "equilibrado", instrucao: "Duração 0,8s a 1s, curva cubic-bezier(.16,1,.3,1), deslocamento de 28px com leve escala (0,98 -> 1), escalonamento de 80ms. Pelo menos DOIS elementos ligados ao scroll com scroll() do motion, e o título entrando palavra por palavra." },
+  { nome: "cinematografico", instrucao: "Duração 1,1s a 1,4s, curva cubic-bezier(.16,1,.3,1), deslocamento de 40px com escala (0,94 -> 1). UMA seção presa (position: sticky) com reveal progressivo, e pelo menos TRÊS elementos com scrubbing via scroll(). O título pode começar grande e reduzir ao rolar." },
+  { nome: "ambiente", instrucao: "Fundo WebGL lento (shader com as cores da marca) atrás do hero — three, plano com shader próprio, sem postprocessing. O fundo respira em 30-60s. O resto da página usa movimento equilibrado." },
+];
+
+const EIXO_ASSINATURA: Opcao[] = [
+  { nome: "heroi-preso", instrucao: "O herói prende na tela (position: sticky, top: 0) e escala de 1 para 0,92 com o título reduzindo, enquanto o conteúdo sobe por cima. Receita: section { position: sticky; top: 0; height: 100vh } + scroll(animate('.hero-conteudo', { scale: [1, .92], opacity: [1, .2] }), { target: hero })" },
+  { nome: "texto-mascara", instrucao: "Título ou frase revelada por linha com clip-path animado por scroll. Receita: cada linha em um span com overflow hidden; scroll(animate(linha, { y: ['100%', '0%'] })) e no CSS span { display: block; overflow: hidden }" },
+  { nome: "galeria-horizontal", instrucao: "Uma faixa de 3 a 5 blocos que anda na horizontal enquanto a página rola na vertical. Receita: container externo com height alta; interno sticky; scroll(animate('.trilho', { x: ['0%', '-60%'] }), { target: externo })" },
+  { nome: "pilha-cartoes", instrucao: "Cartões que se empilham ao rolar: cada um com position: sticky e top crescente (0, 24px, 48px), levemente rotacionados (-1deg, 0, 1deg). Sem JS." },
+  { nome: "shader-scroll", instrucao: "Fundo WebGL cujo uniform é o progresso do scroll: o padrão se deforma conforme a página desce. Receita: three com plano fullscreen e shader que recebe uProgress via scroll()." },
+  { nome: "marquee-tipografico", instrucao: "Uma faixa de tipografia enorme (96-140px) atravessando a página devagar, em loop contínuo, com o nome do negócio repetido e separado por um símbolo. Só uma faixa na página." },
 ];
 
 const EIXO_DETALHE: Opcao[] = [
@@ -159,8 +169,8 @@ const EIXO_DENSIDADE: Opcao[] = [
   { nome: "editorial", instrucao: "Alterna blocos muito arejados (96px) com blocos densos de texto curto. O contraste de respiro é a composição." },
 ];
 
-const EIXOS = [EIXO_COMPOSICAO, EIXO_TIPOGRAFIA, EIXO_COR, EIXO_MOVIMENTO, EIXO_DETALHE, EIXO_PROVA, EIXO_SERVICOS, EIXO_DENSIDADE];
-const NOMES_EIXOS = ["Composição", "Tipografia", "Cor", "Movimento", "Detalhe autoral", "Prova social", "Formato dos serviços", "Densidade"];
+const EIXOS = [EIXO_COMPOSICAO, EIXO_TIPOGRAFIA, EIXO_COR, EIXO_MOVIMENTO, EIXO_ASSINATURA, EIXO_DETALHE, EIXO_PROVA, EIXO_SERVICOS, EIXO_DENSIDADE];
+const NOMES_EIXOS = ["Composição", "Tipografia", "Cor", "Movimento", "Movimento assinatura", "Detalhe autoral", "Prova social", "Formato dos serviços", "Densidade"];
 
 export interface DirecaoDeArte {
   nome: string;
@@ -171,6 +181,7 @@ export interface DirecaoDeArte {
 /** Parâmetros que valem para TODA página, independentes da direção. */
 export const PARAMETROS_DE_QUALIDADE = [
   "Linha de texto entre 60 e 72 caracteres: acima disso o olho perde a linha.",
+  "Título principal GRANDE: clamp(48px, 10vw, 132px), entrelinha 0,92, letter-spacing -0,03em, no máximo 8 palavras. Quebre as linhas onde a frase pede, não onde o navegador decidir.",
   "Escala tipográfica com razão de 1,25 entre níveis; no máximo 4 tamanhos visíveis.",
   "Contraste mínimo 4,5:1 no corpo e 3:1 em título grande. Nenhum texto em cinza translúcido.",
   "Uma cor de destaque por área visível: se o botão é de destaque, o título não é.",
@@ -263,7 +274,8 @@ REGRAS DURAS (violar invalida a entrega):
 1b. BIBLIOTECAS DISPONÍVEIS (já instaladas, empacotadas junto com a página, sem CDN):
    - motion: import { animate, scroll, inView, stagger, spring, transform } from "motion". Anima e amarra valor ao progresso da rolagem. scroll() liga um valor à rolagem; inView() dispara quando o elemento entra na tela; animate() aceita keyframes em array; stagger() escalona vários elementos.
    - three: import * as THREE from "three". WebGL de verdade: cena, câmera, malha, material, luz, shader, pós-processamento simples.
-   Use com critério: three custa cerca de 580 KB empacotado; motion, cerca de 70 KB. Página acima de 900 KB é reprovada. Se a ideia não precisa de 3D, resolva em CSS/SVG com motion.
+   Use com critério: three custa cerca de 580 KB empacotado; motion, cerca de 70 KB.
+   FUNDO ANIMADO NÃO PRECISA DE THREE: um canvas com WebGL puro e um fragment shader de 40 linhas faz aurora, mesh, metal e grão em menos de 6 KB. Use three somente quando houver malha 3D de verdade (objeto girando, cena com câmera). Página acima de 900 KB é reprovada; acima de 450 KB perde nota por peso.
 
 1c. O JavaScript precisa rodar SEM erro na primeira execução. Não invente função que não existe, não use API de React, não importe nada além das bibliotecas acima. Prefira motion a escrever animação na mão.
 
@@ -599,8 +611,11 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
             jsEmpacotado = empacotado.js;
             if (empacotado.bytes > 0) {
               correcoes.push(`bibliotecas empacotadas (${Math.round(empacotado.bytes / 1024)} KB)`);
+              // Peso é AVISO, não bloqueio: a direção "ambiente" usa three e três
+              // sozinho passa de 500 KB. Reprovar por isso travava toda página com
+              // shader e entregava a pior tentativa, sem nota.
               const avisoPeso = avisoDePeso(empacotado.bytes);
-              if (avisoPeso) errosDeBuild.push(avisoPeso);
+              if (avisoPeso) dicasEstaticasExtra.push(avisoPeso);
             }
           }
           html = montarPagina(lead, { markup: blocos.markup, css: blocos.css, js: "" }, "");
@@ -681,8 +696,16 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
           if (dicasMobile.length) console.log(`[previa-ia] polimento mobile: ${dicasMobile.join("; ")}`);
         }
 
+        const avisoMovimento = blocos ? conferirMovimento(html, blocos.js, direcaoDeArte(lead)) : null;
+        if (avisoMovimento) console.log(`[previa-ia] movimento fraco: ${avisoMovimento}`);
         const avisoVariedade = conferirVariedade(html, lead);
-        const dicas = [...dicasEstaticas, ...dicasEstaticasExtra, ...dicasMobile, ...(avisoVariedade ? [avisoVariedade] : [])];
+        const dicas = [
+          ...dicasEstaticas,
+          ...dicasEstaticasExtra,
+          ...dicasMobile,
+          ...(avisoVariedade ? [avisoVariedade] : []),
+          ...(avisoMovimento ? [avisoMovimento] : []),
+        ];
         if (avisoVariedade) console.log(`[previa-ia] variedade: ${avisoVariedade}`);
         const modeloUsado = (resposta as any).modelVersion || modelo;
 
@@ -783,6 +806,33 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
   return { ok: false, motivo: "nenhuma tentativa produziu uma página utilizável", erros: errosAnteriores };
 }
 
+
+
+/**
+ * "Premium" no texto e estático na prática é o pior dos mundos: a página promete
+ * cinematográfico e entrega fade de 0,3s. Aqui a gente confere se o movimento
+ * pedido pela direção realmente existe no CSS/JS entregue.
+ */
+function conferirMovimento(html: string, js: string, direcao: DirecaoDeArte): string | null {
+  const problema: string[] = [];
+  const assinatura = direcao.eixos.find((e) => e.eixo === "Movimento assinatura")?.opcao || "";
+  const intensidade = direcao.eixos.find((e) => e.eixo === "Movimento")?.opcao || "";
+
+  const usaScroll = /scroll\s*\(/.test(js);
+  const usaSticky = /position\s*:\s*sticky/i.test(html);
+  const usaThree = /from\s+["']three["']/.test(js);
+  const temMascara = /clip-path|clipPath|overflow\s*:\s*hidden/i.test(html + js);
+
+  if (assinatura === "heroi-preso" && !usaSticky) problema.push("a assinatura é herói preso e não há position: sticky");
+  if (assinatura === "texto-mascara" && !temMascara) problema.push("a assinatura é texto com máscara e não há overflow/clip-path");
+  if (assinatura === "galeria-horizontal" && !usaScroll) problema.push("a assinatura é galeria horizontal e o JS não usa scroll()");
+  if (assinatura === "pilha-cartoes" && !usaSticky) problema.push("a assinatura é pilha de cartões e não há position: sticky");
+  if (assinatura === "shader-scroll" && !usaThree) problema.push("a assinatura é shader ligado ao scroll e o JS não importa three");
+  if (intensidade === "cinematografico" && !usaScroll) problema.push("a direção pede movimento cinematográfico e nada está ligado ao scroll");
+
+  if (!problema.length) return null;
+  return `${problema.join("; ")}. Use scroll() do motion (ou sticky no CSS) para o movimento acompanhar a rolagem.`;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Variedade: a página não pode repetir a estrutura das anteriores    */
