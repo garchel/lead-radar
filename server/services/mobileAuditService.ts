@@ -552,14 +552,12 @@ export async function auditarPaginaMobile(
     // Portão de desempenho: página bonita que engasga no celular é pior que
     // página simples que rola liso. Abaixo de 40fps avisa; abaixo de 30 reprova.
     const referencia = medidas.find((m) => m.largura === 390) || medidas[0];
-    // FPS medido em renderização por software não representa celular: vira
-    // informação, não reprovação.
-    const software = medidas.some((m) => (m as any).software);
-    if (referencia?.fps !== undefined && !software) {
-      if (referencia.fps < 30) criticos.push(`${referencia.fps}fps na rolagem: a página engasga no celular`);
-      else if (referencia.fps < 45) avisos.push(`${referencia.fps}fps na rolagem (ideal acima de 50)`);
-    } else if (referencia?.fps !== undefined) {
-      avisos.push(`${referencia.fps}fps medidos em renderização por software (não considera GPU real)`);
+    // FPS NUNCA reprova. A auditoria roda em Chrome sem GPU (SwiftShader): numa
+    // página sem WebGL não há como detectar o renderizador por software, e o número
+    // sai pessimista — já reprovou página boa a 29fps. O dado vira dica e o número
+    // que vale é o medido em GPU real.
+    if (referencia?.fps !== undefined) {
+      avisos.push(`${referencia.fps}fps na rolagem em renderização por software (referência, não reprova)`);
     }
     if (referencia?.jsBytes && referencia.jsBytes > 14_000) {
       avisos.push(`${Math.round(referencia.jsBytes / 1024)} KB de JavaScript embutido (orçamento: 14 KB)`);
