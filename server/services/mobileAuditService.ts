@@ -403,6 +403,7 @@ async function medirEm(chrome: string, arquivoUrl: string, largura: number, port
     let perfDaPagina: { fps?: number; jsBytes?: number; externos?: number; software?: boolean } = {};
     let seq = 0;
     const pendentes = new Map<number, (m: any) => void>();
+    const errosJs: string[] = [];
     ws.onmessage = (ev: MessageEvent) => {
       const msg = JSON.parse(String(ev.data));
       if (msg.id && pendentes.has(msg.id)) {
@@ -472,6 +473,9 @@ async function medirEm(chrome: string, arquivoUrl: string, largura: number, port
       medida.avisos.push(
         `no fim da página a barra fixa cobre o conteúdo (${achados.slice(0, 2).join(" | ")}) — aumente o padding-bottom do body`,
       );
+    }
+    if (errosJs.length) {
+      medida.criticos.push(`erro de JavaScript na página: ${errosJs.slice(0, 2).join(" | ")}`);
     }
     if (perfDaPagina.fps !== undefined) medida.fps = perfDaPagina.fps;
     if (perfDaPagina.jsBytes !== undefined) medida.jsBytes = perfDaPagina.jsBytes;

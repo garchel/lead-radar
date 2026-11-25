@@ -6,6 +6,7 @@ import { repararPagina } from "./previewRepair";
 import { perfilCombinaComNegocio } from "./brandResearchService";
 import { julgarPaginaVisualmente, juizVisualAtivo, notaMinima } from "./previewVisionService";
 import { aprimorarPagina } from "./previewEnhance";
+import { avisoDePeso, empacotarJs, extrairBlocos, montarPagina } from "./previewBundleService";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -173,11 +174,28 @@ DIREÇÃO DE ARTE DESTA PÁGINA: ${direcao.nome.toUpperCase()}
 ${direcao.brief}
 
 REGRAS DURAS (violar invalida a entrega):
-1. Um único arquivo HTML completo, começando em <!doctype html>, com CSS embutido em <style>. JavaScript é permitido se servir à página, sempre embutido.
-2. Nenhuma imagem externa. Não use <img src="http..."> nem background-image com URL remota. Use SVG, gradientes, formas e tipografia para criar o visual.
+1. FORMATO DA ENTREGA: exatamente três blocos de código, nesta ordem, cada um com sua cerca:
+\`\`\`html
+(marcação do <body>: header, seções, footer, sem <html>, <head>, <style> ou <script>)
+\`\`\`
+\`\`\`css
+(o CSS inteiro)
+\`\`\`
+\`\`\`js
+(um módulo ES; pode importar bibliotecas)
+\`\`\`
 
-2b. NÃO escreva <script> nem <canvas>. O movimento da página (fundo animado, revelação ao rolar, microinteração) é injetado pelo sistema depois, com orçamento de bytes e respeito a quem pediu menos movimento. Você entrega HTML e CSS; a única coisa que precisa fazer é deixar o primeiro bloco limpo e profundo (espaço para o fundo respirar atrás do título).
-3. Fontes: no máximo duas, via Google Fonts (<link>), mais uma de sistema para o corpo se quiser.
+1b. BIBLIOTECAS DISPONÍVEIS (já instaladas, empacotadas junto com a página, sem CDN):
+   - motion: import { animate, scroll, inView, stagger, spring, transform } from "motion". Anima e amarra valor ao progresso da rolagem. scroll() liga um valor à rolagem; inView() dispara quando o elemento entra na tela; animate() aceita keyframes em array; stagger() escalona vários elementos.
+   - three: import * as THREE from "three". WebGL de verdade: cena, câmera, malha, material, luz, shader, pós-processamento simples.
+   Use com critério: three custa cerca de 580 KB empacotado; motion, cerca de 70 KB. Página acima de 900 KB é reprovada. Se a ideia não precisa de 3D, resolva em CSS/SVG com motion.
+
+1c. O JavaScript precisa rodar SEM erro na primeira execução. Não invente função que não existe, não use API de React, não importe nada além das bibliotecas acima. Prefira motion a escrever animação na mão.
+
+2. Nenhuma imagem externa. Não use <img src="http..."> nem background-image com URL remota. Arte é SVG, canvas/WebGL, gradiente, forma e tipografia.
+3. Fontes: no máximo duas, via Google Fonts (<link> permitido apenas para fonte), mais uma de sistema para o corpo se quiser.
+
+3b. O CONTEÚDO NUNCA DEPENDE DO JAVASCRIPT PARA EXISTIR. Nada de "opacity:0" no CSS esperando a animação revelar: se o JS falhar, o texto tem que estar visível. Anime SEMPRE a partir do estado visível (o JS esconde e revela em milissegundos, o CSS não esconde nada).
 4. Mobile-first de verdade: a página tem que ficar impecável em 360px de largura. Teste mentalmente cada bloco nessa largura.
 4b. Mas NÃO é uma página de celular: no computador ela ocupa a tela. O container é fluido e chega a 1120px em telas largas (nunca limite a menos de 900px) e, a partir de @media (min-width: 900px), a composição muda: hero em duas colunas, lista de serviços em grade, seções com largura total. Página com coluna estreita e sobra de espaço branco nas laterais é proibida.
 5. WhatsApp: EXATAMENTE DOIS acessos na página inteira, com o MESMO rótulo curto (ex: "Falar no WhatsApp") — um no hero e um no fim. Rótulos diferentes para a mesma ação passam impressão de página montada às pressas.
@@ -249,7 +267,7 @@ function promptDeUsuario(lead: StoredLead): string {
   return `DADOS REAIS DO NEGÓCIO (única fonte de verdade):
 ${JSON.stringify(fatos(lead), null, 2)}
 
-Escreva a página agora.`;
+Escreva a página agora, nos três blocos (html, css, js). Nada antes, nada depois.`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -474,7 +492,7 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
           config: {
             systemInstruction: promptDeSistema(lead),
             temperature: 0.9,
-            maxOutputTokens: 15000,
+            maxOutputTokens: 24000,
             reasoningEffort: "none",
             abortSignal: AbortSignal.timeout(timeoutMs),
           },
@@ -483,20 +501,63 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
         // Reparo determinístico ANTES de julgar: alvo de toque, fonte miúda,
         // transbordo e rodapé atrás da barra fixa têm conserto em CSS. Antes, cada
         // detalhe desses custava uma geração inteira e, na segunda, o template.
-        const bruto = limparCercas(resposta.text);
-        const reparo = repararPagina(bruto, errosAnteriores);
-        let html = reparo.html;
-        const correcoes = reparo.reparos.map((r) => `${r.problema} → ${r.correcao}`);
+        // O modelo entrega três blocos (marcação, CSS, JS). O JS pode importar
+        // `motion` e `three`: o esbuild resolve e empacota tudo num arquivo só,
+        // sem CDN e sem requisição externa.
+        const textoResposta = String(resposta.text || "");
+        const blocos = extrairBlocos(textoResposta);
+        const errosDeBuild: string[] = [];
+        const dicasEstaticasExtra: string[] = [];
+        const correcoes: string[] = [];
 
+        let html: string;
+        let jsEmpacotado = "";
+        if (blocos && blocos.markup) {
+          const empacotado = await empacotarJs(blocos.js);
+          if (!empacotado.ok) {
+            errosDeBuild.push(empacotado.erro || "o JavaScript não compila");
+          } else {
+            jsEmpacotado = empacotado.js;
+            if (empacotado.bytes > 0) {
+              correcoes.push(`bibliotecas empacotadas (${Math.round(empacotado.bytes / 1024)} KB)`);
+              const avisoPeso = avisoDePeso(empacotado.bytes);
+              if (avisoPeso) errosDeBuild.push(avisoPeso);
+            }
+          }
+          html = montarPagina(lead, { markup: blocos.markup, css: blocos.css, js: "" }, "");
+          if (!blocos.js.trim()) {
+            // Sem bloco JS a página sai estática: avisa o modelo na próxima
+            // tentativa em vez de aceitar calado.
+            console.warn("[previa-ia] resposta sem bloco js — página sai sem movimento");
+          }
+          console.log(
+            `[previa-ia] blocos: markup ${blocos.markup.length}b, css ${blocos.css.length}b, js ${blocos.js.length}b`,
+          );
+          if (!blocos.js.trim()) {
+            dicasEstaticasExtra.push("faltou o bloco js: entregue marcação, css e js separados, com movimento usando motion");
+          }
+        } else {
+          html = limparCercas(textoResposta);
+        }
 
-        // O portão vê só o que o MODELO escreveu: o kit de movimento entra depois,
-        // senão a própria animação (opacity:0 no CSS de revelação) reprovaria a
-        // página, e os números do script contaminariam contagem de nota e nome.
+        // O reparador mexe em CSS e marcação: roda antes de colar o bundle,
+        // senão ele "conserta" texto dentro do JavaScript minificado.
+        const reparo = repararPagina(html, errosAnteriores);
+        html = reparo.html;
+        correcoes.push(...reparo.reparos.map((r) => `${r.problema} → ${r.correcao}`));
+
+        // O portão vê a página ANTES do bundle: dentro do JavaScript minificado
+        // existem "NaN", "5.0" e "opacity:0" legítimos, e eles já reprovaram
+        // página boa (nota repetida 51 vezes era o bundle, não o conteúdo).
         const veredito = validarPagina(html, lead);
-        const criticos = [...veredito.criticos];
+        const criticos = [...veredito.criticos, ...errosDeBuild];
         const dicasEstaticas = [...veredito.avisos];
 
-        const fase = Number(process.env.PREVIEW_ENHANCE_PHASE ?? 3) as 1 | 2 | 3 | 0;
+        if (jsEmpacotado) {
+          html = html.replace(/<\/body>/i, `<script>${jsEmpacotado}</script>\n</body>`);
+        }
+
+        const fase = Number(process.env.PREVIEW_ENHANCE_PHASE ?? 0) as 1 | 2 | 3 | 0;
         if (!criticos.length && fase > 0 && !/fx-canvas/.test(html)) {
           const aprimorada = aprimorarPagina(html, { fase: fase as 1 | 2 | 3, cores: coresParaShader(lead) });
           if (aprimorada.features.length) {
@@ -541,7 +602,7 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
           if (dicasMobile.length) console.log(`[previa-ia] polimento mobile: ${dicasMobile.join("; ")}`);
         }
 
-        const dicas = [...dicasEstaticas, ...dicasMobile];
+        const dicas = [...dicasEstaticas, ...dicasEstaticasExtra, ...dicasMobile];
         const modeloUsado = (resposta as any).modelVersion || modelo;
 
         if (criticos.length) {
@@ -585,7 +646,7 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
             ok: true,
             pagina: {
               html,
-              conceito: conceitoDe(bruto) || "",
+              conceito: conceitoDe(html) || "",
               modelo: modeloUsado,
               tentativas: tentativa,
               avisos: [...avisos, ...dicas, ...correcoes],
