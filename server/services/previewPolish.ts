@@ -43,9 +43,20 @@ function jaTemDisplay(css: string): boolean {
 }
 
 const CSS = (fonte: string, peso: string) => `
-/* Herói não pode virar área morta: era a reclamação mais repetida em toda prévia.
-   Limita a altura do primeiro bloco em vez de deixar 100vh de vazio. */
-[data-fx-host] { min-height: min(64svh, 620px) !important; }
+/* Herói não pode virar área morta — é a reclamação mais repetida em toda prévia.
+   Causa: o modelo escreve min-height/height de 100vh e um padding-bottom enorme
+   (já vi 224px), então o conteúdo fica espremido no topo e sobra um buraco.
+   Aqui o herói passa a ter a ALTURA DO CONTEÚDO e respiro normalizado. */
+[data-fx-host] {
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+}
+[data-fx-host] > * { min-height: 0 !important; }
+[data-fx-host] > .fx-arte, [data-fx-host] > .fx-canvas {
+  position: absolute !important;
+  inset: 0;
+}
 
 /* Tipografia de display: dá voz ao título, que é 80% da impressão de qualidade. */
 h1, h2, .display {

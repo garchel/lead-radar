@@ -199,7 +199,12 @@ const medidorComLimites = (lim: LimitesDoPublico) => `(() => {
     if (alturaHeroi > window.innerHeight * 0.55) {
       const filhos = [...heroi.children].filter((e) => !/fx-arte|fx-canvas|fx-marca/.test(e.className || ''));
       const conteudo = filhos.reduce((soma, e) => soma + e.offsetHeight, 0);
-      const ocupacao = Math.round((conteudo / alturaHeroi) * 100);
+      // O respiro (padding) NÃO é vazio: desconta antes de medir, senão um herói
+      // saudável de 72px em cima e 88px embaixo é reprovado por "82% de ocupação".
+      const cs2 = getComputedStyle(heroi);
+      const respiro = (parseFloat(cs2.paddingTop) || 0) + (parseFloat(cs2.paddingBottom) || 0);
+      const util = Math.max(1, alturaHeroi - respiro);
+      const ocupacao = Math.round((conteudo / util) * 100);
       if (ocupacao < 55) {
         avisos.push('herói com ' + ocupacao + '% de ocupação em ' + alturaHeroi + 'px: sobrou vazio — centralize o conteúdo ou reduza a altura');
       }
