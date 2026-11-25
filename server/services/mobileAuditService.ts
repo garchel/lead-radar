@@ -391,10 +391,23 @@ const MEDIDOR_DESKTOP = `(() => {
     .filter((e) => e.getBoundingClientRect().height > 80);
   const larguras = candidatos.map((e) => Math.round(e.getBoundingClientRect().width));
   const conteudo = larguras.length ? Math.max(...larguras) : larg;
-  return JSON.stringify({ viewport: larg, conteudo, proporcao: Math.round((conteudo / larg) * 100) });
+  // Medidas de DESKTOP que faltavam: era aqui que a página parecia boa no print do
+  // celular e ruim no monitor do dono — título de 120px em cinco linhas e corpo de 15px.
+  const h1 = document.querySelector('h1');
+  let tituloLinhas = 0;
+  let tituloPx = 0;
+  if (h1) {
+    const cs = getComputedStyle(h1);
+    tituloPx = Math.round(parseFloat(cs.fontSize) || 0);
+    const lh = parseFloat(cs.lineHeight) || tituloPx * 1.1;
+    tituloLinhas = Math.round(h1.getBoundingClientRect().height / lh);
+  }
+  const paragrafos = [...document.querySelectorAll('p')].filter((e) => (e.textContent || '').trim().length > 40);
+  const corpoPx = paragrafos.length ? Math.min(...paragrafos.map((e) => Math.round(parseFloat(getComputedStyle(e).fontSize) || 0))) : 0;
+  return JSON.stringify({ viewport: larg, conteudo, proporcao: Math.round((conteudo / larg) * 100), tituloLinhas, tituloPx, corpoPx });
 })()`;
 
-async function medirDesktop(chrome: string, arquivoUrl: string, porta: number): Promise<{ viewport: number; conteudo: number; proporcao: number } | null> {
+async function medirDesktop(chrome: string, arquivoUrl: string, porta: number): Promise<{ viewport: number; conteudo: number; proporcao: number; tituloLinhas?: number; tituloPx?: number; corpoPx?: number } | null> {
   const perfil = fs.mkdtempSync(path.join(os.tmpdir(), "audit-desk-"));
   const proc = spawn(chrome, [
     "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
@@ -681,6 +694,12 @@ export async function auditarPaginaMobile(
 
     if (medidas.length) {
       const desktop = await medirDesktop(chrome, arquivoUrl, porta + 10);
+      if (desktop && desktop.tituloLinhas && desktop.tituloLinhas > 3) {
+        avisos.push(`título com ${desktop.tituloLinhas} linhas no desktop (${desktop.tituloPx}px): encurte a frase ou reduza o tamanho`);
+      }
+      if (desktop?.corpoPx && desktop.corpoPx < limites.corpo - 2) {
+        avisos.push(`corpo de texto em ${desktop.corpoPx}px no desktop: abaixo do perfil deste público (${limites.corpo}px)`);
+      }
       if (desktop && desktop.proporcao < 65) {
         avisos.push(
           `no computador (1280px) o conteúdo ocupa ${desktop.proporcao}% da largura (${desktop.conteudo}px) — parece página de celular`,

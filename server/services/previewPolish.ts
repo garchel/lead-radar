@@ -97,6 +97,15 @@ header a[href*="wa.me"], header a[href*="whatsapp"] {
   h1 { font-size: clamp(32px, 8.2vw, 40px) !important; line-height: 1.02 !important; }
 }
 
+/* DESKTOP: o modelo escalava o título com vw e chegava a 120px em 1440 — cinco
+   linhas de manchete com corpo de 15px embaixo. Era isso que fazia a página parecer
+   ruim na tela do computador. Aqui o título fica em 2 a 3 linhas e o corpo cresce. */
+@media (min-width: 900px) {
+  h1 { font-size: clamp(44px, 5.2vw, 78px) !important; line-height: 1.02 !important; }
+  p, li { font-size: max(17px, 1em); }
+  blockquote, blockquote p { font-size: max(20px, 1em); }
+}
+
 /* Botão refinado: sem sombra pesada, com fio interno e respiro real. */
 a[href*="wa.me"], a[href*="whatsapp"], .botao, .btn, button {
   letter-spacing: 0.01em;
