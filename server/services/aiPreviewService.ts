@@ -6,6 +6,7 @@ import { repararPagina } from "./previewRepair";
 import { perfilCombinaComNegocio } from "./brandResearchService";
 import { julgarPaginaVisualmente, juizVisualAtivo, notaMinima } from "./previewVisionService";
 import { aprimorarPagina } from "./previewEnhance";
+import { enfeitarPagina } from "./previewArt";
 import { avisoDePeso, empacotarJs, extrairBlocos, montarPagina } from "./previewBundleService";
 import fs from "node:fs";
 import os from "node:os";
@@ -298,7 +299,16 @@ REGRAS DURAS (violar invalida a entrega):
 11. NÃO REPITA informação: o nome do negócio aparece no máximo duas vezes na página inteira (cabeçalho e título); nota e número de avaliações aparecem UMA vez, num bloco só; a cidade aparece no máximo duas vezes.
 12. Concordância e português corretos ("avaliações" no plural quando o número é maior que 1). Nada de linha órfã com uma palavra sozinha no fim do parágrafo.
 13. A página precisa parecer feita para ESTE negócio: o texto fala da categoria e da cidade dele, a paleta vem da marca dele, e existe pelo menos UM elemento gráfico autoral em SVG (forma, recorte, marca d'água tipográfica) que não se repetiria em outra empresa.
-13b. NADA DE ILUSTRAÇÃO. Proibido desenhar casas, prédios, pessoas, plantas, sol, objetos ou qualquer cena figurativa — inclusive em SVG. Clip-art destrói a percepção de qualidade.
+13b. ARTE ABSTRATA É OBRIGATÓRIA; ILUSTRAÇÃO FIGURATIVA É PROIBIDA. Proibido desenhar
+   casas, prédios, pessoas, plantas, sol, objetos ou qualquer cena — inclusive em SVG,
+   porque clip-art destrói a percepção de qualidade. O que a página PRECISA ter: pelo
+   menos uma composição abstrata de verdade, em SVG ou CSS, feita com a paleta da marca —
+   malha de pontos (halftone), arcos concêntricos, faixas diagonais, grade tipográfica ou
+   gradiente em camadas. Ela ocupa uma área da dobra e dá o "assunto visual" que o texto
+   sozinho não dá. Página só com blocos de texto lê como rascunho.
+   A arte fica dentro de um contêiner com position: relative e overflow: hidden, com o
+   desenho em position: absolute; inset: 0. Nada de SVG com largura maior que 100%:
+   transbordo horizontal de 1px já reprova a página.
 
 13c. No lugar de ilustração, marque ONDE A FOTO VAI ENTRAR. Cada espaço de imagem é um bloco assim:
   <figure class="media-slot" data-slot="hero" aria-label="Espaço reservado para foto do projeto">
@@ -348,7 +358,8 @@ ANTÍTESE DO GENÉRICO (evite o visual de página feita por IA):
    em tudo lê como lista. Espaço entre título e texto: 20px. Entre texto e botão: 28px.
    Escada de espaçamento: 8, 16, 24, 32, 48, 72, 96, 120, 160. Nada de 13px ou 37px.
 
-10b. CORPO DE TEXTO: 16px no celular, 17-18px no desktop, entrelinha 1,6. Parágrafo de
+10b. CORPO DE TEXTO: 16px FIXO no celular (não use clamp nem vw no corpo — vw em tela
+   de 360px produz 13-14px), 17-18px no desktop, entrelinha 1,6. Parágrafo de
    16px com 12px é o que faz a página parecer amadora — nunca desça disso. Rótulo em
    caixa alta pode ter 12px; nada mais abaixo de 14px.
 
@@ -677,11 +688,19 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
         }
 
         const fase = Number(process.env.PREVIEW_ENHANCE_PHASE ?? 0) as 1 | 2 | 3 | 0;
-        if (!criticos.length && fase > 0 && !/fx-canvas/.test(html)) {
-          const aprimorada = aprimorarPagina(html, { fase: fase as 1 | 2 | 3, cores: coresParaShader(lead) });
-          if (aprimorada.features.length) {
-            html = aprimorada.html;
-            correcoes.push(`movimento → ${aprimorada.features.join(", ")}`);
+        if (!criticos.length) {
+          // A ARTE NÃO DEPENDE DA FASE: sem ela a prévia sai só com blocos e texto,
+          // que foi a reclamação do dono. PREVIEW_ENHANCE_PHASE=0 continua desligando
+          // só o kit de movimento.
+          const comArte = enfeitarPagina(html, { id: lead.id, name: lead.name }, coresParaShader(lead));
+          if (comArte.features.length) {
+            html = comArte.html;
+            correcoes.push(`arte → ${comArte.features.join(", ")}`);
+          }
+          if (fase > 0 && !/fx-canvas/.test(html)) {
+            const aprimorada = aprimorarPagina(html, { fase: fase as 1 | 2 | 3, cores: coresParaShader(lead) });
+            if (aprimorada.features.length > 0) html = aprimorada.html;
+            if (aprimorada.features.length) correcoes.push(`movimento → ${aprimorada.features.join(", ")}`);
           }
         }
 

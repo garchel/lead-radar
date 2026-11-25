@@ -180,6 +180,21 @@ const MEDIDOR = `(() => {
     }
   }
 
+  // HERÓI VAZIO: é a reclamação que mais se repete em toda prévia — bloco alto com
+  // conteúdo espremido no topo. Mede quanto da altura do herói o conteúdo ocupa.
+  const heroi = document.querySelector('section, header');
+  if (heroi) {
+    const alturaHeroi = heroi.offsetHeight;
+    if (alturaHeroi > window.innerHeight * 0.55) {
+      const filhos = [...heroi.children].filter((e) => !/fx-arte|fx-canvas|fx-marca/.test(e.className || ''));
+      const conteudo = filhos.reduce((soma, e) => soma + e.offsetHeight, 0);
+      const ocupacao = Math.round((conteudo / alturaHeroi) * 100);
+      if (ocupacao < 55) {
+        avisos.push('herói com ' + ocupacao + '% de ocupação em ' + alturaHeroi + 'px: sobrou vazio — centralize o conteúdo ou reduza a altura');
+      }
+    }
+  }
+
   // RITMO E FORMATO: se toda seção tem o mesmo respiro e o mesmo desenho
   // (título + parágrafo), a página vira uma lista e fica sem graça.
   const blocosSecao = [...document.querySelectorAll('section')].filter((e) => e.offsetHeight > 100);
