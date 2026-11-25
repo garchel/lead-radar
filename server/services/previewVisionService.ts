@@ -30,6 +30,7 @@ Critérios, todos com o mesmo peso:
 6. Acabamento: algo parece rascunho, provisório ou automático?
 7. Profundidade: existe camada (grão, forma desfocada, tipografia sobre cor), ou tudo está no mesmo plano chapado?
 8. Movimento com intenção: o que aparece no print sugere movimento ligado à rolagem (seção presa, elemento cortado na borda, faixa em marquise), ou a página parece estática?
+9. Especificidade do negócio: as seções e os títulos foram escolhidos para ESTE negócio, ou serviriam para qualquer um? Convênios, urgência, primeira sessão, tempo de cada corte, como chegar — o que aparece aqui existe porque este negócio precisa, ou é a sequência genérica (serviços, depoimentos, contato) que toda página gerada por IA tem? Página que sobrevive à troca do nome do negócio por outro de ramo diferente é genérica: nota no máximo 6.
 
 Desconte com força:
 - espaço reservado para imagem DOMINANDO a dobra (uma faixa fina e discreta dizendo

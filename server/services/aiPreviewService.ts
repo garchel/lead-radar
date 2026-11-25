@@ -287,7 +287,7 @@ REGRAS DURAS (violar invalida a entrega):
 4b. Mas NÃO é uma página de celular: no computador ela ocupa a tela. O container é fluido e chega a 1120px em telas largas (nunca limite a menos de 900px) e, a partir de @media (min-width: 900px), a composição muda: hero em duas colunas, lista de serviços em grade, seções com largura total. Página com coluna estreita e sobra de espaço branco nas laterais é proibida.
 5. WhatsApp: no MÍNIMO um acesso, no MÁXIMO dois, com o mesmo rótulo curto. Onde eles ficam depende da direção de arte: pode ser só no fim, um no hero e um no fechamento, ou uma barra discreta. Não existe posição obrigatória.
 
-5c. PROIBIDO O INVENTÁRIO PADRÃO. Toda página que você já viu de página gerada por IA tem a mesma sequência: hero com botão, três serviços em cartão, bloco de nota do Google, CTA final. Esta página não pode ser assim por reflexo. Os eixos de PROVA SOCIAL e FORMATO DOS SERVIÇOS dizem exatamente como esses dois blocos devem aparecer — siga o que está escrito, mesmo quando for "sem bloco de nota" ou "serviços em texto corrido".
+5c. PROIBIDO O INVENTÁRIO PADRÃO. A sequência hero → serviços → prova social → onde fica → CTA é o template que estamos abolindo. Se a sua página continuar funcionando depois de trocar o nome do negócio por outro de ramo diferente, ela é genérica e será rejeitada: as seções precisam ser as que ESTE negócio precisa, com os nomes que ESTE negócio usa.
 5b. Nada de botão flutuando em cima de ilustração ou de imagem: o botão fica no fluxo, com respiro antes e depois.
 6. No celular os botões ficam empilhados e com largura total; nunca lado a lado abaixo de 480px. Área de toque mínima de 44px de altura.
 7. Contraste AA em TODO texto, inclusive microtexto: se o fundo é escuro, o texto pequeno tem que ser claro de verdade (nada de cinza ou bege com opacidade baixa). Dá para conferir mentalmente: se parece apagado, está errado.
@@ -307,7 +307,7 @@ REGRAS DURAS (violar invalida a entrega):
   Regras do espaço reservado: proporção definida (16/9, 4/3 ou 3/4), canto suave, fundo levemente tingido com a cor da marca e, se houver texto, uma legenda curta em corpo 12px do tipo "Foto do espaço". PROIBIDO: ícone de imagem, borda tracejada, hachura diagonal, efeito de esqueleto de carregamento — tudo isso lê como página inacabada. A alternativa mais elegante é resolver a área só com cor e tipografia grande, sem moldura nenhuma.
 13d. Use 1 ou 2 espaços reservados, NUNCA como o primeiro bloco depois do título. O hero é tipográfico; o espaço de imagem entra depois de uma seção de conteúdo (serviços, prova social) ou antes do CTA final, e ocupa no máximo 40% da altura da tela.
 13c. Cor de destaque nunca em texto pequeno sobre fundo claro: use a cor da marca em fundo escuro ou em elementos grandes.
-14. Página enxuta: até 18 KB e no máximo 2.800px de altura no celular. Corte enfeite que não ajuda a ler nem a decidir: cada bloco precisa justificar o espaço que ocupa.
+14. Página enxuta, não rasa: até 40 KB e no máximo 6.000px de altura no celular. Corte enfeite que não ajuda a ler nem a decidir, mas NÃO corte seção que responde dúvida real do cliente.
 15. NADA de conteúdo escondido esperando JavaScript. Se usar animação, ela precisa partir de um estado visível (@keyframes com animation-fill-mode), nunca deixar elemento em opacity:0 — sem JS a página tem que aparecer inteira.
 16. Se numerar itens, a numeração começa em 01 e é sequencial.
 
@@ -336,7 +336,7 @@ ANTÍTESE DO GENÉRICO (evite o visual de página feita por IA):
    informação (o que acontece no atendimento, o diferencial, o tempo médio).
 
 9. ESCALA FIXA (não invente tamanhos soltos; use esta escada):
-   - título principal: clamp(30px, 7vw, 56px), entrelinha 1,05, espaçamento entre letras -0,02em
+   - título principal: clamp(44px, 9vw, 120px), entrelinha 0,94, espaçamento entre letras -0,03em (nunca abaixo de 40px no celular)
    - título de seção: clamp(22px, 4vw, 34px), entrelinha 1,15
    - subtítulo de apoio: 17px, entrelinha 1,5
    - corpo: 16px, entrelinha 1,6
@@ -349,17 +349,25 @@ ANTÍTESE DO GENÉRICO (evite o visual de página feita por IA):
 11. CONTRASTE: texto de corpo precisa de 4,5:1 com o fundo; título grande, 3:1. Se a
    paleta é clara, escureça o texto em vez de confiar em cinza médio sobre creme.
 
-ESTRUTURA MÍNIMA (pode reorganizar e nomear como quiser, mas o conteúdo precisa existir):
-hero com nome e uma frase concreta · serviços ou o que o negócio faz · prova social usando nota e número de avaliações reais · onde fica e como falar · chamada final para o WhatsApp.
+COMO ESCOLHER AS SEÇÕES (esta é a parte criativa — não existe gabarito):
+Você recebe o NICHO do negócio. Antes de escrever, responda para si mesmo: quem chega nessa página, o que essa pessoa precisa saber para confiar e chamar hoje? Que informação esse tipo de cliente SEMPRE procura e quase nunca encontra?
+Escolha de 4 a 7 seções e DÊ NOME A ELAS. Nenhuma seção é obrigatória. Se o negócio não vende item, não existe seção de serviços. Se o diferencial real é o tempo de espera, isso vira uma seção e os serviços não.
+Abaixo vêm HIPÓTESES para este nicho. Não é uma lista para cumprir: descarte as que não couberem e invente outras que eu não listei.
+Se a sua escolha de seções não tiver prova social, o eixo de PROVA SOCIAL não se aplica; se não tiver serviços, o eixo de FORMATO DOS SERVIÇOS não se aplica. Eixo descreve COMO um bloco aparece, nunca obriga o bloco a existir.
 
 SAÍDA: apenas o HTML, sem cercas de código, sem comentário antes ou depois, sem explicação.`;
 }
 
 function promptDeUsuario(lead: StoredLead): string {
+  const d = fatos(lead);
+  const ideias = repertorioDoNicho(d.nome, d.categoria);
   return `DADOS REAIS DO NEGÓCIO (única fonte de verdade):
-${JSON.stringify(fatos(lead), null, 2)}
+${JSON.stringify(d, null, 2)}
 
-Antes de escrever, decida a ordem dos blocos desta página. Ela não é a mesma das outras: se a prova social vier antes dos serviços, ou se não houver bloco de serviços separado, está certo — desde que siga os eixos.
+HIPÓTESES DE SEÇÃO PARA O NICHO "${d.categoria || "não informado"}" (descarte o que não couber, invente o que faltar — isto NÃO é uma lista para cumprir):
+${ideias.map((x) => `- ${x}`).join("\n")}
+
+Antes de escrever, decida sozinho as 4 a 7 seções desta página e por que cada uma serve a ESTE negócio. A ordem também é sua: se a informação mais decisiva vier antes dos serviços, está certo.
 
 Escreva a página agora, nos três blocos (html, css, js). Nada antes, nada depois.`;
 }
@@ -838,6 +846,45 @@ function conferirMovimento(html: string, js: string, direcao: DirecaoDeArte): st
 
   if (!problema.length) return null;
   return `${problema.join("; ")}. Use scroll() do motion (ou sticky no CSS) para o movimento acompanhar a rolagem.`;
+}
+
+
+/* ------------------------------------------------------------------ */
+/*  Repertório do nicho: hipóteses de seção, nunca gabarito            */
+/* ------------------------------------------------------------------ */
+
+const REPERTORIO: Array<{ chave: RegExp; ideias: string[] }> = [
+  { chave: /odonto|dent|sorris/i, ideias: ["convênios aceitos", "urgência e dor no mesmo dia", "como é a primeira avaliação e a radiografia", "implante explicado em etapas e tempo", "clareamento e quanto tempo dura", "aparelho ou alinhador: qual serve para cada caso", "quem atende e o CRO do responsável", "estacionamento e como chegar", "formas de pagamento e parcelamento", "medo de dentista: como o atendimento lida com isso"] },
+  { chave: /est[eé]tica|depila|pele|corporal/i, ideias: ["protocolos por objetivo (manchas, flacidez, gordura localizada)", "quantas sessões e com que intervalo", "cuidados antes e depois", "aparelhos e técnicas usados", "avaliação inicial", "resultados esperados em quanto tempo", "para quem o protocolo não é indicado"] },
+  { chave: /psic[oó]|terap|psicanalis/i, ideias: ["como é a primeira sessão", "sigilo e o que ele garante", "abordagem (TCC, psicanálise, sistêmica)", "frequência e duração das sessões", "atendimento online e presencial", "para quem costuma funcionar (ansiedade, luto, casais)", "formação e registro profissional"] },
+  { chave: /advog|jur[ií]dic|escrit[oó]rio de advocacia/i, ideias: ["áreas de atuação com exemplos concretos", "como funciona a primeira consulta", "documentos que o cliente deve levar", "como o processo é acompanhado e com que frequência há retorno", "sigilo profissional"] },
+  { chave: /barbearia|barbeiro|cabelo|sal[aã]o/i, ideias: ["tempo médio de cada serviço", "quem corta e o estilo de cada um", "como funciona a fila ou o agendamento", "produtos usados", "cuidado com barba e pele sensível"] },
+  { chave: /restaurante|lanchonete|pizzaria|caf[eé]|bar/i, ideias: ["o que a casa serve, por categoria", "delivery e retirada no local", "horário por dia da semana", "ambiente e capacidade", "reservas e eventos"] },
+  { chave: /academia|pilates|treino|personal/i, ideias: ["modalidades e horários", "aula experimental", "estrutura e equipamentos", "como é a avaliação inicial", "quem são os professores"] },
+  { chave: /pet|veterin|banho e tosa/i, ideias: ["serviços oferecidos", "como é o banho e tosa passo a passo", "vacinas e cuidados", "atendimento de urgência"] },
+  { chave: /[oó]tica|[oó]ptica|lentes|grau/i, ideias: ["exame de vista e quem faz", "convênios e reembolso", "lentes: tipos, espessura e prazo de montagem", "armações por formato de rosto", "ajuste, conserto e troca de plaqueta", "garantia do que é vendido", "óculos de sol com ou sem grau", "atendimento para criança"] },
+  { chave: /contabil|contador|contabilidade/i, ideias: ["para quem é (MEI, Simples, Lucro Presumido)", "o que está incluso na mensalidade sem falar valor", "como funciona a troca de contador", "prazos e obrigações do mês", "quem cuida da sua empresa"] },
+  { chave: /imobili|corretor|aluguel/i, ideias: ["como funciona a visita e a proposta", "documentos para alugar ou financiar", "taxas e o que o inquilino paga", "bairros que atende", "avaliação de imóvel"] },
+  { chave: /escola|curso|educa|idiomas/i, ideias: ["como é a primeira aula", "metodologia em uma frase concreta", "turmas e horários", "material incluso", "quem são os professores"] },
+  { chave: /hotel|pousada|turismo|passeio/i, ideias: ["acomodações por tipo", "o que está incluso na diária", "como chegar e estacionar", "política de cancelamento", "o que fazer na região"] },
+  { chave: /m[eé]dic|cl[ií]nica geral|cardiolog|dermatolog|pediatr/i, ideias: ["convênios atendidos", "como marcar e tempo de espera", "o que levar na consulta", "exames que faz no local", "quem é o responsável técnico e o CRM"] },
+  { chave: /arquitet|engenh|c[oó]nstrut/i, ideias: ["que tipo de projeto faz e para quem", "etapas do projeto e prazos típicos", "o que está incluso no escopo", "obras ou projetos já entregues (sem foto)", "como começa a conversa"] },
+];
+
+const REPERTORIO_GENERICO = [
+  "qual problema o cliente resolve ali e em quanto tempo",
+  "como é o atendimento passo a passo, do primeiro contato à entrega",
+  "o que o cliente precisa levar ou saber na primeira visita",
+  "horário de funcionamento e como chegar",
+  "quem atende e qual a formação dessa pessoa",
+  "o que costuma dar errado quando o cliente procura outro lugar",
+  "perguntas que todo cliente faz antes de fechar",
+];
+
+export function repertorioDoNicho(nome: string, categoria?: string): string[] {
+  const alvo = `${nome || ""} ${categoria || ""}`;
+  const achado = REPERTORIO.find((r) => r.chave.test(alvo));
+  return achado ? achado.ideias : REPERTORIO_GENERICO;
 }
 
 /* ------------------------------------------------------------------ */
