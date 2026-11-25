@@ -164,8 +164,8 @@ const EIXO_SERVICOS: Opcao[] = [
 ];
 
 const EIXO_DENSIDADE: Opcao[] = [
-  { nome: "arejada", instrucao: "72px entre seções no desktop, 56px no celular, e no máximo 3 blocos de conteúdo por tela de celular." },
-  { nome: "compacta", instrucao: "48px entre seções no desktop, 40px no celular, com fios separando tudo. Informação densa e escaneável, sem parecer apertada." },
+  { nome: "arejada", instrucao: "128px entre seções no desktop e 96px no celular, com no máximo 3 blocos de conteúdo por tela de celular. É o padrão de página com cara de revista." },
+  { nome: "compacta", instrucao: "88px entre seções no desktop e 72px no celular, com fios finos separando. Densa e escaneável, nunca apertada." },
   { nome: "editorial", instrucao: "Alterna blocos muito arejados (96px) com blocos densos de texto curto. O contraste de respiro é a composição." },
 ];
 
@@ -342,10 +342,24 @@ ANTÍTESE DO GENÉRICO (evite o visual de página feita por IA):
    - corpo: 16px, entrelinha 1,6
    - rótulo caixa-alta: 12px, letter-spacing 0,12em, peso 600
    - Nada abaixo de 13px. Nada de 6 tamanhos diferentes de título.
-10. RITMO VERTICAL: seções com padding de 56px em cima e embaixo no celular (72px no
-   desktop). Espaço entre título e texto: 16px. Entre texto e botão: 24px. Os
-   intervalos vêm da mesma escada — 8, 16, 24, 32, 48, 56, 72 —, não de valores
-   aleatórios como 13px ou 37px.
+10. RITMO VERTICAL — é aqui que a página ganha ou perde graça: seções com 88px a 120px
+   de padding em cima e embaixo no celular (128px a 160px no desktop). VARIE: uma seção
+   arejada (120px), a seguinte mais compacta (72px), e assim por diante — respiro igual
+   em tudo lê como lista. Espaço entre título e texto: 20px. Entre texto e botão: 28px.
+   Escada de espaçamento: 8, 16, 24, 32, 48, 72, 96, 120, 160. Nada de 13px ou 37px.
+
+10b. CORPO DE TEXTO: 16px no celular, 17-18px no desktop, entrelinha 1,6. Parágrafo de
+   16px com 12px é o que faz a página parecer amadora — nunca desça disso. Rótulo em
+   caixa alta pode ter 12px; nada mais abaixo de 14px.
+
+10c. TÍTULOS DE SEÇÃO: 26px a 34px no celular (clamp(26px, 6vw, 40px)). Não use o mesmo
+   tamanho em todas: a seção mais importante tem o maior título da página depois do h1.
+
+10d. FORMATO DAS SEÇÕES: duas seções seguidas não podem ter o mesmo desenho. Varie entre
+   estes cinco: (a) banda de cor cheia com texto claro; (b) duas colunas assimétricas
+   (título pequeno à esquerda, texto à direita); (c) lista com números grandes; (d) frase
+   em corpo 28-36px ocupando a largura toda; (e) bloco com figura/símbolo ao lado. Uma
+   página com cinco seções do tipo "título + parágrafo" é uma lista, não uma página.
 11. CONTRASTE: texto de corpo precisa de 4,5:1 com o fundo; título grande, 3:1. Se a
    paleta é clara, escureça o texto em vez de confiar em cinza médio sobre creme.
 

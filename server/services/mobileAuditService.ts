@@ -148,6 +148,63 @@ const MEDIDOR = `(() => {
     criticos.push(ilegiveis.length + ' bloco(s) de texto com fonte abaixo de 9px');
   }
 
+  // CORPO DE TEXTO: 12px é o que faz a página parecer barata. Um parágrafo
+  // legível no celular tem 16-17px. Isto reprova, porque é o defeito que mais
+  // aparece nas gerações e o que o dono percebe primeiro.
+  const paragrafos = [...document.querySelectorAll('p')].filter((e) => (e.textContent || '').trim().length > 40);
+  if (paragrafos.length) {
+    const menor = Math.min(...paragrafos.map((e) => parseFloat(getComputedStyle(e).fontSize) || 16));
+    if (menor < 15) {
+      criticos.push('corpo de texto em ' + menor + 'px: no celular o mínimo é 15px e o confortável é 16-17px');
+    }
+    const entrelinhas = paragrafos
+      .map((e) => { const c = getComputedStyle(e); const f = parseFloat(c.fontSize); const l = parseFloat(c.lineHeight); return f ? l / f : NaN; })
+      .filter((n) => !isNaN(n) && n > 0);
+    if (entrelinhas.length) {
+      const menorEntrelinha = Math.min(...entrelinhas);
+      if (menorEntrelinha < 1.45) {
+        avisos.push('entrelinha de ' + menorEntrelinha.toFixed(2) + ': abaixo de 1,5 o texto fica apertado');
+      }
+    }
+  }
+
+  // TÍTULOS DE SEÇÃO: todos no mesmo tamanho = página chapada, sem hierarquia.
+  const titulosSecao = [...document.querySelectorAll('h2')]
+    .map((e) => parseFloat(getComputedStyle(e).fontSize) || 0)
+    .filter((n) => n > 0);
+  if (titulosSecao.length >= 3) {
+    const menorTitulo = Math.min(...titulosSecao);
+    if (menorTitulo < 24) avisos.push('título de seção em ' + menorTitulo + 'px: abaixo de 24px não há contraste com o corpo');
+    if (new Set(titulosSecao.map((n) => Math.round(n))).size === 1) {
+      avisos.push('todos os ' + titulosSecao.length + ' títulos de seção no mesmo tamanho (' + Math.round(menorTitulo) + 'px): crie hierarquia');
+    }
+  }
+
+  // RITMO E FORMATO: se toda seção tem o mesmo respiro e o mesmo desenho
+  // (título + parágrafo), a página vira uma lista e fica sem graça.
+  const blocosSecao = [...document.querySelectorAll('section')].filter((e) => e.offsetHeight > 100);
+  if (blocosSecao.length >= 3) {
+    const respiros = blocosSecao.map((e) => Math.round(parseFloat(getComputedStyle(e).paddingTop) || 0));
+    if (new Set(respiros).size === 1 && respiros[0] < 80) {
+      avisos.push('as ' + blocosSecao.length + ' seções têm o mesmo respiro de ' + respiros[0] + 'px: varie entre 72px e 128px');
+    }
+    const formatos = new Set(blocosSecao.map((s) => {
+      const marcas = [];
+      if (s.querySelectorAll('li').length >= 3) marcas.push('lista');
+      if (s.querySelector('blockquote')) marcas.push('citacao');
+      if (s.querySelector('figure, img, svg')) marcas.push('figura');
+      const bg = getComputedStyle(s).backgroundColor;
+      marcas.push(bg && bg !== 'rgba(0, 0, 0, 0)' ? 'banda' : 'plana');
+      const primeiro = s.firstElementChild;
+      const disp = (getComputedStyle(s).display || '') + (primeiro ? getComputedStyle(primeiro).display : '');
+      if (/grid|flex/.test(disp)) marcas.push('colunas');
+      return marcas.join('+');
+    }));
+    if (formatos.size < 3 && blocosSecao.length >= 4) {
+      avisos.push('só ' + formatos.size + ' formato(s) de seção na página inteira: alterne banda de cor cheia, lista, citação, figura e duas colunas');
+    }
+  }
+
   // Espaço reservado ocupando meia tela logo no topo deixa a página com cara de
   // wireframe vazio. É dica (não reprova), mas entra no retorno para o gerador.
   const slot = document.querySelector('[data-slot]');
