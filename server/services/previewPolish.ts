@@ -65,6 +65,9 @@ const CSS = (fonte: string, peso: string) => `
 /* O modelo quebra o título em um <span> por palavra (display:block), e isso força
    "no Santos / Dumont." com a última palavra órfã. Em título, span é inline. */
 h1 span { display: inline !important; }
+/* O modelo aplica text-transform em cada palavra e "BarbeaRia" aparece com R maiúsculo
+   no meio. Em título, o texto é como o cliente escreveu. */
+h1 span, h1 em, h1 strong { text-transform: none !important; }
 h1 br { display: none !important; }
 [data-fx-host] > .fx-arte, [data-fx-host] > .fx-canvas {
   position: absolute !important;
@@ -145,7 +148,7 @@ a[href*="wa.me"]:active, .botao:active, .btn:active, button:active { transform: 
  */
 export function refinarPagina(
   html: string,
-  lead: { id?: string; name?: string },
+  lead: { id?: string; name?: string; city?: string },
 ): { html: string; features: string[] } {
   if (/data-acabamento="1"/.test(html)) return { html, features: [] };
   if (jaTemDisplay(html)) return { html, features: [] };
@@ -155,6 +158,18 @@ export function refinarPagina(
   const estilo = `<style data-acabamento="1">${CSS(fonte.nome, fonte.peso)}</style>`;
 
   let saida = html;
+
+  // Cidade no título não quebra entre linhas: "Três / Lagoas" parece erro de digitação.
+  const cidade = String(lead.city || "").trim();
+  if (cidade.length > 3) {
+    const junto = cidade.replace(/\s+/g, "&nbsp;");
+    const reTitulo = /(<h1[^>]*>)([\s\S]*?)(<\/h1>)/i;
+    const m = saida.match(reTitulo);
+    if (m && m[2].toLowerCase().includes(cidade.toLowerCase())) {
+      const titulo = m[2].replace(new RegExp(cidade.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), junto);
+      saida = saida.replace(reTitulo, `${m[1]}${titulo}${m[3]}`);
+    }
+  }
   if (/<\/head>/i.test(saida)) saida = saida.replace(/<\/head>/i, link + "</head>");
   else if (/<body[^>]*>/i.test(saida)) saida = saida.replace(/(<body[^>]*>)/i, `$1${link}`);
   saida = /<\/body>/i.test(saida)

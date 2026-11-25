@@ -236,7 +236,8 @@ function fatos(lead: StoredLead) {
     bairro: (lead as any).neighborhood || "",
     endereco: lead.address || "",
     nota: lead.rating ?? null,
-    avaliacoes: lead.reviewsCount ?? null,
+    // Número de avaliações no padrão brasileiro: "1274" na página lê como erro.
+    avaliacoes: lead.reviewsCount != null ? Number(lead.reviewsCount).toLocaleString("pt-BR") : null,
     // Número de outro DDD numa página local passa impressão de template.
     telefone: telefoneCombinaComEstado(lead.phone || "", lead.state) ? lead.phone || "" : "",
     whatsapp: whatsappLink((lead as any).dmPhone || lead.phone) || "",
@@ -720,7 +721,7 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
             correcoes.push(`arte → ${comArte.features.join(", ")}`);
           }
           // Acabamento por último: fonte de display, botão, cartão e quebra de texto.
-          const refinada = refinarPagina(html, { id: lead.id, name: lead.name });
+          const refinada = refinarPagina(html, { id: lead.id, name: lead.name, city: lead.city });
           if (refinada.features.length) {
             html = refinada.html;
             correcoes.push(`acabamento → ${refinada.features.join(", ")}`);
