@@ -334,7 +334,11 @@ const MEDIDOR_PERF = `(async () => {
   const duracao = (performance.now() - inicio) / 1000;
   window.scrollTo(0, 0);
   const jsBytes = [...document.scripts].reduce((soma, s) => soma + (s.src ? 0 : (s.textContent || "").length), 0);
-  const externos = [...document.querySelectorAll("script[src], link[rel=stylesheet], img[src^='http']")].length;
+  // Fonte do Google não conta: o prompt permite e a página não deixa de funcionar
+  // sem ela (sempre há fallback de sistema). O que reprova é script/imagem externa.
+  const externos = [...document.querySelectorAll("script[src], link[rel=stylesheet], img[src^='http']")]
+    .filter((e) => !/fonts\.(googleapis|gstatic)\.com/.test(String(e.getAttribute("href") || e.getAttribute("src") || "")))
+    .length;
   return JSON.stringify({ fps: Math.round(frames / duracao), duracao, jsBytes, externos });
 })()`;
 

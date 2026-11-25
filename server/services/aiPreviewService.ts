@@ -7,6 +7,7 @@ import { perfilCombinaComNegocio } from "./brandResearchService";
 import { julgarPaginaVisualmente, juizVisualAtivo, notaMinima } from "./previewVisionService";
 import { aprimorarPagina } from "./previewEnhance";
 import { enfeitarPagina } from "./previewArt";
+import { refinarPagina } from "./previewPolish";
 import { avisoDePeso, empacotarJs, extrairBlocos, montarPagina } from "./previewBundleService";
 import fs from "node:fs";
 import os from "node:os";
@@ -696,6 +697,12 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
           if (comArte.features.length) {
             html = comArte.html;
             correcoes.push(`arte → ${comArte.features.join(", ")}`);
+          }
+          // Acabamento por último: fonte de display, botão, cartão e quebra de texto.
+          const refinada = refinarPagina(html, { id: lead.id, name: lead.name });
+          if (refinada.features.length) {
+            html = refinada.html;
+            correcoes.push(`acabamento → ${refinada.features.join(", ")}`);
           }
           if (fase > 0 && !/fx-canvas/.test(html)) {
             const aprimorada = aprimorarPagina(html, { fase: fase as 1 | 2 | 3, cores: coresParaShader(lead) });

@@ -59,7 +59,15 @@ describe("reparo da página gerada", () => {
   it("marca o slot quando a página já trouxe uma figura de mídia", () => {
     const comFigura = base.replace("</body>", '<figure class="media-slot"><span>foto</span></figure></body>');
     const r = repararPagina(comFigura, []);
-    expect(r.html).toContain('data-slot="hero"');
+    expect(r.html).toContain('data-slot="meio"');
+  });
+
+  it("não cria uma segunda moldura quando a página já tem uma", () => {
+    // Reprovação real: o reparador inseria outro bloco e a página ficava com dois
+    // retângulos cinzas — o dono via "esqueleto inacabado" no meio do conteúdo.
+    const comFigura = base.replace("</body>", '<figure class="media-slot"><span>foto</span></figure></body>');
+    const r = repararPagina(comFigura, []);
+    expect((r.html.match(/media-slot/g) || []).length).toBe(1);
   });
 
   it("some com opacity:0 fora de keyframes e preserva a animação", () => {

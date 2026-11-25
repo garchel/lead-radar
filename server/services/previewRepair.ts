@@ -93,29 +93,13 @@ export function repararPagina(html: string, problemas: string[] = []): Resultado
     saida = semOpacidade;
   }
 
-  // 2) slot de imagem obrigatório
-  // Só insere moldura quando a própria página pediu uma (tem <figure> de mídia sem
-  // data-slot). Página sem foto não ganha retângulo vazio.
+  // 2) moldura de mídia: se a página já desenhou uma <figure> de mídia sem
+  // data-slot, só MARCA essa figura. Antes o reparador inseria OUTRO bloco de
+  // imagem — a página ficava com dois retângulos cinzas e o dono via "esqueleto
+  // inacabado" no meio do conteúdo.
   if (/<figure[^>]*class=["'][^"']*media-slot/i.test(saida) && !/data-slot=["'][^"']+["']/i.test(saida)) {
-    // Onde encaixar: depois da primeira seção; se a página não usa <section>,
-    // depois do <h1>; e, na falta dos dois, logo na abertura do <body>.
-    const marcas = ["</section>", "</header>", "</main>", "</h1>"];
-    let corte = -1;
-    for (const marca of marcas) {
-      const pos = saida.indexOf(marca);
-      if (pos > 0) {
-        corte = pos + marca.length;
-        break;
-      }
-    }
-    if (corte < 0) {
-      const corpo = saida.match(/<body[^>]*>/i);
-      if (corpo?.index !== undefined) corte = corpo.index + corpo[0].length;
-    }
-    if (corte > 0) {
-      saida = saida.slice(0, corte) + "\n" + slotPadrao() + "\n" + saida.slice(corte);
-      reparos.push({ problema: "sem espaço reservado para imagem", correcao: "bloco de imagem inserido no início do conteúdo" });
-    }
+    saida = saida.replace(/(<figure[^>]*class=["'][^"']*media-slot[^>]*)(>)/i, '$1 data-slot="meio"$2');
+    reparos.push({ problema: "moldura de mídia sem identificação", correcao: "marcada com data-slot (sem bloco extra)" });
   }
 
   // 3) CSS de segurança: transbordo, toque, texto miúdo, rodapé atrás da barra fixa
