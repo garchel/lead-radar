@@ -1,6 +1,6 @@
 import type { StoredLead } from "../store/types";
 import { chaveDeepSeek, getAiClient, modelosDeepSeek } from "./aiClient";
-import { buildPreviewHtml, whatsappLink, writePreviewFiles, type PreviewResult } from "./previewService";
+import { previewsDir, whatsappLink, writePreviewFiles, type PreviewResult } from "./previewService";
 import { auditarPaginaMobile, auditoriaDisponivel, type MedidaViewport } from "./mobileAuditService";
 import { repararPagina } from "./previewRepair";
 import { perfilCombinaComNegocio } from "./brandResearchService";
@@ -137,14 +137,30 @@ const EIXO_DETALHE: Opcao[] = [
   { nome: "marca-dagua", instrucao: "O nome do negócio em tipografia enorme (clamp 80-160px) como marca d'água de baixo contraste atrás de um bloco, cortada pelas bordas. Só um ponto da página." },
 ];
 
+const EIXO_PROVA: Opcao[] = [
+  { nome: "numero-grande", instrucao: "A nota aparece uma única vez, como número grande (48-64px) com a contagem embaixo em corpo 13px. Sem estrelas desenhadas, sem cartão em volta." },
+  { nome: "citacao", instrucao: "Nada de bloco de nota: a avaliação entra dentro de uma frase do texto corrido (\"nota 4,9 em 235 avaliações no Google\") e o peso visual vai para uma citação de cliente com nome, entre aspas." },
+  { nome: "selo-discreto", instrucao: "A nota vira um selo pequeno no rodapé ou junto do endereço, em corpo 12px. A página inteira NÃO ganha faixa, cartão nem bloco de avaliação." },
+  { nome: "faixa-estreita", instrucao: "Uma faixa de 64px de altura com a nota, a contagem e o link para o perfil do Google, alinhados em uma linha só. Nada mais na faixa." },
+  { nome: "sem-prova", instrucao: "Esta página não mostra nota nem contagem de avaliações. A confiança vem do texto, do endereço e da clareza do atendimento." },
+];
+
+const EIXO_SERVICOS: Opcao[] = [
+  { nome: "lista-fio", instrucao: "Serviços em lista vertical com fio de 1px entre itens e nome à esquerda, descrição curta à direita. Sem numeração, sem cartão." },
+  { nome: "grade", instrucao: "Serviços em grade de 2 colunas no desktop e 1 no celular, cada um com título curto e uma linha de descrição. Sem bordas, só respiro." },
+  { nome: "acordeao", instrucao: "Serviços em acordeão (details/summary nativo): título sempre visível, descrição abre no toque. Funciona sem JavaScript." },
+  { nome: "editorial", instrucao: "Serviços como texto editorial: um parágrafo curto por serviço, com o nome em destaque dentro da própria frase. Sem lista, sem grade." },
+  { nome: "tabela", instrucao: "Serviços em tabela de duas colunas (serviço | o que envolve), com fios horizontais e sem zebra. Sem preço." },
+];
+
 const EIXO_DENSIDADE: Opcao[] = [
   { nome: "arejada", instrucao: "72px entre seções no desktop, 56px no celular, e no máximo 3 blocos de conteúdo por tela de celular." },
   { nome: "compacta", instrucao: "48px entre seções no desktop, 40px no celular, com fios separando tudo. Informação densa e escaneável, sem parecer apertada." },
   { nome: "editorial", instrucao: "Alterna blocos muito arejados (96px) com blocos densos de texto curto. O contraste de respiro é a composição." },
 ];
 
-const EIXOS = [EIXO_COMPOSICAO, EIXO_TIPOGRAFIA, EIXO_COR, EIXO_MOVIMENTO, EIXO_DETALHE, EIXO_DENSIDADE];
-const NOMES_EIXOS = ["Composição", "Tipografia", "Cor", "Movimento", "Detalhe autoral", "Densidade"];
+const EIXOS = [EIXO_COMPOSICAO, EIXO_TIPOGRAFIA, EIXO_COR, EIXO_MOVIMENTO, EIXO_DETALHE, EIXO_PROVA, EIXO_SERVICOS, EIXO_DENSIDADE];
+const NOMES_EIXOS = ["Composição", "Tipografia", "Cor", "Movimento", "Detalhe autoral", "Prova social", "Formato dos serviços", "Densidade"];
 
 export interface DirecaoDeArte {
   nome: string;
@@ -257,7 +273,9 @@ REGRAS DURAS (violar invalida a entrega):
 3b. O CONTEÚDO NUNCA DEPENDE DO JAVASCRIPT PARA EXISTIR. Nada de "opacity:0" no CSS esperando a animação revelar: se o JS falhar, o texto tem que estar visível. Anime SEMPRE a partir do estado visível (o JS esconde e revela em milissegundos, o CSS não esconde nada).
 4. Mobile-first de verdade: a página tem que ficar impecável em 360px de largura. Teste mentalmente cada bloco nessa largura.
 4b. Mas NÃO é uma página de celular: no computador ela ocupa a tela. O container é fluido e chega a 1120px em telas largas (nunca limite a menos de 900px) e, a partir de @media (min-width: 900px), a composição muda: hero em duas colunas, lista de serviços em grade, seções com largura total. Página com coluna estreita e sobra de espaço branco nas laterais é proibida.
-5. WhatsApp: EXATAMENTE DOIS acessos na página inteira, com o MESMO rótulo curto (ex: "Falar no WhatsApp") — um no hero e um no fim. Rótulos diferentes para a mesma ação passam impressão de página montada às pressas.
+5. WhatsApp: no MÍNIMO um acesso, no MÁXIMO dois, com o mesmo rótulo curto. Onde eles ficam depende da direção de arte: pode ser só no fim, um no hero e um no fechamento, ou uma barra discreta. Não existe posição obrigatória.
+
+5c. PROIBIDO O INVENTÁRIO PADRÃO. Toda página que você já viu de página gerada por IA tem a mesma sequência: hero com botão, três serviços em cartão, bloco de nota do Google, CTA final. Esta página não pode ser assim por reflexo. Os eixos de PROVA SOCIAL e FORMATO DOS SERVIÇOS dizem exatamente como esses dois blocos devem aparecer — siga o que está escrito, mesmo quando for "sem bloco de nota" ou "serviços em texto corrido".
 5b. Nada de botão flutuando em cima de ilustração ou de imagem: o botão fica no fluxo, com respiro antes e depois.
 6. No celular os botões ficam empilhados e com largura total; nunca lado a lado abaixo de 480px. Área de toque mínima de 44px de altura.
 7. Contraste AA em TODO texto, inclusive microtexto: se o fundo é escuro, o texto pequeno tem que ser claro de verdade (nada de cinza ou bege com opacidade baixa). Dá para conferir mentalmente: se parece apagado, está errado.
@@ -325,6 +343,8 @@ SAÍDA: apenas o HTML, sem cercas de código, sem comentário antes ou depois, s
 function promptDeUsuario(lead: StoredLead): string {
   return `DADOS REAIS DO NEGÓCIO (única fonte de verdade):
 ${JSON.stringify(fatos(lead), null, 2)}
+
+Antes de escrever, decida a ordem dos blocos desta página. Ela não é a mesma das outras: se a prova social vier antes dos serviços, ou se não houver bloco de serviços separado, está certo — desde que siga os eixos.
 
 Escreva a página agora, nos três blocos (html, css, js). Nada antes, nada depois.`;
 }
@@ -661,7 +681,9 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
           if (dicasMobile.length) console.log(`[previa-ia] polimento mobile: ${dicasMobile.join("; ")}`);
         }
 
-        const dicas = [...dicasEstaticas, ...dicasEstaticasExtra, ...dicasMobile];
+        const avisoVariedade = conferirVariedade(html, lead);
+        const dicas = [...dicasEstaticas, ...dicasEstaticasExtra, ...dicasMobile, ...(avisoVariedade ? [avisoVariedade] : [])];
+        if (avisoVariedade) console.log(`[previa-ia] variedade: ${avisoVariedade}`);
         const modeloUsado = (resposta as any).modelVersion || modelo;
 
         if (criticos.length) {
@@ -759,6 +781,81 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
   }
 
   return { ok: false, motivo: "nenhuma tentativa produziu uma página utilizável", erros: errosAnteriores };
+}
+
+
+/* ------------------------------------------------------------------ */
+/*  Variedade: a página não pode repetir a estrutura das anteriores    */
+/* ------------------------------------------------------------------ */
+
+interface Assinatura {
+  titulos: string[];
+  provaEmBloco: number;
+  listaNumerada: number;
+  cartao: number;
+}
+
+function limparTexto(valor: string): string {
+  return String(valor || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+/** Impressão digital da ESTRUTURA (não do estilo): o que a página tem e em que ordem. */
+export function assinaturaEstrutural(html: string): Assinatura {
+  const titulos = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)]
+    .map((m) => limparTexto(m[1]).slice(0, 40))
+    .filter(Boolean)
+    .slice(0, 8);
+  const provaEmBloco = /nota no google|avalia[cç][õo]es no google|\bgoogle\b/i.test(html) ? 1 : 0;
+  const listaNumerada = /(^|[\s>])0[1-9]([\s<.:—–-])/.test(html) ? 1 : 0;
+  const cartao = /class="[^"]*(card|cartao|cartão)/i.test(html) ? 1 : 0;
+  return { titulos, provaEmBloco, listaNumerada, cartao };
+}
+
+export function similaridadeEstrutural(a: Assinatura, b: Assinatura): number {
+  const A = new Set(a.titulos);
+  const B = new Set(b.titulos);
+  const inter = [...A].filter((x) => B.has(x)).length;
+  const uniao = new Set([...A, ...B]).size || 1;
+  const jaccard = inter / uniao;
+  const iguais = [a.provaEmBloco === b.provaEmBloco, a.listaNumerada === b.listaNumerada, a.cartao === b.cartao]
+    .filter(Boolean).length / 3;
+  return Math.round((jaccard * 0.55 + iguais * 0.45) * 100) / 100;
+}
+
+/** Compara com as últimas páginas geradas. Devolve dica quando fica parecido demais. */
+function conferirVariedade(html: string, lead: StoredLead): string | null {
+  try {
+    const dir = previewsDir();
+    if (!fs.existsSync(dir)) return null;
+    const arquivos = fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".html"))
+      .map((f) => ({ f, t: fs.statSync(path.join(dir, f)).mtimeMs }))
+      .sort((a, b) => b.t - a.t)
+      .slice(0, 12);
+    const minha = assinaturaEstrutural(html);
+    let pior = 0;
+    let parecida = "";
+    for (const { f } of arquivos) {
+      const outro = fs.readFileSync(path.join(dir, f), "utf8");
+      if (outro.slice(0, 400) === html.slice(0, 400)) continue; // é a própria página
+      const valor = similaridadeEstrutural(minha, assinaturaEstrutural(outro));
+      if (valor > pior) {
+        pior = valor;
+        parecida = f;
+      }
+    }
+    if (pior >= 0.72) {
+      return `a estrutura ficou ${Math.round(pior * 100)}% parecida com a página de outro cliente (${parecida}): mude a ORDEM dos blocos e o formato dos serviços e da prova social`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /* ------------------------------------------------------------------ */
