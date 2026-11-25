@@ -227,6 +227,30 @@ function comandoWrangler(): { bin: string; prefixo: string[] } {
   return { bin: "npx", prefixo: ["-y", "wrangler@4"] };
 }
 
+
+/** Primeira página HTML publicável do diretório (para conferir se subiu de verdade). */
+function primeiraPagina(dir: string): string | null {
+  try {
+    const arquivo = fs.readdirSync(dir).filter((f) => f.endsWith(".html")).sort()[0];
+    return arquivo || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Confere de verdade se a página responde conteúdo no ar (ignora cache). */
+async function conferirNoAr(url: string): Promise<boolean> {
+  try {
+    const alvo = `${url}?verificacao=${Date.now()}`;
+    const resposta = await fetch(alvo, { headers: { "Cache-Control": "no-cache" }, signal: AbortSignal.timeout(20_000) });
+    if (!resposta.ok) return false;
+    const texto = await resposta.text();
+    return texto.length > 500;
+  } catch {
+    return false;
+  }
+}
+
 function rodarWrangler(dir: string, cfg: { project: string; token: string; accountId: string }, timeoutMs: number): Promise<PagesPublishResult> {
   return new Promise<PagesPublishResult>((resolve) => {
     let saida = "";
@@ -319,7 +343,27 @@ export async function publishPreviews(
           await new Promise((resolve) => setTimeout(resolve, esperas[tentativa]));
           resultado = await rodarWrangler(dir, cfg, timeoutMs);
         }
-        if (resultado.ok) ultimoDeploy = { hash, url: resultado.url };
+        if (resultado.ok) {
+          // Deploy "ok" que deixa produção em 404 já aconteceu: o wrangler sobe,
+          // o processo morre no meio e o CF fica servindo um deployment vazio. O
+          // sintoma é site inteiro em 404 e a resposta dizendo sucesso. Aqui a
+          // gente confere na URL pública e, se estiver quebrado, refaz o deploy.
+          const alvo = primeiraPagina(dir);
+          if (alvo) {
+            const noAr = await conferirNoAr(`${resultado.url || ""}/${alvo}`);
+            if (!noAr) {
+              console.warn(`[pages] deploy voltou ok mas ${alvo} não está no ar: refazendo`);
+              const segunda = await rodarWrangler(dir, cfg, timeoutMs);
+              const okFinal = segunda.ok && (await conferirNoAr(`${segunda.url || ""}/${alvo}`));
+              if (!okFinal) {
+                return { ok: false, url: null, error: "deploy publicado mas a página não responde no ar (verificado na URL pública)" };
+              }
+              ultimoDeploy = { hash, url: segunda.url };
+              return segunda;
+            }
+          }
+          ultimoDeploy = { hash, url: resultado.url };
+        }
         return resultado;
       });
     } finally {
