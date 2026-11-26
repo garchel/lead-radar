@@ -3,17 +3,12 @@
   "amostra": {
     "paginas": 67,
     "coletado_em": "2026-11-26",
-    "fonte": "listas de design (squarestash, vandelay, hubspot, colorlib, thesalonbusiness, cyberoptik)"
+    "fonte": "listas de design (squarestash, vandelay, hubspot, colorlib, thesalonbusiness, cyberoptik)",
+    "obs": "1 domínio de infraestrutura (cloudflare.com) removido por regra nova"
   },
   "metodo": "só estrutura: presença de componentes por página, sem copiar texto, imagem ou código. HTML medido sem <style>/<script>.",
   "conferencia_de_nicho": "67 de 82 passaram (3+ sinais de barbearia); 5 reprovados (iloveluluhairspa, cutupssalon, github, digitalocean, photowebdesigns); 9 inconclusivos (SPA)",
   "componentes": [
-    {
-      "componente": "corte",
-      "presenca_pct": 99,
-      "presenca_n": 66,
-      "faixa": "base"
-    },
     {
       "componente": "agendamento_online",
       "presenca_pct": 97,
@@ -21,15 +16,21 @@
       "faixa": "base"
     },
     {
+      "componente": "corte",
+      "presenca_pct": 97,
+      "presenca_n": 65,
+      "faixa": "base"
+    },
+    {
       "componente": "equipe",
-      "presenca_pct": 79,
-      "presenca_n": 53,
+      "presenca_pct": 78,
+      "presenca_n": 52,
       "faixa": "base"
     },
     {
       "componente": "barba",
-      "presenca_pct": 75,
-      "presenca_n": 50,
+      "presenca_pct": 76,
+      "presenca_n": 51,
       "faixa": "base"
     },
     {
@@ -52,8 +53,8 @@
     },
     {
       "componente": "blog",
-      "presenca_pct": 55,
-      "presenca_n": 37,
+      "presenca_pct": 54,
+      "presenca_n": 36,
       "faixa": "diferenciador"
     },
     {
@@ -64,8 +65,8 @@
     },
     {
       "componente": "depoimentos",
-      "presenca_pct": 49,
-      "presenca_n": 33,
+      "presenca_pct": 48,
+      "presenca_n": 32,
       "faixa": "diferenciador"
     },
     {
@@ -76,8 +77,8 @@
     },
     {
       "componente": "gift_card",
-      "presenca_pct": 30,
-      "presenca_n": 20,
+      "presenca_pct": 31,
+      "presenca_n": 21,
       "faixa": "diferenciador"
     },
     {
@@ -94,14 +95,14 @@
     },
     {
       "componente": "video",
-      "presenca_pct": 22,
-      "presenca_n": 15,
+      "presenca_pct": 21,
+      "presenca_n": 14,
       "faixa": "diferenciador"
     },
     {
       "componente": "planos",
-      "presenca_pct": 19,
-      "presenca_n": 13,
+      "presenca_pct": 21,
+      "presenca_n": 14,
       "faixa": "diferenciador"
     },
     {
@@ -165,7 +166,7 @@
       "faixa": "raro"
     }
   ],
-  "media_titulos_por_pagina": 14.7,
+  "media_titulos_por_pagina": 14.5,
   "leituras": {
     "padrao_do_nicho": [
       "agendamento online 97% — aqui NÃO é diferencial, é o mínimo (Booksy/Fresha/Squire)",

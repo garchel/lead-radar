@@ -91,6 +91,28 @@ const LEXICO_NICHO = {
       contabilidade: /contabil|contador|imposto de renda/i,
     },
   },
+  otica: {
+    exige: 3,
+    positivo: /[oó]tica|\b[oó]culos\b|arma[cç][aã]o|\blentes?\b|optometri|eyewear|\bglasses\b|\boptician\b|sunglasses|\bframes\b|contato gel|multifocal|progressiv/i,
+    outrosNichos: {
+      odontologia: /dent(ista|e|al)|odont|implante dent|ortodont/i,
+      barbearia: /barbearia|barbershop|\bfade\b|navalha|degrad[eê]/i,
+      estetica_facial: /harmoniza[cç][aã]o facial|botox|preenchimento labial/i,
+      veterinaria: /veterin[aá]ri|castra[cç][aã]o animal/i,
+      advocacia: /advogad|\boab\b|jur[ií]dic/i,
+      contabilidade: /contabil|contador|imposto de renda/i,
+    },
+    servicos: {
+      grau: /grau|prescri[cç][aã]o|receita|\bprescription\b|\bglasses\b/i,
+      sol: /\bsol\b|sunglasses|\bsolar\b|polarizad/i,
+      lentes_contato: /lente de contato|contact lens|contato gel/i,
+      multifocal: /multifocal|progressiv|varilux|bifocal/i,
+      infantil: /infantil|crian[cç]a|\bkids\b/i,
+      esportivo: /esport|sport|nata[cç][aã]o|ciclismo/i,
+      ajuste: /ajuste|conserto|concert|manuten[cç][aã]o|\bfitting\b|repair/i,
+      exame: /exame de vista|exame visual|\beye exam\b|refrat|optometrista/i,
+    },
+  },
 };
 
 function conferirNicho(html, titulo, nicho = "odontologia") {
@@ -122,12 +144,26 @@ function conferirNicho(html, titulo, nicho = "odontologia") {
   return { confirmado: false, acertos, alheios, motivo: `sinais insuficientes de ${nicho} (${acertos}/${regra.exige})` };
 }
 
+
+/**
+ * Domínios que NUNCA são o negócio: infraestrutura, plataformas, portais.
+ * Vazam das listas de "inspiração" (link para Cloudflare, GitHub, reddit, API do
+ * WhatsApp) e, se entram, contaminam a frequência com o que não é do nicho.
+ */
+const DOMINIOS_BLOQUEADOS = /^(www\.)?(cloudflare|github|gitlab|digitalocean|aws\.amazon|netlify|vercel|reddit|twitter|x|facebook|instagram|whatsapp|gmpg|w3|schema|wordpress|wordpress\.org|shopify|squarespace|wix|godaddy|medium|youtube|vimeo|apple|google)\b/i;
+
 const TITULOS = /<h([1-3])[^>]*>([\s\S]*?)<\/h\1>/gi;
 const limpar = (t) => t.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
 
 const resultado = [];
 for (const url of urls) {
   const registro = { url, ok: false };
+  const hostDoUrl = (() => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; } })();
+  if (DOMINIOS_BLOQUEADOS.test(hostDoUrl)) {
+    registro.motivo = `domínio de infraestrutura/plataforma (${hostDoUrl}): não é o negócio`;
+    resultado.push(registro);
+    continue;
+  }
   try {
     const resposta = await fetch(url, {
       redirect: "follow",
@@ -161,6 +197,7 @@ fs.writeFileSync(saida, JSON.stringify(resultado, null, 1));
 // Agregação
 const validos = resultado.filter((r) => r.ok && r.nicho?.confirmado !== false);
 const recusados = resultado.filter((r) => r.ok && r.nicho?.confirmado === false);
+const bloqueados = resultado.filter((r) => !r.ok && /infraestrutura\/plataforma/.test(r.motivo || ""));
 const inconclusivos = resultado.filter((r) => r.ok && r.nicho?.confirmado === null);
 const freq = {};
 for (const chave of Object.keys(SINAIS)) {
@@ -171,6 +208,10 @@ console.log(`\n=== ${validos.length} páginas válidas de ${resultado.length} ==
 if (recusados.length) {
   console.log(`\nFORA DO NICHO (não entram na conta):`);
   for (const r of recusados) console.log(`  ${r.url} → ${r.nicho.motivo}`);
+}
+if (bloqueados.length) {
+  console.log(`\nBLOQUEADOS (infraestrutura, não são o negócio):`);
+  for (const r of bloqueados) console.log(`  ${r.url}`);
 }
 if (inconclusivos.length) {
   console.log(`\nNICHO INCONCLUSIVO (entram, mas precisam de conferência visual):`);
