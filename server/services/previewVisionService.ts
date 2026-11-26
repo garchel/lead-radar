@@ -15,7 +15,7 @@ export interface VereditoVisual {
   problemas: string[];
 }
 
-const RUBRICA = `Você é diretor de arte avaliando a primeira dobra de uma página de vendas
+export const RUBRICA = `Você é diretor de arte avaliando a primeira dobra de uma página de vendas
 para um negócio local brasileiro. A página foi feita para convencer o dono do
 negócio a contratar um site.
 

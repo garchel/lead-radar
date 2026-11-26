@@ -1,0 +1,315 @@
+{
+  "nicho": "odontologia",
+  "coletado_em": "2026-11-26",
+  "amostras": {
+    "mercado_br": 33,
+    "referencia_avaliada": 32,
+    "quartil_superior": 8
+  },
+  "rubrica": "a mesma que julga as prévias geradas (escala 0-10, nota mínima 7.5)",
+  "excluidas": {
+    "motivo": "captura caiu em tela de verificação Cloudflare, não é julgamento de design",
+    "urls": [
+      "https://luka.dental/",
+      "https://winning-smile.com/",
+      "https://www.hellotend.com/"
+    ]
+  },
+  "distribuicao": {
+    "mediana": 6.25,
+    "max": 8.5,
+    "min": 1.5
+  },
+  "notas": [
+    {
+      "url": "https://glasshousedental.com/",
+      "nota": 8.5
+    },
+    {
+      "url": "https://dentologie.com/",
+      "nota": 8.5
+    },
+    {
+      "url": "https://www.thelittleroyalsdentistry.com/",
+      "nota": 8.5
+    },
+    {
+      "url": "https://alva-odontologia.vercel.app/",
+      "nota": 8.5
+    },
+    {
+      "url": "https://www.bulovkadc.com/",
+      "nota": 7.5
+    },
+    {
+      "url": "https://www.swishsmiles.com/",
+      "nota": 7.5
+    },
+    {
+      "url": "https://www.bowlesdentalcenter.com/",
+      "nota": 7.5
+    },
+    {
+      "url": "https://clinicazimmermann.com.br/",
+      "nota": 7.5
+    },
+    {
+      "url": "https://bowlanedental.com/",
+      "nota": 7
+    },
+    {
+      "url": "https://www.ladentalclinic.com/",
+      "nota": 6.5
+    },
+    {
+      "url": "https://shoopdentistry.com/",
+      "nota": 6.5
+    },
+    {
+      "url": "https://www.grandstreetdental.com/",
+      "nota": 6.5
+    },
+    {
+      "url": "https://www.bitesizepediatricdentistry.com/",
+      "nota": 6.5
+    },
+    {
+      "url": "https://www.wintergardensmiles.com/",
+      "nota": 6.5
+    },
+    {
+      "url": "https://www.zen.dentist/",
+      "nota": 6.5
+    },
+    {
+      "url": "https://rieseodontologia.com.br/",
+      "nota": 6.5
+    },
+    {
+      "url": "https://www.austindentalworks.com/",
+      "nota": 6
+    },
+    {
+      "url": "https://www.nycdentalimplantscenter.com/",
+      "nota": 5.5
+    },
+    {
+      "url": "https://dentalofficesallentown.com/",
+      "nota": 5.5
+    },
+    {
+      "url": "https://clinicavivareodonto.com.br/",
+      "nota": 5.5
+    },
+    {
+      "url": "https://www.clinicaorth.com.br/",
+      "nota": 5.5
+    },
+    {
+      "url": "https://skylinedentaldesigns.com/",
+      "nota": 5
+    },
+    {
+      "url": "https://www.dentalclinicdelhi.com/",
+      "nota": 4.5
+    },
+    {
+      "url": "https://www.dohadentalcenter.com/",
+      "nota": 4.5
+    },
+    {
+      "url": "https://www.studiodental.com/",
+      "nota": 4.5
+    },
+    {
+      "url": "https://www.mpcestomatologia.com.br/",
+      "nota": 4.5
+    },
+    {
+      "url": "https://www.dralucianemarchiori.com.br/",
+      "nota": 4.5
+    },
+    {
+      "url": "https://reginadental.com/",
+      "nota": 3.5
+    },
+    {
+      "url": "https://www.smilestonedental.ca/",
+      "nota": 3.5
+    },
+    {
+      "url": "https://www.smileculture.com/",
+      "nota": 3.5
+    },
+    {
+      "url": "https://drmarlonfiorentini.com.br/",
+      "nota": 3.5
+    },
+    {
+      "url": "https://www.westvillagedentalstudio.com/",
+      "nota": 1.5
+    }
+  ],
+  "destaques": [
+    "https://www.bulovkadc.com/",
+    "https://www.swishsmiles.com/",
+    "https://glasshousedental.com/",
+    "https://dentologie.com/",
+    "https://www.thelittleroyalsdentistry.com/",
+    "https://www.bowlesdentalcenter.com/",
+    "https://alva-odontologia.vercel.app/",
+    "https://clinicazimmermann.com.br/"
+  ],
+  "comparacao_top_vs_mercado": [
+    {
+      "componente": "agendamento_online",
+      "mercado_pct": 24,
+      "top_pct": 50,
+      "delta": 26
+    },
+    {
+      "componente": "video",
+      "mercado_pct": 27,
+      "top_pct": 50,
+      "delta": 23
+    },
+    {
+      "componente": "urgencia",
+      "mercado_pct": 42,
+      "top_pct": 62,
+      "delta": 20
+    },
+    {
+      "componente": "blog",
+      "mercado_pct": 55,
+      "top_pct": 75,
+      "delta": 20
+    },
+    {
+      "componente": "convenios",
+      "mercado_pct": 88,
+      "top_pct": 100,
+      "delta": 12
+    },
+    {
+      "componente": "tecnologia",
+      "mercado_pct": 27,
+      "top_pct": 38,
+      "delta": 11
+    },
+    {
+      "componente": "telefone_clicavel",
+      "mercado_pct": 64,
+      "top_pct": 75,
+      "delta": 11
+    },
+    {
+      "componente": "horario",
+      "mercado_pct": 42,
+      "top_pct": 50,
+      "delta": 8
+    },
+    {
+      "componente": "pagamento",
+      "mercado_pct": 33,
+      "top_pct": 38,
+      "delta": 5
+    },
+    {
+      "componente": "casos",
+      "mercado_pct": 21,
+      "top_pct": 12,
+      "delta": -9
+    },
+    {
+      "componente": "financeiro",
+      "mercado_pct": 12,
+      "top_pct": 0,
+      "delta": -12
+    },
+    {
+      "componente": "mapa",
+      "mercado_pct": 64,
+      "top_pct": 50,
+      "delta": -14
+    },
+    {
+      "componente": "equipe",
+      "mercado_pct": 91,
+      "top_pct": 75,
+      "delta": -16
+    },
+    {
+      "componente": "depoimentos",
+      "mercado_pct": 79,
+      "top_pct": 62,
+      "delta": -17
+    },
+    {
+      "componente": "galeria",
+      "mercado_pct": 42,
+      "top_pct": 25,
+      "delta": -17
+    },
+    {
+      "componente": "infantil",
+      "mercado_pct": 45,
+      "top_pct": 25,
+      "delta": -20
+    },
+    {
+      "componente": "faq",
+      "mercado_pct": 48,
+      "top_pct": 25,
+      "delta": -23
+    },
+    {
+      "componente": "ortodontia",
+      "mercado_pct": 85,
+      "top_pct": 62,
+      "delta": -23
+    },
+    {
+      "componente": "harmonizacao",
+      "mercado_pct": 61,
+      "top_pct": 38,
+      "delta": -23
+    },
+    {
+      "componente": "antes_depois",
+      "mercado_pct": 24,
+      "top_pct": 0,
+      "delta": -24
+    },
+    {
+      "componente": "estacionamento",
+      "mercado_pct": 24,
+      "top_pct": 0,
+      "delta": -24
+    },
+    {
+      "componente": "endereco",
+      "mercado_pct": 79,
+      "top_pct": 50,
+      "delta": -29
+    },
+    {
+      "componente": "clareamento",
+      "mercado_pct": 79,
+      "top_pct": 38,
+      "delta": -41
+    },
+    {
+      "componente": "implante",
+      "mercado_pct": 97,
+      "top_pct": 50,
+      "delta": -47
+    },
+    {
+      "componente": "whatsapp",
+      "mercado_pct": 94,
+      "top_pct": 25,
+      "delta": -69
+    }
+  ]
+}
