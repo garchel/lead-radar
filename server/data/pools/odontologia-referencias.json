@@ -50,10 +50,6 @@
       "nota": 7.5
     },
     {
-      "url": "https://clinicazimmermann.com.br/",
-      "nota": 7.5
-    },
-    {
       "url": "https://bowlanedental.com/",
       "nota": 7
     },
@@ -157,8 +153,7 @@
     "https://dentologie.com/",
     "https://www.thelittleroyalsdentistry.com/",
     "https://www.bowlesdentalcenter.com/",
-    "https://alva-odontologia.vercel.app/",
-    "https://clinicazimmermann.com.br/"
+    "https://alva-odontologia.vercel.app/"
   ],
   "comparacao_top_vs_mercado": [
     {
@@ -311,5 +306,13 @@
       "top_pct": 25,
       "delta": -69
     }
-  ]
+  ],
+  "conferencia_de_nicho": {
+    "removidos": [
+      "clinicazimmermann.com.br — proctologia"
+    ],
+    "inconclusivos": [
+      "dentologie.com — SPA, confirmado na captura"
+    ]
+  }
 }

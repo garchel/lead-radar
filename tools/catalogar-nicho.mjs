@@ -37,6 +37,55 @@ const SINAIS = {
   financeiro: /financiamento|boleto|mensalidade/i,
 };
 
+
+/**
+ * Conferência de nicho — OBRIGATÓRIA antes de catalogar.
+ * Já entrou errado uma referência de proctologia numa amostra de odontologia
+ * (clinicazimmermann, vinda de portfólio de agência). Curadoria de lista e
+ * case de agência não garantem que o site seja do nicho.
+ */
+const LEXICO_NICHO = {
+  odontologia: {
+    exige: 3,
+    positivo: /dent(ista|e|al|adura)|odont(o|ologia)|implante|ortodont|aparelho ortod|clareamento|sorriso|\bcro\b|endodont|periodont|pr[oó]tese dent|canal|extra[cç][aã]o/i,
+    outrosNichos: {
+      proctologia: /proctolog|colonoscopia|colorretal|hemorroid|fissura anal|cirurgia rob[oó]tica/i,
+      ginecologia: /ginecolog|obstetr|pr[eé]-natal|menopausa|contracep/i,
+      dermatologia: /dermatolog|pele|melasma|acne|cabelo|capilar/i,
+      oftalmologia: /oftalmolog|catarata|glaucoma|retina|miopia|astigmatismo/i,
+      veterinaria: /veterin[aá]ri|pet shop|vacina[cç][aã]o animal|castra[cç][aã]o/i,
+      advocacia: /advogad|jur[ií]dic|escrit[oó]rio de advocacia|oab\b/i,
+      contabilidade: /contabil|contador|balan[cç]o|imposto de renda/i,
+    },
+  },
+};
+
+function conferirNicho(html, titulo, nicho = "odontologia") {
+  const regra = LEXICO_NICHO[nicho];
+  if (!regra) return { confirmado: null, motivo: "sem léxico para este nicho" };
+  const amostra = ((titulo || "") + " " + (html || "")).slice(0, 400000);
+  const acertos = (amostra.match(regra.positivo) || []).length;
+  const alheios = [];
+  for (const [outro, re] of Object.entries(regra.outrosNichos)) {
+    const n = (amostra.match(re) || []).length;
+    if (n >= 2) alheios.push(`${outro}:${n}`);
+  }
+  // Site feito em SPA entrega HTML quase vazio: não dá para julgar o nicho pelo
+  // texto. Nesse caso é INCONCLUSIVO (precisa de captura renderizada), nunca reprovado.
+  const textoVisivel = (html || "").replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<!--[\s\S]*?-->/g, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const poucoTexto = textoVisivel.length < 1500;
+  if (acertos >= regra.exige && alheios.length === 0) {
+    return { confirmado: true, acertos, alheios, motivo: `ok (${acertos} sinais de ${nicho})` };
+  }
+  if (alheios.length) {
+    return { confirmado: false, acertos, alheios, motivo: `fala de outro nicho (${alheios.join(", ")})` };
+  }
+  if (poucoTexto) {
+    return { confirmado: null, acertos, alheios, motivo: `inconclusivo: HTML quase vazio (${textoVisivel.length} chars) — conferir na captura renderizada` };
+  }
+  return { confirmado: false, acertos, alheios, motivo: `sinais insuficientes de ${nicho} (${acertos}/${regra.exige})` };
+}
+
 const TITULOS = /<h([1-3])[^>]*>([\s\S]*?)<\/h\1>/gi;
 const limpar = (t) => t.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
 
@@ -57,6 +106,8 @@ for (const url of urls) {
     registro.titulos = titulos.slice(0, 24);
     registro.qtdSecoes = titulos.filter((_, i) => true).length;
     registro.sinais = Object.fromEntries(Object.entries(SINAIS).map(([k, re]) => [k, re.test(html)]));
+    const tituloHtml = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || "";
+    registro.nicho = conferirNicho(html, tituloHtml, process.env.NICHO_ALVO || "odontologia");
     registro.whatsapp_flutuante = /position:\s*fixed[^}]*whatsapp|whatsapp[^{]*\{[^}]*position:\s*fixed/i.test(html);
     registro.ok = true;
   } catch (erro) {
@@ -69,13 +120,24 @@ for (const url of urls) {
 fs.writeFileSync(saida, JSON.stringify(resultado, null, 1));
 
 // Agregação
-const validos = resultado.filter((r) => r.ok);
+const validos = resultado.filter((r) => r.ok && r.nicho?.confirmado !== false);
+const recusados = resultado.filter((r) => r.ok && r.nicho?.confirmado === false);
+const inconclusivos = resultado.filter((r) => r.ok && r.nicho?.confirmado === null);
 const freq = {};
 for (const chave of Object.keys(SINAIS)) {
   freq[chave] = validos.filter((r) => r.sinais?.[chave]).length;
 }
 const ordenado = Object.entries(freq).sort((a, b) => b[1] - a[1]);
-console.log(`\n=== ${validos.length} páginas válidas de ${resultado.length} ===\n`);
+console.log(`\n=== ${validos.length} páginas válidas de ${resultado.length} ===`);
+if (recusados.length) {
+  console.log(`\nFORA DO NICHO (não entram na conta):`);
+  for (const r of recusados) console.log(`  ${r.url} → ${r.nicho.motivo}`);
+}
+if (inconclusivos.length) {
+  console.log(`\nNICHO INCONCLUSIVO (entram, mas precisam de conferência visual):`);
+  for (const r of inconclusivos) console.log(`  ${r.url} → ${r.nicho.motivo}`);
+}
+console.log("");
 for (const [k, v] of ordenado) {
   console.log(`${String(Math.round((v / validos.length) * 100)).padStart(3)}%  ${k.padEnd(20)} (${v}/${validos.length})`);
 }

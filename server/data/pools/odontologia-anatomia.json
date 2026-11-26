@@ -455,100 +455,23 @@
           "rgb(244, 244, 244)"
         ]
       }
-    },
-    {
-      "site": "clinicazimmermann.com.br",
-      "nicho_declarado": "proctologia",
-      "estrutura": {
-        "secoes_medidas": 8,
-        "altura_total_px": 6398,
-        "sequencia": [
-          {
-            "titulo": "Proctologista em Novo Hamburgo há mais de 40 anos",
-            "altura_px": 800,
-            "componentes": [
-              "imagem"
-            ]
-          },
-          {
-            "titulo": "Colonoscopia",
-            "altura_px": 575,
-            "componentes": [
-              "imagem",
-              "cartao"
-            ]
-          },
-          {
-            "titulo": "Colonoscopia e a prevenção do câncer colorretal",
-            "altura_px": 616,
-            "componentes": [
-              "imagem"
-            ]
-          },
-          {
-            "titulo": "Laser e cirurgia robótica na proctologia",
-            "altura_px": 616,
-            "componentes": [
-              "imagem"
-            ]
-          },
-          {
-            "titulo": "Quando procurar um proctologista",
-            "altura_px": 448,
-            "componentes": [
-              "imagem"
-            ]
-          },
-          {
-            "titulo": "Dr. Amauri Gilson Zimmermann",
-            "altura_px": 546,
-            "componentes": [
-              "imagem"
-            ]
-          },
-          {
-            "titulo": "Atendimento para o Vale dos Sinos e a Serra",
-            "altura_px": 556,
-            "componentes": [
-              "imagem"
-            ]
-          },
-          {
-            "titulo": "Consulta",
-            "altura_px": 546,
-            "componentes": [
-              "imagem",
-              "cartao"
-            ]
-          }
-        ]
-      },
-      "sistema_visual": {
-        "h1_px": 42,
-        "h1_fonte": "Inter",
-        "h1_peso": "800",
-        "corpo_px": 19,
-        "corpo_fonte": "Inter",
-        "razao_h1_corpo": 2.2,
-        "degraus_de_texto": [
-          "19.8px×78",
-          "15.5px×21",
-          "14px×19",
-          "18px×19",
-          "36px×13",
-          "16px×9",
-          "24px×6",
-          "13px×4",
-          "26.6px×3",
-          "19px×1"
-        ],
-        "paleta": [
-          "rgb(242, 242, 242)",
-          "rgb(255, 255, 255)",
-          "rgb(53, 76, 156)",
-          "rgb(44, 63, 129)"
-        ]
-      }
     }
-  ]
+  ],
+  "conferencia_de_nicho": {
+    "regra": "todo site passa por conferirNicho() antes de entrar no catálogo: precisa de 3+ sinais do nicho no HTML e nenhum sinal forte de outro nicho; HTML de SPA vira 'inconclusivo' e exige captura renderizada",
+    "aplicada_em": "2026-11-26",
+    "removidos": [
+      {
+        "site": "clinicazimmermann.com.br",
+        "motivo": "proctologia (0 sinais de odontologia, veio de portfólio de agência)"
+      }
+    ],
+    "inconclusivos": [
+      {
+        "site": "dentologie.com",
+        "motivo": "HTML de 6,8 KB servido por SPA: nenhum texto no código-fonte; confirmado como odontologia na captura renderizada ('Dental Services', 'Dental Insurance')"
+      }
+    ]
+  },
+  "pendente": "substituir a referência removida por um site odontológico brasileiro (hoje restou só alva-odontologia como BR)"
 }
