@@ -76,32 +76,19 @@ radial-gradient(46% 42% at 12% 82%, ${alpha(b, 0.42)} 0%, transparent 68%),
 radial-gradient(70% 60% at 50% 50%, ${alpha(c, 0.22)} 0%, transparent 72%);"></div>`;
 }
 
+/**
+ * Monograma = INICIAIS. Antes esta variante escrevia o nome do negócio em 150px
+ * repetido no herói, e isso virava "letreiro gigante do nome" em toda página que
+ * caía aqui — o nome grande e cortado pelas bordas é justamente o que não se quer.
+ */
 function monograma(nome: string, cor: string): string {
-  const inicial = (String(nome || "V").trim()[0] || "V").toUpperCase();
-  const palavra = String(nome || "")
-    .replace(/[^\p{L}\s]/gu, "")
+  const partes = String(nome || "V")
+    .replace(/[^\p{L}\s]/gu, " ")
     .split(/\s+/)
-    .filter((p) => p.length > 2)[0] || inicial;
+    .filter((p) => p.length > 1);
+  const iniciais = (partes.slice(0, 2).map((p) => p[0]).join("") || "V").toUpperCase();
   return `<div class="fx-a fx-mono" aria-hidden="true" style="color:${alpha(cor, 0.14)}">
-<span>${palavra.toUpperCase()}</span><span>${inicial}</span></div>`;
-}
-
-function marcaDoDivisor(cor: string): string {
-  const pontos = Array.from({ length: 28 }, (_, i) => `<circle cx="${i * 24 + 12}" cy="12" r="2"/>`).join("");
-  return `<svg viewBox="0 0 672 24" preserveAspectRatio="none" fill="${alpha(cor, 0.5)}">${pontos}</svg>`;
-}
-
-function marcaDaSecao(cor: string, semente: number): string {
-  if (semente % 2 === 1) {
-    const aneis = [30, 54, 78, 102]
-      .map((r, i) => `<circle cx="20" cy="120" r="${r}" fill="none" stroke="${alpha(cor, 0.22 - i * 0.04)}" stroke-width="1.2"/>`)
-      .join("");
-    return `<svg viewBox="0 0 160 160" aria-hidden="true">${aneis}</svg>`;
-  }
-  const pontos = Array.from({ length: 6 }, (_, lin) =>
-    Array.from({ length: 6 }, (_, col) => `<circle cx="${10 + col * 16}" cy="${10 + lin * 16}" r="${1.5 + lin * 0.5}"/>`).join(""),
-  ).join("");
-  return `<svg viewBox="0 0 100 100" fill="${alpha(cor, 0.45)}" aria-hidden="true">${pontos}</svg>`;
+<span>${iniciais}</span></div>`;
 }
 
 const CSS = `
@@ -114,10 +101,6 @@ const CSS = `
 [data-fx-host] > *:not(.fx-arte):not(.fx-canvas){position:relative;z-index:1}
 @media (prefers-reduced-motion:no-preference){.fx-arte{opacity:1}}
 /* Moldura de imagem: área desenhada, nunca esqueleto de carregamento. */
-.fx-divisor{position:relative;z-index:1;height:24px;margin:0 auto;max-width:1120px;padding:0 20px;opacity:.75}
-.fx-divisor svg{display:block;width:100%;height:24px}
-.fx-marca{position:absolute;right:0;bottom:0;width:132px;height:132px;z-index:0;opacity:.5;pointer-events:none;overflow:hidden}
-.fx-marca svg{width:100%;height:100%;display:block}
 .media-slot,[data-slot]{border:0!important;background-color:rgba(127,127,127,.10)!important;
   background-image:radial-gradient(rgba(127,127,127,.28) 1px, transparent 1px)!important;
   background-size:12px 12px!important;border-radius:14px!important;min-height:150px}
@@ -164,36 +147,20 @@ export function enfeitarPagina(
   if (!heroi) return { html, features: [] };
 
   const { html: arte, variante } = arteDoLead(lead, cores);
-  const base = cores.filter((c) => /^#[0-9a-f]{6}$/i.test(c));
-  const cor = base[0] || "#1a3a5a";
-  const n = varianteDeArte(String(lead.id || lead.name || "lead"));
   const abre = /data-fx-host/.test(heroi.abre)
     ? heroi.abre
     : heroi.abre.replace(/>$/, ' data-fx-host="1">');
   let saida = html.replace(heroi.abre, abre + arte);
 
-  // O mesmo motivo reaparece duas vezes: como divisor antes do fechamento e como
-  // marca d'água em uma seção do meio. Arte que só existe no herói parece adorno
-  // isolado; repetida, vira sistema visual.
-  const aberturas = [...saida.matchAll(/<section\b[^>]*>/gi)];
-  if (aberturas.length >= 3) {
-    const ultima = aberturas[aberturas.length - 1];
-    if (ultima.index !== undefined) {
-      const divisor = `<div class="fx-divisor" aria-hidden="true">${marcaDoDivisor(base[1] || cor)}</div>`;
-      saida = saida.slice(0, ultima.index) + divisor + saida.slice(ultima.index);
-    }
-    const meio = aberturas[1];
-    const fimMeio = saida.indexOf("</section>", meio.index || 0);
-    if (fimMeio > 0) {
-      const marca = `<div class="fx-marca" aria-hidden="true" style="pointer-events:none">${marcaDaSecao(base[1] || cor, n)}</div>`;
-      saida = saida.slice(0, fimMeio) + marca + saida.slice(fimMeio);
-    }
-  }
+  // SEM divisor de pontos e SEM marca d'água no canto: os dois eram injetados em
+  // TODA página, sempre no mesmo lugar, e isso é template — a página passava a ter
+  // a mesma ornamentação independente do negócio. A arte fica só no herói, onde o
+  // modelo a pediu, e o resto da página é decisão dele.
 
   const estilo = `<style>${CSS}</style>`;
   saida = /<\/body>/i.test(saida)
     ? saida.replace(/<\/body>/i, estilo + "</body>")
     : saida + estilo;
 
-  return { html: saida, features: [`arte ${variante} no hero`, "divisor e marca de seção"] };
+  return { html: saida, features: [`arte ${variante} no hero`] };
 }

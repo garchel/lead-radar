@@ -57,6 +57,15 @@ const CSS = (fonte: string, peso: string) => `
 /* Respiro simétrico no herói: antes o padding de baixo (88px) somava com o de cima
    da seção seguinte (96px) e o CTA ficava flutuando num vão de 184px. */
 [data-fx-host] { padding-block: clamp(40px, 6vw, 72px) !important; }
+
+/* SVG decorativo do modelo dentro do herói não pode tomar a dobra inteira. Medido
+   numa página real: o herói tinha 2313px e um <svg> decorativo com 1425px empurrava
+   o <h1> para 1650px do topo — a manchete começava na segunda tela. Zerar altura de
+   [data-fx-host] não pega isto, porque quem define a altura é o SVG filho. Com o teto
+   de 58vh o título subiu para 746px. A arte injetada (.fx-arte) fica de fora: ela é
+   absoluta e precisa continuar cobrindo o herói. */
+[data-fx-host] svg { max-height: 58vh !important; height: auto !important; }
+[data-fx-host] .fx-arte svg { height: 100% !important; max-height: none !important; }
 [data-fx-host] + section, [data-fx-host] + figure, [data-fx-host] + div {
   padding-top: clamp(24px, 4vw, 48px) !important;
   margin-top: 0 !important;

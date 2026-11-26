@@ -142,14 +142,12 @@ const EIXO_ASSINATURA: Opcao[] = [
   { nome: "galeria-horizontal", instrucao: "Uma faixa de 3 a 5 blocos que anda na horizontal enquanto a página rola na vertical. Receita: container externo com height alta; interno sticky; scroll(animate('.trilho', { x: ['0%', '-60%'] }), { target: externo })" },
   { nome: "pilha-cartoes", instrucao: "Cartões que se empilham ao rolar: cada um com position: sticky e top crescente (0, 24px, 48px), levemente rotacionados (-1deg, 0, 1deg). Sem JS." },
   { nome: "shader-scroll", instrucao: "Fundo WebGL cujo uniform é o progresso do scroll: o padrão se deforma conforme a página desce. Receita: three com plano fullscreen e shader que recebe uProgress via scroll()." },
-  { nome: "marquee-tipografico", instrucao: "Uma faixa de tipografia enorme (96-140px) atravessando a página devagar, em loop contínuo, com o nome do negócio repetido e separado por um símbolo. Só uma faixa na página." },
 ];
 
 const EIXO_DETALHE: Opcao[] = [
   { nome: "fio-e-numero", instrucao: "Fios de 1px separando blocos e lista numerada 01-04 em corpo 12px, caixa alta, letter-spacing 0,12em. Nenhum card com sombra." },
   { nome: "grão", instrucao: "Textura de grão fina (SVG feTurbulence, opacidade 0,15) sobre a cor de fundo, e nenhuma borda em cartão. O grão é o único ornamento." },
   { nome: "forma-recortada", instrucao: "Uma forma orgânica em SVG (arco, meia-lua, recorte) repetida em escala diferente em 2 pontos da página, como assinatura visual do negócio." },
-  { nome: "marca-dagua", instrucao: "O nome do negócio em tipografia enorme (clamp 80-160px) como marca d'água de baixo contraste atrás de um bloco, cortada pelas bordas. Só um ponto da página." },
 ];
 
 const EIXO_PROVA: Opcao[] = [
@@ -303,7 +301,7 @@ REGRAS DURAS (violar invalida a entrega):
 10. Proibido "R$", nome de plano, emoji no texto da página, "lorem ipsum", placeholder entre colchetes e frases genéricas de agência ("soluções inovadoras", "transformamos sonhos").
 11. NÃO REPITA informação: o nome do negócio aparece no máximo duas vezes na página inteira (cabeçalho e título); nota e número de avaliações aparecem UMA vez, num bloco só; a cidade aparece no máximo duas vezes.
 12. Concordância e português corretos ("avaliações" no plural quando o número é maior que 1). Nada de linha órfã com uma palavra sozinha no fim do parágrafo.
-13. A página precisa parecer feita para ESTE negócio: o texto fala da categoria e da cidade dele, a paleta vem da marca dele, e existe pelo menos UM elemento gráfico autoral em SVG (forma, recorte, marca d'água tipográfica) que não se repetiria em outra empresa.
+13. A página precisa parecer feita para ESTE negócio: o texto fala da categoria e da cidade dele, a paleta vem da marca dele, e existe pelo menos UM elemento gráfico autoral em SVG (forma, recorte, textura, diagrama) que não se repetiria em outra empresa e que não seja o nome da empresa repetido.
 13b. ARTE ABSTRATA É OBRIGATÓRIA; ILUSTRAÇÃO FIGURATIVA É PROIBIDA. Proibido desenhar
    casas, prédios, pessoas, plantas, sol, objetos ou qualquer cena — inclusive em SVG,
    porque clip-art destrói a percepção de qualidade. O que a página PRECISA ter: pelo
