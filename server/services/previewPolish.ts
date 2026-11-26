@@ -9,6 +9,8 @@
  * escolhas determinísticas por lead.
  */
 
+import { PERFIS, perfilDoLead } from "./publicoService";
+
 export type Cores = string[];
 
 function hash(texto: string): number {
@@ -62,9 +64,10 @@ const CSS = (fonte: string, peso: string) => `
    numa página real: o herói tinha 2313px e um <svg> decorativo com 1425px empurrava
    o <h1> para 1650px do topo — a manchete começava na segunda tela. Zerar altura de
    [data-fx-host] não pega isto, porque quem define a altura é o SVG filho. Com o teto
-   de 58vh o título subiu para 746px. A arte injetada (.fx-arte) fica de fora: ela é
-   absoluta e precisa continuar cobrindo o herói. */
-[data-fx-host] svg { max-height: 58vh !important; height: auto !important; }
+   de 58vh o título subiu para 746px — mas 58vh AINDA é a dobra inteira, e o juiz
+   chamou de "bloco vazio". Teto de 34vh deixa o título e o CTA na primeira tela.
+   A arte injetada (.fx-arte) fica de fora: é absoluta e precisa cobrir o herói. */
+[data-fx-host] svg { max-height: 34vh !important; height: auto !important; }
 [data-fx-host] .fx-arte svg { height: 100% !important; max-height: none !important; }
 [data-fx-host] + section, [data-fx-host] + figure, [data-fx-host] + div {
   padding-top: clamp(24px, 4vw, 48px) !important;
@@ -173,22 +176,68 @@ a[href*="wa.me"]:active, .botao:active, .btn:active, button:active { transform: 
 ::selection { background: rgba(127,127,127,.28); }
 `;
 
+
+/**
+ * Medidas do PÚBLICO, impostas por CSS.
+ *
+ * O modelo recebe o tamanho de corpo na instrução e ignora: em quatro tentativas
+ * seguidas entregou 15px para um público que pede 19px, e a página reprovou por
+ * isso. Instrução que já falhou quatro vezes vira CSS.
+ *
+ * `max(Npx, 1em)` levanta o que está pequeno sem encolher o que já é maior — o
+ * subtítulo grande do herói continua grande.
+ */
+const CSS_MEDIDAS = (corpo: number, minimo: number) => `
+/* Seletor amplo de propósito: restringir a "main p" não pega nada quando a página
+   não tem elemento main — e foi assim que a auditoria continuou medindo 15px mesmo
+   depois desta camada rodar. */
+p, li {
+  font-size: max(${corpo}px, 1em) !important;
+  line-height: 1.6 !important;
+}
+small, figcaption, [class*="legenda"], [class*="caption"], [class*="meta"] {
+  font-size: ${minimo}px !important;
+}
+/* Hierarquia de h2: o auditor acusou "todos os títulos de seção no mesmo tamanho
+   (26px)" em todas as páginas. Três degraus alternados por posição da seção. */
+/* Três degraus, nenhum abaixo de 26px: em 20px o auditor acusou "título de seção
+   abaixo de 24px não há contraste com o corpo" — a hierarquia não pode ser feita
+   encolhendo o título até ele competir com o parágrafo. */
+h2 { font-size: clamp(30px, 2.6vw, 40px) !important; }
+section h2 { font-size: clamp(30px, 2.6vw, 40px) !important; }
+main > section:nth-of-type(2n) h2,
+main > div:nth-child(2n) h2,
+section:nth-of-type(2n) h2 { font-size: clamp(26px, 2.2vw, 32px) !important; }
+main > section:nth-of-type(3n) h2,
+main > div:nth-child(3n) h2,
+section:nth-of-type(3n) h2 { font-size: clamp(34px, 3vw, 46px) !important; }
+`;
+
 /**
  * Aplica o acabamento. Não mexe em página que já tem serifada de display nem
  * em página sem herói.
  */
 export function refinarPagina(
   html: string,
-  lead: { id?: string; name?: string; city?: string },
+  lead: { id?: string; name?: string; city?: string; category?: string },
 ): { html: string; features: string[] } {
   if (/data-acabamento="1"/.test(html)) return { html, features: [] };
-  if (jaTemDisplay(html)) return { html, features: [] };
+
+  // Medidas do público entram SEMPRE — inclusive na página que já traz serifada e
+  // por isso sai antes do acabamento. Deixá-las dentro do ramo do display era o
+  // mesmo que não impor nada nas páginas que o modelo escreveu bonitas.
+  const perfil = perfilDoLead(lead.category || "", lead.name || "");
+  const medidas = PERFIS[perfil];
+  const estiloMedidas = `<style data-medidas="1">${CSS_MEDIDAS(medidas.corpo, medidas.minimo)}</style>`;
+  let base = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, estiloMedidas + "</body>") : html + estiloMedidas;
+
+  if (jaTemDisplay(base)) return { html: base, features: [`medidas ${perfil}: corpo ${medidas.corpo}px`] };
 
   const fonte = fonteDeDisplay(String(lead.id || lead.name || "lead"));
   const link = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${fonte.url}&display=swap">`;
   const estilo = `<style data-acabamento="1">${CSS(fonte.nome, fonte.peso)}</style>`;
 
-  let saida = html;
+  let saida = base;
 
   // Cidade no título não quebra entre linhas: "Três / Lagoas" parece erro de digitação.
   const cidade = String(lead.city || "").trim();
@@ -207,5 +256,5 @@ export function refinarPagina(
     ? saida.replace(/<\/body>/i, estilo + "</body>")
     : saida + estilo;
 
-  return { html: saida, features: [`display ${fonte.nome}`, "botão e cartão refinados"] };
+  return { html: saida, features: [`display ${fonte.nome}`, `medidas ${perfil}: corpo ${medidas.corpo}px`, "botão e cartão refinados"] };
 }

@@ -731,7 +731,7 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
             correcoes.push(`arte → ${comArte.features.join(", ")}`);
           }
           // Acabamento por último: fonte de display, botão, cartão e quebra de texto.
-          const refinada = refinarPagina(html, { id: lead.id, name: lead.name, city: lead.city });
+          const refinada = refinarPagina(html, { id: lead.id, name: lead.name, city: lead.city, category: lead.category });
           if (refinada.features.length) {
             html = refinada.html;
             correcoes.push(`acabamento → ${refinada.features.join(", ")}`);

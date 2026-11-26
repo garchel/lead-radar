@@ -28,11 +28,21 @@ describe("acabamento", () => {
     expect(features.join(" ")).toContain("display");
   });
 
-  it("não mexe em página que já tem serifada própria", () => {
+  it("não troca a serifada da página, mas ainda impõe as medidas do público", () => {
     const comSerifa = pagina.replace("Manrope", "Playfair Display");
     const { html, features } = refinarPagina(comSerifa, { id: "lead_1", name: "Clínica" });
-    expect(html).toBe(comSerifa);
-    expect(features).toEqual([]);
+    // Tipografia: respeita a escolha do modelo.
+    expect(html).not.toContain('data-acabamento="1"');
+    expect(html).not.toContain("fonts.googleapis.com");
+    // Medidas: entram sempre — instrução de tamanho o modelo ignora.
+    expect(html).toContain('data-medidas="1"');
+    expect(features.join(" ")).toMatch(/medidas/);
+  });
+
+  it("impõe corpo de 19px para público idoso (ótica)", () => {
+    const { html } = refinarPagina(pagina, { id: "lead_2", name: "Ótica Central", category: "Ótica" });
+    const m = html.match(/data-medidas="1">([\s\S]*?)<\/style>/);
+    expect(m?.[1]).toMatch(/font-size: max\(19px, 1em\)/);
   });
 
   it("não aplica duas vezes", () => {
