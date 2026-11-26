@@ -106,19 +106,29 @@ header a[href*="wa.me"], header a[href*="whatsapp"] {
 /* TELA LARGA: em monitor de 2000px+ o container travado em 1120 deixa quase metade
    da tela em branco — foi exatamente o que o dono viu e chamou de amador. O conteúdo
    cresce com a tela, sem passar do ponto em que a linha fica longa. */
-/* Só os WRAPPERS de conteúdo crescem — nunca main ou section: se a seção é
-   limitada, o fundo do herói para no meio da tela e sobra um bloco vazio à direita. */
-@media (min-width: 1440px) {
-  .wrap, .container, .page, .inner { max-width: min(1320px, 88vw) !important; margin-inline: auto !important; }
+/* Largura FLUIDA, não faixas fixas: a página tem que funcionar de 320 a 2560px,
+   não só na tela de quem testou. O conteúdo ocupa 92vw até o teto de 1400px e
+   centraliza sempre. Seção fica full-bleed: limitar a seção corta o fundo. */
+@media (min-width: 900px) {
+  .wrap, .container, .page, .inner {
+    max-width: min(1400px, 92vw) !important;
+    margin-inline: auto !important;
+    padding-inline: clamp(20px, 3vw, 48px);
+  }
 }
-@media (min-width: 1900px) {
-  .wrap, .container, .page, .inner { max-width: min(1440px, 84vw) !important; margin-inline: auto !important; }
+/* Ultrawide: 1400px num monitor de 2560 deixa 45% vazio. Cresce mais um degrau. */
+@media (min-width: 2000px) {
+  .wrap, .container, .page, .inner { max-width: min(1640px, 92vw) !important; }
 }
 
 @media (min-width: 900px) {
   h1 { font-size: clamp(44px, 5.2vw, 78px) !important; line-height: 1.02 !important; }
   p, li { font-size: max(17px, 1em); }
   blockquote, blockquote p { font-size: max(20px, 1em); }
+  /* GRID LARGO, TEXTO ESTREITO: com contentor fluido o parágrafo esticava até 299
+     caracteres por linha em 2560px. A coluna de leitura fica entre 45 e 75ch. */
+  p, li, dd { max-width: 64ch; }
+  blockquote, blockquote p { max-width: 44ch; }
 }
 
 /* Botão refinado: sem sombra pesada, com fio interno e respiro real. */

@@ -389,7 +389,11 @@ const MEDIDOR_DESKTOP = `(() => {
   const larg = window.innerWidth;
   const candidatos = [...document.querySelectorAll('body > *, main, .wrap, .container, .page, section')]
     .filter((e) => e.getBoundingClientRect().height > 80);
-  const larguras = candidatos.map((e) => Math.round(e.getBoundingClientRect().width));
+  // Ignora faixas full-bleed (fundo de seção ocupa 100% por definição) — o que
+  // interessa é a largura do CONTENTOR de conteúdo.
+  const larguras = candidatos
+    .map((e) => Math.round(e.getBoundingClientRect().width))
+    .filter((w) => w > 0 && w < larg * 0.97);
   const conteudo = larguras.length ? Math.max(...larguras) : larg;
   // Medidas de DESKTOP que faltavam: era aqui que a página parecia boa no print do
   // celular e ruim no monitor do dono — título de 120px em cinco linhas e corpo de 15px.
@@ -404,10 +408,18 @@ const MEDIDOR_DESKTOP = `(() => {
   }
   const paragrafos = [...document.querySelectorAll('p')].filter((e) => (e.textContent || '').trim().length > 40);
   const corpoPx = paragrafos.length ? Math.min(...paragrafos.map((e) => Math.round(parseFloat(getComputedStyle(e).fontSize) || 0))) : 0;
-  return JSON.stringify({ viewport: larg, conteudo, proporcao: Math.round((conteudo / larg) * 100), tituloLinhas, tituloPx, corpoPx });
+  const transbordo = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - larg;
+  // Medida de leitura: caracteres por linha no parágrafo mais comum.
+  let medidaCh = 0;
+  if (paragrafos.length) {
+    const p = paragrafos[0];
+    const fonte = parseFloat(getComputedStyle(p).fontSize) || 16;
+    medidaCh = Math.round(p.getBoundingClientRect().width / (fonte * 0.5));
+  }
+  return JSON.stringify({ viewport: larg, conteudo, proporcao: Math.round((conteudo / larg) * 100), tituloLinhas, tituloPx, corpoPx, transbordo, medidaCh });
 })()`;
 
-async function medirDesktop(chrome: string, arquivoUrl: string, porta: number, larguraDesktop = 1280): Promise<{ viewport: number; conteudo: number; proporcao: number; tituloLinhas?: number; tituloPx?: number; corpoPx?: number } | null> {
+async function medirDesktop(chrome: string, arquivoUrl: string, porta: number, larguraDesktop = 1280): Promise<{ viewport: number; conteudo: number; proporcao: number; tituloLinhas?: number; tituloPx?: number; corpoPx?: number; transbordo?: number; medidaCh?: number } | null> {
   const perfil = fs.mkdtempSync(path.join(os.tmpdir(), "audit-desk-"));
   const proc = spawn(chrome, [
     "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
@@ -682,13 +694,6 @@ export async function auditarPaginaMobile(
     // página sem WebGL não há como detectar o renderizador por software, e o número
     // sai pessimista — já reprovou página boa a 29fps. O dado vira dica e o número
     // que vale é o medido em GPU real.
-    // Tela larga de verdade: o dono usa monitor grande e o container de 1120px
-    // deixava metade da tela vazia. Medir só em 1280 escondia isso.
-    const larga = await medirDesktop(chrome, arquivoUrl, porta + 11, 1920);
-    if (larga && larga.proporcao < 62) {
-      avisos.push(`em tela de 1920px o conteúdo ocupa ${larga.proporcao}% da largura (${larga.conteudo}px): o container precisa crescer em telas largas`);
-    }
-
     if (referencia?.fps !== undefined) {
       avisos.push(`${referencia.fps}fps na rolagem em renderização por software (referência, não reprova)`);
     }
@@ -699,6 +704,27 @@ export async function auditarPaginaMobile(
       criticos.push(`${referencia.externos} requisição(ões) externa(s): a prévia não deve depender de rede`);
     }
 
+    // FAIXA, não ponto: responsivo é passar em todas as larguras, não na tela de quem testou.
+    const LARGURAS_FAIXA = [320, 414, 768, 1024, 1440, 1920, 2560];
+    const faixa: string[] = [];
+    for (let i = 0; i < LARGURAS_FAIXA.length; i++) {
+      const w = LARGURAS_FAIXA[i];
+      const m = await medirDesktop(chrome, arquivoUrl, porta + 20 + i, w);
+      if (!m) continue;
+      const problemas: string[] = [];
+      if ((m.transbordo || 0) > 1) problemas.push(`transbordo ${m.transbordo}px`);
+      if (w >= 900 && m.proporcao < 60) problemas.push(`conteúdo em ${m.proporcao}%`);
+      if (w >= 900 && m.proporcao > 96) problemas.push(`conteúdo colado nas bordas (${m.proporcao}%)`);
+      if (m.tituloLinhas && m.tituloLinhas > (w < 900 ? 4 : 3)) problemas.push(`título em ${m.tituloLinhas} linhas`);
+      if (m.corpoPx && m.corpoPx < limites.corpo - 3) problemas.push(`corpo ${m.corpoPx}px`);
+      if (m.medidaCh && w >= 768 && (m.medidaCh < 40 || m.medidaCh > 92)) problemas.push(`linha de ${m.medidaCh}ch`);
+      faixa.push(`${w}px: ${problemas.length ? problemas.join(", ") : "ok"}`);
+      for (const problema of problemas) {
+        avisos.push(`em ${w}px — ${problema}`);
+      }
+    }
+    if (faixa.length) console.log(`[auditoria] faixa de larguras: ${faixa.join(" | ")}`);
+
     if (medidas.length) {
       const desktop = await medirDesktop(chrome, arquivoUrl, porta + 10);
       if (desktop && desktop.tituloLinhas && desktop.tituloLinhas > 3) {
@@ -706,11 +732,6 @@ export async function auditarPaginaMobile(
       }
       if (desktop?.corpoPx && desktop.corpoPx < limites.corpo - 2) {
         avisos.push(`corpo de texto em ${desktop.corpoPx}px no desktop: abaixo do perfil deste público (${limites.corpo}px)`);
-      }
-      if (desktop && desktop.proporcao < 65) {
-        avisos.push(
-          `no computador (1280px) o conteúdo ocupa ${desktop.proporcao}% da largura (${desktop.conteudo}px) — parece página de celular`,
-        );
       }
     }
   } finally {
