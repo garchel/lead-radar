@@ -48,6 +48,70 @@ def _resolve_db() -> str:
 DB = _resolve_db()
 
 
+
+# ---------------------------------------------------------------- nicho catalogado
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+INDICES = [
+    os.path.join(REPO, "server", "data", "pools", "_indice-nichos.json"),
+    r"C:\Users\paulo\OneDrive\Documentos\lead-radar\server\data\pools\_indice-nichos.json",
+]
+
+# categoria do Google Places (texto livre) -> chave do pool catalogado
+ALIASES = {
+    "barbearia": "barbearia",
+    "otica": "otica",
+    "oculos": "otica",
+    "psicolog": "psicologia",
+    "pilates": "pilates",
+    "fisioterap": "fisioterapia",
+    "oficina": "oficina",
+    "mecanic": "oficina",
+    "automotiv": "oficina",
+    "estetic": "estetica",
+    "veterin": "veterinaria",
+    "pet": "veterinaria",
+    "advoca": "advocacia",
+    "juridic": "advocacia",
+    "odonto": "odontologia",
+    "dentist": "odontologia",
+}
+
+
+def _sem_acento_texto(texto: str) -> str:
+    import unicodedata
+
+    return "".join(c for c in unicodedata.normalize("NFD", texto.lower()) if unicodedata.category(c) != "Mn")
+
+
+def nicho_do_lead(category: str):
+    """Devolve as seções que a pesquisa de nicho mostrou como essenciais.
+
+    É o que o agente precisa para falar de conteúdo com propriedade em vez de
+    perguntar "qual serviço aparece primeiro?" antes mesmo de vender.
+    """
+    cat = _sem_acento_texto(str(category or ""))
+    if not cat:
+        return None
+    chave = next((v for k, v in ALIASES.items() if k in cat), None)
+    if not chave:
+        return None
+    for caminho in INDICES:
+        try:
+            with open(caminho, "r", encoding="utf-8") as fh:
+                indice = json.load(fh)
+        except OSError:
+            continue
+        dados = (indice.get("nichos") or {}).get(chave)
+        if not dados:
+            return None
+        return {
+            "chave": chave,
+            "secoes_essenciais": dados.get("estrutura_base") or [],
+            "secoes_diferenciador": (dados.get("estrutura_diferenciador") or [])[:6],
+        }
+    return None
+
+
 def clara_pausada() -> bool:
     """O dono pode calar a Clara pelo WhatsApp (`/pausar`)."""
     try:
@@ -61,7 +125,7 @@ def clara_pausada() -> bool:
 
 QUERY = """
     SELECT c.id AS message_id, c.created_at, c.message, c.intent, c.intent_source,
-           c.lead_id, l.name, l.phone, l.pipeline_status,
+           c.lead_id, l.name, l.phone, l.pipeline_status, l.category,
            (SELECT COUNT(*) FROM communications o
              WHERE o.lead_id = c.lead_id AND o.direction = 'outbound'
                AND o.created_at > c.created_at) AS replied_after
@@ -205,6 +269,9 @@ def main() -> None:
         "text": " ".join(str(row["message"] or "").split())[:240],
     }
     ctx = contexto(row["lead_id"])
+    nicho = nicho_do_lead(row["category"])
+    if nicho:
+        ctx["nicho"] = nicho
     if "aguardando_resposta" in ctx:
         # "já respondido" é sobre FALA, não sobre aviso automático
         payload["already_answered"] = not ctx["aguardando_resposta"]

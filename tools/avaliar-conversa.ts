@@ -77,7 +77,7 @@ function estadoDoLead(estado: string): string {
 - nota Google 5,0 com 2.340 avaliações · telefone disponível
 - prévia gratuita: ${estado.includes("já enviada") ? "já foi enviada e publicada (link na conversa)" : "não foi enviada ainda"}
 - última mensagem da conversa: do lead (nunca respondida ainda)
-Interprete o papel de Clara e responda SÓ a mensagem do cliente abaixo. Não execute comandos, não consulte API: apenas escreva a resposta que você enviaria.`;
+Interprete o papel de Clara. Devolva somente o texto da mensagem que você enviaria ao cliente — sem comentários, sem explicação, sem marcadores.`;
 }
 
 async function main() {
