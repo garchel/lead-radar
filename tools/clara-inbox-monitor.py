@@ -216,6 +216,9 @@ def contexto(lead_id: str) -> dict:
         hook = l["hook"] or ""
         if hook == "pagina_aviso":
             return False
+        # rede de seguranca do app: outro repertorio, nao e fala da Clara
+        if hook.startswith("fallback"):
+            return False
         if hook == "pagina_unica" and str(l["created_at"]) != str(primeira_entrega):
             return False
         return True
@@ -227,6 +230,7 @@ def contexto(lead_id: str) -> dict:
     travada = bool(aguardando and ultima_bruta is not ultima_fala)
 
     return {
+        "fallback_falou": any((l["hook"] or "").startswith("fallback") for l in linhas),
         "aguardando_resposta": aguardando,
         "travada_por_aviso": travada,
         "pagina_entregue": bool(entregas),

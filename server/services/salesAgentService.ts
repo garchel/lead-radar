@@ -556,7 +556,10 @@ export async function answerLead(lead: StoredLead, inbound: string): Promise<Com
   }
 
   const composed = await composeReplyMessage(lead, inbound);
-  const dispatch = await dispatchLeadReply(lead, { channel: "whatsapp", message: composed.message });
+  // Marca a origem: a mensagem da rede de seguranca nao e uma fala da Clara. Sem
+  // este hook, o turno dela ficava "respondido" por um texto de outro repertorio
+  // (foi assim que o lead recebeu "primeira tela" e "qual servico primeiro").
+  const dispatch = await dispatchLeadReply(lead, { channel: "whatsapp", message: composed.message, hook: "fallback_ia" });
 
   // Ninguém respondeu: ou o gateway recusou, ou a humanização barrou. O lead está
   // esperando e o Paulo é a única pessoa que pode destravar.

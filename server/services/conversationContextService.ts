@@ -37,6 +37,8 @@ export type FatosDaConversa = {
   aguardandoResposta: boolean;
   /** A última mensagem no histórico é um aviso automático nosso, e não uma fala. */
   travadaPorAviso: boolean;
+  /** A rede de segurança do app já falou nesta conversa (outro repertório). */
+  fallbackFalou: boolean;
   /** Horas desde a última mensagem do lead. */
   silencioHoras: number | null;
 };
@@ -137,6 +139,8 @@ export function contextoDaConversa(leadId: string, opts: { limite?: number } = {
   const falas = todas.filter((c: any) => {
     const hook = String(c.hook || "");
     if (hook === "pagina_aviso") return false;
+    // Rede de segurança do app: outro repertório. Não é fala da Clara.
+    if (hook.startsWith("fallback")) return false;
     if (hook === "pagina_unica" && c.id !== primeiraEntregaId) return false;
     return true;
   });
@@ -162,6 +166,7 @@ export function contextoDaConversa(leadId: string, opts: { limite?: number } = {
     respostasDoLead: inbound.length,
     elogiouDepoisDeVer,
     aguardandoResposta: Boolean(ultimaMensagem && ultimaMensagem.direction === "inbound"),
+    fallbackFalou: todas.some((c: any) => String(c.hook || "").startsWith("fallback")),
     travadaPorAviso: Boolean(
       ultimaMensagem && ultimaMensagem.direction === "inbound" && todas[todas.length - 1] !== ultimaMensagem,
     ),
@@ -179,6 +184,9 @@ export function contextoDaConversa(leadId: string, opts: { limite?: number } = {
     linhas.push("Página ainda NÃO foi entregue.");
   }
   if (fatos.silencioHoras !== null) linhas.push(`Última mensagem do lead: ${fatos.silencioHoras}h atrás.`);
+  if (fatos.fallbackFalou) {
+    linhas.push("A rede de segurança do app já respondeu nesta conversa com outro repertório. Retome o fio pela etapa certa, sem se desculpar e sem citar bastidor.");
+  }
   if (fatos.travadaPorAviso) {
     linhas.push(
       "A última mensagem do histórico é um AVISO AUTOMÁTICO nosso, não uma resposta. O lead está esperando: responda a fala dele.",

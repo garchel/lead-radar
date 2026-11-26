@@ -78,6 +78,7 @@ describe("memória da conversa", () => {
       elogiouDepoisDeVer: false,
       aguardandoResposta: true,
       travadaPorAviso: false,
+      fallbackFalou: false,
       silencioHoras: 0,
     };
 
@@ -155,6 +156,22 @@ describe("memória da conversa", () => {
       expect(ctx.fatos.aguardandoResposta).toBe(true);
       expect(ctx.fatos.travadaPorAviso).toBe(true);
       expect(ctx.texto).toContain("AVISO AUTOMÁTICO");
+    });
+
+    it("resposta da rede de segurança não fecha o turno", async () => {
+      const id = `teste-ctx-fallback-${Date.now()}`;
+      upsertLead(makeLead(id));
+      recordCommunication({ leadId: id, channel: "whatsapp", direction: "outbound", status: "sent", message: "Oi! Montei uma prévia.", hook: "sem_site" });
+      await espera();
+      recordCommunication({ leadId: id, channel: "whatsapp", direction: "inbound", status: "sent", message: "[RECEBIDA] Como funciona?" });
+      await espera();
+      recordCommunication({ leadId: id, channel: "whatsapp", direction: "outbound", status: "sent", message: "Funciona assim: monto a primeira tela...", hook: "fallback_ia" });
+
+      const ctx = contextoDaConversa(id);
+      expect(ctx.fatos.fallbackFalou).toBe(true);
+      // o fallback não é fala da Clara: o turno continua aberto para ela
+      expect(ctx.fatos.aguardandoResposta).toBe(true);
+      expect(ctx.texto).toContain("rede de segurança");
     });
 
     it("sem histórico: página não entregue e nada de elogio", () => {
