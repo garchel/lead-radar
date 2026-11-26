@@ -1,0 +1,44 @@
+{
+  "nicho": "advocacia",
+  "medido_em": "2026-11-26",
+  "largura_px": 1440,
+  "amostra": 65,
+  "tipografia": {
+    "h1_px": {
+      "p25": 38.9,
+      "mediana": 48.2,
+      "p75": 58.4
+    },
+    "corpo_px": {
+      "mediana": 16.4
+    },
+    "razao_h1_corpo_mediana": 2.96
+  },
+  "fontes": {
+    "Playfair Display": 6,
+    "Montserrat": 4,
+    "Cinzel": 3,
+    "Oswald": 2,
+    "Lora": 2,
+    "Roboto": 2,
+    "Raleway": 1
+  },
+  "cor": {
+    "fundos_distintos_mediana": 2
+  },
+  "densidade": {
+    "degraus_de_texto_mediana": 10
+  },
+  "sem_h1": {
+    "quantos": 8,
+    "de": 65
+  },
+  "regras": [
+    "título 48px (p25 39 / p75 58) e razão 2,96",
+    "corpo 16,4px — leitura séria, entre psicologia (18) e o resto (16)",
+    "Playfair Display 6x, Montserrat 4x, CINZEL 3x, Oswald, Lora: serifada clássica de instituição é o vocabulário de autoridade",
+    "2 fundos e 10 degraus, como a maioria",
+    "12% sem h1"
+  ],
+  "aviso": "amostra anglófona; escritório brasileiro usa muito azul-marinho e dourado, que a medição de fonte não captura. Medir 10 sites brasileiros antes de fixar paleta."
+}

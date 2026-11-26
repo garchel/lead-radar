@@ -9,6 +9,61 @@
     "lista_negra": "reprovar de imediato e aplicar o teste de troca"
   },
   "nichos": {
+    "advocacia": {
+      "amostra": {
+        "referencias": 60,
+        "mercado_br": 8,
+        "coletado_em": "2026-11-26",
+        "fonte": "8 listas de design (magnifylab, ueni, theedigital, reallygooddesigns, vxt, seedprod, jurisdigital, pravaah) + busca de escritórios brasileiros"
+      },
+      "estrutura_base": [
+        "equipe",
+        "telefone_clicavel"
+      ],
+      "estrutura_diferenciador": [
+        "depoimentos",
+        "blog",
+        "artigos",
+        "endereco",
+        "casos",
+        "mapa",
+        "contato_whatsapp",
+        "familia"
+      ],
+      "enquadramento_campeao": {
+        "id": "nome_proprio",
+        "nome": "nome do advogado/escritório",
+        "ocorrencias": 13,
+        "de": 41
+      },
+      "prova_obrigatoria_do_campeao": null,
+      "tipografia": {
+        "h1_mediana": 48.2,
+        "h1_p25": 38.9,
+        "h1_p75": 58.4,
+        "corpo_mediana": 16.4,
+        "razao": 2.96,
+        "n": 65
+      },
+      "lista_negra": [
+        "a melhor advocacia",
+        "defendemos seus direitos",
+        "justiça para você",
+        "excelência jurídica",
+        "compromisso com a verdade",
+        "há X anos de experiência",
+        "bem-vindo ao nosso escritório",
+        "confiança e competência",
+        "soluções jurídicas completas"
+      ],
+      "regra_dado_ausente": "sem OAB, sem área de atuação e sem prazo, a página não promete êxito nem valor: descreve o que acontece na primeira conversa e deixa a pendência explícita. Prometer resultado é infração ética",
+      "limites": [
+        "41 heróis úteis; amostra majoritariamente dos EUA e Reino Unido",
+        "o Brasil difere: criminal e previdenciário dominam (75% e 38% na amostra de 8), e a linguagem é de especialista, não de full-service",
+        "promessa de resultado é vedada pelo Código de Ética da OAB — a lista negra cobre",
+        "a amostra de referência é de law firms dos EUA/Reino Unido e contém 2-3 SaaS jurídicos vindos das listas ('legal practice management software'). Trate 57 como 54."
+      ]
+    },
     "barbearia": {
       "amostra": {
         "paginas": 67,

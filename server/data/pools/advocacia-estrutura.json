@@ -1,0 +1,247 @@
+{
+  "nicho": "advocacia",
+  "amostra": {
+    "referencias": 60,
+    "mercado_br": 8,
+    "coletado_em": "2026-11-26",
+    "fonte": "8 listas de design (magnifylab, ueni, theedigital, reallygooddesigns, vxt, seedprod, jurisdigital, pravaah) + busca de escritórios brasileiros"
+  },
+  "aviso_amostra": "a amostra de referência é de law firms dos EUA/Reino Unido e contém 2-3 SaaS jurídicos vindos das listas ('legal practice management software'). Trate 57 como 54.",
+  "correcao_de_lexico": "PRIMEIRA PASSADA INTEIRA ERRADA: 'honorários' deu 93% porque a regex casava 'custo/preço' em qualquer canto, e trabalhista/cível/imobiliário/consumidor deram 0% porque só havia termos em português numa amostra anglófona. Corrigido com employment law, civil litigation, real estate, consumer protection, contingency fee etc.",
+  "componentes": [
+    {
+      "componente": "equipe",
+      "referencia_pct": 72,
+      "mercado_br_pct": 62,
+      "delta": 10
+    },
+    {
+      "componente": "telefone_clicavel",
+      "referencia_pct": 72,
+      "mercado_br_pct": 50,
+      "delta": 22
+    },
+    {
+      "componente": "depoimentos",
+      "referencia_pct": 63,
+      "mercado_br_pct": 50,
+      "delta": 13
+    },
+    {
+      "componente": "blog",
+      "referencia_pct": 58,
+      "mercado_br_pct": 75,
+      "delta": -17
+    },
+    {
+      "componente": "artigos",
+      "referencia_pct": 55,
+      "mercado_br_pct": 88,
+      "delta": -33
+    },
+    {
+      "componente": "endereco",
+      "referencia_pct": 55,
+      "mercado_br_pct": 75,
+      "delta": -20
+    },
+    {
+      "componente": "casos",
+      "referencia_pct": 48,
+      "mercado_br_pct": 88,
+      "delta": -40
+    },
+    {
+      "componente": "mapa",
+      "referencia_pct": 48,
+      "mercado_br_pct": 25,
+      "delta": 23
+    },
+    {
+      "componente": "contato_whatsapp",
+      "referencia_pct": 45,
+      "mercado_br_pct": 100,
+      "delta": -55
+    },
+    {
+      "componente": "familia",
+      "referencia_pct": 38,
+      "mercado_br_pct": 88,
+      "delta": -50
+    },
+    {
+      "componente": "tecnologia",
+      "referencia_pct": 37,
+      "mercado_br_pct": 0,
+      "delta": 37
+    },
+    {
+      "componente": "gift_card",
+      "referencia_pct": 35,
+      "mercado_br_pct": 0,
+      "delta": 35
+    },
+    {
+      "componente": "agendamento_online",
+      "referencia_pct": 35,
+      "mercado_br_pct": 25,
+      "delta": 10
+    },
+    {
+      "componente": "urgencia",
+      "referencia_pct": 33,
+      "mercado_br_pct": 50,
+      "delta": -17
+    },
+    {
+      "componente": "civel",
+      "referencia_pct": 33,
+      "mercado_br_pct": 25,
+      "delta": 8
+    },
+    {
+      "componente": "primeira_consulta",
+      "referencia_pct": 32,
+      "mercado_br_pct": 12,
+      "delta": 20
+    },
+    {
+      "componente": "empresarial",
+      "referencia_pct": 25,
+      "mercado_br_pct": 38,
+      "delta": -13
+    },
+    {
+      "componente": "consultoria",
+      "referencia_pct": 25,
+      "mercado_br_pct": 62,
+      "delta": -37
+    },
+    {
+      "componente": "imobiliario",
+      "referencia_pct": 23,
+      "mercado_br_pct": 25,
+      "delta": -2
+    },
+    {
+      "componente": "criminal",
+      "referencia_pct": 20,
+      "mercado_br_pct": 75,
+      "delta": -55
+    },
+    {
+      "componente": "faq",
+      "referencia_pct": 20,
+      "mercado_br_pct": 50,
+      "delta": -30
+    },
+    {
+      "componente": "trabalhista",
+      "referencia_pct": 20,
+      "mercado_br_pct": 38,
+      "delta": -18
+    },
+    {
+      "componente": "pagamento",
+      "referencia_pct": 17,
+      "mercado_br_pct": 12,
+      "delta": 5
+    },
+    {
+      "componente": "video",
+      "referencia_pct": 17,
+      "mercado_br_pct": 0,
+      "delta": 17
+    },
+    {
+      "componente": "horario",
+      "referencia_pct": 10,
+      "mercado_br_pct": 62,
+      "delta": -52
+    },
+    {
+      "componente": "antes_depois",
+      "referencia_pct": 10,
+      "mercado_br_pct": 0,
+      "delta": 10
+    },
+    {
+      "componente": "galeria",
+      "referencia_pct": 8,
+      "mercado_br_pct": 0,
+      "delta": 8
+    },
+    {
+      "componente": "atendimento_online",
+      "referencia_pct": 8,
+      "mercado_br_pct": 25,
+      "delta": -17
+    },
+    {
+      "componente": "planos",
+      "referencia_pct": 7,
+      "mercado_br_pct": 0,
+      "delta": 7
+    },
+    {
+      "componente": "previdenciario",
+      "referencia_pct": 7,
+      "mercado_br_pct": 38,
+      "delta": -31
+    },
+    {
+      "componente": "honorarios",
+      "referencia_pct": 7,
+      "mercado_br_pct": 50,
+      "delta": -43
+    },
+    {
+      "componente": "tributario",
+      "referencia_pct": 5,
+      "mercado_br_pct": 25,
+      "delta": -20
+    },
+    {
+      "componente": "consumidor",
+      "referencia_pct": 3,
+      "mercado_br_pct": 0,
+      "delta": 3
+    },
+    {
+      "componente": "estacionamento",
+      "referencia_pct": 2,
+      "mercado_br_pct": 0,
+      "delta": 2
+    },
+    {
+      "componente": "produtos",
+      "referencia_pct": 2,
+      "mercado_br_pct": 0,
+      "delta": 2
+    }
+  ],
+  "leituras": {
+    "nucleo_do_nicho": [
+      "telefone clicável 72% e equipe 72% — quem atende é o produto",
+      "depoimentos 63%",
+      "blog 58% e artigos 55% — conteúdo é a prova de competência no nicho",
+      "endereço 55% e mapa 48%",
+      "casos 48% — resultado de caso é a prova central"
+    ],
+    "esconder_preco_e_legitimo": [
+      "honorários citados em só 7% (depois da correção)",
+      "primeira consulta aparece em 32% — o funil é conversa inicial, não tabela de preço",
+      "é o oposto de ótica (preço 11 de 34) e de oficina (orçamento é o diferencial)"
+    ],
+    "areas_de_atuacao": [
+      "família 38%",
+      "cível 33%",
+      "empresarial 25%",
+      "imobiliário 23%",
+      "trabalhista 20% e criminal 20%",
+      "previdenciário 7% e tributário 5% na amostra internacional",
+      "no BR: criminal 75% e previdenciário 38% na amostra de 8 — o mercado brasileiro é de especialista, não de full-service"
+    ],
+    "contraste": "advocacia e psicologia são os dois nichos em que a marca é a PESSOA. A diferença: psicologia vende escuta, advocacia vende competência contra um risco"
+  }
+}

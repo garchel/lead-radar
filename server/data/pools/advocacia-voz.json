@@ -1,0 +1,151 @@
+{
+  "nicho": "advocacia",
+  "gerado_em": "2026-11-26",
+  "n_lido": 65,
+  "n_util": 41,
+  "metodo": "leitura manual dos 65 títulos. Descartados 'modal title', '{{title}}', 'main navigation', 'search', 'client login', 'people', 'expertise', 'about us', páginas de SaaS jurídico e de associação de escritórios.",
+  "principio": "cataloga a ESCOLHA (público -> promessa -> prova), nunca a frase.",
+  "enquadramentos": [
+    {
+      "id": "nome_proprio",
+      "nome": "nome do advogado/escritório",
+      "ocorrencias": 13,
+      "de": 41,
+      "pergunta_que_responde": "quem vai me representar?",
+      "exemplos_observados": [
+        "The Law Offices of Nicholas Adamucci",
+        "Carmen Miller Law",
+        "Jim Strickland Law",
+        "Lazarow Law Firm, PLC",
+        "Meyer Law Firm"
+      ],
+      "porque_funciona": "advocacia é relação de confiança pessoal, como psicologia. A marca é a pessoa e o sobrenome",
+      "limite": "para lead novo sem reputação, o nome sozinho não informa nada"
+    },
+    {
+      "id": "especialidade",
+      "nome": "especialidade + lugar",
+      "ocorrencias": 12,
+      "de": 41,
+      "pergunta_que_responde": "vocês resolvem o MEU tipo de problema aqui?",
+      "exemplos_observados": [
+        "bankruptcy attorney serving the San Francisco Bay Area",
+        "providing family law services in Charlotte, NC",
+        "compassionate personal injury services in Houston",
+        "advogado criminalista em São Paulo",
+        "escritório especializado em direito previdenciário"
+      ],
+      "prova_obrigatoria": [
+        "área de atuação nomeada",
+        "cidade/foro de atuação",
+        "OAB do responsável"
+      ],
+      "leitura": "é o campeão empatado e o mais brasileiro dos enquadramentos: aqui o escritório se define por área + foro"
+    },
+    {
+      "id": "medo",
+      "nome": "medo do erro jurídico",
+      "ocorrencias": 7,
+      "de": 41,
+      "pergunta_que_responde": "o que acontece se eu fizer isso errado / se ninguém me defender?",
+      "exemplos_observados": [
+        "não deixe seu familiar preso cumprir pena no regime errado!",
+        "it wasn't your fault.",
+        "on the case",
+        "sua aposentadoria merece atenção de quem realmente entende"
+      ],
+      "prova_obrigatoria": [
+        "consequência concreta do erro (prazo, regime, perda de direito)",
+        "prazo legal em que ainda dá tempo"
+      ],
+      "leitura": "é o diferencial mais forte do nicho: a dor não é 'quero justiça', é 'posso perder um direito por não saber'"
+    },
+    {
+      "id": "resultado",
+      "nome": "resultado / vitória",
+      "ocorrencias": 6,
+      "de": 41,
+      "pergunta_que_responde": "vocês ganham?",
+      "exemplos_observados": [
+        "results-driven advocacy for family and criminal matters",
+        "redefining excellence",
+        "casos e resultados (48% dos sites)",
+        "sophisticated legal solutions that spark positive impact"
+      ],
+      "prova_obrigatoria": [
+        "caso real, anonimizado, com desfecho e tempo",
+        "nunca prometer resultado (vedado pelo Código de Ética da OAB)"
+      ],
+      "risco": "promessa de êxito é infração ética: a página mostra caso e processo, não garantia"
+    },
+    {
+      "id": "preco_alternativo",
+      "nome": "preço como diferencial (raro)",
+      "ocorrencias": 3,
+      "de": 41,
+      "pergunta_que_responde": "dá para pagar?",
+      "exemplos_observados": [
+        "law firm quality at up to half the cost",
+        "smart and affordable advocacy for all!",
+        "100% free, done in 3 minutes"
+      ],
+      "prova_obrigatoria": [
+        "modelo de cobrança real: êxito, hora, fixo, consulta gratuita"
+      ],
+      "leitura": "aparece só em 3 de 41 — é o espaço vazio do nicho. Quem mostra modelo de cobrança sem tabelar preço se diferencia"
+    }
+  ],
+  "ausentes": [
+    {
+      "enquadramento": "tabela de preço",
+      "ocorrencias": 0,
+      "leitura": "nenhum dos 41 abre com valor. Em advocacia esconder preço é legítimo e esperado — o oposto de ótica"
+    },
+    {
+      "enquadramento": "saudação",
+      "ocorrencias": 2,
+      "leitura": "'welcome to Pitblado' aparece, mas em site institucional antigo"
+    }
+  ],
+  "lista_negra": [
+    "a melhor advocacia",
+    "defendemos seus direitos",
+    "justiça para você",
+    "excelência jurídica",
+    "compromisso com a verdade",
+    "há X anos de experiência",
+    "bem-vindo ao nosso escritório",
+    "confiança e competência",
+    "soluções jurídicas completas"
+  ],
+  "padroes_de_titulo_proibidos": [
+    "começa com 'O que'",
+    "começa com 'Conheça o escritório'",
+    "começa com 'Nossas áreas'"
+  ],
+  "teste_de_troca": {
+    "regra": "trocar o nome do escritório por outro de ramo diferente; se continuar verdadeira, reprovar",
+    "exemplos_de_troca": [
+      "Ótica Central",
+      "Clínica Vida"
+    ]
+  },
+  "regra_de_dado_ausente": "sem OAB, sem área de atuação e sem prazo, a página não promete êxito nem valor: descreve o que acontece na primeira conversa e deixa a pendência explícita. Prometer resultado é infração ética",
+  "comparacao": {
+    "odontologia": "experiência",
+    "barbearia": "lugar",
+    "otica": "preço",
+    "psicologia": "nome + dor",
+    "pilates": "transformação + pertencimento",
+    "fisioterapia": "lugar + alívio",
+    "oficina": "confiança anti-golpe",
+    "estetica": "autoestima + naturalidade",
+    "veterinaria": "família + disponibilidade",
+    "advocacia": "nome próprio + especialidade (e o medo do erro jurídico como diferencial)"
+  },
+  "limites": [
+    "41 heróis úteis; amostra majoritariamente dos EUA e Reino Unido",
+    "o Brasil difere: criminal e previdenciário dominam (75% e 38% na amostra de 8), e a linguagem é de especialista, não de full-service",
+    "promessa de resultado é vedada pelo Código de Ética da OAB — a lista negra cobre"
+  ]
+}
