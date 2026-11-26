@@ -187,6 +187,27 @@ function conferirNicho(html, titulo, nicho = "odontologia") {
  */
 const DOMINIOS_BLOQUEADOS = /^(www\.)?(cloudflare|github|gitlab|digitalocean|aws\.amazon|netlify|vercel|reddit|twitter|x|facebook|instagram|whatsapp|gmpg|w3|schema|wordpress|wordpress\.org|shopify|squarespace|wix|godaddy|medium|youtube|vimeo|apple|google)\b/i;
 
+
+/**
+ * Tipo de site — a conferência de nicho sozinha não basta.
+ * Numa busca por "psicólogo", entraram diretório, associação e até agência de
+ * marketing que fala de "agenda cheia". Nenhum deles é consultório e todos
+ * distorcem a frequência.
+ */
+function classificarTipo(html, url) {
+  const texto = (html || "").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<script[\s\S]*?<\/script>/gi, " ");
+  const host = String(url || "").toLowerCase();
+  const regras = [
+    // regras apertadas de propósito: "eventos" e "curso" aparecem em consultório de verdade
+    ["agencia", /ag[eê]ncia de (marketing|tr[aá]fego|publicidade)|tr[aá]fego pago|gest[aã]o de redes sociais|sua agenda cheia sem depender/i],
+    ["agregador", /encontre (seu|a) (psic[oó]log|terapeuta|profissional)|find a (therapist|counselor|psychologist)|milhares de profissionais|diret[oó]rio de profissionais|compare pre[cç]os de/i],
+    ["associacao", /associa[cç][aã]o (brasileira|de [a-z]|dos)|sociedade brasileira de|seja um associado|quadro de associados/i],
+    ["instituto_metodo", /instituto (de|do) [a-z]|forma[cç][aã]o em (psicoterapia|psican[aá]lise)|curso de (forma[cç][aã]o|especializa[cç][aã]o)/i],
+  ];
+  for (const [tipo, re] of regras) if (re.test(texto)) return tipo;
+  return "negocio";
+}
+
 const TITULOS = /<h([1-3])[^>]*>([\s\S]*?)<\/h\1>/gi;
 const limpar = (t) => t.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
 
@@ -217,6 +238,7 @@ for (const url of urls) {
     const limpo = html.replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<!--[\s\S]*?-->/g, " ");
     registro.sinais = Object.fromEntries(Object.entries(SINAIS).map(([k, re]) => [k, re.test(limpo)]));
     const tituloHtml = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || "";
+    registro.tipo = classificarTipo(html, url);
     registro.nicho = conferirNicho(html, tituloHtml, process.env.NICHO_ALVO || "odontologia");
     registro.whatsapp_flutuante = /position:\s*fixed[^}]*whatsapp|whatsapp[^{]*\{[^}]*position:\s*fixed/i.test(html);
     registro.ok = true;
@@ -230,7 +252,8 @@ for (const url of urls) {
 fs.writeFileSync(saida, JSON.stringify(resultado, null, 1));
 
 // Agregação
-const validos = resultado.filter((r) => r.ok && r.nicho?.confirmado !== false);
+const foraDoTipo = resultado.filter((r) => r.ok && r.tipo && r.tipo !== "negocio");
+const validos = resultado.filter((r) => r.ok && r.nicho?.confirmado !== false && (!r.tipo || r.tipo === "negocio"));
 const recusados = resultado.filter((r) => r.ok && r.nicho?.confirmado === false);
 const bloqueados = resultado.filter((r) => !r.ok && /infraestrutura\/plataforma/.test(r.motivo || ""));
 const inconclusivos = resultado.filter((r) => r.ok && r.nicho?.confirmado === null);
@@ -243,6 +266,10 @@ console.log(`\n=== ${validos.length} páginas válidas de ${resultado.length} ==
 if (recusados.length) {
   console.log(`\nFORA DO NICHO (não entram na conta):`);
   for (const r of recusados) console.log(`  ${r.url} → ${r.nicho.motivo}`);
+}
+if (foraDoTipo.length) {
+  console.log(`\nNÃO É NEGÓCIO (agregador/associação/agência — fora da conta):`);
+  for (const r of foraDoTipo) console.log(`  ${r.url} → ${r.tipo}`);
 }
 if (bloqueados.length) {
   console.log(`\nBLOQUEADOS (infraestrutura, não são o negócio):`);

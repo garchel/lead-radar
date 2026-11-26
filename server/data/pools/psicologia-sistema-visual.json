@@ -14,14 +14,20 @@
     "razao_h1_corpo": 2.67
   },
   "brasil": {
-    "n": 7,
-    "com_h1": 7,
-    "sem_h1": 0,
-    "h1_mediana": 40,
-    "h1_p25": 39,
-    "h1_p75": 56,
-    "corpo_mediana": 18,
-    "razao_h1_corpo": 2.22
+    "n": 6,
+    "com_h1": 6,
+    "h1_valores": [
+      36.8,
+      40,
+      40,
+      41,
+      60,
+      60
+    ],
+    "h1_mediana": 40.5,
+    "corpo_mediana": 18.0,
+    "razao_h1_corpo": 2.39,
+    "aviso": "base pequena (7 consultórios) e inclui um h1 ausente; usar só como indício"
   },
   "internacional": {
     "n": 73,
@@ -57,5 +63,6 @@
     "serifada aparece de verdade aqui: Lora, Playfair, Caudex, junto de Montserrat e Nunito",
     "2 fundos e 10 degraus, igual aos outros: a paleta é contida em todos os nichos",
     "11% da amostra sem h1, contra 38% em ótica: consultório individual cuida melhor do básico que varejo"
-  ]
+  ],
+  "correcao": "a versão anterior somava 10 sites brasileiros, mas 3 eram endereço de agregador/associação/agência. Recontado só com consultório."
 }

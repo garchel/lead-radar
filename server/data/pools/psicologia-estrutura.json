@@ -2,9 +2,10 @@
   "nicho": "psicologia",
   "amostra": {
     "referencias": 74,
-    "mercado_br": 11,
+    "mercado_br": 7,
     "coletado_em": "2026-11-26",
-    "fonte": "listas de design (flamingo, colorlib, simplepractice, sitebuilderreport, websiteplanet, jesscreatives, azuro, mycodeless) + busca de consultórios brasileiros"
+    "fonte": "listas de design (flamingo, colorlib, simplepractice, sitebuilderreport, websiteplanet, jesscreatives, azuro, mycodeless) + busca de consultórios brasileiros",
+    "mercado_br_bruto": 21
   },
   "conferencia_de_nicho": "referencias 70 de 102 confirmadas | mercado 10 de 21 (5 dominios não resolveram, 1 deu 403)",
   "metodo": "presença de componentes por página; HTML sem <style>/<script>; nenhum texto, imagem ou código copiado.",
@@ -198,18 +199,36 @@
       "terapia individual 30% (baixo porque é pressuposto)",
       "depoimentos 39%"
     ],
-    "o_que_o_mercado_br_faz_e_a_referencia_nao": [
-      "whatsapp 73% vs 3%",
-      "endereço 73% vs 35%",
-      "depoimentos 55% vs 39%",
-      "psicanálise 36% vs 0%"
-    ],
-    "o_que_a_referencia_faz_e_o_mercado_nao": [
-      "ansiedade 65% vs 45%",
-      "blog 62% vs 64% (empate)",
-      "abordagem declarada",
-      "cobertura por convênio"
-    ],
     "contraste_com_os_outros_nichos": "psicologia é o único nicho em que o herói costuma ser o NOME DA PESSOA, não da clínica: 12 de 48 títulos úteis são só o nome da terapeuta. É venda de confiança pessoal, não de serviço."
-  }
+  },
+  "descartados_do_mercado": {
+    "motivo": "agregador, associação de método e agência de marketing não são consultório",
+    "itens": [
+      {
+        "url": "https://www.psicologossaopaulo.com.br/",
+        "tipo": "agregador"
+      },
+      {
+        "url": "https://www.emdr.org.br/",
+        "tipo": "associacao"
+      },
+      {
+        "url": "https://www.matilab.com.br/",
+        "tipo": "agencia"
+      },
+      {
+        "url": "https://sedes.org.br/",
+        "tipo": "instituto_metodo"
+      },
+      {
+        "url": "https://trafegoods.com.br/",
+        "tipo": "agencia"
+      },
+      {
+        "url": "https://www.superix.com.br/",
+        "tipo": "agencia"
+      }
+    ]
+  },
+  "aviso_mercado_br": "com 7 sites, a amostra brasileira é pequena demais para comparação de frequência. As colunas 'mercado_br_pct' devem ser lidas como indício, não medida — e o contraste BR x referência fica EM SUSPENSO até nova coleta."
 }
