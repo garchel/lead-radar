@@ -1,0 +1,554 @@
+{
+  "gerado_em": "2026-11-26",
+  "fontes": "8 sites de odontologia curados por listas de design (weblium, flamingo, webfx) + 2 cases de agência BR",
+  "metodo": "medição no navegador em 1440px: seções, componentes, tamanhos, fontes e paleta. Sem copiar texto, imagem ou código.",
+  "ressalvas": [
+    "3 sites (glasshouse, littleroyals, bowlesdentalcenter) não usam <section>: a sequência não foi extraída (altura e tipografia sim)",
+    "clinicazimmermann é de PROCTOLOGIA, não odontologia: entrou pelo portfólio da agência; serve como referência de sistema visual, não de nicho",
+    "a nota da rubrica NÃO foi usada para escolher; a seleção é a curadoria de terceiros"
+  ],
+  "fichas": [
+    {
+      "site": "glasshousedental.com",
+      "nicho_declarado": "odontologia",
+      "estrutura": {
+        "secoes_medidas": 0,
+        "altura_total_px": 10858,
+        "sequencia": []
+      },
+      "sistema_visual": {
+        "h1_px": 58,
+        "h1_fonte": "Sackers Gothic",
+        "h1_peso": "800",
+        "corpo_px": null,
+        "corpo_fonte": null,
+        "razao_h1_corpo": null,
+        "degraus_de_texto": [
+          "16px×69",
+          "18px×18",
+          "26px×18",
+          "20px×15",
+          "13px×14",
+          "36px×10",
+          "30px×9",
+          "35px×2",
+          "40px×2",
+          "58px×2"
+        ],
+        "paleta": [
+          "rgb(228, 207, 187)",
+          "rgb(247, 243, 239)",
+          "rgb(255, 255, 255)"
+        ]
+      }
+    },
+    {
+      "site": "dentologie.com",
+      "nicho_declarado": "odontologia",
+      "estrutura": {
+        "secoes_medidas": 10,
+        "altura_total_px": 8156,
+        "sequencia": [
+          {
+            "titulo": "A better dental experience,by design.",
+            "altura_px": 1320,
+            "componentes": [
+              "imagem",
+              "numerogrande"
+            ]
+          },
+          {
+            "titulo": "Dentists on a mission: inspiring you to smile more",
+            "altura_px": 742,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "Dental Services at Dentologie",
+            "altura_px": 882,
+            "componentes": [
+              "imagem",
+              "cartao"
+            ]
+          },
+          {
+            "titulo": "What Patients say About Dentologie:",
+            "altura_px": 588,
+            "componentes": []
+          },
+          {
+            "titulo": "Dental Insurance Accepted",
+            "altura_px": 890,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "Find a Dentologie dental office near you!",
+            "altura_px": 1004,
+            "componentes": []
+          },
+          {
+            "titulo": "A Fresh Approach to Dentistry",
+            "altura_px": 792,
+            "componentes": []
+          },
+          {
+            "titulo": "Other Dental Services",
+            "altura_px": 597,
+            "componentes": [
+              "cartao"
+            ]
+          },
+          {
+            "titulo": "Frequently Asked Questions",
+            "altura_px": 734,
+            "componentes": []
+          }
+        ]
+      },
+      "sistema_visual": {
+        "h1_px": 72,
+        "h1_fonte": "Playfair Display",
+        "h1_peso": "400",
+        "corpo_px": 12,
+        "corpo_fonte": "Inter",
+        "razao_h1_corpo": 6.0,
+        "degraus_de_texto": [
+          "16px×78",
+          "14px×18",
+          "18px×14",
+          "20px×9",
+          "12px×5",
+          "48px×5",
+          "24px×3",
+          "36px×3",
+          "30px×1",
+          "72px×1"
+        ],
+        "paleta": [
+          "rgb(233, 231, 226)",
+          "rgb(180, 235, 220)",
+          "rgb(249, 248, 246)",
+          "rgba(233, 231, 226, 0.3)"
+        ]
+      }
+    },
+    {
+      "site": "www.thelittleroyalsdentistry.com",
+      "nicho_declarado": "odontologia",
+      "estrutura": {
+        "secoes_medidas": 0,
+        "altura_total_px": 8033,
+        "sequencia": []
+      },
+      "sistema_visual": {
+        "h1_px": 40,
+        "h1_fonte": "Playfair Display",
+        "h1_peso": "400",
+        "corpo_px": 14,
+        "corpo_fonte": "Playfair Display",
+        "razao_h1_corpo": 2.9,
+        "degraus_de_texto": [
+          "14px×51",
+          "13px×22",
+          "40px×12",
+          "30px×8",
+          "25px×5",
+          "36px×5",
+          "28px×3",
+          "15px×1",
+          "18px×1"
+        ],
+        "paleta": [
+          "rgb(255, 255, 255)",
+          "rgb(0, 0, 0)",
+          "rgb(135, 179, 193)",
+          "rgb(52, 57, 77)"
+        ]
+      }
+    },
+    {
+      "site": "alva-odontologia.vercel.app",
+      "nicho_declarado": "odontologia",
+      "estrutura": {
+        "secoes_medidas": 6,
+        "altura_total_px": 3263,
+        "sequencia": [
+          {
+            "titulo": "Seu sorriso.Sua essência.Nosso cuidado.",
+            "altura_px": 696,
+            "componentes": [
+              "imagem",
+              "numerogrande"
+            ]
+          },
+          {
+            "titulo": "Um sorriso saudável.Muitas possibilidades.",
+            "altura_px": 683,
+            "componentes": []
+          },
+          {
+            "titulo": "A gente cuida de dentes.Mas, antes de tudo,cuida de pessoas.",
+            "altura_px": 518,
+            "componentes": [
+              "numerogrande"
+            ]
+          },
+          {
+            "titulo": "Uma boa conversa.É assim que começa.",
+            "altura_px": 585,
+            "componentes": []
+          },
+          {
+            "titulo": "Seu próximo sorrisocomeça com um encontro.",
+            "altura_px": 427,
+            "componentes": [
+              "numerogrande"
+            ]
+          }
+        ]
+      },
+      "sistema_visual": {
+        "h1_px": 76.32,
+        "h1_fonte": "Playfair Display",
+        "h1_peso": "400",
+        "corpo_px": 16,
+        "corpo_fonte": "DM Sans",
+        "razao_h1_corpo": 4.8,
+        "degraus_de_texto": [
+          "14px×14",
+          "16px×12",
+          "23px×7",
+          "13px×3",
+          "15px×3",
+          "36px×3",
+          "30px×2",
+          "50px×2",
+          "12px×1",
+          "58px×1"
+        ],
+        "paleta": [
+          "rgb(227, 230, 217)",
+          "rgb(248, 247, 242)",
+          "rgb(232, 236, 223)",
+          "rgb(37, 60, 50)"
+        ]
+      }
+    },
+    {
+      "site": "www.bulovkadc.com",
+      "nicho_declarado": "odontologia",
+      "estrutura": {
+        "secoes_medidas": 9,
+        "altura_total_px": 6372,
+        "sequencia": [
+          {
+            "titulo": "Three clinics. One standard of care.",
+            "altura_px": 1000,
+            "componentes": [
+              "imagem",
+              "video",
+              "numerogrande"
+            ]
+          },
+          {
+            "titulo": "How we can help you",
+            "altura_px": 1042,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "Our team of 62 specialists will care for you",
+            "altura_px": 853,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "What makes us exceptional",
+            "altura_px": 857,
+            "componentes": [
+              "cartao"
+            ]
+          },
+          {
+            "titulo": "What our patients say",
+            "altura_px": 725,
+            "componentes": [
+              "numerogrande"
+            ]
+          },
+          {
+            "titulo": "Frequently asked questions",
+            "altura_px": 588,
+            "componentes": []
+          },
+          {
+            "titulo": "Book your visit today",
+            "altura_px": 402,
+            "componentes": []
+          }
+        ]
+      },
+      "sistema_visual": {
+        "h1_px": 73.6,
+        "h1_fonte": "Sora",
+        "h1_peso": "600",
+        "corpo_px": 15,
+        "corpo_fonte": "Inter",
+        "razao_h1_corpo": 4.9,
+        "degraus_de_texto": [
+          "16px×115",
+          "14px×36",
+          "12px×12",
+          "20px×11",
+          "30px×8",
+          "36px×7",
+          "15px×5",
+          "20.8px×5",
+          "13px×4",
+          "18px×1"
+        ],
+        "paleta": [
+          "rgb(255, 255, 255)",
+          "rgb(250, 248, 245)",
+          "rgb(28, 37, 65)",
+          "rgb(15, 22, 41)"
+        ]
+      }
+    },
+    {
+      "site": "www.swishsmiles.com",
+      "nicho_declarado": "odontologia",
+      "estrutura": {
+        "secoes_medidas": 10,
+        "altura_total_px": 11228,
+        "sequencia": [
+          {
+            "titulo": "Seeing the dentist just got cooler",
+            "altura_px": 660,
+            "componentes": [
+              "imagem",
+              "video",
+              "numerogrande"
+            ]
+          },
+          {
+            "titulo": "Helping you achieve your dream smile",
+            "altura_px": 864,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "Dental services in a relaxed, judgment-free environment",
+            "altura_px": 2062,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "Convenient Locations Throughout Central Texas",
+            "altura_px": 1353,
+            "componentes": [
+              "imagem",
+              "formulario",
+              "cartao"
+            ]
+          },
+          {
+            "titulo": "You deserve the best dental care",
+            "altura_px": 789,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "Flexible Payment Options",
+            "altura_px": 885,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "@swishdental",
+            "altura_px": 762,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "The Swish Smile Blog",
+            "altura_px": 1187,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "Ready to book your appointment?",
+            "altura_px": 537,
+            "componentes": []
+          }
+        ]
+      },
+      "sistema_visual": {
+        "h1_px": 72,
+        "h1_fonte": "Poppins",
+        "h1_peso": "600",
+        "corpo_px": 18,
+        "corpo_fonte": "Poppins",
+        "razao_h1_corpo": 4.0,
+        "degraus_de_texto": [
+          "12px×181",
+          "16px×156",
+          "14px×101",
+          "18px×59",
+          "24px×15",
+          "20px×14",
+          "48px×9",
+          "15.8px×4",
+          "22px×1",
+          "40px×1"
+        ],
+        "paleta": [
+          "rgb(123, 214, 208)",
+          "rgb(26, 55, 67)",
+          "rgb(249, 219, 211)",
+          "rgb(254, 167, 161)"
+        ]
+      }
+    },
+    {
+      "site": "www.bowlesdentalcenter.com",
+      "nicho_declarado": "odontologia",
+      "estrutura": {
+        "secoes_medidas": 0,
+        "altura_total_px": 13651,
+        "sequencia": []
+      },
+      "sistema_visual": {
+        "h1_px": 20,
+        "h1_fonte": "Century Gothic Regular",
+        "h1_peso": "700",
+        "corpo_px": 20,
+        "corpo_fonte": "Martel Sans",
+        "razao_h1_corpo": 1.0,
+        "degraus_de_texto": [
+          "16px×219",
+          "14px×105",
+          "22px×20",
+          "40px×15",
+          "24px×9",
+          "35px×8",
+          "30px×4",
+          "15px×3",
+          "12px×2",
+          "20px×2"
+        ],
+        "paleta": [
+          "rgba(255, 255, 255, 0)",
+          "rgb(255, 255, 255)",
+          "rgb(0, 98, 111)",
+          "rgb(244, 244, 244)"
+        ]
+      }
+    },
+    {
+      "site": "clinicazimmermann.com.br",
+      "nicho_declarado": "proctologia",
+      "estrutura": {
+        "secoes_medidas": 8,
+        "altura_total_px": 6398,
+        "sequencia": [
+          {
+            "titulo": "Proctologista em Novo Hamburgo há mais de 40 anos",
+            "altura_px": 800,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "Colonoscopia",
+            "altura_px": 575,
+            "componentes": [
+              "imagem",
+              "cartao"
+            ]
+          },
+          {
+            "titulo": "Colonoscopia e a prevenção do câncer colorretal",
+            "altura_px": 616,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "Laser e cirurgia robótica na proctologia",
+            "altura_px": 616,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "Quando procurar um proctologista",
+            "altura_px": 448,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "Dr. Amauri Gilson Zimmermann",
+            "altura_px": 546,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "Atendimento para o Vale dos Sinos e a Serra",
+            "altura_px": 556,
+            "componentes": [
+              "imagem"
+            ]
+          },
+          {
+            "titulo": "Consulta",
+            "altura_px": 546,
+            "componentes": [
+              "imagem",
+              "cartao"
+            ]
+          }
+        ]
+      },
+      "sistema_visual": {
+        "h1_px": 42,
+        "h1_fonte": "Inter",
+        "h1_peso": "800",
+        "corpo_px": 19,
+        "corpo_fonte": "Inter",
+        "razao_h1_corpo": 2.2,
+        "degraus_de_texto": [
+          "19.8px×78",
+          "15.5px×21",
+          "14px×19",
+          "18px×19",
+          "36px×13",
+          "16px×9",
+          "24px×6",
+          "13px×4",
+          "26.6px×3",
+          "19px×1"
+        ],
+        "paleta": [
+          "rgb(242, 242, 242)",
+          "rgb(255, 255, 255)",
+          "rgb(53, 76, 156)",
+          "rgb(44, 63, 129)"
+        ]
+      }
+    }
+  ]
+}
