@@ -1,7 +1,7 @@
 {
   "nicho": "fisioterapia",
   "amostra": {
-    "referencias": 24,
+    "referencias": 30,
     "mercado_br": 8,
     "coletado_em": "2026-11-26",
     "fonte": "4 listas de design (devmizan, cyberoptik, mycodeless, kcwebdesign) + busca de clínicas"
@@ -185,9 +185,9 @@
     },
     {
       "componente": "pelvica",
-      "referencia_pct": 0,
+      "referencia_pct": 27,
       "mercado_br_pct": 12,
-      "delta": -12
+      "delta": 15
     }
   ],
   "leituras": {
@@ -200,9 +200,9 @@
       "aparelhos/equipamentos 50% (ultrassom, laser, TENS)"
     ],
     "onde_da_para_diferenciar": [
+      "pélvica 27%",
       "domiciliar/home care",
       "respiratória",
-      "pélvica",
       "neurológica",
       "vídeo",
       "antes/depois"
@@ -215,5 +215,6 @@
       "agendamento online só 50% — de novo o funil é WhatsApp"
     ],
     "contraste": "fisioterapia é o nicho com MAIOR presença de equipe (92%) e MENOR de preço: convênio resolve a objeção de custo. Onde pilates vende plano, fisioterapia vende cobertura."
-  }
+  },
+  "correcao": "pélvica saiu de 0% para 27% ao incluir 'pelvic floor/health', incontinence, postpartum e perineal: a regex anterior só tinha português e a amostra é australiana. Pélvica é diferenciador real, não ausência."
 }

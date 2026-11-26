@@ -28,7 +28,7 @@ const SINAIS_GENERICOS = {
   pagamento: /parcel|cart[aã]o de cr[eé]dito|\bpix\b|formas de pagamento|\bfinancing\b|payment plans?|carecredit|\bwe accept\b/i,
   estacionamento: /estacionamento|\bparking\b/i,
   urgencia: /urg[eê]ncia|plant[aã]o|atendimento imediato|\bemergency\b|same-day|walk-?in/i,
-  tecnologia: /scanner|radiografia digital|tomografia|laser|impressora 3d|cad\/cam|digital x-?ray|\bcerec\b|intraoral/i,
+    tecnologia: /scanner|radiografia digital|tomografia|laser|impressora 3d|cad\/cam|digital x-?ray|\bcerec\b|intraoral|\bequipment\b/i,
   antes_depois: /antes e depois|antes\/depois|before.?after|smile makeover|transformation/i,
   faq: /<details|<summary|perguntas frequentes|\bfaq\b|frequently asked/i,
     produtos: /loja online|shop now|\badd to cart\b|pomada|\bmerch\b|nossa loja|\bmembership products\b/i,
@@ -64,7 +64,7 @@ const SERVICOS_POR_NICHO = {
   fisioterapia: {
     ortopedica: /ortop[eé]dic|coluna|joelho|ombro|h[eé]rnia|\blombar\b|\bcervical\b|tendinite|\bles[aã]o\b/i,
     esportiva: /esportiv|atleta|corrida|\brunner\b|\bsport\b|performance/i,
-    pelvica: /p[eé]lvica|assoalho|incontin[eê]ncia|p[oó]s-?parto|gestante/i,
+    pelvica: /p[eé]lvica|assoalho|incontin[eê]ncia|p[oó]s-?parto|gestante|pelvic (floor|health)|incontinence|postpartum|perineal/i,
     respiratoria: /respirat[oó]ri|pulmonar|\bipap\b|\bcpap\b|asma|dpoc/i,
     neurologica: /neuro|\bavc\b|parkinson|esclerose|\bneurofuncional\b/i,
     pilates: /pilates|reformer/i,

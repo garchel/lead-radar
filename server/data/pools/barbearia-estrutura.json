@@ -184,5 +184,11 @@
       "estacionamento 9%"
     ],
     "contraste_com_odontologia": "em odontologia agendamento online é 24% (diferencial); em barbearia é 97% (padrão). O pool de um nicho não transfere para outro."
-  }
+  },
+  "componentes_nao_aplicaveis": [
+    {
+      "componente": "tecnologia",
+      "motivo": "o conceito é de clínica (scanner, tomografia); 0% em barbearia mede o vocabulário errado, não ausência"
+    }
+  ]
 }
