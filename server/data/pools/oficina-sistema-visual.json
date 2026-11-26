@@ -1,0 +1,44 @@
+{
+  "nicho": "oficina",
+  "medido_em": "2026-11-26",
+  "largura_px": 1440,
+  "amostra": 73,
+  "tipografia": {
+    "h1_px": {
+      "p25": 26.7,
+      "mediana": 46.5,
+      "p75": 64
+    },
+    "corpo_px": {
+      "mediana": 16
+    },
+    "razao_h1_corpo_mediana": 2.91
+  },
+  "fontes": {
+    "Poppins": 7,
+    "Montserrat": 4,
+    "Oswald": 4,
+    "Barlow": 4,
+    "Raleway": 3,
+    "Glacial": 3,
+    "Lato": 2
+  },
+  "cor": {
+    "fundos_distintos_mediana": 2
+  },
+  "densidade": {
+    "degraus_de_texto_mediana": 10
+  },
+  "sem_h1": {
+    "quantos": 7,
+    "de": 73
+  },
+  "regras": [
+    "título mediano 46,5px (p25 27 / p75 64): mais contido que pilates e fisioterapia",
+    "corpo 16px, razão 2,91",
+    "Poppins e Montserrat dominam; Oswald e Barlow aparecem — grotesca pesada de oficina",
+    "2 fundos e 10 degraus, igual a todos os nichos",
+    "10% sem h1"
+  ],
+  "aviso": "toda a amostra é dos EUA. Não há site brasileiro de oficina medido porque quase não existe (1 de 84 leads tem URL). A tipografia serve de faixa, não de espelho local."
+}

@@ -1,0 +1,154 @@
+{
+  "nicho": "oficina",
+  "gerado_em": "2026-11-26",
+  "n_lido": 73,
+  "n_util": 44,
+  "metodo": "leitura manual dos 73 títulos de abertura. Descartados 'menu', 'settings', 'navigation', 'business hours', 'oil change +', 'battery change', 'wanted', título de artigo de blog e blocos de preço Goodyear.",
+  "principio": "cataloga a ESCOLHA (público -> promessa -> prova), nunca a frase.",
+  "enquadramentos": [
+    {
+      "id": "confianca",
+      "nome": "confiança anti-golpe",
+      "ocorrencias": 13,
+      "de": 44,
+      "pergunta_que_responde": "vou ser enganado aqui?",
+      "exemplos_observados": [
+        "auto repair you can trust",
+        "you're in good hands",
+        "honest. progressive. kind.",
+        "expert auto repair, zero mansplaining",
+        "expert service. fair pricing. 100% satisfaction.",
+        "fixed right the first time.",
+        "trusted mechanics"
+      ],
+      "prova_obrigatoria": [
+        "depoimento com nome (depoimentos aparecem em 82% dos sites do nicho)",
+        "garantia do serviço por escrito",
+        "orçamento antes de executar"
+      ],
+      "leitura": "É O CAMPEÃO ABSOLUTO do nicho. Mecânica não vende serviço, vende alívio do medo de ser enganado. 'Fair pricing' e 'honest' são a mesma promessa dita de dois jeitos"
+    },
+    {
+      "id": "lugar",
+      "nome": "lugar",
+      "ocorrencias": 12,
+      "de": 44,
+      "pergunta_que_responde": "fica perto e atende meu carro?",
+      "exemplos_observados": [
+        "best auto service in Shasta County",
+        "Houston auto repair",
+        "Chicago's trusted tire & auto repair since 1987",
+        "auto mechanic in Phoenix, Glendale, Tempe & Mesa",
+        "San Diego auto repair"
+      ],
+      "prova_obrigatoria": [
+        "bairro/cidade",
+        "anos no mesmo endereço",
+        "estacionamento ou pátio (só 9% citam, e é dor real)"
+      ],
+      "leitura": "empata com confiança. Repare na combinação lugar + confiança + ano de fundação, que é a fórmula mais repetida: 'Chicago's trusted tire & auto repair since 1987'"
+    },
+    {
+      "id": "especialidade",
+      "nome": "especialidade por marca/origem",
+      "ocorrencias": 6,
+      "de": 44,
+      "pergunta_que_responde": "sabem mexer no MEU carro?",
+      "exemplos_observados": [
+        "specializing in german auto repair",
+        "Austin's European auto service experts",
+        "the premier European & Asian auto repair shop",
+        "no matter what you drive",
+        "whatever make or model you drive we fix it"
+      ],
+      "prova_obrigatoria": [
+        "marcas atendidas de verdade",
+        "se é multimarcas, dizer que é (36% dos sites dizem)"
+      ],
+      "leitura": "no Brasil o equivalente é 'especializada em injeção eletrônica' ou 'multimarcas', não 'European'"
+    },
+    {
+      "id": "risco",
+      "nome": "risco removido",
+      "ocorrencias": 5,
+      "de": 44,
+      "pergunta_que_responde": "quanto vou gastar e quando fico sem carro?",
+      "exemplos_observados": [
+        "get your car repaired today - financing available",
+        "get a free instant auto service repair quote",
+        "free body shop estimates",
+        "save up to $100 when you buy 4 tires"
+      ],
+      "prova_obrigatoria": [
+        "orçamento gratuito e sem compromisso",
+        "prazo do serviço",
+        "formas de pagamento (52% dos sites citam)"
+      ],
+      "leitura": "só 25% dos sites têm orçamento explícito apesar de ser o pedido nº1 do cliente"
+    },
+    {
+      "id": "servico",
+      "nome": "serviço genérico (fraco)",
+      "ocorrencias": 4,
+      "de": 44,
+      "pergunta_que_responde": "o que vocês fazem?",
+      "exemplos_observados": [
+        "auto repair shop",
+        "professional automotive repair",
+        "complete auto repair"
+      ],
+      "leitura": "não diferencia: 95% dos sites já falam de revisão"
+    },
+    {
+      "id": "saudacao",
+      "nome": "saudação (ruim)",
+      "ocorrencias": 4,
+      "de": 44,
+      "pergunta_que_responde": "nada",
+      "exemplos_observados": [
+        "welcome to auto tek your premier auto repair and service shop",
+        "welcome to pinnacle auto repair"
+      ],
+      "leitura": "aparece, mas sempre em site de template; nenhum dos melhores usa"
+    }
+  ],
+  "lista_negra": [
+    "a melhor oficina da cidade",
+    "atendimento de qualidade",
+    "preço justo",
+    "profissionais capacitados",
+    "tecnologia de ponta",
+    "há X anos no mercado",
+    "venha nos conhecer",
+    "bem-vindo à nossa oficina",
+    "seu carro em boas mãos",
+    "confiança e segurança"
+  ],
+  "padroes_de_titulo_proibidos": [
+    "começa com 'O que'",
+    "começa com 'Conheça nossa'",
+    "começa com 'Nossos serviços'"
+  ],
+  "teste_de_troca": {
+    "regra": "trocar o nome da oficina por outro de ramo diferente; se continuar verdadeira, reprovar",
+    "exemplos_de_troca": [
+      "Ótica Central",
+      "Clínica Vida"
+    ]
+  },
+  "regra_de_dado_ausente": "sem depoimento real, sem garantia e sem orçamento, a página NÃO afirma confiança: mostra o que existe (anos de casa, marcas atendidas, horário) e deixa a pendência explícita. Confiança sem prova é a mentira mais fácil de escrever",
+  "comparacao": {
+    "odontologia": "experiência",
+    "barbearia": "lugar",
+    "otica": "preço",
+    "psicologia": "nome + dor",
+    "pilates": "transformação + pertencimento",
+    "fisioterapia": "lugar + alívio",
+    "oficina": "confiança anti-golpe + lugar"
+  },
+  "limites": [
+    "contagem é leitura manual dos títulos",
+    "amostra 100% dos EUA: 'German auto repair' e 'European' não existem no vocabulário do mecânico brasileiro",
+    "no Brasil o equivalente de confiança é 'orçamento na hora', 'peça com nota' e 'garantia', não 'trusted shop'"
+  ]
+}
