@@ -11,6 +11,8 @@ data/
 !server/data/
 server/data/*
 !server/data/cities_ibge.csv
+!server/data/pools/
+!server/data/pools/*.json
 
 # Artefatos locais de pareamento do WhatsApp (carregam credenciais da sessão)
 qr-*.json

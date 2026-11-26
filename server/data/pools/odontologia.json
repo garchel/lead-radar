@@ -1,0 +1,185 @@
+{
+  "nicho": "odontologia",
+  "amostra": {
+    "paginas": 33,
+    "coletado_em": "2026-11-26",
+    "fonte": "sites de clínicas odontológicas brasileiras (home)"
+  },
+  "metodo": "só estrutura: presença de componentes, vocabulário de seção e títulos. Nenhum texto, imagem ou código de terceiros foi copiado.",
+  "componentes": [
+    {
+      "componente": "implante",
+      "presenca_pct": 97,
+      "tipo": "servico",
+      "faixa": "base"
+    },
+    {
+      "componente": "whatsapp",
+      "presenca_pct": 94,
+      "tipo": "contato",
+      "faixa": "base"
+    },
+    {
+      "componente": "convenios",
+      "presenca_pct": 91,
+      "tipo": "decisao",
+      "faixa": "base"
+    },
+    {
+      "componente": "equipe",
+      "presenca_pct": 91,
+      "tipo": "confianca",
+      "faixa": "base"
+    },
+    {
+      "componente": "ortodontia",
+      "presenca_pct": 85,
+      "tipo": "servico",
+      "faixa": "base"
+    },
+    {
+      "componente": "depoimentos",
+      "presenca_pct": 79,
+      "tipo": "prova",
+      "faixa": "base"
+    },
+    {
+      "componente": "clareamento",
+      "presenca_pct": 79,
+      "tipo": "servico",
+      "faixa": "base"
+    },
+    {
+      "componente": "endereco",
+      "presenca_pct": 79,
+      "tipo": "pratica",
+      "faixa": "base"
+    },
+    {
+      "componente": "mapa",
+      "presenca_pct": 64,
+      "tipo": "pratica",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "telefone_clicavel",
+      "presenca_pct": 64,
+      "tipo": "contato",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "harmonizacao",
+      "presenca_pct": 58,
+      "tipo": "servico",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "pagamento",
+      "presenca_pct": 55,
+      "tipo": "decisao",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "faq",
+      "presenca_pct": 48,
+      "tipo": "duvida",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "blog",
+      "presenca_pct": 48,
+      "tipo": "conteudo",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "infantil",
+      "presenca_pct": 42,
+      "tipo": "servico",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "galeria",
+      "presenca_pct": 42,
+      "tipo": "prova",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "horario",
+      "presenca_pct": 39,
+      "tipo": "pratica",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "urgencia",
+      "presenca_pct": 36,
+      "tipo": "decisao",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "tecnologia",
+      "presenca_pct": 27,
+      "tipo": "confianca",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "video",
+      "presenca_pct": 27,
+      "tipo": "prova",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "antes_depois",
+      "presenca_pct": 24,
+      "tipo": "prova",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "agendamento_online",
+      "presenca_pct": 24,
+      "tipo": "decisao",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "estacionamento",
+      "presenca_pct": 21,
+      "tipo": "pratica",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "casos",
+      "presenca_pct": 21,
+      "tipo": "prova",
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "financeiro",
+      "presenca_pct": 12,
+      "tipo": "decisao",
+      "faixa": "raro"
+    }
+  ],
+  "nomes_de_secao": {
+    "sorriso": 64,
+    "tratamento": 52,
+    "implante": 48,
+    "contato": 39,
+    "clareamento": 33,
+    "equipe": 24,
+    "tecnologia": 21,
+    "sobre": 21,
+    "aparelho": 21,
+    "harmonizacao": 18,
+    "avaliacoes": 18,
+    "agendamento": 18,
+    "onde_fica": 15,
+    "estrutura": 12,
+    "depoimento": 12,
+    "alinhador": 12,
+    "perguntas": 12
+  },
+  "leitura": {
+    "base": "aparece em 70%+ dos sites: é o que TODO mundo tem. Usar quando faz sentido, nunca como diferencial.",
+    "diferenciador": "entre 15% e 50%: é onde a página ganha especificidade sem parecer cópia do vizinho.",
+    "raro": "abaixo de 15%: só entra se o negócio realmente tiver o dado."
+  }
+}
