@@ -1,0 +1,176 @@
+{
+  "nicho": "pilates",
+  "gerado_em": "2026-11-26",
+  "n_lido": 121,
+  "n_util": 55,
+  "metodo": "leitura manual dos títulos de abertura das 121 páginas confirmadas. Descartados ~66 que não são herói: 'menu', 'cart', '{{share}}', e-mail solto, 'welcome to', páginas de agência de marketing e SaaS de gestão que apareceram nas listas.",
+  "principio": "cataloga a ESCOLHA (público -> promessa -> prova), nunca a frase.",
+  "enquadramentos": [
+    {
+      "id": "transformacao",
+      "nome": "transformação física concreta",
+      "ocorrencias": 14,
+      "de": 55,
+      "pergunta_que_responde": "o que melhora no meu corpo?",
+      "exemplos_observados": [
+        "get stronger. move better.",
+        "pilates that sets you up for life.",
+        "your body is a powerhouse, let's flip the switch",
+        "stronger, freer, better movement",
+        "lengthen",
+        "move with purpose, breathe with ease",
+        "strength. balance. wellbeing."
+      ],
+      "prova_obrigatoria": [
+        "o que muda e em quanto tempo (postura, dor lombar, força, equilíbrio)",
+        "formato: individual, turma ou dupla"
+      ],
+      "leitura": "é o campeão do nicho. Funciona porque a promessa é física e verificável, não abstrata"
+    },
+    {
+      "id": "pertencimento",
+      "nome": "pertencimento / comunidade",
+      "ocorrencias": 11,
+      "de": 55,
+      "pergunta_que_responde": "eu caibo aqui?",
+      "exemplos_observados": [
+        "where everyone is welcome, every body is beautiful, and every breath counts",
+        "where every body belongs",
+        "a tribe called pilates",
+        "more than a studio. your third space.",
+        "we make movement fun, achievable & for everyone",
+        "for every body"
+      ],
+      "prova_obrigatoria": [
+        "turma pequena (quantas pessoas)",
+        "perfil real de aluno (idade, nível, objetivo)",
+        "o que acontece na primeira aula"
+      ],
+      "leitura": "o trocadilho 'every body' é recorrente e diz a tese: o estúdio vende não-julgamento. É o antídoto da academia"
+    },
+    {
+      "id": "metodo",
+      "nome": "método / credencial técnica",
+      "ocorrencias": 8,
+      "de": 55,
+      "pergunta_que_responde": "quem me ensina sabe o que faz?",
+      "exemplos_observados": [
+        "experience the prescription effect",
+        "pilates by the experts",
+        "alignment focused fitness that gets powerful results",
+        "classical and reformer pilates",
+        "thoughtful movement, individual care, lifelong wellbeing"
+      ],
+      "prova_obrigatoria": [
+        "formação do instrutor (Pilates clássico, fisioterapia, certificação)",
+        "equipamentos que o estúdio tem"
+      ],
+      "leitura": "no Brasil esse é o enquadramento dominante: 'com fisioterapeuta', 'equipamentos completos', 'pilates clássico'"
+    },
+    {
+      "id": "identidade",
+      "nome": "identidade / atitude da marca",
+      "ocorrencias": 7,
+      "de": 55,
+      "pergunta_que_responde": "que tipo de gente treina aqui?",
+      "exemplos_observados": [
+        "reformer rebels only.",
+        "body of work / work of art",
+        "mind-bending fitness",
+        "work hard.",
+        "this is your place to embrace the challenge",
+        "your happi place"
+      ],
+      "prova_obrigatoria": [
+        "precisa combinar com o público real do bairro; 'rebels' num estúdio de terceira idade é mentira"
+      ],
+      "risco": "atitude sem substância vira pose"
+    },
+    {
+      "id": "lugar",
+      "nome": "lugar",
+      "ocorrencias": 6,
+      "de": 55,
+      "pergunta_que_responde": "onde fica, e é perto?",
+      "exemplos_observados": [
+        "calabasas",
+        "london's most loved pilates studio",
+        "kalamunda's pilates studio",
+        "pilates of eastlake",
+        "o mais completo estúdio de pilates do Itaim Bibi",
+        "pilates em Curitiba"
+      ],
+      "prova_obrigatoria": [
+        "bairro reconhecível",
+        "estacionamento (só 11% mencionam, e é dor real na cidade)"
+      ],
+      "leitura": "no BR o lugar vem grudado em superlativo local ('o mais completo do Itaim Bibi')"
+    },
+    {
+      "id": "oferta",
+      "nome": "oferta de entrada",
+      "ocorrencias": 3,
+      "de": 55,
+      "pergunta_que_responde": "como eu experimento sem risco?",
+      "exemplos_observados": [
+        "3 classes for $90",
+        "get 20% off your first class",
+        "new client special",
+        "aula experimental gratuita (BR)"
+      ],
+      "prova_obrigatoria": [
+        "preço real da aula experimental e o que está incluso"
+      ],
+      "leitura": "é raro na referência (15%) e comum no Brasil (60%): aqui a aula experimental é o funil"
+    }
+  ],
+  "ausentes": [
+    {
+      "enquadramento": "preço de mensalidade",
+      "ocorrencias": 0,
+      "leitura": "nenhum abre com valor de plano; mensalidade aparece escondida ou em página interna. Mesma lacuna de psicologia"
+    },
+    {
+      "enquadramento": "saudação",
+      "ocorrencias": 2,
+      "leitura": "'bem-vindo ao nosso studio' e 'welcome to' aparecem, mas em site fraco — os bons não usam"
+    }
+  ],
+  "lista_negra": [
+    "corpo dos sonhos",
+    "corpo perfeito",
+    "transforme seu corpo",
+    "qualidade de vida (sozinho)",
+    "bem-estar (sozinho)",
+    "aqui você encontra equilíbrio",
+    "venha nos conhecer",
+    "bem-vindo ao nosso estúdio",
+    "o melhor estúdio da cidade",
+    "há X anos cuidando de você"
+  ],
+  "padroes_de_titulo_proibidos": [
+    "começa com 'O que'",
+    "começa com 'Conheça o'",
+    "começa com 'Nossas aulas'"
+  ],
+  "teste_de_troca": {
+    "regra": "trocar o nome do estúdio por outro de ramo diferente; se continuar verdadeira, reprovar",
+    "exemplos_de_troca": [
+      "Ótica Central",
+      "Clínica Vida"
+    ]
+  },
+  "regra_de_dado_ausente": "sem preço, sem formação do instrutor e sem tamanho de turma, a página mostra o que existe (formato, equipamentos, primeira aula) e deixa a pendência explícita",
+  "comparacao_com_os_outros_nichos": {
+    "odontologia": "experiência/conforto (4 de 7)",
+    "barbearia": "lugar (15 de 54)",
+    "otica": "preço visível (11 de 34)",
+    "psicologia": "nome próprio + dor nomeada (12 e 10 de 48)",
+    "pilates": "transformação física (14 de 55) e pertencimento (11 de 55)"
+  },
+  "limites": [
+    "contagem é leitura manual; 14 e 11 são aproximações, não contagem automática",
+    "amostra de referência anglófona; vocabulário BR difere ('aparelhos' em vez de 'reformer')",
+    "aula experimental é padrão só no BR: não transferir a leitura sem essa ressalva"
+  ]
+}

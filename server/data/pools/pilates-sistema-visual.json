@@ -1,0 +1,61 @@
+{
+  "nicho": "pilates",
+  "medido_em": "2026-11-26",
+  "largura_px": 1440,
+  "amostra": 121,
+  "todos": {
+    "n": 121,
+    "com_h1": 108,
+    "sem_h1": 13,
+    "h1_mediana": 62.4,
+    "h1_p25": 46,
+    "h1_p75": 79,
+    "corpo_mediana": 16,
+    "razao_h1_corpo": 4.15
+  },
+  "brasil": {
+    "n": 15,
+    "com_h1": 12,
+    "sem_h1": 3,
+    "h1_mediana": 40.0,
+    "h1_p25": 32,
+    "h1_p75": 70,
+    "corpo_mediana": 16,
+    "razao_h1_corpo": 2.5
+  },
+  "internacional": {
+    "n": 106,
+    "com_h1": 96,
+    "sem_h1": 10,
+    "h1_mediana": 64.7,
+    "h1_p25": 51.3,
+    "h1_p75": 80,
+    "corpo_mediana": 16.0,
+    "razao_h1_corpo": 4.23
+  },
+  "fontes_de_display_observadas": {
+    "Playfair Display": 7,
+    "Poppins": 6,
+    "futura-pt": 3,
+    "CooperHewitt-Bold": 2,
+    "Unbounded": 2,
+    "Zona-Pro-Light": 2,
+    "soleil": 2,
+    "adonis-web": 2
+  },
+  "cor": {
+    "fundos_distintos_mediana": 3
+  },
+  "densidade": {
+    "degraus_de_texto_mediana": 10
+  },
+  "regras_que_saem_da_medicao": [
+    "o nicho do TÍTULO GRANDE: internacional 65px (p25 51 / p75 80), razão 4,2 — o maior de todos os cinco nichos",
+    "o Brasil usa 40px (p25 32 / p75 70), razão 2,5 — metade do internacional. Provável causa: site brasileiro de estúdio é feito em construtor com template",
+    "corpo 16px nos dois: a diferença está no título, não na leitura",
+    "Playfair Display (7x) e Poppins (6x) dominam: serifada editorial + geométrica limpa, junto de futura-pt, CooperHewitt e Unbounded",
+    "2 fundos e ~10 degraus, como nos outros nichos",
+    "11% sem h1 — o segundo melhor índice, atrás só de psicologia (11% empate)"
+  ],
+  "ressalva": "a divergência BR x internacional em pilates é grande demais para uma regra única. Para lead brasileiro, 40-50px; para referência de qualidade, 65-80px."
+}

@@ -1,0 +1,220 @@
+{
+  "nicho": "pilates",
+  "amostra": {
+    "referencias": 107,
+    "mercado_br": 15,
+    "coletado_em": "2026-11-26",
+    "fonte": "listas de design (colorlib, sitebuilderreport, zarla, squarestash, pixality, wildberry) + busca de estúdios brasileiros"
+  },
+  "conferencia": "referencias 106 de 117 confirmadas; BR 15 de 15. Agregadores e agências (mindbody, classpass, downway, mazyos) foram bloqueados na coleta e o resto passou por classificarTipo().",
+  "componentes": [
+    {
+      "componente": "agendamento_online",
+      "referencia_pct": 88,
+      "mercado_br_pct": 47,
+      "delta": 41
+    },
+    {
+      "componente": "individual",
+      "referencia_pct": 86,
+      "mercado_br_pct": 87,
+      "delta": -1
+    },
+    {
+      "componente": "galeria",
+      "referencia_pct": 82,
+      "mercado_br_pct": 53,
+      "delta": 29
+    },
+    {
+      "componente": "reformer",
+      "referencia_pct": 82,
+      "mercado_br_pct": 27,
+      "delta": 55
+    },
+    {
+      "componente": "blog",
+      "referencia_pct": 80,
+      "mercado_br_pct": 33,
+      "delta": 47
+    },
+    {
+      "componente": "equipe",
+      "referencia_pct": 53,
+      "mercado_br_pct": 33,
+      "delta": 20
+    },
+    {
+      "componente": "endereco",
+      "referencia_pct": 43,
+      "mercado_br_pct": 67,
+      "delta": -24
+    },
+    {
+      "componente": "faq",
+      "referencia_pct": 43,
+      "mercado_br_pct": 13,
+      "delta": 30
+    },
+    {
+      "componente": "depoimentos",
+      "referencia_pct": 42,
+      "mercado_br_pct": 73,
+      "delta": -31
+    },
+    {
+      "componente": "planos",
+      "referencia_pct": 38,
+      "mercado_br_pct": 13,
+      "delta": 25
+    },
+    {
+      "componente": "formacao",
+      "referencia_pct": 36,
+      "mercado_br_pct": 80,
+      "delta": -44
+    },
+    {
+      "componente": "turma",
+      "referencia_pct": 36,
+      "mercado_br_pct": 73,
+      "delta": -37
+    },
+    {
+      "componente": "dor_postura",
+      "referencia_pct": 33,
+      "mercado_br_pct": 73,
+      "delta": -40
+    },
+    {
+      "componente": "gift_card",
+      "referencia_pct": 28,
+      "mercado_br_pct": 0,
+      "delta": 28
+    },
+    {
+      "componente": "telefone_clicavel",
+      "referencia_pct": 25,
+      "mercado_br_pct": 47,
+      "delta": -22
+    },
+    {
+      "componente": "horario",
+      "referencia_pct": 22,
+      "mercado_br_pct": 53,
+      "delta": -31
+    },
+    {
+      "componente": "aparelhos",
+      "referencia_pct": 21,
+      "mercado_br_pct": 60,
+      "delta": -39
+    },
+    {
+      "componente": "mapa",
+      "referencia_pct": 18,
+      "mercado_br_pct": 53,
+      "delta": -35
+    },
+    {
+      "componente": "gestante",
+      "referencia_pct": 18,
+      "mercado_br_pct": 53,
+      "delta": -35
+    },
+    {
+      "componente": "experimental",
+      "referencia_pct": 15,
+      "mercado_br_pct": 60,
+      "delta": -45
+    },
+    {
+      "componente": "estacionamento",
+      "referencia_pct": 11,
+      "mercado_br_pct": 13,
+      "delta": -2
+    },
+    {
+      "componente": "antes_depois",
+      "referencia_pct": 9,
+      "mercado_br_pct": 0,
+      "delta": 9
+    },
+    {
+      "componente": "video",
+      "referencia_pct": 9,
+      "mercado_br_pct": 27,
+      "delta": -18
+    },
+    {
+      "componente": "urgencia",
+      "referencia_pct": 9,
+      "mercado_br_pct": 0,
+      "delta": 9
+    },
+    {
+      "componente": "fisioterapia",
+      "referencia_pct": 6,
+      "mercado_br_pct": 53,
+      "delta": -47
+    },
+    {
+      "componente": "contato_whatsapp",
+      "referencia_pct": 6,
+      "mercado_br_pct": 100,
+      "delta": -94
+    },
+    {
+      "componente": "produtos",
+      "referencia_pct": 5,
+      "mercado_br_pct": 0,
+      "delta": 5
+    },
+    {
+      "componente": "terceira_idade",
+      "referencia_pct": 5,
+      "mercado_br_pct": 33,
+      "delta": -28
+    },
+    {
+      "componente": "tecnologia",
+      "referencia_pct": 1,
+      "mercado_br_pct": 0,
+      "delta": 1
+    },
+    {
+      "componente": "pagamento",
+      "referencia_pct": 0,
+      "mercado_br_pct": 0,
+      "delta": 0
+    }
+  ],
+  "leituras": {
+    "nucleo_do_nicho": [
+      "agendamento online 88% (ref) — é o padrão; no BR só 47%, porque marca-se no WhatsApp (100%)",
+      "individual 86% / turma 36% — o formato é decisão declarada, e o individual domina",
+      "reformer 82% — o equipamento é o produto",
+      "galeria 82% — mostrar o studio e o movimento",
+      "blog 80% — conteúdo é canal de aquisição forte neste nicho"
+    ],
+    "recorrencia_e_receita": [
+      "planos/assinatura 38% (ref) vs 33% BR",
+      "gift card 28% (ref) vs 13% BR",
+      "formação de instrutores 36% (ref) vs 80% BR — no Brasil o estúdio vende curso, é receita B2B que quase nunca aparece na página inicial de um lead"
+    ],
+    "onde_da_para_diferenciar": [
+      "vídeo 9%",
+      "antes/depois 9%",
+      "terceira idade 5%",
+      "estacionamento 11%",
+      "gestante 18%"
+    ],
+    "br_vs_referencia": [
+      "aula experimental: 60% BR vs 15% ref — no Brasil é o argumento de entrada; fora é raro",
+      "fisioterapia integrada: 53% BR vs 6% ref — o estúdio brasileiro se vende como reabilitação",
+      "mapa 53% BR vs 18% ref e endereço 67% vs 43%: presença física pesa mais aqui",
+      "depoimentos 73% BR vs 42% ref"
+    ],
+    "contraste_com_os_outros_nichos": "é o primeiro nicho em que a página vende RECORRÊNCIA (plano mensal) e não um serviço avulso. Nos outros quatro, ninguém tinha assinatura como componente relevante."
+  }
+}
