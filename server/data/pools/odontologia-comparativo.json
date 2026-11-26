@@ -1,0 +1,162 @@
+{
+  "nicho": "odontologia",
+  "coletado_em": "2026-11-26",
+  "amostras": {
+    "mercado_br": 33,
+    "referencia_curada": 31
+  },
+  "metodo": "mesmo léxico pt+en nos dois grupos; presença de componente na página inteira (inclui link de menu).",
+  "aviso": "amostra de referência inclui sites fora do Brasil: whatsapp e estacionamento sofrem viés de país.",
+  "comparacao": [
+    {
+      "componente": "agendamento_online",
+      "mercado_pct": 24,
+      "referencia_pct": 58,
+      "delta": 34
+    },
+    {
+      "componente": "tecnologia",
+      "mercado_pct": 27,
+      "referencia_pct": 55,
+      "delta": 28
+    },
+    {
+      "componente": "urgencia",
+      "mercado_pct": 42,
+      "referencia_pct": 58,
+      "delta": 16
+    },
+    {
+      "componente": "convenios",
+      "mercado_pct": 88,
+      "referencia_pct": 100,
+      "delta": 12
+    },
+    {
+      "componente": "telefone_clicavel",
+      "mercado_pct": 64,
+      "referencia_pct": 74,
+      "delta": 10
+    },
+    {
+      "componente": "blog",
+      "mercado_pct": 55,
+      "referencia_pct": 61,
+      "delta": 6
+    },
+    {
+      "componente": "horario",
+      "mercado_pct": 42,
+      "referencia_pct": 48,
+      "delta": 6
+    },
+    {
+      "componente": "galeria",
+      "mercado_pct": 42,
+      "referencia_pct": 48,
+      "delta": 6
+    },
+    {
+      "componente": "video",
+      "mercado_pct": 27,
+      "referencia_pct": 32,
+      "delta": 5
+    },
+    {
+      "componente": "pagamento",
+      "mercado_pct": 33,
+      "referencia_pct": 35,
+      "delta": 2
+    },
+    {
+      "componente": "casos",
+      "mercado_pct": 21,
+      "referencia_pct": 23,
+      "delta": 2
+    },
+    {
+      "componente": "antes_depois",
+      "mercado_pct": 24,
+      "referencia_pct": 19,
+      "delta": -5
+    },
+    {
+      "componente": "endereco",
+      "mercado_pct": 79,
+      "referencia_pct": 74,
+      "delta": -5
+    },
+    {
+      "componente": "harmonizacao",
+      "mercado_pct": 61,
+      "referencia_pct": 55,
+      "delta": -6
+    },
+    {
+      "componente": "equipe",
+      "mercado_pct": 91,
+      "referencia_pct": 84,
+      "delta": -7
+    },
+    {
+      "componente": "depoimentos",
+      "mercado_pct": 79,
+      "referencia_pct": 71,
+      "delta": -8
+    },
+    {
+      "componente": "mapa",
+      "mercado_pct": 64,
+      "referencia_pct": 55,
+      "delta": -9
+    },
+    {
+      "componente": "financeiro",
+      "mercado_pct": 12,
+      "referencia_pct": 0,
+      "delta": -12
+    },
+    {
+      "componente": "infantil",
+      "mercado_pct": 45,
+      "referencia_pct": 32,
+      "delta": -13
+    },
+    {
+      "componente": "faq",
+      "mercado_pct": 48,
+      "referencia_pct": 35,
+      "delta": -13
+    },
+    {
+      "componente": "estacionamento",
+      "mercado_pct": 24,
+      "referencia_pct": 6,
+      "delta": -18
+    },
+    {
+      "componente": "clareamento",
+      "mercado_pct": 79,
+      "referencia_pct": 55,
+      "delta": -24
+    },
+    {
+      "componente": "ortodontia",
+      "mercado_pct": 85,
+      "referencia_pct": 61,
+      "delta": -24
+    },
+    {
+      "componente": "implante",
+      "mercado_pct": 97,
+      "referencia_pct": 68,
+      "delta": -29
+    },
+    {
+      "componente": "whatsapp",
+      "mercado_pct": 94,
+      "referencia_pct": 48,
+      "delta": -46
+    }
+  ]
+}
