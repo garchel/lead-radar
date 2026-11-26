@@ -1,0 +1,409 @@
+{
+  "gerado_em": "2026-11-26",
+  "versao": 1,
+  "como_usar": {
+    "estrutura_base": "aparece em 70%+ do nicho: usar só quando fizer sentido, nunca como diferencial",
+    "estrutura_diferenciador": "15-70%: é onde a página ganha especificidade",
+    "enquadramento_campeao": "o que abertura boa faz no nicho; acompanha a prova obrigatória no arquivo de voz",
+    "tipografia": "faixa medida; NÃO copiar valor exato — respeitar a proporção",
+    "lista_negra": "reprovar de imediato, e aplicar o teste de troca"
+  },
+  "nichos": {
+    "odontologia": {
+      "amostra": {
+        "paginas": 33,
+        "coletado_em": "2026-11-26",
+        "fonte": "sites de clínicas odontológicas brasileiras (home)"
+      },
+      "estrutura_base": [
+        "implante",
+        "whatsapp",
+        "convenios",
+        "equipe",
+        "ortodontia",
+        "depoimentos",
+        "clareamento",
+        "endereco"
+      ],
+      "estrutura_diferenciador": [
+        "mapa",
+        "telefone_clicavel",
+        "harmonizacao",
+        "pagamento",
+        "faq",
+        "blog",
+        "infantil",
+        "galeria"
+      ],
+      "enquadramento_campeao": {
+        "id": "experiencia",
+        "nome": "experiência / conforto",
+        "ocorrencias": 4,
+        "de": 7
+      },
+      "prova_obrigatoria_do_campeao": [
+        "processo descrito (o que acontece, quanto tempo, o que a pessoa sente)",
+        "ou relato real de paciente"
+      ],
+      "tipografia": {
+        "h1_mediana": 72,
+        "corpo_mediana": 15.5,
+        "razao": 4.4,
+        "n": 7,
+        "aviso": "calculado das 7 fichas de anatomia, não de medição em lote"
+      },
+      "lista_negra": [
+        "sorriso dos sonhos",
+        "sorriso que você merece",
+        "transforme seu sorriso",
+        "tecnologia de ponta",
+        "equipamentos modernos",
+        "ambiente acolhedor",
+        "atendimento humanizado",
+        "cuidado personalizado",
+        "excelência em odontologia",
+        "bem-vindo à",
+        "há X anos cuidando de sorrisos"
+      ],
+      "regra_dado_ausente": "enquadramento sem prova disponível não é usado; a página declara a pendência em vez de inventar",
+      "limites": [
+        "n=7",
+        "a classificação dos enquadramentos é leitura dos títulos, não medição automática",
+        "automatizável: lista negra e teste de troca; a escolha do enquadramento permanece decisão do modelo"
+      ]
+    },
+    "barbearia": {
+      "amostra": {
+        "paginas": 67,
+        "coletado_em": "2026-11-26",
+        "fonte": "listas de design (squarestash, vandelay, hubspot, colorlib, thesalonbusiness, cyberoptik)",
+        "obs": "1 domínio de infraestrutura (cloudflare.com) removido por regra nova"
+      },
+      "estrutura_base": [
+        "agendamento_online",
+        "corte",
+        "equipe",
+        "barba",
+        "galeria"
+      ],
+      "estrutura_diferenciador": [
+        "horario",
+        "endereco",
+        "blog",
+        "telefone_clicavel",
+        "depoimentos",
+        "infantil",
+        "gift_card",
+        "urgencia"
+      ],
+      "enquadramento_campeao": {
+        "id": "lugar",
+        "nome": "o lugar (geografia)",
+        "ocorrencias": 15,
+        "de": 54
+      },
+      "prova_obrigatoria_do_campeao": [
+        "bairro/cidade reais",
+        "referência local reconhecível",
+        "anos naquele endereço"
+      ],
+      "tipografia": {
+        "h1_mediana": 55.5,
+        "h1_p25": 44,
+        "h1_p75": 72,
+        "corpo_mediana": 16.0,
+        "razao": 3.47,
+        "n": 68
+      },
+      "lista_negra": [
+        "o melhor da cidade",
+        "corte perfeito",
+        "ambiente descontraído",
+        "profissionais qualificados",
+        "sua barbearia de confiança",
+        "transforme seu visual",
+        "estilo único",
+        "venha nos conhecer",
+        "bem-vindo à",
+        "há X anos cuidando do seu estilo"
+      ],
+      "regra_dado_ausente": "enquadramento sem prova disponível não é usado; a página declara a pendência (ex: 'horário a confirmar') em vez de inventar",
+      "limites": [
+        "contagem é leitura manual dos títulos, não medição automática",
+        "amostra internacional (EUA, Canadá, Austrália, Reino Unido): o enquadramento 'lugar' pode ser ainda mais forte no Brasil, onde a barbearia é de bairro"
+      ]
+    },
+    "otica": {
+      "amostra": {
+        "referencias": 34,
+        "mercado_br": 10,
+        "coletado_em": "2026-11-26",
+        "fonte": "listas de design (mycodeless, limely, colorlib, imatrix, zarla, polothemes, webflow) + busca de óticas brasileiras"
+      },
+      "estrutura_base": [
+        "sol",
+        "grau"
+      ],
+      "estrutura_diferenciador": [
+        "faq",
+        "depoimentos",
+        "produtos",
+        "agendamento_online",
+        "blog",
+        "telefone_clicavel",
+        "multifocal",
+        "exame"
+      ],
+      "enquadramento_campeao": {
+        "id": "preco_visivel",
+        "nome": "preço visível / oferta",
+        "ocorrencias": 11,
+        "de": 34
+      },
+      "prova_obrigatoria_do_campeao": [
+        "preço real ou faixa",
+        "o que está incluso (lente? armação? exame?)"
+      ],
+      "tipografia": {
+        "h1_mediana": 36,
+        "h1_p25": 30,
+        "h1_p75": 60,
+        "corpo_mediana": 16,
+        "razao": 2.25,
+        "n": 23,
+        "aviso": "loja física brasileira; e-commerce mede 20px de h1 e razão 1,43"
+      },
+      "lista_negra": [
+        "a melhor ótica da cidade",
+        "visão perfeita",
+        "estilo e sofisticação",
+        "qualidade e preço justo",
+        "as melhores marcas",
+        "venha conferir",
+        "bem-vindo à",
+        "há X anos cuidando da sua visão",
+        "título do slide",
+        "por você estamos sempre evoluindo"
+      ],
+      "regra_dado_ausente": "enquadramento sem prova não é usado; preço sem preço real vira mentira — nesse caso a página mostra o que está incluso e pede o dado",
+      "limites": [
+        "contagem é leitura manual",
+        "amostra mistura varejo on-line internacional com loja de bairro brasileira",
+        "o 'encaixe' apareceu em 4 de 34: é hipótese forte, não lei"
+      ]
+    },
+    "psicologia": {
+      "amostra": {
+        "referencias": 74,
+        "mercado_br": 7,
+        "coletado_em": "2026-11-26",
+        "fonte": "listas de design (flamingo, colorlib, simplepractice, sitebuilderreport, websiteplanet, jesscreatives, azuro, mycodeless) + busca de consultórios brasileiros",
+        "mercado_br_bruto": 21
+      },
+      "estrutura_base": [
+        "agendamento_online"
+      ],
+      "estrutura_diferenciador": [
+        "ansiedade",
+        "blog",
+        "online",
+        "galeria",
+        "terapia_casal",
+        "abordagem",
+        "telefone_clicavel",
+        "infantil"
+      ],
+      "enquadramento_campeao": {
+        "id": "nome_proprio",
+        "nome": "só o nome da terapeuta",
+        "ocorrencias": 12,
+        "de": 48
+      },
+      "prova_obrigatoria_do_campeao": null,
+      "tipografia": {
+        "h1_mediana": 48,
+        "h1_p25": 24,
+        "h1_p75": 64,
+        "corpo_mediana": 18.0,
+        "razao": 2.67,
+        "n": 80,
+        "brasil": {
+          "n": 6,
+          "com_h1": 6,
+          "h1_valores": [
+            36.8,
+            40,
+            40,
+            41,
+            60,
+            60
+          ],
+          "h1_mediana": 40.5,
+          "corpo_mediana": 18.0,
+          "razao_h1_corpo": 2.39,
+          "aviso": "base pequena (7 consultórios) e inclui um h1 ausente; usar só como indício"
+        }
+      },
+      "lista_negra": [
+        "cuide da sua saúde mental",
+        "bem-estar",
+        "qualidade de vida",
+        "autoconhecimento (sozinho, sem contexto)",
+        "atendimento humanizado",
+        "escuta acolhedora (como título, não como processo)",
+        "transforme sua vida",
+        "seja a melhor versão de você",
+        "bem-vindo ao consultório"
+      ],
+      "regra_dado_ausente": "sem preço e sem CRP/abordagem declarados, a página não inventa: mostra o que existe (modalidade, primeira conversa, tempo de sessão) e deixa a pendência explícita",
+      "limites": [
+        "contagem é leitura manual",
+        "amostra majoritariamente norte-americana; o BR difere em preço, psicanálise e WhatsApp",
+        "apenas 7 sites .com.br com h1 na anatomia — base brasileira pequena"
+      ]
+    },
+    "pilates": {
+      "amostra": {
+        "referencias": 107,
+        "mercado_br": 15,
+        "coletado_em": "2026-11-26",
+        "fonte": "listas de design (colorlib, sitebuilderreport, zarla, squarestash, pixality, wildberry) + busca de estúdios brasileiros"
+      },
+      "estrutura_base": [
+        "agendamento_online",
+        "individual",
+        "galeria",
+        "reformer",
+        "blog"
+      ],
+      "estrutura_diferenciador": [
+        "equipe",
+        "endereco",
+        "faq",
+        "depoimentos",
+        "planos",
+        "formacao",
+        "turma",
+        "dor_postura"
+      ],
+      "enquadramento_campeao": {
+        "id": "transformacao",
+        "nome": "transformação física concreta",
+        "ocorrencias": 14,
+        "de": 55
+      },
+      "prova_obrigatoria_do_campeao": [
+        "o que muda e em quanto tempo (postura, dor lombar, força, equilíbrio)",
+        "formato: individual, turma ou dupla"
+      ],
+      "tipografia": {
+        "h1_mediana": 62.4,
+        "h1_p25": 46,
+        "h1_p75": 79,
+        "corpo_mediana": 16,
+        "razao": 4.15,
+        "n": 121,
+        "brasil": {
+          "n": 15,
+          "com_h1": 12,
+          "sem_h1": 3,
+          "h1_mediana": 40.0,
+          "h1_p25": 32,
+          "h1_p75": 70,
+          "corpo_mediana": 16,
+          "razao_h1_corpo": 2.5
+        }
+      },
+      "lista_negra": [
+        "corpo dos sonhos",
+        "corpo perfeito",
+        "transforme seu corpo",
+        "qualidade de vida (sozinho)",
+        "bem-estar (sozinho)",
+        "aqui você encontra equilíbrio",
+        "venha nos conhecer",
+        "bem-vindo ao nosso estúdio",
+        "o melhor estúdio da cidade",
+        "há X anos cuidando de você"
+      ],
+      "regra_dado_ausente": "sem preço, sem formação do instrutor e sem tamanho de turma, a página mostra o que existe (formato, equipamentos, primeira aula) e deixa a pendência explícita",
+      "limites": [
+        "contagem é leitura manual; 14 e 11 são aproximações, não contagem automática",
+        "amostra de referência anglófona; vocabulário BR difere ('aparelhos' em vez de 'reformer')",
+        "aula experimental é padrão só no BR: não transferir a leitura sem essa ressalva"
+      ]
+    },
+    "fisioterapia": {
+      "amostra": {
+        "referencias": 24,
+        "mercado_br": 8,
+        "coletado_em": "2026-11-26",
+        "fonte": "4 listas de design (devmizan, cyberoptik, mycodeless, kcwebdesign) + busca de clínicas"
+      },
+      "estrutura_base": [
+        "equipe",
+        "agendamento_online",
+        "blog",
+        "esportiva",
+        "convenio"
+      ],
+      "estrutura_diferenciador": [
+        "telefone_clicavel",
+        "equipamentos",
+        "pilates",
+        "planos",
+        "depoimentos",
+        "avaliacao",
+        "faq",
+        "endereco"
+      ],
+      "enquadramento_campeao": {
+        "id": "lugar",
+        "nome": "lugar",
+        "ocorrencias": 7,
+        "de": 22
+      },
+      "prova_obrigatoria_do_campeao": [
+        "bairro/cidade",
+        "horário",
+        "se atende por convênio ali"
+      ],
+      "tipografia": {
+        "h1_mediana": 60,
+        "h1_p25": 36,
+        "h1_p75": 72,
+        "corpo_mediana": 16.0,
+        "razao": 3.75,
+        "n": 31,
+        "brasil": {
+          "n": 5,
+          "com_h1": 4,
+          "sem_h1": 1,
+          "h1_mediana": 34.0,
+          "h1_p25": 32,
+          "h1_p75": 60,
+          "corpo_mediana": 16,
+          "razao_h1_corpo": 2.27
+        }
+      },
+      "lista_negra": [
+        "a melhor clínica de fisioterapia",
+        "recupere sua qualidade de vida",
+        "tratamento humanizado",
+        "tecnologia de ponta",
+        "equipe altamente qualificada",
+        "bem-vindo à nossa clínica",
+        "cuidando de você",
+        "sua saúde em primeiro lugar",
+        "resultados comprovados"
+      ],
+      "regra_dado_ausente": "sem convênio, sem CREFITO e sem especialidade, a página mostra o que existe (endereço, horário, avaliação inicial) e deixa a pendência explícita",
+      "limites": [
+        "n pequeno (22 heróis úteis): a contagem é indício",
+        "amostra internacional é anglo-australiana; no BR o herói é mais fraco (saudação/serviço)",
+        "não confundir com pilates: lá o argumento é pertencimento, aqui é retomada funcional",
+        "AMOSTRA MENOR que os outros nichos (24 e 8 confirmados contra 67-107). As porcentagens aqui são indício, não medida. Antes de usar em produção, ampliar para 40+ por grupo."
+      ]
+    }
+  }
+}
