@@ -1,0 +1,233 @@
+{
+  "nicho": "veterinaria",
+  "amostra": {
+    "referencias": 23,
+    "mercado_br": 5,
+    "coletado_em": "2026-11-26",
+    "fonte": "listas de design (cyberoptik, designrush, webcitz x2, vetstoria, mycodeless, bookingpress) que renderizam por JS — só 7 saíram; ampliado por busca direta"
+  },
+  "aviso_amostra": "amostra pequena (23 referências, 5 brasileiras). Indício, não medida. O mercado BR bate 100% em quase tudo porque são 5 sites.",
+  "correcao_de_lexico": "odonto_pet saiu de 0% para 13% incluindo dental care/cleaning/scaling/periodontal: a regex só tinha português.",
+  "componentes": [
+    {
+      "componente": "agendamento_online",
+      "referencia_pct": 78,
+      "mercado_br_pct": 60,
+      "delta": 18
+    },
+    {
+      "componente": "equipe",
+      "referencia_pct": 74,
+      "mercado_br_pct": 100,
+      "delta": -26
+    },
+    {
+      "componente": "internacao",
+      "referencia_pct": 70,
+      "mercado_br_pct": 100,
+      "delta": -30
+    },
+    {
+      "componente": "cirurgia",
+      "referencia_pct": 70,
+      "mercado_br_pct": 100,
+      "delta": -30
+    },
+    {
+      "componente": "emergencia",
+      "referencia_pct": 65,
+      "mercado_br_pct": 100,
+      "delta": -35
+    },
+    {
+      "componente": "depoimentos",
+      "referencia_pct": 65,
+      "mercado_br_pct": 80,
+      "delta": -15
+    },
+    {
+      "componente": "horario",
+      "referencia_pct": 65,
+      "mercado_br_pct": 40,
+      "delta": 25
+    },
+    {
+      "componente": "mapa",
+      "referencia_pct": 61,
+      "mercado_br_pct": 60,
+      "delta": 1
+    },
+    {
+      "componente": "consulta",
+      "referencia_pct": 57,
+      "mercado_br_pct": 100,
+      "delta": -43
+    },
+    {
+      "componente": "urgencia",
+      "referencia_pct": 57,
+      "mercado_br_pct": 80,
+      "delta": -23
+    },
+    {
+      "componente": "racao",
+      "referencia_pct": 52,
+      "mercado_br_pct": 60,
+      "delta": -8
+    },
+    {
+      "componente": "telefone_clicavel",
+      "referencia_pct": 48,
+      "mercado_br_pct": 60,
+      "delta": -12
+    },
+    {
+      "componente": "blog",
+      "referencia_pct": 48,
+      "mercado_br_pct": 20,
+      "delta": 28
+    },
+    {
+      "componente": "endereco",
+      "referencia_pct": 43,
+      "mercado_br_pct": 60,
+      "delta": -17
+    },
+    {
+      "componente": "exames",
+      "referencia_pct": 39,
+      "mercado_br_pct": 100,
+      "delta": -61
+    },
+    {
+      "componente": "banho_tosa",
+      "referencia_pct": 35,
+      "mercado_br_pct": 20,
+      "delta": 15
+    },
+    {
+      "componente": "galeria",
+      "referencia_pct": 35,
+      "mercado_br_pct": 40,
+      "delta": -5
+    },
+    {
+      "componente": "contato_whatsapp",
+      "referencia_pct": 35,
+      "mercado_br_pct": 100,
+      "delta": -65
+    },
+    {
+      "componente": "especialidade",
+      "referencia_pct": 35,
+      "mercado_br_pct": 100,
+      "delta": -65
+    },
+    {
+      "componente": "faq",
+      "referencia_pct": 26,
+      "mercado_br_pct": 40,
+      "delta": -14
+    },
+    {
+      "componente": "vacina",
+      "referencia_pct": 26,
+      "mercado_br_pct": 100,
+      "delta": -74
+    },
+    {
+      "componente": "castracao",
+      "referencia_pct": 22,
+      "mercado_br_pct": 20,
+      "delta": 2
+    },
+    {
+      "componente": "convenio",
+      "referencia_pct": 22,
+      "mercado_br_pct": 20,
+      "delta": 2
+    },
+    {
+      "componente": "video",
+      "referencia_pct": 17,
+      "mercado_br_pct": 0,
+      "delta": 17
+    },
+    {
+      "componente": "domiciliar",
+      "referencia_pct": 17,
+      "mercado_br_pct": 20,
+      "delta": -3
+    },
+    {
+      "componente": "odonto_pet",
+      "referencia_pct": 13,
+      "mercado_br_pct": 20,
+      "delta": -7
+    },
+    {
+      "componente": "planos",
+      "referencia_pct": 13,
+      "mercado_br_pct": 0,
+      "delta": 13
+    },
+    {
+      "componente": "produtos",
+      "referencia_pct": 13,
+      "mercado_br_pct": 0,
+      "delta": 13
+    },
+    {
+      "componente": "pagamento",
+      "referencia_pct": 13,
+      "mercado_br_pct": 0,
+      "delta": 13
+    },
+    {
+      "componente": "antes_depois",
+      "referencia_pct": 9,
+      "mercado_br_pct": 0,
+      "delta": 9
+    },
+    {
+      "componente": "tecnologia",
+      "referencia_pct": 4,
+      "mercado_br_pct": 0,
+      "delta": 4
+    },
+    {
+      "componente": "estacionamento",
+      "referencia_pct": 4,
+      "mercado_br_pct": 60,
+      "delta": -56
+    },
+    {
+      "componente": "gift_card",
+      "referencia_pct": 0,
+      "mercado_br_pct": 0,
+      "delta": 0
+    }
+  ],
+  "leituras": {
+    "nucleo_do_nicho": [
+      "agendamento online 78% e equipe 74%",
+      "cirurgia 70% e internação 70% — o hospital, não o consultório, é a referência do nicho",
+      "emergência 65% e urgência 57% — o MAIOR índice de urgência de todos os nichos (nos outros: 6-28%)",
+      "horário 65% porque o '24 horas' é o produto",
+      "mapa 61% — localização pesa: o tutor vai com o animal"
+    ],
+    "onde_da_para_diferenciar": [
+      "domiciliar 17%",
+      "especialidade 35%",
+      "convênio 22%",
+      "planos 13%",
+      "vídeo 17%"
+    ],
+    "br": [
+      "whatsapp 100%",
+      "25% dos sites brasileiros são 24h no domínio (clinivet24horas, vita24h, vetlife24horas): o plantão é a marca",
+      "banho e tosa só 20% no BR contra 35% na referência"
+    ],
+    "contraste_com_os_outros_nichos": "é o único nicho em que EMERGÊNCIA é núcleo. A pergunta que a página responde não é 'é bom?', é 'atende agora?'"
+  }
+}

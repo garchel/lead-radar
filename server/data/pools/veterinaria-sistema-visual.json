@@ -1,0 +1,46 @@
+{
+  "nicho": "veterinaria",
+  "medido_em": "2026-11-26",
+  "largura_px": 1440,
+  "amostra": 25,
+  "tipografia": {
+    "h1_px": {
+      "p25": 31.9,
+      "mediana": 48,
+      "p75": 62
+    },
+    "corpo_px": {
+      "mediana": 17.0
+    },
+    "razao_h1_corpo_mediana": 3.0
+  },
+  "fontes": {
+    "Montserrat": 4,
+    "Poppins": 2,
+    "brandon-grotesque": 1,
+    "sofia-pro-soft": 1,
+    "Delius": 1,
+    "Nothing You Could Do": 1,
+    "montserrat-black": 1,
+    "raleway": 1
+  },
+  "cor": {
+    "fundos_distintos_mediana": 3
+  },
+  "densidade": {
+    "degraus_de_texto_mediana": 10
+  },
+  "sem_h1": {
+    "quantos": 6,
+    "de": 25
+  },
+  "regras": [
+    "corpo 17px — o segundo maior, atrás só de psicologia (18). O tutor lê com atenção",
+    "título 48px (p25 32 / p75 62) e razão 3,0",
+    "3 fundos distintos, como estética: o nicho separa blocos de serviço por cor",
+    "ÚNICO nicho com fonte arredondada/macia: sofia-pro-soft, Delius, Baloo Tamma. É o vocabulário visual de 'fofo' e não aparece em nenhum outro",
+    "Montserrat 4x como base neutra, com a arredondada como assinatura",
+    "24% sem h1 — índice alto, mesmo padrão de varejo"
+  ],
+  "aviso": "25 anatomias apenas; 5 brasileiras. A leitura de fonte fofa vem de 3 sites — hipótese forte, não lei."
+}

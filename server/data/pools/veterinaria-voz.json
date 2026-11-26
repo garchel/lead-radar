@@ -1,0 +1,143 @@
+{
+  "nicho": "veterinaria",
+  "gerado_em": "2026-11-26",
+  "n_lido": 25,
+  "n_util": 17,
+  "metodo": "leitura manual dos 25 títulos. Descartados 'main navigation', '!side menu images', 'sobre nós', 'conheça mais', 'como nos podemos te ajudar?' e nomes de clínica sem promessa.",
+  "principio": "cataloga a ESCOLHA (público -> promessa -> prova), nunca a frase.",
+  "enquadramentos": [
+    {
+      "id": "familia",
+      "nome": "família (o pet é da família)",
+      "ocorrencias": 5,
+      "de": 17,
+      "pergunta_que_responde": "vocês entendem que ele é da família?",
+      "exemplos_observados": [
+        "cuidado completo para quem faz parte da família",
+        "cuidando do seu pet com amor e profissionalismo",
+        "no one knows your pet like you, and we are honored to be part of...",
+        "healthy pet, healthy life"
+      ],
+      "prova_obrigatoria": [
+        "nome do veterinário responsável e CRMV",
+        "o que acontece na consulta (tempo, exames inclusos)"
+      ],
+      "leitura": "campeão do nicho. 'Família' é a palavra, não 'animal' nem 'paciente'"
+    },
+    {
+      "id": "urgencia",
+      "nome": "disponibilidade agora (plantão)",
+      "ocorrencias": 4,
+      "de": 17,
+      "pergunta_que_responde": "atendem agora, de madrugada?",
+      "exemplos_observados": [
+        "urgent care for your pet's urgent needs",
+        "emergência 24h (65% dos sites)",
+        "internação (70%)"
+      ],
+      "prova_obrigatoria": [
+        "horário real do plantão",
+        "tempo de espera",
+        "se tem UTI e cirurgia de urgência"
+      ],
+      "leitura": "é o que a estrutura confirma: 65% citam emergência e 57% urgência — o maior índice de todos os nove nichos"
+    },
+    {
+      "id": "lugar",
+      "nome": "lugar",
+      "ocorrencias": 4,
+      "de": 17,
+      "pergunta_que_responde": "onde fica, e é perto?",
+      "exemplos_observados": [
+        "your full-service vet in Colorado Springs, CO",
+        "your full-service vet in Franklin, TN",
+        "City Paws Veterinary Clinic"
+      ],
+      "prova_obrigatoria": [
+        "bairro",
+        "estacionamento (só 4% citam, e é dor real com animal no colo)"
+      ],
+      "leitura": "o formato 'full-service vet in <cidade>' é o mais repetido da amostra"
+    },
+    {
+      "id": "experiencia",
+      "nome": "experiência do atendimento",
+      "ocorrencias": 2,
+      "de": 17,
+      "pergunta_que_responde": "meu animal vai ficar estressado?",
+      "exemplos_observados": [
+        "friendly, expert veterinary care meets exceptional hospitality",
+        "veterinary care that feels better",
+        "care made personal. medicine made excellent."
+      ],
+      "prova_obrigatoria": [
+        "processo para animal medroso (sala separada, espera fora do balcão)"
+      ],
+      "leitura": "a dor real do tutor é o animal estressado, não o preço — e quase ninguém trata disso"
+    },
+    {
+      "id": "servico",
+      "nome": "serviço genérico (fraco)",
+      "ocorrencias": 2,
+      "de": 17,
+      "pergunta_que_responde": "o que vocês fazem?",
+      "exemplos_observados": [
+        "professional and personal service",
+        "sobre nós"
+      ],
+      "leitura": "não diferencia: consulta, vacina e cirurgia aparecem em 100% dos sites brasileiros"
+    }
+  ],
+  "ausentes": [
+    {
+      "enquadramento": "preço",
+      "ocorrencias": 0,
+      "leitura": "nenhum abre com valor de consulta. O nicho esconde preço como psicologia e estética"
+    },
+    {
+      "enquadramento": "convênio/plano pet",
+      "ocorrencias": 2,
+      "leitura": "só 22% citam convênio e 13% plano, apesar de o tutor comparar custo de emergência"
+    }
+  ],
+  "lista_negra": [
+    "o melhor para o seu pet",
+    "amamos os animais",
+    "cuidado com carinho",
+    "seu pet em boas mãos",
+    "clínica veterinária de excelência",
+    "tecnologia de ponta",
+    "venha nos visitar",
+    "bem-vindo à nossa clínica",
+    "aqui seu pet é tratado como família"
+  ],
+  "padroes_de_titulo_proibidos": [
+    "começa com 'O que'",
+    "começa com 'Conheça nossa'",
+    "começa com 'Nossos serviços'"
+  ],
+  "teste_de_troca": {
+    "regra": "trocar 'pet' por 'paciente' mentalmente: se a frase continuar óbvia numa clínica médica, reprovar por genérico",
+    "exemplos_de_troca": [
+      "Clínica Vida",
+      "Ótica Central"
+    ]
+  },
+  "regra_de_dado_ausente": "sem horário de plantão confirmado, sem CRMV e sem tempo de espera, a página não promete urgência: mostra o que existe (horário, telefone, endereço) e pede confirmação",
+  "comparacao": {
+    "odontologia": "experiência",
+    "barbearia": "lugar",
+    "otica": "preço",
+    "psicologia": "nome + dor",
+    "pilates": "transformação + pertencimento",
+    "fisioterapia": "lugar + alívio",
+    "oficina": "confiança anti-golpe",
+    "estetica": "autoestima + naturalidade",
+    "veterinaria": "família + disponibilidade"
+  },
+  "limites": [
+    "17 heróis úteis e 25 anatomias: menor amostra de todos os nichos",
+    "as listas de design de veterinária são renderizadas por JS e devolveram só 7 URLs; o resto veio de busca direta",
+    "a fonte arredondada ('fofa') aparece em 3 sites: hipótese, não regra"
+  ]
+}

@@ -543,6 +543,66 @@
         "amostra majoritariamente norte-americana; o BR difere em preço, psicanálise e WhatsApp",
         "apenas 7 sites .com.br com h1 na anatomia — base brasileira pequena"
       ]
+    },
+    "veterinaria": {
+      "amostra": {
+        "referencias": 23,
+        "mercado_br": 5,
+        "coletado_em": "2026-11-26",
+        "fonte": "listas de design (cyberoptik, designrush, webcitz x2, vetstoria, mycodeless, bookingpress) que renderizam por JS — só 7 saíram; ampliado por busca direta"
+      },
+      "estrutura_base": [
+        "agendamento_online",
+        "equipe",
+        "internacao",
+        "cirurgia"
+      ],
+      "estrutura_diferenciador": [
+        "emergencia",
+        "depoimentos",
+        "horario",
+        "mapa",
+        "consulta",
+        "urgencia",
+        "racao",
+        "telefone_clicavel"
+      ],
+      "enquadramento_campeao": {
+        "id": "familia",
+        "nome": "família (o pet é da família)",
+        "ocorrencias": 5,
+        "de": 17
+      },
+      "prova_obrigatoria_do_campeao": [
+        "nome do veterinário responsável e CRMV",
+        "o que acontece na consulta (tempo, exames inclusos)"
+      ],
+      "tipografia": {
+        "h1_mediana": 48,
+        "h1_p25": 31.9,
+        "h1_p75": 62,
+        "corpo_mediana": 17,
+        "razao": 3,
+        "n": 25
+      },
+      "lista_negra": [
+        "o melhor para o seu pet",
+        "amamos os animais",
+        "cuidado com carinho",
+        "seu pet em boas mãos",
+        "clínica veterinária de excelência",
+        "tecnologia de ponta",
+        "venha nos visitar",
+        "bem-vindo à nossa clínica",
+        "aqui seu pet é tratado como família"
+      ],
+      "regra_dado_ausente": "sem horário de plantão confirmado, sem CRMV e sem tempo de espera, a página não promete urgência: mostra o que existe (horário, telefone, endereço) e pede confirmação",
+      "limites": [
+        "17 heróis úteis e 25 anatomias: menor amostra de todos os nichos",
+        "as listas de design de veterinária são renderizadas por JS e devolveram só 7 URLs; o resto veio de busca direta",
+        "a fonte arredondada ('fofa') aparece em 3 sites: hipótese, não regra",
+        "amostra pequena (23 referências, 5 brasileiras). Indício, não medida. O mercado BR bate 100% em quase tudo porque são 5 sites."
+      ]
     }
   }
 }
