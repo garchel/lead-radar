@@ -407,7 +407,7 @@ const MEDIDOR_DESKTOP = `(() => {
   return JSON.stringify({ viewport: larg, conteudo, proporcao: Math.round((conteudo / larg) * 100), tituloLinhas, tituloPx, corpoPx });
 })()`;
 
-async function medirDesktop(chrome: string, arquivoUrl: string, porta: number): Promise<{ viewport: number; conteudo: number; proporcao: number; tituloLinhas?: number; tituloPx?: number; corpoPx?: number } | null> {
+async function medirDesktop(chrome: string, arquivoUrl: string, porta: number, larguraDesktop = 1280): Promise<{ viewport: number; conteudo: number; proporcao: number; tituloLinhas?: number; tituloPx?: number; corpoPx?: number } | null> {
   const perfil = fs.mkdtempSync(path.join(os.tmpdir(), "audit-desk-"));
   const proc = spawn(chrome, [
     "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
@@ -453,7 +453,7 @@ async function medirDesktop(chrome: string, arquivoUrl: string, porta: number): 
 
     await cdp("Page.enable");
     await cdp("Runtime.enable");
-    await cdp("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+    await cdp("Emulation.setDeviceMetricsOverride", { width: larguraDesktop, height: 900, deviceScaleFactor: 1, mobile: false });
     await cdp("Page.navigate", { url: arquivoUrl });
     await dormir(1500);
     const res = await cdp("Runtime.evaluate", { expression: MEDIDOR_DESKTOP, returnByValue: true });
@@ -682,6 +682,13 @@ export async function auditarPaginaMobile(
     // página sem WebGL não há como detectar o renderizador por software, e o número
     // sai pessimista — já reprovou página boa a 29fps. O dado vira dica e o número
     // que vale é o medido em GPU real.
+    // Tela larga de verdade: o dono usa monitor grande e o container de 1120px
+    // deixava metade da tela vazia. Medir só em 1280 escondia isso.
+    const larga = await medirDesktop(chrome, arquivoUrl, porta + 11, 1920);
+    if (larga && larga.proporcao < 62) {
+      avisos.push(`em tela de 1920px o conteúdo ocupa ${larga.proporcao}% da largura (${larga.conteudo}px): o container precisa crescer em telas largas`);
+    }
+
     if (referencia?.fps !== undefined) {
       avisos.push(`${referencia.fps}fps na rolagem em renderização por software (referência, não reprova)`);
     }

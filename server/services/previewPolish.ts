@@ -103,6 +103,18 @@ header a[href*="wa.me"], header a[href*="whatsapp"] {
 /* DESKTOP: o modelo escalava o título com vw e chegava a 120px em 1440 — cinco
    linhas de manchete com corpo de 15px embaixo. Era isso que fazia a página parecer
    ruim na tela do computador. Aqui o título fica em 2 a 3 linhas e o corpo cresce. */
+/* TELA LARGA: em monitor de 2000px+ o container travado em 1120 deixa quase metade
+   da tela em branco — foi exatamente o que o dono viu e chamou de amador. O conteúdo
+   cresce com a tela, sem passar do ponto em que a linha fica longa. */
+/* Só os WRAPPERS de conteúdo crescem — nunca main ou section: se a seção é
+   limitada, o fundo do herói para no meio da tela e sobra um bloco vazio à direita. */
+@media (min-width: 1440px) {
+  .wrap, .container, .page, .inner { max-width: min(1320px, 88vw) !important; margin-inline: auto !important; }
+}
+@media (min-width: 1900px) {
+  .wrap, .container, .page, .inner { max-width: min(1440px, 84vw) !important; margin-inline: auto !important; }
+}
+
 @media (min-width: 900px) {
   h1 { font-size: clamp(44px, 5.2vw, 78px) !important; line-height: 1.02 !important; }
   p, li { font-size: max(17px, 1em); }
