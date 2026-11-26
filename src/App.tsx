@@ -20,6 +20,7 @@ import { ProjectTypeSelectModal } from './components/ProjectTypeSelectModal';
 import { SerpApiResultsPage } from './components/SerpApiResultsPage';
 import { CitiesQueueDashboard } from './components/CitiesQueueDashboard';
 import { CategoriesDashboard } from './components/CategoriesDashboard';
+import { NicheCatalogPage } from './components/NicheCatalogPage';
 import { AutomationSettingsPage } from './components/AutomationSettingsPage';
 import { DatabaseDashboard } from './components/DatabaseDashboard';
 import { OverviewDashboard } from './components/OverviewDashboard';
@@ -695,6 +696,7 @@ export default function App() {
         {activeTab === 'cities' && <CitiesQueueDashboard />}
 
         {activeTab === 'categories' && <CategoriesDashboard />}
+        {activeTab === 'niches' && <NicheCatalogPage />}
 
         {activeTab === 'automation' && <AutomationSettingsPage />}
         {activeTab === 'database' && <DatabaseDashboard onOpenPipeline={() => setActiveTab('crm')} onAddLead={() => setIsAddModalOpen(true)} />}

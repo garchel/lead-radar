@@ -27,6 +27,7 @@ import {
 import { generateLeadPreview, generateLeadPreviewCached, previewExists, previewSlug, previewsDir, resolvePreviewUrl, resolvePublicBaseUrl } from "../services/previewService";
 import { gerarPaginaUnica } from "../services/aiPreviewService";
 import { bloqueioHttp } from "../services/nichoGate";
+import { montarCatalogoDeNichos } from "../services/nichoCatalogoService";
 import { pagesConfigured, publishPreviews } from "../services/pagesService";
 import { buildPalettePreview, publishPaletteCard, sendPalettePreview } from "../services/paletteService";
 import { generateProposalPdf, proposalFileName, publishProposal } from "../services/proposalService";
@@ -40,6 +41,17 @@ import {
 } from "../services/warmupService";
 
 export function registerAgentRoutes(app: Express) {
+  /** Catálogo de nichos medido (3 camadas) — alimenta a tela de nichos. */
+  app.get("/api/nichos", (_req: Request, res: Response) => {
+    try {
+      res.setHeader("Cache-Control", "no-store");
+      return res.json({ success: true, catalogo: montarCatalogoDeNichos() });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return res.status(500).json({ success: false, error: msg });
+    }
+  });
+
   app.get("/api/agent/status", (_req: Request, res: Response) => {
     const policy = getCommercialPolicy();
     const cheapest = policy.packages[0];

@@ -107,14 +107,27 @@ function carregar(): Indice | null {
   return null;
 }
 
+/** Classifica um texto livre (nome + categoria) num dos nichos conhecidos. */
+export function classificarNicho(nome: string, categoria?: string): string | null {
+  const alvo = `${nome || ""} ${categoria || ""}`.normalize("NFC");
+  return CHAVES.find((c) => c.chave.test(alvo))?.nicho ?? null;
+}
+
+/** Diretório dos pools resolvido (ou null quando não existe no ambiente). */
+export function resolverPoolsDir(): string | null {
+  for (const dir of candidatos()) {
+    if (fs.existsSync(path.join(dir, "_indice-nichos.json"))) return dir;
+  }
+  return null;
+}
+
 /** Só quem já foi catalogado tem pool; o resto continua no repertório manual. */
 export function nichoCatalogado(nome: string, categoria?: string): string | null {
-  const alvo = `${nome || ""} ${categoria || ""}`.normalize("NFC");
-  const achado = CHAVES.find((c) => c.chave.test(alvo));
-  if (!achado) return null;
+  const nicho = classificarNicho(nome, categoria);
+  if (!nicho) return null;
   const indice = carregar();
   if (!indice) return null;
-  return indice.nichos[achado.nicho] ? achado.nicho : null;
+  return indice.nichos[nicho] ? nicho : null;
 }
 
 export function perfilDoPool(nome: string, categoria?: string): PerfilDoPool | null {

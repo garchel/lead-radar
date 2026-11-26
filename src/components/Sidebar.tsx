@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Target, Search, FolderKanban, BookOpen, Cpu, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings, Bot, TrendingUp, Users, KeyRound, ClipboardList, ChevronDown, MessageSquare } from 'lucide-react';
+import { Target, Search, FolderKanban, BookOpen, Cpu, Radar, Activity, Rocket, Building2, Database, MapPin, Briefcase, Settings, Bot, TrendingUp, Users, KeyRound, ClipboardList, ChevronDown, MessageSquare, Compass } from 'lucide-react';
 import { PwaInstallButton } from './PwaStatus';
 
 /** Abas do app — a navegação segue a etapa do funil, não a idade da feature. */
 export type AppTab =
   | 'overview'
   | 'search' | 'crm' | 'growth' | 'guide' | 'monitoring' | 'projects' | 'agents'
-  | 'companies' | 'cities' | 'categories' | 'automation' | 'database'
+  | 'companies' | 'cities' | 'categories' | 'automation' | 'database' | 'niches'
   | 'followups' | 'channels' | 'bots';
 
 /** Grupos recolhidos ficam salvos no navegador. */
@@ -245,6 +245,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button id="nav-growth-btn" onClick={() => setActiveTab('growth')} className={navBtn('growth', activeTab === 'growth')}>
             <TrendingUp className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Crescimento</span>
+          </button>
+
+          <button id="nav-niches-btn" onClick={() => setActiveTab('niches')} className={navBtn('niches', activeTab === 'niches')}>
+            <Compass className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">Catálogo de Nichos</span>
           </button>
         </>
       )}
