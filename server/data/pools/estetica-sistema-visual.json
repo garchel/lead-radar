@@ -1,0 +1,45 @@
+{
+  "nicho": "estetica",
+  "medido_em": "2026-11-26",
+  "largura_px": 1440,
+  "amostra": 44,
+  "tipografia": {
+    "h1_px": {
+      "p25": 36,
+      "mediana": 48.0,
+      "p75": 68
+    },
+    "corpo_px": {
+      "mediana": 15.5
+    },
+    "razao_h1_corpo_mediana": 3.33
+  },
+  "fontes": {
+    "Cormorant Garamond": 4,
+    "editorial-new": 2,
+    "__Belleza_c039cf": 2,
+    "Blacker Pro Display": 2,
+    "Syne": 2,
+    "Lato": 2,
+    "Playfair Display": 2
+  },
+  "cor": {
+    "fundos_distintos_mediana": 3.0
+  },
+  "densidade": {
+    "degraus_de_texto_mediana": 10.0
+  },
+  "sem_h1": {
+    "quantos": 6,
+    "de": 44
+  },
+  "regras": [
+    "título mediano 48px (p25 36 / p75 68) e razão 3,33",
+    "corpo 15,5px — o menor de todos os nichos, junto com odontologia. Público lê pouco e olha imagem",
+    "3 fundos distintos (contra 2 nos outros nichos): o nicho usa blocos de cor para separar protocolo de resultado",
+    "Cormorant Garamond 4x, editorial-new, Blacker Pro Display, Syne: serifada fina de luxo + grotesca de moda. É o vocabulário de beleza",
+    "10 degraus de texto, como todos",
+    "14% sem h1"
+  ],
+  "aviso": "amostra de referência anglófona (med spa dos EUA). No Brasil a linguagem visual é mais 'clínica' e menos editorial; medir 10 sites brasileiros antes de adotar a serifada fina."
+}

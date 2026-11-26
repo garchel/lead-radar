@@ -1,0 +1,218 @@
+{
+  "nicho": "estetica",
+  "amostra": {
+    "referencias": 44,
+    "mercado_br": 4,
+    "coletado_em": "2026-11-26",
+    "fonte": "6 listas de design (flamingo, routeless, workee, webcitz x2, joinmoxie) + busca de clínicas"
+  },
+  "aviso_amostra": "mercado BR tem só 4 sites válidos: comparação BR x referência NÃO é possível aqui. As porcentagens são da amostra de referência (n=44).",
+  "correcao_de_lexico": "corporal, tricologia e protocolo saíram de 0% para 59%, 61% e 61% ao incluir body contouring/hair restoration/treatment plan: a amostra é anglófona e a regex só tinha português. 'resultado' foi de 2% para 98% pelo mesmo motivo (results).",
+  "componentes": [
+    {
+      "componente": "agendamento_online",
+      "presenca_pct": 98,
+      "presenca_n": 43,
+      "faixa": "base"
+    },
+    {
+      "componente": "resultado",
+      "presenca_pct": 98,
+      "presenca_n": 43,
+      "faixa": "base"
+    },
+    {
+      "componente": "depoimentos",
+      "presenca_pct": 95,
+      "presenca_n": 42,
+      "faixa": "base"
+    },
+    {
+      "componente": "tecnologia",
+      "presenca_pct": 93,
+      "presenca_n": 41,
+      "faixa": "base"
+    },
+    {
+      "componente": "laser",
+      "presenca_pct": 93,
+      "presenca_n": 41,
+      "faixa": "base"
+    },
+    {
+      "componente": "aparelhos",
+      "presenca_pct": 93,
+      "presenca_n": 41,
+      "faixa": "base"
+    },
+    {
+      "componente": "facial",
+      "presenca_pct": 91,
+      "presenca_n": 40,
+      "faixa": "base"
+    },
+    {
+      "componente": "equipe",
+      "presenca_pct": 89,
+      "presenca_n": 39,
+      "faixa": "base"
+    },
+    {
+      "componente": "profissional",
+      "presenca_pct": 89,
+      "presenca_n": 39,
+      "faixa": "base"
+    },
+    {
+      "componente": "injetaveis",
+      "presenca_pct": 86,
+      "presenca_n": 38,
+      "faixa": "base"
+    },
+    {
+      "componente": "blog",
+      "presenca_pct": 84,
+      "presenca_n": 37,
+      "faixa": "base"
+    },
+    {
+      "componente": "avaliacao",
+      "presenca_pct": 80,
+      "presenca_n": 35,
+      "faixa": "base"
+    },
+    {
+      "componente": "telefone_clicavel",
+      "presenca_pct": 68,
+      "presenca_n": 30,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "endereco",
+      "presenca_pct": 64,
+      "presenca_n": 28,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "tricologia",
+      "presenca_pct": 61,
+      "presenca_n": 27,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "protocolo",
+      "presenca_pct": 61,
+      "presenca_n": 27,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "corporal",
+      "presenca_pct": 59,
+      "presenca_n": 26,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "galeria",
+      "presenca_pct": 52,
+      "presenca_n": 23,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "faq",
+      "presenca_pct": 52,
+      "presenca_n": 23,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "planos",
+      "presenca_pct": 52,
+      "presenca_n": 23,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "pagamento",
+      "presenca_pct": 50,
+      "presenca_n": 22,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "mapa",
+      "presenca_pct": 45,
+      "presenca_n": 20,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "horario",
+      "presenca_pct": 43,
+      "presenca_n": 19,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "video",
+      "presenca_pct": 43,
+      "presenca_n": 19,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "gift_card",
+      "presenca_pct": 43,
+      "presenca_n": 19,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "antes_depois",
+      "presenca_pct": 39,
+      "presenca_n": 17,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "contato_whatsapp",
+      "presenca_pct": 27,
+      "presenca_n": 12,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "produtos",
+      "presenca_pct": 23,
+      "presenca_n": 10,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "estacionamento",
+      "presenca_pct": 18,
+      "presenca_n": 8,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "urgencia",
+      "presenca_pct": 14,
+      "presenca_n": 6,
+      "faixa": "raro"
+    }
+  ],
+  "leituras": {
+    "nucleo_do_nicho": [
+      "agendamento online 98% e resultado 98% — os dois pilares",
+      "depoimentos 95% — prova social quase universal",
+      "tecnologia 93%, laser 93%, aparelhos 93% — o equipamento é argumento de venda",
+      "facial 91%, injetáveis 86% — o serviço é pressuposto",
+      "profissional citado 89% (biomédico, esteticista, médica, CRM/CRBM/CRESS): a credencial de quem aplica é obrigação",
+      "blog 84% e avaliação 80%"
+    ],
+    "prova_visual": [
+      "antes_depois 39% — o componente de imagem que diferencia de verdade neste nicho",
+      "galeria 52% — portfólio de resultado"
+    ],
+    "recorrencia": [
+      "planos/membership 52% — quase metade vende assinatura",
+      "gift card 43% — presente é canal real"
+    ],
+    "onde_da_para_diferenciar": [
+      "vídeo 43%",
+      "antes/depois 39%",
+      "urgência 14%",
+      "estacionamento 18%"
+    ],
+    "contraste_com_os_outros_nichos": "é o único nicho em que RESULTADO aparece em 98% e a palavra 'resultado' é moeda corrente. Nos outros sete, o argumento é processo (odontologia), lugar (barbearia/fisio), preço (ótica) ou confiança (oficina)."
+  }
+}

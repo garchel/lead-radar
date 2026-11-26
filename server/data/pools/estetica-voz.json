@@ -1,0 +1,153 @@
+{
+  "nicho": "estetica",
+  "gerado_em": "2026-11-26",
+  "n_lido": 44,
+  "n_util": 26,
+  "metodo": "leitura manual dos 44 títulos de abertura. Descartados 'consultation', 'black friday gift card sale', 'beverly hills med spa' (só localidade), títulos de procedimento isolado ('introducing aviclear laser acne treatment') e blocos de menu.",
+  "principio": "cataloga a ESCOLHA (público -> promessa -> prova), nunca a frase.",
+  "enquadramentos": [
+    {
+      "id": "autoestima",
+      "nome": "autoestima / como você se sente",
+      "ocorrencias": 8,
+      "de": 26,
+      "pergunta_que_responde": "como eu vou me sentir olhando no espelho?",
+      "exemplos_observados": [
+        "find your confidence.",
+        "confidence looks good on you",
+        "love your skin",
+        "feel elevated, stay grounded",
+        "helping you build strength, confidence, and a healthier future"
+      ],
+      "prova_obrigatoria": [
+        "depoimento com nome e contexto",
+        "foto de resultado autorizada",
+        "tempo até o resultado aparecer"
+      ],
+      "leitura": "é o campeão do nicho. Não vende corpo, vende confiança — e o vocabulário evita 'transformação'"
+    },
+    {
+      "id": "naturalidade",
+      "nome": "naturalidade / sem parecer feito",
+      "ocorrencias": 7,
+      "de": 26,
+      "pergunta_que_responde": "vou parecer eu mesma, ou artificial?",
+      "exemplos_observados": [
+        "the art of natural enhancement",
+        "refined. restored. naturally you.",
+        "natural. regenerative. results.",
+        "looking young never gets old"
+      ],
+      "prova_obrigatoria": [
+        "antes/depois com o MESMO ângulo e luz",
+        "texto explicando o que é reversível"
+      ],
+      "leitura": "é a resposta ao medo específico do nicho: o resultado artificial. Aparece em 7 de 26 e é o que separa clínica boa de 'plástica exagerada'"
+    },
+    {
+      "id": "resultado",
+      "nome": "resultado comprovado",
+      "ocorrencias": 5,
+      "de": 26,
+      "pergunta_que_responde": "funciona mesmo?",
+      "exemplos_observados": [
+        "natural. regenerative. results.",
+        "before & after",
+        "real results"
+      ],
+      "prova_obrigatoria": [
+        "antes/depois real e autorizado",
+        "número de sessões até o resultado",
+        "nome do profissional responsável"
+      ],
+      "risco": "promessa de resultado é limitada por norma (CFM/CRBM). A regra é mostrar processo e variação, nunca garantir"
+    },
+    {
+      "id": "lugar_credencial",
+      "nome": "lugar + credencial",
+      "ocorrencias": 4,
+      "de": 26,
+      "pergunta_que_responde": "onde fica e quem aplica?",
+      "exemplos_observados": [
+        "Beverly Hills med spa",
+        "Charlotte med spa & laser center",
+        "Austin med spa, private med spa in Austin, TX, est. 2004",
+        "La Jolla plastic surgery & dermatology"
+      ],
+      "prova_obrigatoria": [
+        "bairro",
+        "registro do profissional (CRM/CRBM/CRESS)",
+        "anos de casa"
+      ],
+      "leitura": "nos EUA o nome da cidade funciona como selo de status; no Brasil o equivalente é bairro nobre + registro profissional"
+    },
+    {
+      "id": "membro",
+      "nome": "assinatura / membership",
+      "ocorrencias": 2,
+      "de": 26,
+      "pergunta_que_responde": "como eu mantenho isso?",
+      "exemplos_observados": [
+        "become a member",
+        "planos e pacotes (52% dos sites)"
+      ],
+      "prova_obrigatoria": [
+        "valor mensal e o que está incluso (quantas sessões, quais procedimentos)"
+      ],
+      "leitura": "52% dos sites vendem plano: o nicho é de recorrência, como pilates, não de sessão avulsa"
+    }
+  ],
+  "ausentes": [
+    {
+      "enquadramento": "preço visível",
+      "ocorrencias": 1,
+      "leitura": "24 dos 26 não abrem com preço. É o oposto de ótica: aqui preço escondido é norma do setor"
+    },
+    {
+      "enquadramento": "saudação",
+      "ocorrencias": 0,
+      "leitura": "nenhum dos 26 abre com 'bem-vinda'"
+    }
+  ],
+  "lista_negra": [
+    "a melhor clínica de estética",
+    "beleza e autoestima",
+    "resultados garantidos",
+    "transforme-se",
+    "pele de porcelana",
+    "juventude eterna",
+    "tecnologia de ponta",
+    "produtos importados",
+    "venha nos conhecer",
+    "bem-vinda à nossa clínica",
+    "corpo dos sonhos"
+  ],
+  "padroes_de_titulo_proibidos": [
+    "começa com 'O que'",
+    "começa com 'Conheça nossa'",
+    "começa com 'Nossos procedimentos'"
+  ],
+  "teste_de_troca": {
+    "regra": "trocar o nome da clínica por outro de ramo diferente; se continuar verdadeira (ex: 'find your confidence' numa barbearia), reprovar por genérico",
+    "exemplos_de_troca": [
+      "Barbearia Dom Corte",
+      "Ótica Central"
+    ]
+  },
+  "regra_de_dado_ausente": "sem antes/depois autorizado, sem registro do profissional e sem número de sessões, a página NÃO promete resultado: descreve o protocolo e o que acontece na avaliação. Prometer resultado sem prova é o erro mais grave possível neste nicho",
+  "comparacao": {
+    "odontologia": "experiência",
+    "barbearia": "lugar",
+    "otica": "preço",
+    "psicologia": "nome + dor",
+    "pilates": "transformação + pertencimento",
+    "fisioterapia": "lugar + alívio",
+    "oficina": "confiança anti-golpe",
+    "estetica": "autoestima + naturalidade"
+  },
+  "limites": [
+    "44 páginas, das quais só 4 brasileiras: a leitura de voz vem sobretudo de med spas dos EUA",
+    "no Brasil o vocabulário muda: 'harmonização facial' e 'estética avançada' substituem 'med spa'",
+    "risco ético: promessa de resultado é vedada; a lista negra cobre isso"
+  ]
+}

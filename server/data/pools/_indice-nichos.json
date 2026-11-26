@@ -70,6 +70,77 @@
         "amostra internacional (EUA, Canadá, Austrália, Reino Unido): o enquadramento 'lugar' pode ser ainda mais forte no Brasil, onde a barbearia é de bairro"
       ]
     },
+    "estetica": {
+      "amostra": {
+        "referencias": 44,
+        "mercado_br": 4,
+        "coletado_em": "2026-11-26",
+        "fonte": "6 listas de design (flamingo, routeless, workee, webcitz x2, joinmoxie) + busca de clínicas"
+      },
+      "estrutura_base": [
+        "agendamento_online",
+        "resultado",
+        "depoimentos",
+        "tecnologia",
+        "laser",
+        "aparelhos",
+        "facial",
+        "equipe",
+        "profissional",
+        "injetaveis",
+        "blog",
+        "avaliacao"
+      ],
+      "estrutura_diferenciador": [
+        "telefone_clicavel",
+        "endereco",
+        "tricologia",
+        "protocolo",
+        "corporal",
+        "galeria",
+        "faq",
+        "planos"
+      ],
+      "enquadramento_campeao": {
+        "id": "autoestima",
+        "nome": "autoestima / como você se sente",
+        "ocorrencias": 8,
+        "de": 26
+      },
+      "prova_obrigatoria_do_campeao": [
+        "depoimento com nome e contexto",
+        "foto de resultado autorizada",
+        "tempo até o resultado aparecer"
+      ],
+      "tipografia": {
+        "h1_mediana": 48,
+        "h1_p25": 36,
+        "h1_p75": 68,
+        "corpo_mediana": 15.5,
+        "razao": 3.33,
+        "n": 44
+      },
+      "lista_negra": [
+        "a melhor clínica de estética",
+        "beleza e autoestima",
+        "resultados garantidos",
+        "transforme-se",
+        "pele de porcelana",
+        "juventude eterna",
+        "tecnologia de ponta",
+        "produtos importados",
+        "venha nos conhecer",
+        "bem-vinda à nossa clínica",
+        "corpo dos sonhos"
+      ],
+      "regra_dado_ausente": "sem antes/depois autorizado, sem registro do profissional e sem número de sessões, a página NÃO promete resultado: descreve o protocolo e o que acontece na avaliação. Prometer resultado sem prova é o erro mais grave possível neste nicho",
+      "limites": [
+        "44 páginas, das quais só 4 brasileiras: a leitura de voz vem sobretudo de med spas dos EUA",
+        "no Brasil o vocabulário muda: 'harmonização facial' e 'estética avançada' substituem 'med spa'",
+        "risco ético: promessa de resultado é vedada; a lista negra cobre isso",
+        "mercado BR tem só 4 sites válidos: comparação BR x referência NÃO é possível aqui. As porcentagens são da amostra de referência (n=44)."
+      ]
+    },
     "fisioterapia": {
       "amostra": {
         "referencias": 30,
