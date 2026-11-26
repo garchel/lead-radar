@@ -1,0 +1,211 @@
+{
+  "nicho": "otica",
+  "amostra": {
+    "referencias": 34,
+    "mercado_br": 10,
+    "coletado_em": "2026-11-26",
+    "fonte": "listas de design (mycodeless, limely, colorlib, imatrix, zarla, polothemes, webflow) + busca de óticas brasileiras"
+  },
+  "conferencia_de_nicho": "referencias: 34 de 58 confirmadas | mercado: 10 de 14 confirmadas",
+  "metodo": "presença de componentes por página; HTML sem <style>/<script>; nenhum texto, imagem ou código copiado.",
+  "componentes": [
+    {
+      "componente": "sol",
+      "referencia_pct": 85,
+      "mercado_br_pct": 80,
+      "delta": 5
+    },
+    {
+      "componente": "grau",
+      "referencia_pct": 79,
+      "mercado_br_pct": 80,
+      "delta": -1
+    },
+    {
+      "componente": "faq",
+      "referencia_pct": 62,
+      "mercado_br_pct": 50,
+      "delta": 12
+    },
+    {
+      "componente": "depoimentos",
+      "referencia_pct": 56,
+      "mercado_br_pct": 30,
+      "delta": 26
+    },
+    {
+      "componente": "produtos",
+      "referencia_pct": 53,
+      "mercado_br_pct": 50,
+      "delta": 3
+    },
+    {
+      "componente": "agendamento_online",
+      "referencia_pct": 50,
+      "mercado_br_pct": 40,
+      "delta": 10
+    },
+    {
+      "componente": "blog",
+      "referencia_pct": 47,
+      "mercado_br_pct": 40,
+      "delta": 7
+    },
+    {
+      "componente": "telefone_clicavel",
+      "referencia_pct": 44,
+      "mercado_br_pct": 40,
+      "delta": 4
+    },
+    {
+      "componente": "multifocal",
+      "referencia_pct": 44,
+      "mercado_br_pct": 40,
+      "delta": 4
+    },
+    {
+      "componente": "exame",
+      "referencia_pct": 44,
+      "mercado_br_pct": 30,
+      "delta": 14
+    },
+    {
+      "componente": "endereco",
+      "referencia_pct": 44,
+      "mercado_br_pct": 80,
+      "delta": -36
+    },
+    {
+      "componente": "lentes_contato",
+      "referencia_pct": 44,
+      "mercado_br_pct": 20,
+      "delta": 24
+    },
+    {
+      "componente": "horario",
+      "referencia_pct": 41,
+      "mercado_br_pct": 90,
+      "delta": -49
+    },
+    {
+      "componente": "galeria",
+      "referencia_pct": 35,
+      "mercado_br_pct": 50,
+      "delta": -15
+    },
+    {
+      "componente": "equipe",
+      "referencia_pct": 35,
+      "mercado_br_pct": 30,
+      "delta": 5
+    },
+    {
+      "componente": "planos",
+      "referencia_pct": 35,
+      "mercado_br_pct": 20,
+      "delta": 15
+    },
+    {
+      "componente": "gift_card",
+      "referencia_pct": 26,
+      "mercado_br_pct": 0,
+      "delta": 26
+    },
+    {
+      "componente": "infantil",
+      "referencia_pct": 24,
+      "mercado_br_pct": 30,
+      "delta": -6
+    },
+    {
+      "componente": "pagamento",
+      "referencia_pct": 21,
+      "mercado_br_pct": 50,
+      "delta": -29
+    },
+    {
+      "componente": "contato_whatsapp",
+      "referencia_pct": 15,
+      "mercado_br_pct": 90,
+      "delta": -75
+    },
+    {
+      "componente": "estacionamento",
+      "referencia_pct": 15,
+      "mercado_br_pct": 20,
+      "delta": -5
+    },
+    {
+      "componente": "video",
+      "referencia_pct": 12,
+      "mercado_br_pct": 0,
+      "delta": 12
+    },
+    {
+      "componente": "ajuste",
+      "referencia_pct": 12,
+      "mercado_br_pct": 60,
+      "delta": -48
+    },
+    {
+      "componente": "mapa",
+      "referencia_pct": 12,
+      "mercado_br_pct": 40,
+      "delta": -28
+    },
+    {
+      "componente": "esportivo",
+      "referencia_pct": 12,
+      "mercado_br_pct": 20,
+      "delta": -8
+    },
+    {
+      "componente": "tecnologia",
+      "referencia_pct": 9,
+      "mercado_br_pct": 0,
+      "delta": 9
+    },
+    {
+      "componente": "urgencia",
+      "referencia_pct": 6,
+      "mercado_br_pct": 10,
+      "delta": -4
+    },
+    {
+      "componente": "antes_depois",
+      "referencia_pct": 0,
+      "mercado_br_pct": 20,
+      "delta": -20
+    }
+  ],
+  "media_titulos_por_pagina": {
+    "referencias": 18.2,
+    "mercado_br": 30
+  },
+  "leituras": {
+    "nucleo_do_nicho": [
+      "sol 85% e grau 79% (referência) — o serviço é pressuposto",
+      "exame de vista 44%, lentes de contato 44%, multifocal 44%",
+      "faq 62% — muito alto; a dúvida do cliente é técnica (grau, lente, prazo)"
+    ],
+    "onde_da_para_diferenciar": [
+      "vídeo 12%",
+      "esportivo 12%",
+      "ajuste/conserto 12%",
+      "infantil 24%",
+      "mapa 12%"
+    ],
+    "o_que_o_mercado_br_faz_e_a_referencia_nao": [
+      "whatsapp 90% vs 15%",
+      "horário 90% vs 41%",
+      "endereço 80% vs 44%",
+      "mapa 40% vs 12% — a ótica brasileira vende PRESENÇA FÍSICA; a referência vende checkout"
+    ],
+    "o_que_a_referencia_faz_e_o_mercado_nao": [
+      "agendamento online 50% vs 43%",
+      "depoimentos 56% vs 20%",
+      "blog 47% vs 30%"
+    ],
+    "contraste_com_os_outros_nichos": "odontologia e barbearia têm herói grande e página de venda única; ótica é varejo: catálogo, preço e exame. Aqui presença física vence on-line no Brasil."
+  }
+}

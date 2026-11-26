@@ -45,6 +45,16 @@ const SERVICOS_POR_NICHO = {
     harmonizacao: /harmoniza[cç][aã]o facial|botox|preenchimento|cosmetic/i,
     convenios: /conv[eê]nio|plano de sa[uú]de|unimed|amil|bradesco sa[uú]de|sulamerica|odontoprev|\binsurance\b|in-network/i,
   },
+  otica: {
+    grau: /\bgrau\b|prescri[cç][aã]o|receita m[eé]dica|\bprescription\b/i,
+    sol: /\bsol\b|sunglasses|\bsolar\b|polarizad/i,
+    lentes_contato: /lente de contato|contact lens|contato gel/i,
+    multifocal: /multifocal|progressiv|varilux|bifocal/i,
+    infantil: /infantil|crian[cç]a|\bkids\b/i,
+    esportivo: /esportiv|\bsport\b|nata[cç][aã]o|ciclismo/i,
+    ajuste: /ajuste|conserto|manuten[cç][aã]o|\bfitting\b|\brepair\b/i,
+    exame: /exame de vista|exame visual|\beye exam\b|\beye test\b|optometrista/i,
+  },
   barbearia: {
     corte: /\bcorte\b|\bhaircut\b|\bfade\b|degrad[eê]|\btrim\b|\bcut\b/i,
     barba: /\bbarba\b|\bbeard\b|\bshave\b|navalha|\brazor\b|hot towel/i,
@@ -65,6 +75,8 @@ const SINAIS = { ...SINAIS_GENERICOS, ...(SERVICOS_POR_NICHO[process.env.NICHO_A
  * (clinicazimmermann, vinda de portfólio de agência). Curadoria de lista e
  * case de agência não garantem que o site seja do nicho.
  */
+// NOTA: radicais curtos (dent, odont) PRECISAM de \b — sem âncora, 'dent' casa dentro
+// de 'acidente' e reprova ótica de verdade como se fosse odontologia.
 const LEXICO_NICHO = {
   odontologia: {
     exige: 3,
@@ -83,7 +95,7 @@ const LEXICO_NICHO = {
     exige: 3,
     positivo: /barbearia|barbeiro|barbershop|\bhig ?\b|navalha|\bfade\b|degrad[eê]|corte masculino|\bshave\b|\bhaircut\b|beard/i,
     outrosNichos: {
-      odontologia: /dent(ista|e|al)|odont|implante dent|ortodont|clareamento/i,
+      odontologia: /\b(dentista|dentes?|dental|odontolog\w*|ortodont\w*)\b|implante dent[aá]rio/i,
       proctologia: /proctolog|colonoscopia|hemorroid/i,
       estetica_facial: /harmoniza[cç][aã]o facial|botox|preenchimento labial|skinbooster/i,
       veterinaria: /veterin[aá]ri|castra[cç][aã]o|vacina[cç][aã]o animal/i,
@@ -95,23 +107,21 @@ const LEXICO_NICHO = {
     exige: 3,
     positivo: /[oó]tica|\b[oó]culos\b|arma[cç][aã]o|\blentes?\b|optometri|eyewear|\bglasses\b|\boptician\b|sunglasses|\bframes\b|contato gel|multifocal|progressiv/i,
     outrosNichos: {
-      odontologia: /dent(ista|e|al)|odont|implante dent|ortodont/i,
+      odontologia: /\b(dentista|dentes?|dental|odontolog\w*|ortodont\w*)\b|implante dent[aá]rio/i,
       barbearia: /barbearia|barbershop|\bfade\b|navalha|degrad[eê]/i,
       estetica_facial: /harmoniza[cç][aã]o facial|botox|preenchimento labial/i,
       veterinaria: /veterin[aá]ri|castra[cç][aã]o animal/i,
       advocacia: /advogad|\boab\b|jur[ií]dic/i,
       contabilidade: /contabil|contador|imposto de renda/i,
     },
-    servicos: {
-      grau: /grau|prescri[cç][aã]o|receita|\bprescription\b|\bglasses\b/i,
-      sol: /\bsol\b|sunglasses|\bsolar\b|polarizad/i,
-      lentes_contato: /lente de contato|contact lens|contato gel/i,
-      multifocal: /multifocal|progressiv|varilux|bifocal/i,
-      infantil: /infantil|crian[cç]a|\bkids\b/i,
-      esportivo: /esport|sport|nata[cç][aã]o|ciclismo/i,
-      ajuste: /ajuste|conserto|concert|manuten[cç][aã]o|\bfitting\b|repair/i,
-      exame: /exame de vista|exame visual|\beye exam\b|refrat|optometrista/i,
-    },
+    grau: /\bgrau\b|prescri[cç][aã]o|receita m[eé]dica|\bprescription\b/i,
+    sol: /\bsol\b|sunglasses|\bsolar\b|polarizad/i,
+    lentes_contato: /lente de contato|contact lens|contato gel/i,
+    multifocal: /multifocal|progressiv|varilux|bifocal/i,
+    infantil: /infantil|crian[cç]a|\bkids\b/i,
+    esportivo: /esportiv|sport|nata[cç][aã]o|ciclismo/i,
+    ajuste: /ajuste|conserto|manuten[cç][aã]o|\bfitting\b|\brepair\b/i,
+    exame: /exame de vista|exame visual|\beye exam\b|refrat|optometrista/i,
   },
 };
 

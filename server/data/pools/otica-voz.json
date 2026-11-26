@@ -1,0 +1,145 @@
+{
+  "nicho": "otica",
+  "gerado_em": "2026-11-26",
+  "n_lido": 44,
+  "n_util": 34,
+  "metodo": "leitura manual dos títulos de abertura das 44 páginas confirmadas (34 referências + 10 brasileiras). Descartados os que não são herói (newsletter, busca, horário de feriado, 'título do slide').",
+  "principio": "cataloga a ESCOLHA (público -> promessa -> prova), nunca a frase.",
+  "enquadramentos": [
+    {
+      "id": "preco_visivel",
+      "nome": "preço visível / oferta",
+      "ocorrencias": 11,
+      "de": 34,
+      "pergunta_que_responde": "quanto custa, sem enrolação?",
+      "exemplos_observados": [
+        "óculos completos por R$ 79,90",
+        "buy glasses online from £9.00, lenses included",
+        "50% off lenses + 30% off designer frames",
+        "explore 2000+ frame styles",
+        "crediário para negativados"
+      ],
+      "prova_obrigatoria": [
+        "preço real ou faixa",
+        "o que está incluso (lente? armação? exame?)"
+      ],
+      "leitura": "é o enquadramento DOMINANTE do varejo óptico. Não é diferencial — é o piso. Quem não mostra preço parece caro."
+    },
+    {
+      "id": "lugar",
+      "nome": "o lugar",
+      "ocorrencias": 6,
+      "de": 34,
+      "pergunta_que_responde": "onde eu vou e por que ali?",
+      "exemplos_observados": [
+        "eyes on Main in Carmel's arts & design district",
+        "your trusted local optometrist in SE Calgary",
+        "ótica em Curitiba para todo tipo de grau"
+      ],
+      "prova_obrigatoria": [
+        "bairro reconhecível",
+        "horário",
+        "anos no endereço"
+      ],
+      "leitura": "no Brasil o mercado usa lugar + preço juntos: 'ótica em Curitiba' com 'R$ 79,90'"
+    },
+    {
+      "id": "encaixe",
+      "nome": "encaixe / ajuste ao rosto",
+      "ocorrencias": 4,
+      "de": 34,
+      "pergunta_que_responde": "vai ficar bom em mim?",
+      "exemplos_observados": [
+        "eyewear that actually fits",
+        "exceptional eyewear tailored to you",
+        "escolha a armação, monte seu óculos na hora",
+        "adjustment/fitting services"
+      ],
+      "prova_obrigatoria": [
+        "processo de ajuste descrito (medição, tempo, quantas vezes)",
+        "ou serviço de conserto/ajuste com prazo"
+      ],
+      "leitura": "A DOR REAL do nicho é diferente dos outros: ninguém tem medo do oftalmologista, tem medo do óculos que não cai bem, aperta atrás da orelha ou fica torto. É o enquadramento mais forte e o mais raro no mercado brasileiro (12% oferecem ajuste)."
+    },
+    {
+      "id": "acao",
+      "nome": "ação direta (exame)",
+      "ocorrencias": 5,
+      "de": 34,
+      "pergunta_que_responde": "posso resolver agora?",
+      "exemplos_observados": [
+        "book an eye test",
+        "check your insurance eligibility",
+        "exames de vista e óculos completos"
+      ],
+      "prova_obrigatoria": [
+        "duração do exame",
+        "se é gratuito ou o valor",
+        "se precisa de receita"
+      ],
+      "leitura": "exame de vista é o gatilho de entrada do nicho, como o agendamento é na barbearia"
+    },
+    {
+      "id": "marca",
+      "nome": "só o nome / marca",
+      "ocorrencias": 5,
+      "de": 34,
+      "pergunta_que_responde": "nada — assume reputação",
+      "exemplos_observados": [
+        "Mott Optical Group",
+        "Jimmy Fairly",
+        "Gentle Monster",
+        "Pair Eyewear"
+      ],
+      "leitura": "funciona para marca com desejo próprio; para lead novo, é página muda"
+    },
+    {
+      "id": "servico",
+      "nome": "serviço genérico",
+      "ocorrencias": 3,
+      "de": 34,
+      "pergunta_que_responde": "o que vocês vendem?",
+      "exemplos_observados": [
+        "eyeglasses",
+        "sunglasses",
+        "popular items"
+      ],
+      "leitura": "é o mais fraco: informa sem diferenciar"
+    }
+  ],
+  "lista_negra": [
+    "a melhor ótica da cidade",
+    "visão perfeita",
+    "estilo e sofisticação",
+    "qualidade e preço justo",
+    "as melhores marcas",
+    "venha conferir",
+    "bem-vindo à",
+    "há X anos cuidando da sua visão",
+    "título do slide",
+    "por você estamos sempre evoluindo"
+  ],
+  "padroes_de_titulo_proibidos": [
+    "começa com 'O que'",
+    "começa com 'Conheça nossa'",
+    "começa com 'Nossos serviços'"
+  ],
+  "teste_de_troca": {
+    "regra": "trocar o nome do negócio por um concorrente de outro ramo; se continuar verdadeira, reprovar",
+    "exemplos_de_troca": [
+      "Barbearia Dom Corte",
+      "Clínica Vida"
+    ]
+  },
+  "regra_de_dado_ausente": "enquadramento sem prova não é usado; preço sem preço real vira mentira — nesse caso a página mostra o que está incluso e pede o dado",
+  "comparacao_com_os_outros_nichos": {
+    "odontologia": "campeão = experiência/conforto (4 de 7)",
+    "barbearia": "campeão = lugar (15 de 54)",
+    "otica": "campeão = preço visível (11 de 34), com 'encaixe' como diferencial mais forte e mais raro"
+  },
+  "limites": [
+    "contagem é leitura manual",
+    "amostra mistura varejo on-line internacional com loja de bairro brasileira",
+    "o 'encaixe' apareceu em 4 de 34: é hipótese forte, não lei"
+  ]
+}

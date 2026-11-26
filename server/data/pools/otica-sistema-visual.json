@@ -1,0 +1,45 @@
+{
+  "nicho": "otica",
+  "medido_em": "2026-11-26",
+  "largura_px": 1440,
+  "amostra": 44,
+  "amostra_e_bimodal": "23 lojas físicas (com horário) e 21 e-commerces (sem horário) — a tipografia é MUITO diferente entre os dois",
+  "loja_fisica": {
+    "n": 23,
+    "h1_mediana": 36,
+    "h1_p25": 32,
+    "h1_p75": 50,
+    "corpo_mediana": 16,
+    "razao_h1_corpo": 2.25
+  },
+  "ecommerce": {
+    "n": 21,
+    "h1_mediana": 20,
+    "h1_p25": 16,
+    "h1_p75": 26,
+    "corpo_mediana": 16,
+    "razao_h1_corpo": 1.43
+  },
+  "fontes_de_display_observadas": {
+    "Times New Roman": 5,
+    "Outfit": 3,
+    "Montserrat": 3,
+    "Poppins": 2,
+    "Paralucent": 1,
+    "Soleil": 1,
+    "Playfair Display": 1,
+    "FairlySans": 1
+  },
+  "sem_h1": {
+    "quantos": 16,
+    "de": 44
+  },
+  "regras_que_saem_da_medicao": [
+    "título MUITO menor que nos outros nichos: mediana 36px em loja física (32-50 no intervalo central), 20px em e-commerce",
+    "razão título/corpo ~2,2 — contra 3,25 em barbearia e 4-6 em odontologia",
+    "corpo 16px",
+    "e-commerce suporta título pequeno porque a página é grade de produto, não promessa",
+    "38% da amostra não tem h1: em varejo isso costuma ser home de carrossel, e é defeito de acessibilidade"
+  ],
+  "ressalva": "nossas prévias são página de venda de UMA dobra, não home de varejo: aplicar 36px direto pode deixar a página sem hierarquia. Medir o efeito antes de adotar."
+}
