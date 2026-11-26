@@ -35,11 +35,32 @@
     "de": 44
   },
   "regras_que_saem_da_medicao": [
-    "título MUITO menor que nos outros nichos: mediana 36px em loja física (32-50 no intervalo central), 20px em e-commerce",
-    "razão título/corpo ~2,2 — contra 3,25 em barbearia e 4-6 em odontologia",
-    "corpo 16px",
-    "e-commerce suporta título pequeno porque a página é grade de produto, não promessa",
-    "38% da amostra não tem h1: em varejo isso costuma ser home de carrossel, e é defeito de acessibilidade"
+    "separar POR PAÍS antes de concluir tipografia: e-commerce internacional puxa a mediana para 20px e não representa a ótica de rua brasileira",
+    "ótica brasileira de loja física: 45-66px no título (as com projeto), corpo 17-18px, razão ~2,5-3",
+    "razão título/corpo menor que barbearia (3,25) e odontologia (4-6): em varejo o título divide espaço com produto",
+    "corpo maior que os outros nichos (17,8px vs 16): lê-se preço, não promessa",
+    "e-commerce suporta título pequeno porque a hierarquia vem da grade de produto",
+    "38% da amostra não tem h1 — em varejo costuma ser home de carrossel; é defeito de acessibilidade, não estilo"
   ],
-  "ressalva": "nossas prévias são página de venda de UMA dobra, não home de varejo: aplicar 36px direto pode deixar a página sem hierarquia. Medir o efeito antes de adotar."
+  "ressalva": "nossas prévias são página de venda de UMA dobra, não home de varejo: aplicar 36px direto pode deixar a página sem hierarquia. Medir o efeito antes de adotar.",
+  "brasil_loja_fisica": {
+    "n": 10,
+    "com_h1": 7,
+    "sem_h1": 3,
+    "h1_valores": [
+      14,
+      30,
+      36,
+      36,
+      45.6,
+      60,
+      66
+    ],
+    "h1_mediana": 36,
+    "h1_p25": 30,
+    "h1_p75": 60,
+    "corpo_mediana": 17.76,
+    "leitura": "a mediana 36px é puxada para baixo por 2 sites fracos (14px e 30px). As óticas brasileiras com projeto de design usam 45-66px (tanaka 66 serif, arancia 60, laborotica 45,6, oart 36 com Montserrat)."
+  },
+  "correcao": "a primeira versão deste arquivo dizia 36px como regra para loja física. Errado: 36 era mistura de e-commerce com loja de bairro. Corrigido separando país e removendo h1 quebrados."
 }
