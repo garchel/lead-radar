@@ -1,5 +1,6 @@
 import type { StoredLead } from "../store/types";
 import { chaveDeepSeek, getAiClient, modelosDeepSeek } from "./aiClient";
+import { blocoDoPool } from "./nichoPoolService";
 import { previewsDir, previewSlug, whatsappLink, writePreviewFiles, type PreviewResult } from "./previewService";
 import { auditarPaginaMobile, auditoriaDisponivel, type MedidaViewport } from "./mobileAuditService";
 import { repararPagina } from "./previewRepair";
@@ -393,9 +394,19 @@ Se a sua escolha de seções não tiver prova social, o eixo de PROVA SOCIAL nã
 SAÍDA: apenas o HTML, sem cercas de código, sem comentário antes ou depois, sem explicação.`;
 }
 
-function promptDeUsuario(lead: StoredLead): string {
+/**
+ * Pool medido do nicho (server/data/pools). Ligado por padrão; `PREVIEW_NICHO_POOL=off`
+ * desliga — e o A/B da simulação usa `opts.pool` para gerar as duas versões do mesmo lead.
+ */
+function poolLigado(opts?: { pool?: boolean }): boolean {
+  if (opts?.pool !== undefined) return opts.pool;
+  return String(process.env.PREVIEW_NICHO_POOL || "on").toLowerCase() !== "off";
+}
+
+function promptDeUsuario(lead: StoredLead, opts?: { pool?: boolean }): string {
   const d = fatos(lead);
   const ideias = repertorioDoNicho(d.nome, d.categoria);
+  const blocoPool = poolLigado(opts) ? blocoDoPool(d.nome, d.categoria) : "";
   const perfil = perfilDoLead(d.categoria, d.nome);
   const m = PERFIS[perfil];
   const medidas = `MEDIDAS DESTE PÚBLICO (perfil "${perfil}" — ${m.porque}):
@@ -414,6 +425,7 @@ ${medidas}
 
 HIPÓTESES DE SEÇÃO PARA O NICHO "${d.categoria || "não informado"}" (descarte o que não couber, invente o que faltar — isto NÃO é uma lista para cumprir):
 ${ideias.map((x) => `- ${x}`).join("\n")}
+${blocoPool ? `\n${blocoPool}\n` : ""}
 
 Antes de escrever, decida sozinho as 4 a 7 seções desta página e por que cada uma serve a ESTE negócio. A ordem também é sua: se a informação mais decisiva vier antes dos serviços, está certo.
 
@@ -601,7 +613,7 @@ export function iaDePaginaDisponivel(): boolean {
  * Gera a página. Devolve `{ ok: false }` quando o portão reprova duas vezes —
  * quem chamou decide cair no template fixo. Nunca devolve página suspeita.
  */
-export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: number } = {}): Promise<
+export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: number; pool?: boolean } = {}): Promise<
   { ok: true; pagina: PaginaGerada } | FalhaGeracao
 > {
   if (!iaDePaginaDisponivel()) return { ok: false, motivo: "sem chave de IA", erros: [] };
@@ -638,7 +650,7 @@ export async function gerarPaginaDoLead(lead: StoredLead, opts: { timeoutMs?: nu
       try {
         const resposta = await ai.models.generateContent({
           model: modelo,
-          contents: [{ role: "user", parts: [{ text: promptDeUsuario(lead) + correcao }] }],
+          contents: [{ role: "user", parts: [{ text: promptDeUsuario(lead, opts) + correcao }] }],
           config: {
             systemInstruction: promptDeSistema(lead),
             temperature: 0.9,
@@ -1068,7 +1080,7 @@ export interface ResultadoPaginaUnica {
 export async function gerarPaginaUnica(
   lead: StoredLead,
   now = new Date(),
-  opts: { timeoutMs?: number } = {},
+  opts: { timeoutMs?: number; pool?: boolean } = {},
 ): Promise<ResultadoPaginaUnica> {
   const gerada = await gerarPaginaDoLead(lead, opts);
   if (gerada.ok === true) {

@@ -79,10 +79,10 @@ let avisou = false;
 function candidatos(): string[] {
   const lista: string[] = [];
   if (process.env.LEADRADAR_POOLS_DIR) lista.push(process.env.LEADRADAR_POOLS_DIR);
+  // Só caminhos relativos ao cwd e o override por env: `__dirname` não existe no
+  // mesmo arquivo que top-level await (tsx/ESM) e o servidor sempre roda da raiz.
   lista.push(path.join(process.cwd(), "server", "data", "pools"));
   lista.push(path.join(process.cwd(), "data", "pools"));
-  lista.push(path.join(__dirname, "..", "..", "server", "data", "pools"));
-  lista.push(path.join(__dirname, "..", "data", "pools"));
   return lista;
 }
 

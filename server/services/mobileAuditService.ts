@@ -164,9 +164,9 @@ const medidorComLimites = (lim: LimitesDoPublico) => `(() => {
   if (paragrafos.length) {
     const menor = Math.min(...paragrafos.map((e) => parseFloat(getComputedStyle(e).fontSize) || 16));
     if (menor < ${lim.corpo - 2}) {
-      criticos.push('corpo de texto em ' + menor + 'px: para este público o tamanho é ${"${lim.corpo}"}px');
+      criticos.push('corpo de texto em ' + menor + 'px: para este público o tamanho é ${lim.corpo}px');
     } else if (menor < ${lim.corpo}) {
-      avisos.push('corpo de texto em ' + menor + 'px (o ideal para este público é ${"${lim.corpo}"}px)');
+      avisos.push('corpo de texto em ' + menor + 'px (o ideal para este público é ${lim.corpo}px)');
     }
     const entrelinhas = paragrafos
       .map((e) => { const c = getComputedStyle(e); const f = parseFloat(c.fontSize); const l = parseFloat(c.lineHeight); return f ? l / f : NaN; })
