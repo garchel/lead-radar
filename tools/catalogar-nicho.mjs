@@ -9,33 +9,54 @@ import fs from "node:fs";
 const urls = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
 const saida = process.argv[3] || "odonto-catalogo.json";
 
-const SINAIS = {
-  convenios: /conv[eê]nio|plano de sa[uú]de|unimed|amil|bradesco sa[uú]de|sulamerica|odontoprev|particular/i,
-  urgencia: /urg[eê]ncia|dor de dente|plant[aã]o|24 ?h|atendimento imediato/i,
-  antes_depois: /antes e depois|antes\/depois|before.?after|transforma[cç][aã]o do sorriso/i,
-  equipe: /nossa equipe|corpo cl[ií]nico|doutor|dra\.|respons[aá]vel t[eé]cnico|\bcro\b/i,
-  depoimentos: /depoimento|avalia[cç][oõ]es|google reviews|o que dizem/i,
-  faq: /<details|<summary|perguntas frequentes|\bfaq\b/i,
-  mapa: /maps\.google|<iframe[^>]*(maps|waze)|google\.com\/maps/i,
-  horario: /hor[aá]rio de (atendimento|funcionamento)|segunda a|seg\.? a sex|aberto das/i,
-  pagamento: /parcel|cart[aã]o de cr[eé]dito|pix|formas de pagamento/i,
-  estacionamento: /estacionamento/i,
-  tecnologia: /scanner|radiografia digital|tomografia|laser|impressora 3d|cad\/cam/i,
-  implante: /implante|protocolo|pr[oó]tese/i,
-  ortodontia: /aparelho|alinhador|invisalign|ortodont/i,
-  clareamento: /clareamento/i,
-  infantil: /odontopediatria|infantil|crian[cç]a/i,
-  harmonizacao: /harmoniza[cç][aã]o|botox|preenchimento|est[eé]tica facial/i,
-  casos: /casos? cl[ií]nicos|resultados reais|portfolio/i,
-  galeria: /galeria|gallery/i,
-  video: /youtube\.com\/embed|<video/i,
-  blog: /\/blog|artigos|conte[uú]dos/i,
-  agendamento_online: /agende (online|agora)|agendamento online|calendly|booking|agende seu hor[aá]rio/i,
-  whatsapp: /wa\.me|api\.whatsapp|whatsapp/i,
+/**
+ * Componentes GENÉRICOS (valem para qualquer nicho, em pt e en) e SERVIÇOS por nicho.
+ * A separação é de propósito: serviço é vocabulário do nicho, componente é estrutura.
+ */
+const SINAIS_GENERICOS = {
+  contato_whatsapp: /wa\.me|api\.whatsapp|whatsapp|\btext us\b/i,
   telefone_clicavel: /href=["']tel:/i,
-  endereco: /rua |avenida |av\. |alameda |rodovia |pra[cç]a /i,
-  financeiro: /financiamento|boleto|mensalidade/i,
+  endereco: /\brua \b|\bavenida \b|\bav\. |\balameda |\brodovia |\bpra[cç]a |\bstreet\b|\bavenue\b|\bsuite\b|\bblvd\b/i,
+  mapa: /maps\.google|<iframe[^>]*(maps|waze)|google\.com\/maps/i,
+  horario: /hor[aá]rio|segunda a|seg\.? a sex|\bhours\b|open (mon|tue|wed)|\bmon[\s-]?(fri|sat)\b|office hours/i,
+  equipe: /nossa equipe|corpo cl[ií]nico|respons[aá]vel t[eé]cnico|\bcro\b|\bteam\b|our (doctors|barbers|stylists|professionals)|meet the/i,
+  depoimentos: /depoimento|avalia[cç][oõ]es|google reviews|o que dizem|\btestimonials?\b|\breviews?\b/i,
+  galeria: /galeria|gallery|portfolio|\bour work\b/i,
+  video: /youtube\.com\/embed|youtu\.be|vimeo\.com|<video/i,
+  blog: /\/blog|artigos|conte[uú]dos|\bblog\b/i,
+  agendamento_online: /agende (online|agora)|agendamento|calendly|\bbooking\.com|\bbooksy\b|\bfresha\b|\bvagaro\b|\bsquire\b|book (online|now|an appointment)|schedule (online|now)|reserve/i,
+  pagamento: /parcel|cart[aã]o de cr[eé]dito|\bpix\b|formas de pagamento|\bfinancing\b|payment plans?|carecredit|\bwe accept\b/i,
+  estacionamento: /estacionamento|\bparking\b/i,
+  urgencia: /urg[eê]ncia|plant[aã]o|atendimento imediato|\bemergency\b|same-day|walk-?in/i,
+  tecnologia: /scanner|radiografia digital|tomografia|laser|impressora 3d|cad\/cam|digital x-?ray|\bcerec\b|intraoral/i,
+  antes_depois: /antes e depois|antes\/depois|before.?after|smile makeover|transformation/i,
+  faq: /<details|<summary|perguntas frequentes|\bfaq\b|frequently asked/i,
+    produtos: /loja online|shop now|\badd to cart\b|pomada|\bmerch\b|nossa loja|\bmembership products\b/i,
+  gift_card: /gift ?card|vale.?presente/i,
+  planos: /\bmembership\b|plano mensal|assinatura|\bclub\b|subscription/i,
 };
+
+const SERVICOS_POR_NICHO = {
+  odontologia: {
+    implante: /implante|\bimplants?\b|dental implant|pr[oó]tese|protocolo/i,
+    ortodontia: /aparelho|alinhador|invisalign|ortodont|\bbraces\b|orthodont/i,
+    clareamento: /clareamento|\bwhitening\b|bleach/i,
+    odontopediatria: /odontopediatria|pediatric|kids/i,
+    harmonizacao: /harmoniza[cç][aã]o facial|botox|preenchimento|cosmetic/i,
+    convenios: /conv[eê]nio|plano de sa[uú]de|unimed|amil|bradesco sa[uú]de|sulamerica|odontoprev|\binsurance\b|in-network/i,
+  },
+  barbearia: {
+    corte: /\bcorte\b|\bhaircut\b|\bfade\b|degrad[eê]|\btrim\b|\bcut\b/i,
+    barba: /\bbarba\b|\bbeard\b|\bshave\b|navalha|\brazor\b|hot towel/i,
+    combo: /\bcombo\b|\bpackage\b|pacote|corte \+ barba|haircut \+ beard/i,
+    coloracao: /colora[cç][aã]o|\bhair color\b|platinum|descolora|coloring/i,
+    sobrancelha: /sobrancelha|\bbrow\b/i,
+    infantil: /infantil|crian[cç]a|\bkids\b|\bchild\b/i,
+    produtos: /loja online|shop now|\badd to cart\b|pomada|\bmerch\b|nossa loja|\bmembership products\b/i,
+  },
+};
+
+const SINAIS = { ...SINAIS_GENERICOS, ...(SERVICOS_POR_NICHO[process.env.NICHO_ALVO || "odontologia"] || {}) };
 
 
 /**
@@ -58,16 +79,31 @@ const LEXICO_NICHO = {
       contabilidade: /contabil|contador|balan[cç]o|imposto de renda/i,
     },
   },
+  barbearia: {
+    exige: 3,
+    positivo: /barbearia|barbeiro|barbershop|\bhig ?\b|navalha|\bfade\b|degrad[eê]|corte masculino|\bshave\b|\bhaircut\b|beard/i,
+    outrosNichos: {
+      odontologia: /dent(ista|e|al)|odont|implante dent|ortodont|clareamento/i,
+      proctologia: /proctolog|colonoscopia|hemorroid/i,
+      estetica_facial: /harmoniza[cç][aã]o facial|botox|preenchimento labial|skinbooster/i,
+      veterinaria: /veterin[aá]ri|castra[cç][aã]o|vacina[cç][aã]o animal/i,
+      advocacia: /advogad|\boab\b|jur[ií]dic/i,
+      contabilidade: /contabil|contador|imposto de renda/i,
+    },
+  },
 };
 
 function conferirNicho(html, titulo, nicho = "odontologia") {
   const regra = LEXICO_NICHO[nicho];
   if (!regra) return { confirmado: null, motivo: "sem léxico para este nicho" };
   const amostra = ((titulo || "") + " " + (html || "")).slice(0, 400000);
-  const acertos = (amostra.match(regra.positivo) || []).length;
+  // ATENÇÃO: regex sem /g casa só a PRIMEIRA ocorrência. Contar exigia a flag global —
+  // sem isso todo site dava no máximo 1 "acerto" e era reprovado por insuficiência.
+  const contar = (re) => (amostra.match(new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g")) || []).length;
+  const acertos = contar(regra.positivo);
   const alheios = [];
   for (const [outro, re] of Object.entries(regra.outrosNichos)) {
-    const n = (amostra.match(re) || []).length;
+    const n = contar(re);
     if (n >= 2) alheios.push(`${outro}:${n}`);
   }
   // Site feito em SPA entrega HTML quase vazio: não dá para julgar o nicho pelo
@@ -105,7 +141,10 @@ for (const url of urls) {
     const titulos = [...html.matchAll(TITULOS)].map((m) => limpar(m[2])).filter((t) => t.length > 2 && t.length < 90);
     registro.titulos = titulos.slice(0, 24);
     registro.qtdSecoes = titulos.filter((_, i) => true).length;
-    registro.sinais = Object.fromEntries(Object.entries(SINAIS).map(([k, re]) => [k, re.test(html)]));
+    // Medir sobre o HTML SEM <style>/<script>: senão "color:" do CSS casa com coloração,
+    // "product" de schema casa com produtos, e a frequência mente.
+    const limpo = html.replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<!--[\s\S]*?-->/g, " ");
+    registro.sinais = Object.fromEntries(Object.entries(SINAIS).map(([k, re]) => [k, re.test(limpo)]));
     const tituloHtml = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || "";
     registro.nicho = conferirNicho(html, tituloHtml, process.env.NICHO_ALVO || "odontologia");
     registro.whatsapp_flutuante = /position:\s*fixed[^}]*whatsapp|whatsapp[^{]*\{[^}]*position:\s*fixed/i.test(html);

@@ -1,0 +1,124 @@
+{
+  "nicho": "odontologia",
+  "gerado_em": "2026-11-26",
+  "n_analisado": 7,
+  "principio": "cataloga a ESCOLHA (público -> promessa -> prova), nunca a frase. Frase se parafraseia; escolha se transfere.",
+  "enquadramentos": [
+    {
+      "id": "experiencia",
+      "nome": "experiência / conforto",
+      "ocorrencias": 4,
+      "de": 7,
+      "pergunta_que_responde": "como é passar por aqui?",
+      "exemplos_de_abertura_observados": [
+        "A better dental experience, by design",
+        "Seeing the dentist just got cooler",
+        "dental services in a relaxed, judgment-free place",
+        "a gente cuida de dentes, mas antes de tudo conversa"
+      ],
+      "prova_obrigatoria": [
+        "processo descrito (o que acontece, quanto tempo, o que a pessoa sente)",
+        "ou relato real de paciente"
+      ],
+      "sem_prova": "não usar: vira adjetivo vazio"
+    },
+    {
+      "id": "escala",
+      "nome": "escala / padrão",
+      "ocorrencias": 2,
+      "de": 7,
+      "pergunta_que_responde": "que tamanho e que padrão isso tem?",
+      "exemplos_de_abertura_observados": [
+        "Three clinics. One standard of care",
+        "Our team of 62 specialists will care for you"
+      ],
+      "prova_obrigatoria": [
+        "número verificável: unidades, profissionais, anos, atendimentos"
+      ],
+      "sem_prova": "não usar: número inventado é o pior defeito possível"
+    },
+    {
+      "id": "identidade",
+      "nome": "identidade do paciente",
+      "ocorrencias": 1,
+      "de": 7,
+      "pergunta_que_responde": "de quem essa página está falando?",
+      "exemplos_de_abertura_observados": [
+        "Seu sorriso. Sua essência. Nosso cuidado."
+      ],
+      "prova_obrigatoria": [
+        "a página precisa falar do paciente em 2+ seções, não só no herói"
+      ],
+      "sem_prova": "sozinho no herói vira decoração"
+    },
+    {
+      "id": "preco_escondido",
+      "nome": "preço escondido",
+      "ocorrencias": 0,
+      "de": 7,
+      "pergunta_que_responde": "por que ninguém fala o preço?",
+      "exemplos_de_abertura_observados": [],
+      "prova_obrigatoria": [
+        "valor, faixa ou critério de parcelamento"
+      ],
+      "sem_prova": "não usar: sem número é propaganda"
+    },
+    {
+      "id": "tempo_perdido",
+      "nome": "tempo perdido",
+      "ocorrencias": 0,
+      "de": 7,
+      "pergunta_que_responde": "quanto tempo isso custa da minha vida?",
+      "exemplos_de_abertura_observados": [],
+      "prova_obrigatoria": [
+        "duração concreta por etapa"
+      ],
+      "sem_prova": "não usar"
+    }
+  ],
+  "ausentes_no_nicho": [
+    {
+      "enquadramento": "procedimento",
+      "ocorrencias": 0,
+      "de": 7,
+      "leitura": "nenhum dos bons abre com implante, ortodontia ou clareamento; é o que o mercado faz (97% citam implante na página)"
+    },
+    {
+      "enquadramento": "saudacao",
+      "ocorrencias": 0,
+      "de": 7,
+      "leitura": "nenhum abre com 'bem-vindo à clínica'; é o vício mais comum de página gerada por IA"
+    }
+  ],
+  "lista_negra": [
+    "sorriso dos sonhos",
+    "sorriso que você merece",
+    "transforme seu sorriso",
+    "tecnologia de ponta",
+    "equipamentos modernos",
+    "ambiente acolhedor",
+    "atendimento humanizado",
+    "cuidado personalizado",
+    "excelência em odontologia",
+    "bem-vindo à",
+    "há X anos cuidando de sorrisos"
+  ],
+  "padroes_de_titulo_proibidos": [
+    "começa com 'O que'",
+    "começa com 'Conheça nossos'",
+    "começa com 'Nossos serviços'"
+  ],
+  "teste_de_troca": {
+    "regra": "trocar o nome do negócio pelo de um concorrente de outro ramo; se a frase continuar verdadeira, reprovar",
+    "exemplos_de_troca": [
+      "Clínica Vida",
+      "Studio Aurora"
+    ]
+  },
+  "regra_de_dado_ausente": "enquadramento sem prova disponível não é usado; a página declara a pendência em vez de inventar",
+  "limites": [
+    "n=7",
+    "a classificação dos enquadramentos é leitura dos títulos, não medição automática",
+    "automatizável: lista negra e teste de troca; a escolha do enquadramento permanece decisão do modelo"
+  ]
+}

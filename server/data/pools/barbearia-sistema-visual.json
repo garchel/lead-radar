@@ -1,0 +1,52 @@
+{
+  "nicho": "barbearia",
+  "medido_em": "2026-11-26",
+  "amostra": 68,
+  "largura_px": 1440,
+  "tipografia": {
+    "h1_px": {
+      "p25": 44,
+      "mediana": 55.5,
+      "p75": 72,
+      "min": 14,
+      "max": 200
+    },
+    "corpo_px": {
+      "p25": 15,
+      "mediana": 16.0,
+      "p75": 19
+    },
+    "razao_h1_corpo_mediana": 3.47,
+    "familias_de_display_observadas": {
+      "sans-serif": 4,
+      "Bebas Neue": 2,
+      "Poppins": 2,
+      "Oswald": 2,
+      "Archivo Black": 2,
+      "TradeGothic Fixed": 2,
+      "proxima-nova": 2,
+      "Playfair Display": 2,
+      "Niagsol": 1,
+      "superclarendon": 1
+    }
+  },
+  "cor": {
+    "fundos_distintos_por_site_mediana": 2.0
+  },
+  "densidade": {
+    "degraus_de_texto_mediana": 10.0
+  },
+  "defeito_frequente": {
+    "sem_h1": 16,
+    "de": 68,
+    "pct": 24
+  },
+  "regras_que_saem_da_medicao": [
+    "título de abertura entre 44 e 72px em 1440 (p25-p75), não 96px+",
+    "corpo 16-18px; razão título/corpo perto de 3 a 3,5 (barbearia usa contraste MENOR que odontologia, que fica em 4-6)",
+    "duas cores de fundo no máximo: um claro e um escuro de contraste",
+    "no máximo 10 degraus de texto na página inteira",
+    "display condensed/grotesca pesada (Bebas Neue, Oswald, Archivo Black) é o vocabulário do nicho; serifada só quando a marca pede clássico",
+    "h1 é obrigatório: 24% da amostra não tem nenhum, e isso é defeito, não estilo"
+  ]
+}

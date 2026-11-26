@@ -1,0 +1,187 @@
+{
+  "nicho": "barbearia",
+  "amostra": {
+    "paginas": 67,
+    "coletado_em": "2026-11-26",
+    "fonte": "listas de design (squarestash, vandelay, hubspot, colorlib, thesalonbusiness, cyberoptik)"
+  },
+  "metodo": "só estrutura: presença de componentes por página, sem copiar texto, imagem ou código. HTML medido sem <style>/<script>.",
+  "conferencia_de_nicho": "67 de 82 passaram (3+ sinais de barbearia); 5 reprovados (iloveluluhairspa, cutupssalon, github, digitalocean, photowebdesigns); 9 inconclusivos (SPA)",
+  "componentes": [
+    {
+      "componente": "corte",
+      "presenca_pct": 99,
+      "presenca_n": 66,
+      "faixa": "base"
+    },
+    {
+      "componente": "agendamento_online",
+      "presenca_pct": 97,
+      "presenca_n": 65,
+      "faixa": "base"
+    },
+    {
+      "componente": "equipe",
+      "presenca_pct": 79,
+      "presenca_n": 53,
+      "faixa": "base"
+    },
+    {
+      "componente": "barba",
+      "presenca_pct": 75,
+      "presenca_n": 50,
+      "faixa": "base"
+    },
+    {
+      "componente": "galeria",
+      "presenca_pct": 70,
+      "presenca_n": 47,
+      "faixa": "base"
+    },
+    {
+      "componente": "horario",
+      "presenca_pct": 60,
+      "presenca_n": 40,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "endereco",
+      "presenca_pct": 55,
+      "presenca_n": 37,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "blog",
+      "presenca_pct": 55,
+      "presenca_n": 37,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "telefone_clicavel",
+      "presenca_pct": 51,
+      "presenca_n": 34,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "depoimentos",
+      "presenca_pct": 49,
+      "presenca_n": 33,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "infantil",
+      "presenca_pct": 33,
+      "presenca_n": 22,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "gift_card",
+      "presenca_pct": 30,
+      "presenca_n": 20,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "urgencia",
+      "presenca_pct": 27,
+      "presenca_n": 18,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "faq",
+      "presenca_pct": 25,
+      "presenca_n": 17,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "video",
+      "presenca_pct": 22,
+      "presenca_n": 15,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "planos",
+      "presenca_pct": 19,
+      "presenca_n": 13,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "mapa",
+      "presenca_pct": 18,
+      "presenca_n": 12,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "produtos",
+      "presenca_pct": 15,
+      "presenca_n": 10,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "combo",
+      "presenca_pct": 15,
+      "presenca_n": 10,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "coloracao",
+      "presenca_pct": 15,
+      "presenca_n": 10,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "estacionamento",
+      "presenca_pct": 9,
+      "presenca_n": 6,
+      "faixa": "raro"
+    },
+    {
+      "componente": "pagamento",
+      "presenca_pct": 6,
+      "presenca_n": 4,
+      "faixa": "raro"
+    },
+    {
+      "componente": "antes_depois",
+      "presenca_pct": 6,
+      "presenca_n": 4,
+      "faixa": "raro"
+    },
+    {
+      "componente": "contato_whatsapp",
+      "presenca_pct": 1,
+      "presenca_n": 1,
+      "faixa": "raro"
+    },
+    {
+      "componente": "tecnologia",
+      "presenca_pct": 0,
+      "presenca_n": 0,
+      "faixa": "raro"
+    },
+    {
+      "componente": "sobrancelha",
+      "presenca_pct": 0,
+      "presenca_n": 0,
+      "faixa": "raro"
+    }
+  ],
+  "media_titulos_por_pagina": 14.7,
+  "leituras": {
+    "padrao_do_nicho": [
+      "agendamento online 97% — aqui NÃO é diferencial, é o mínimo (Booksy/Fresha/Squire)",
+      "corte 99% e barba 75% — o serviço é pressuposto",
+      "equipe 79% — o barbeiro é a marca",
+      "galeria 70% — o trabalho precisa ser visto"
+    ],
+    "onde_da_para_diferenciar": [
+      "video 22%",
+      "combo explícito 15%",
+      "planos/assinatura 19%",
+      "gift card 30%",
+      "antes/depois 6%",
+      "produtos 15%",
+      "estacionamento 9%"
+    ],
+    "contraste_com_odontologia": "em odontologia agendamento online é 24% (diferencial); em barbearia é 97% (padrão). O pool de um nicho não transfere para outro."
+  }
+}

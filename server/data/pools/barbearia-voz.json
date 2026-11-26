@@ -1,0 +1,139 @@
+{
+  "nicho": "barbearia",
+  "gerado_em": "2026-11-26",
+  "n_lido": 66,
+  "n_util": 54,
+  "metodo": "leitura manual dos títulos de abertura (h1) das 66 páginas com título. 12 foram descartadas por não serem herói (política de reembolso, 'our locations', 'welcome back', blog) ou por serem DEMO de template ('official starter project', 'everything we learned from powering 20% of the internet').",
+  "principio": "cataloga a ESCOLHA (público -> promessa -> prova), nunca a frase.",
+  "enquadramentos": [
+    {
+      "id": "lugar",
+      "nome": "o lugar (geografia)",
+      "ocorrencias": 15,
+      "de": 54,
+      "pergunta_que_responde": "onde exatamente eu estou entrando?",
+      "exemplos_observados": [
+        "San Francisco's SoMa barbershop",
+        "afro-vibe barbershop in the heart of Collingwood",
+        "neighborhood barber shops in Bouldin and Hyde Park",
+        "Wash Park, Denver, Colorado",
+        "LA's best barber shop since 1999"
+      ],
+      "prova_obrigatoria": [
+        "bairro/cidade reais",
+        "referência local reconhecível",
+        "anos naquele endereço"
+      ],
+      "porque_funciona": "barbearia é serviço de vizinhança: o cliente escolhe por proximidade antes de qualquer outra coisa"
+    },
+    {
+      "id": "experiencia",
+      "nome": "experiência / rito",
+      "ocorrencias": 12,
+      "de": 54,
+      "pergunta_que_responde": "como é a hora que eu passo aí?",
+      "exemplos_observados": [
+        "let us pamper you",
+        "sit back, relax",
+        "fresh cuts + hi-fi sound",
+        "it's not just a cut",
+        "experience the art of italian barbering"
+      ],
+      "prova_obrigatoria": [
+        "processo descrito: o que acontece, quanto tempo, o que tem no ambiente"
+      ],
+      "sem_prova": "vira adjetivo vazio"
+    },
+    {
+      "id": "identidade",
+      "nome": "identidade / autoimagem",
+      "ocorrencias": 11,
+      "de": 54,
+      "pergunta_que_responde": "que tipo de homem sai daqui?",
+      "exemplos_observados": [
+        "get handsome today",
+        "high quality haircuts for higher quality humans",
+        "where men get ready",
+        "the style & service you deserve",
+        "for the modern man"
+      ],
+      "prova_obrigatoria": [
+        "falar do cliente em 2+ seções, não só no herói",
+        "mostrar trabalho que sustente a promessa"
+      ],
+      "risco": "machismo casual: 'homem de verdade' envelhece mal e afasta cliente"
+    },
+    {
+      "id": "servico",
+      "nome": "serviço direto",
+      "ocorrencias": 6,
+      "de": 54,
+      "pergunta_que_responde": "o que vocês fazem?",
+      "exemplos_observados": [
+        "get a fresh modern cut",
+        "experts in barbering",
+        "book a chair"
+      ],
+      "prova_obrigatoria": [
+        "preço ou faixa por serviço"
+      ],
+      "leitura": "é o enquadramento mais fraco dos bons: informa sem diferenciar"
+    },
+    {
+      "id": "nome_proprio",
+      "nome": "só o nome da marca",
+      "ocorrencias": 10,
+      "de": 54,
+      "pergunta_que_responde": "nada — assume que a marca já é conhecida",
+      "exemplos_observados": [
+        "Rudy's",
+        "V's Barbershop",
+        "Swagger & Jacks Ltd",
+        "Canyon del Oro Barbershop"
+      ],
+      "leitura": "funciona só para marca com reputação; para lead novo é página muda"
+    }
+  ],
+  "ausentes_ou_raros": [
+    {
+      "enquadramento": "procedimento/preço em destaque",
+      "ocorrencias": 0,
+      "leitura": "nenhum abre com 'corte degradê R$ 60'; preço aparece depois, em tabela"
+    },
+    {
+      "enquadramento": "saudação",
+      "ocorrencias": 2,
+      "leitura": "'welcome back' e 'welcome to MJD' aparecem só em site de template"
+    }
+  ],
+  "lista_negra": [
+    "o melhor da cidade",
+    "corte perfeito",
+    "ambiente descontraído",
+    "profissionais qualificados",
+    "sua barbearia de confiança",
+    "transforme seu visual",
+    "estilo único",
+    "venha nos conhecer",
+    "bem-vindo à",
+    "há X anos cuidando do seu estilo"
+  ],
+  "padroes_de_titulo_proibidos": [
+    "começa com 'O que'",
+    "começa com 'Nossos serviços'",
+    "começa com 'Conheça a'"
+  ],
+  "teste_de_troca": {
+    "regra": "trocar o nome do negócio por um concorrente de outro ramo; se a frase continuar verdadeira, reprovar",
+    "exemplos_de_troca": [
+      "Ótica Central",
+      "Studio Pilates Vida"
+    ]
+  },
+  "regra_de_dado_ausente": "enquadramento sem prova disponível não é usado; a página declara a pendência (ex: 'horário a confirmar') em vez de inventar",
+  "comparacao_com_odontologia": "em odontologia o herói dos bons é experiência/conforto (4 de 7); em barbearia o dominante é LUGAR (15 de 54) seguido de experiência (12) e identidade (11). O enquadramento campeão muda por nicho — é por isso que voz é por nicho, não global.",
+  "limites": [
+    "contagem é leitura manual dos títulos, não medição automática",
+    "amostra internacional (EUA, Canadá, Austrália, Reino Unido): o enquadramento 'lugar' pode ser ainda mais forte no Brasil, onde a barbearia é de bairro"
+  ]
+}
