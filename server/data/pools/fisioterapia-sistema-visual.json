@@ -1,0 +1,52 @@
+{
+  "nicho": "fisioterapia",
+  "medido_em": "2026-11-26",
+  "largura_px": 1440,
+  "amostra": 31,
+  "todos": {
+    "n": 31,
+    "com_h1": 27,
+    "sem_h1": 4,
+    "h1_mediana": 60,
+    "h1_p25": 36,
+    "h1_p75": 72,
+    "corpo_mediana": 16.0,
+    "razao_h1_corpo": 3.75
+  },
+  "brasil": {
+    "n": 5,
+    "com_h1": 4,
+    "sem_h1": 1,
+    "h1_mediana": 34.0,
+    "h1_p25": 32,
+    "h1_p75": 60,
+    "corpo_mediana": 16,
+    "razao_h1_corpo": 2.27
+  },
+  "internacional": {
+    "n": 26,
+    "com_h1": 23,
+    "sem_h1": 3,
+    "h1_mediana": 70,
+    "h1_p25": 40,
+    "h1_p75": 75.6,
+    "corpo_mediana": 16,
+    "razao_h1_corpo": 4.0
+  },
+  "fontes": {
+    "Poppins": 4,
+    "Montserrat": 2,
+    "Anton-Regular": 1,
+    "Barlow-Regular": 1,
+    "Mark Pro": 1,
+    "wfont_4b903a_a5bf73f52f614e289c51f503c7d1fc1e": 1
+  },
+  "regras": [
+    "título 70px no internacional (p25 40 / p75 76) e 34px no BR — mesmo padrão de pilates: o site brasileiro de clínica é menor",
+    "corpo 16px em todo mundo",
+    "razão 4,0 internacional e 2,27 BR",
+    "Poppins e Montserrat dominam; nada de serifada editorial — o tom é clínico, não aspiracional",
+    "13% sem h1"
+  ],
+  "aviso_amostra": "31 anatomias apenas; BR tem 5. Não tratar como regra antes de ampliar."
+}

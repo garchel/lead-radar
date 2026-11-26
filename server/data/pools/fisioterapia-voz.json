@@ -1,0 +1,134 @@
+{
+  "nicho": "fisioterapia",
+  "gerado_em": "2026-11-26",
+  "n_lido": 32,
+  "n_util": 22,
+  "metodo": "leitura manual dos 32 títulos de abertura confirmados. Descartados 'main navigation', 'your details', telefone solto e o site multisserviço de Dubai.",
+  "principio": "cataloga a ESCOLHA (público -> promessa -> prova), nunca a frase.",
+  "enquadramentos": [
+    {
+      "id": "lugar",
+      "nome": "lugar",
+      "ocorrencias": 7,
+      "de": 22,
+      "pergunta_que_responde": "onde fica, e é perto de mim?",
+      "exemplos_observados": [
+        "perth physiotherapy clinic",
+        "powerhouse canberra",
+        "melbourne sports physiotherapy",
+        "gold coast physiotherapy",
+        "physio adelaide",
+        "clínica de fisioterapia em João Pessoa"
+      ],
+      "prova_obrigatoria": [
+        "bairro/cidade",
+        "horário",
+        "se atende por convênio ali"
+      ],
+      "leitura": "DOMINANTE de novo, como em barbearia. Clínica de fisioterapia é serviço de vizinhança: 7 dos 22 heróis são o nome da cidade"
+    },
+    {
+      "id": "alivio",
+      "nome": "alívio / retorno ao movimento",
+      "ocorrencias": 6,
+      "de": 22,
+      "pergunta_que_responde": "vou voltar a fazer o que eu fazia?",
+      "exemplos_observados": [
+        "pain relief starts here",
+        "move better. feel stronger. get back to you.",
+        "move with confidence — live the life you choose",
+        "understand your problem, reach your potential",
+        "keep you moving for life"
+      ],
+      "prova_obrigatoria": [
+        "o que volta a funcionar (correr, jogar, trabalhar)",
+        "prazo típico por caso"
+      ],
+      "leitura": "a promessa é a RETOMADA, não a cura: nunca prometer 'sem dor para sempre'"
+    },
+    {
+      "id": "credencial",
+      "nome": "credencial / especialidade",
+      "ocorrencias": 5,
+      "de": 22,
+      "pergunta_que_responde": "sabem tratar o meu caso?",
+      "exemplos_observados": [
+        "leaders in physiotherapy and sports medicine",
+        "physiotherapy, hand therapy and exercise physiology",
+        "why choose ATI physical therapy?"
+      ],
+      "prova_obrigatoria": [
+        "CREFITO do responsável",
+        "especialidade nomeada (esportiva, pélvica, respiratória, neurológica)"
+      ],
+      "leitura": "equipe aparece em 92% das páginas: a credencial é o argumento mais presente da estrutura"
+    },
+    {
+      "id": "modelo",
+      "nome": "modelo de atendimento",
+      "ocorrencias": 2,
+      "de": 22,
+      "pergunta_que_responde": "atendem onde e como?",
+      "exemplos_observados": [
+        "mobile allied health that comes to you (domiciliar)",
+        "premium integrated healthcare services on the central coast"
+      ],
+      "prova_obrigatoria": [
+        "se é domiciliar, a área coberta",
+        "se é clínica, a estrutura (piscina, equipamentos)"
+      ],
+      "leitura": "home care e pélvica são os diferenciais mais raros e mais defensáveis do nicho"
+    },
+    {
+      "id": "saudacao_servico",
+      "nome": "saudação / serviço genérico (fraco)",
+      "ocorrencias": 2,
+      "de": 22,
+      "pergunta_que_responde": "nada",
+      "exemplos_observados": [
+        "a sua clínica de fisioterapia",
+        "¡hola, somos Clire Fisioterapia!",
+        "fisioterapia, rehabilitación",
+        "terapias manuais"
+      ],
+      "leitura": "os piores heróis da amostra são brasileiros e espanhóis: saudação e lista de serviço. Exatamente o vício que evitamos"
+    }
+  ],
+  "lista_negra": [
+    "a melhor clínica de fisioterapia",
+    "recupere sua qualidade de vida",
+    "tratamento humanizado",
+    "tecnologia de ponta",
+    "equipe altamente qualificada",
+    "bem-vindo à nossa clínica",
+    "cuidando de você",
+    "sua saúde em primeiro lugar",
+    "resultados comprovados"
+  ],
+  "padroes_de_titulo_proibidos": [
+    "começa com 'O que'",
+    "começa com 'Conheça a'",
+    "começa com 'Nossos tratamentos'"
+  ],
+  "teste_de_troca": {
+    "regra": "trocar o nome da clínica por outro de ramo diferente; se continuar verdadeira, reprovar",
+    "exemplos_de_troca": [
+      "Ótica Central",
+      "Studio Pilates Vida"
+    ]
+  },
+  "regra_de_dado_ausente": "sem convênio, sem CREFITO e sem especialidade, a página mostra o que existe (endereço, horário, avaliação inicial) e deixa a pendência explícita",
+  "comparacao": {
+    "odontologia": "experiência",
+    "barbearia": "lugar",
+    "otica": "preço",
+    "psicologia": "nome + dor",
+    "pilates": "transformação + pertencimento",
+    "fisioterapia": "lugar + alívio"
+  },
+  "limites": [
+    "n pequeno (22 heróis úteis): a contagem é indício",
+    "amostra internacional é anglo-australiana; no BR o herói é mais fraco (saudação/serviço)",
+    "não confundir com pilates: lá o argumento é pertencimento, aqui é retomada funcional"
+  ]
+}

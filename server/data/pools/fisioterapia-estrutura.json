@@ -1,0 +1,219 @@
+{
+  "nicho": "fisioterapia",
+  "amostra": {
+    "referencias": 24,
+    "mercado_br": 8,
+    "coletado_em": "2026-11-26",
+    "fonte": "4 listas de design (devmizan, cyberoptik, mycodeless, kcwebdesign) + busca de clínicas"
+  },
+  "aviso_amostra": "AMOSTRA MENOR que os outros nichos (24 e 8 confirmados contra 67-107). As porcentagens aqui são indício, não medida. Antes de usar em produção, ampliar para 40+ por grupo.",
+  "conferencia": "o achado da rodada anterior se repetiu: a busca por 'fisioterapia' devolveu agências ('site para fisioterapeutas') e diretórios (buscafisio, portaldafisioterapia) antes de clínica. classificarTipo() removeu 1 site e os demais foram filtrados na coleta.",
+  "componentes": [
+    {
+      "componente": "equipe",
+      "referencia_pct": 92,
+      "mercado_br_pct": 25,
+      "delta": 67
+    },
+    {
+      "componente": "agendamento_online",
+      "referencia_pct": 83,
+      "mercado_br_pct": 50,
+      "delta": 33
+    },
+    {
+      "componente": "blog",
+      "referencia_pct": 75,
+      "mercado_br_pct": 50,
+      "delta": 25
+    },
+    {
+      "componente": "esportiva",
+      "referencia_pct": 75,
+      "mercado_br_pct": 50,
+      "delta": 25
+    },
+    {
+      "componente": "convenio",
+      "referencia_pct": 75,
+      "mercado_br_pct": 88,
+      "delta": -13
+    },
+    {
+      "componente": "telefone_clicavel",
+      "referencia_pct": 67,
+      "mercado_br_pct": 62,
+      "delta": 5
+    },
+    {
+      "componente": "equipamentos",
+      "referencia_pct": 50,
+      "mercado_br_pct": 50,
+      "delta": 0
+    },
+    {
+      "componente": "pilates",
+      "referencia_pct": 50,
+      "mercado_br_pct": 38,
+      "delta": 12
+    },
+    {
+      "componente": "planos",
+      "referencia_pct": 46,
+      "mercado_br_pct": 0,
+      "delta": 46
+    },
+    {
+      "componente": "depoimentos",
+      "referencia_pct": 46,
+      "mercado_br_pct": 62,
+      "delta": -16
+    },
+    {
+      "componente": "avaliacao",
+      "referencia_pct": 46,
+      "mercado_br_pct": 25,
+      "delta": 21
+    },
+    {
+      "componente": "faq",
+      "referencia_pct": 46,
+      "mercado_br_pct": 38,
+      "delta": 8
+    },
+    {
+      "componente": "endereco",
+      "referencia_pct": 42,
+      "mercado_br_pct": 38,
+      "delta": 4
+    },
+    {
+      "componente": "horario",
+      "referencia_pct": 38,
+      "mercado_br_pct": 62,
+      "delta": -24
+    },
+    {
+      "componente": "galeria",
+      "referencia_pct": 33,
+      "mercado_br_pct": 62,
+      "delta": -29
+    },
+    {
+      "componente": "mapa",
+      "referencia_pct": 33,
+      "mercado_br_pct": 38,
+      "delta": -5
+    },
+    {
+      "componente": "pagamento",
+      "referencia_pct": 29,
+      "mercado_br_pct": 0,
+      "delta": 29
+    },
+    {
+      "componente": "video",
+      "referencia_pct": 25,
+      "mercado_br_pct": 0,
+      "delta": 25
+    },
+    {
+      "componente": "estacionamento",
+      "referencia_pct": 25,
+      "mercado_br_pct": 12,
+      "delta": 13
+    },
+    {
+      "componente": "neurologica",
+      "referencia_pct": 21,
+      "mercado_br_pct": 75,
+      "delta": -54
+    },
+    {
+      "componente": "urgencia",
+      "referencia_pct": 21,
+      "mercado_br_pct": 0,
+      "delta": 21
+    },
+    {
+      "componente": "domiciliar",
+      "referencia_pct": 8,
+      "mercado_br_pct": 12,
+      "delta": -4
+    },
+    {
+      "componente": "tecnologia",
+      "referencia_pct": 8,
+      "mercado_br_pct": 12,
+      "delta": -4
+    },
+    {
+      "componente": "respiratoria",
+      "referencia_pct": 8,
+      "mercado_br_pct": 50,
+      "delta": -42
+    },
+    {
+      "componente": "ortopedica",
+      "referencia_pct": 8,
+      "mercado_br_pct": 75,
+      "delta": -67
+    },
+    {
+      "componente": "contato_whatsapp",
+      "referencia_pct": 8,
+      "mercado_br_pct": 88,
+      "delta": -80
+    },
+    {
+      "componente": "antes_depois",
+      "referencia_pct": 0,
+      "mercado_br_pct": 0,
+      "delta": 0
+    },
+    {
+      "componente": "produtos",
+      "referencia_pct": 0,
+      "mercado_br_pct": 0,
+      "delta": 0
+    },
+    {
+      "componente": "gift_card",
+      "referencia_pct": 0,
+      "mercado_br_pct": 0,
+      "delta": 0
+    },
+    {
+      "componente": "pelvica",
+      "referencia_pct": 0,
+      "mercado_br_pct": 12,
+      "delta": -12
+    }
+  ],
+  "leituras": {
+    "nucleo_do_nicho": [
+      "equipe 92% (ref) — fisioterapia vende QUEM atende, com CREFITO e especialidade",
+      "agendamento online 83%",
+      "convênio 75% (ref) e 88% (BR) — é a primeira pergunta do paciente",
+      "esportiva 75%",
+      "blog 75%",
+      "aparelhos/equipamentos 50% (ultrassom, laser, TENS)"
+    ],
+    "onde_da_para_diferenciar": [
+      "domiciliar/home care",
+      "respiratória",
+      "pélvica",
+      "neurológica",
+      "vídeo",
+      "antes/depois"
+    ],
+    "br": [
+      "whatsapp 88% (ref: não medido como alto)",
+      "ortopédica e neurológica 75%",
+      "depoimentos 62%",
+      "galeria 62%",
+      "agendamento online só 50% — de novo o funil é WhatsApp"
+    ],
+    "contraste": "fisioterapia é o nicho com MAIOR presença de equipe (92%) e MENOR de preço: convênio resolve a objeção de custo. Onde pilates vende plano, fisioterapia vende cobertura."
+  }
+}
