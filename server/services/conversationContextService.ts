@@ -1,0 +1,194 @@
+/**
+ * Memória da conversa.
+ *
+ * O agente respondia sem saber o que já tinha sido dito: o monitor do inbox
+ * acordava a Clara com UMA linha e ela reconstruía o contexto no escuro. O
+ * resultado apareceu em produção: o lead recebeu o link, disse "achei legal
+ * demais" e recebeu o link de novo, porque o pipeline tratou elogio como pedido.
+ *
+ * Aqui a conversa vira dado: quem falou o quê, quando, e os fatos que o agente
+ * precisa para conduzir em vez de adivinhar (página já entregue? qual link? há
+ * quanto tempo ele não responde?).
+ */
+import { getCommunicationsByLead, getLeadById } from "../store/db";
+
+export type Turno = {
+  de: "lead" | "clara";
+  texto: string;
+  em: string;
+  hook: string | null;
+  intent: string | null;
+};
+
+export type FatosDaConversa = {
+  /** A página já foi entregue alguma vez nesta conversa. */
+  paginaEntregue: boolean;
+  /** Link entregue (o último, se houve mais de um). */
+  paginaUrl: string | null;
+  /** Quando a página foi entregue. */
+  entregueEm: string | null;
+  /** Quantas vezes o lead já recebeu o link. */
+  vezesEntregue: number;
+  /** Quantas mensagens o lead já mandou. */
+  respostasDoLead: number;
+  /** Já elogiou a página depois de receber ("achei legal", "gostei"). */
+  elogiouDepoisDeVer: boolean;
+  /** Última mensagem da conversa é do lead (ela está devendo resposta). */
+  aguardandoResposta: boolean;
+  /** Horas desde a última mensagem do lead. */
+  silencioHoras: number | null;
+};
+
+export type ContextoDaConversa = {
+  turnos: Turno[];
+  fatos: FatosDaConversa;
+  /** Bloco pronto para o prompt do agente. */
+  texto: string;
+};
+
+const URL_RE = /https?:\/\/[^\s)]+/i;
+
+/** Normaliza acentos: `\b` do JS não fecha depois de "á" e quebrava "tá top". */
+function semAcento(texto: string): string {
+  return String(texto || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+const NEGACAO = /\b(nao|nunca|nem)\b/;
+
+/** Pedido explícito do link. Elogio NÃO é pedido. */
+export function pedidoDeLink(texto: string): boolean {
+  const t = semAcento(texto);
+  if (!t.trim()) return false;
+  const padroes = [
+    /\b(mand|envi|reenvi|repet|repit)\w*[^.]{0,25}\b(link|pagina|site|de novo|novamente|outra vez)\b/,
+    /\b(cade)\b[^.]{0,15}\b(link|pagina)\b/,
+    /\bnao\s+(achei|encontrei|abriu|consigo abrir)\b/,
+    /\b(perdi|sumiu)\b[^.]{0,15}\b(link|mensagem)\b/,
+    /\b(qual|manda)\b[^.]{0,10}\bo?\s*link\b/,
+  ];
+  return padroes.some((r) => r.test(t));
+}
+
+/** Elogio/aceitação sem pedido: "achei legal", "gostei", "ficou bom", "top". */
+export function ehElogio(texto: string): boolean {
+  const t = semAcento(texto);
+  // "não gostei" e "não achei legal" são crítica, não elogio.
+  if (NEGACAO.test(t)) {
+    const afirmativo = /\b(gostei|amei|adorei|curti|legal|bonit|bacana)\b/.test(t);
+    if (!afirmativo) return false;
+    return false;
+  }
+  return (
+    /\b(achei|ficou|ta|esta)\b[^.]{0,20}\b(legal|bonit\w*|bom|boa|top|show|otim\w*|perfeito|lind\w*|bacana|massa)\b/.test(t) ||
+    /\b(gostei|amei|adorei|curti)\b/.test(t)
+  );
+}
+
+function horasDesde(iso: string | null): number | null {
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(ms)) return null;
+  return Number((ms / 3_600_000).toFixed(1));
+}
+
+/**
+ * Reconstrói a conversa de um lead.
+ *
+ * `limite` corta os turnos antigos do texto do prompt, mas os FATOS são sempre
+ * calculados sobre o histórico inteiro: a página pode ter sido entregue há 40
+ * mensagens e isso não pode sumir do contexto.
+ */
+export function contextoDaConversa(leadId: string, opts: { limite?: number } = {}): ContextoDaConversa {
+  const limite = opts.limite ?? 12;
+  // getCommunicationsByLead devolve DESC (mais nova primeiro). A conversa é lida de
+  // trás para frente: sem reordenar, "a última mensagem" viraria a primeira da thread.
+  const todas = [...(getCommunicationsByLead(leadId) || [])].sort(
+    (a: any, b: any) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime(),
+  );
+
+  const turnos: Turno[] = todas.map((c: any) => ({
+    de: c.direction === "inbound" ? "lead" : "clara",
+    texto: String(c.message || "").replace(/^\[RECEBIDA\]\s*/i, ""),
+    em: c.createdAt || "",
+    hook: c.hook || null,
+    intent: c.intent || null,
+  }));
+
+  const entregas = todas.filter((c: any) => c.direction === "outbound" && String(c.hook || "") === "pagina_unica");
+  const ultimaEntrega = entregas[entregas.length - 1];
+  const urlDaEntrega = ultimaEntrega ? (String(ultimaEntrega.message || "").match(URL_RE) || [])[0] || null : null;
+
+  const inbound = todas.filter((c: any) => c.direction === "inbound");
+  const ultimoInbound = inbound[inbound.length - 1];
+  const ultimaMensagem = todas[todas.length - 1];
+
+  // Referência é a PRIMEIRA entrega: se o link foi reenviado por engano, medir a
+  // partir da última esconderia o elogio (ele veio antes do reenvio).
+  const primeiraEntrega = entregas[0];
+  const elogiouDepoisDeVer = Boolean(
+    primeiraEntrega &&
+      inbound.some(
+        (c: any) =>
+          new Date(c.createdAt || 0).getTime() > new Date(primeiraEntrega.createdAt || 0).getTime() &&
+          ehElogio(String(c.message || "")),
+      ),
+  );
+
+  const fatos: FatosDaConversa = {
+    paginaEntregue: entregas.length > 0,
+    paginaUrl: urlDaEntrega,
+    entregueEm: ultimaEntrega ? ultimaEntrega.createdAt || null : null,
+    vezesEntregue: entregas.length,
+    respostasDoLead: inbound.length,
+    elogiouDepoisDeVer,
+    aguardandoResposta: Boolean(ultimaMensagem && ultimaMensagem.direction === "inbound"),
+    silencioHoras: horasDesde(ultimoInbound ? ultimoInbound.createdAt || null : null),
+  };
+
+  const lead = getLeadById(leadId);
+  const linhas: string[] = [];
+  if (lead) linhas.push(`${lead.name}${lead.city ? ` · ${lead.city}` : ""}`);
+
+  if (fatos.paginaEntregue) {
+    linhas.push(`Página JÁ entregue (${fatos.vezesEntregue}x)${fatos.entregueEm ? ` em ${fatos.entregueEm}` : ""}${fatos.paginaUrl ? `: ${fatos.paginaUrl}` : ""}`);
+    if (fatos.elogiouDepoisDeVer) linhas.push("O lead já ELOGIOU a página depois de ver. Não mande o link de novo: elogio não é pedido.");
+  } else {
+    linhas.push("Página ainda NÃO foi entregue.");
+  }
+  if (fatos.silencioHoras !== null) linhas.push(`Última mensagem do lead: ${fatos.silencioHoras}h atrás.`);
+
+  const recentes = turnos.slice(-limite);
+  const transcricao = recentes
+    .map((t) => {
+      const hora = t.em ? new Date(t.em).toISOString().slice(11, 16) : "";
+      return `${t.de === "lead" ? "LEAD" : "CLARA"}${hora ? ` (${hora})` : ""}: ${t.texto.replace(/\s+/g, " ").slice(0, 320)}`;
+    })
+    .join("\n");
+
+  const texto = [
+    "CONTEXTO REAL DA CONVERSA (leia antes de escrever, não repita o que já foi feito):",
+    ...linhas.map((l) => `- ${l}`),
+    "",
+    transcricao ? `Últimas mensagens:\n${transcricao}` : "Sem histórico anterior.",
+  ].join("\n");
+
+  return { turnos, fatos, texto };
+}
+
+/**
+ * A entrega da página deve rodar?
+ *
+ * Regra: entrega na primeira vez, e depois SÓ com pedido explícito do link.
+ * Elogio, dúvida e objeção não reentregam — quem trata esses casos é a conversa.
+ */
+export function deveEntregarPagina(fatos: FatosDaConversa, mensagemDoLead: string): { entregar: boolean; motivo: string } {
+  if (!fatos.paginaEntregue) return { entregar: true, motivo: "primeira entrega" };
+  if (pedidoDeLink(mensagemDoLead)) return { entregar: true, motivo: "o lead pediu o link explicitamente" };
+  return {
+    entregar: false,
+    motivo: `página já entregue${fatos.entregueEm ? ` em ${fatos.entregueEm}` : ""}; a mensagem não é pedido de link`,
+  };
+}

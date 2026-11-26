@@ -12,6 +12,7 @@
 import { Express, Request, Response } from "express";
 import { getLeadById, getProjects, getSetting, setSetting, upsertLead } from "../store/db";
 import { buildLeadBriefing } from "../services/briefingService";
+import { contextoDaConversa } from "../services/conversationContextService";
 import {
   deliveryLabel,
   formatBRL,
@@ -86,6 +87,20 @@ export function registerAgentRoutes(app: Express) {
     return res.json({ success: true, policy: getCommercialPolicy() });
   });
 
+  /**
+   * Memória da conversa para o agente.
+   *
+   * O agente era acordado só com a última mensagem e reconstruía o resto no escuro:
+   * mandou o link, ouviu "achei legal" e mandou o link outra vez. Aqui ele recebe
+   * o histórico e os fatos (página entregue? quando? qual link? elogiou?).
+   */
+  app.get("/api/agent/contexto/:leadId", (req: Request, res: Response) => {
+    const leadId = String(req.params.leadId || "");
+    if (!getLeadById(leadId)) return res.status(404).json({ success: false, error: "lead não encontrado" });
+    const limite = Math.min(40, Math.max(2, Number(req.query.limite) || 12));
+    const contexto = contextoDaConversa(leadId, { limite });
+    return res.json({ success: true, contexto });
+  });
   app.put("/api/agent/policy", (req: Request, res: Response) => {
     const body = req.body || {};
     // Validação dura: preço é o único campo em que errar quebra a confiança

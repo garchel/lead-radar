@@ -1,4 +1,5 @@
 import { getCommunicationsByLead, getLeadById } from "../store/db";
+import { contextoDaConversa, deveEntregarPagina } from "./conversationContextService";
 import { sendOwnerAlert } from "./ownerAlertService";
 import { eventHub } from "../events/eventHub";
 import { dispatchLeadReply } from "./interactionService";
@@ -147,9 +148,25 @@ export function mensagemDeEspera(): string {
 
 export async function entregarPaginaDoLead(
   leadId: string,
-  opts: { aviso?: boolean } = {},
+  opts: { aviso?: boolean; forcar?: boolean } = {},
 ): Promise<EntregaPagina> {
   if (entregando.has(leadId)) return { ok: false, motivo: "já existe uma entrega em andamento para este lead" };
+
+  // Memória antes de gerar: a página já foi entregue e esta mensagem não é pedido de
+  // link? Então não há entrega. Era aqui que "achei legal demais" virava um segundo
+  // "Dá um minutinho que eu já te mando o link" e uma regeração inteira da página.
+  if (!opts.forcar) {
+    const ctx = contextoDaConversa(leadId);
+    if (ctx.fatos.paginaEntregue) {
+      const ultimoInbound = [...ctx.turnos].reverse().find((t) => t.de === "lead");
+      const decisao = deveEntregarPagina(ctx.fatos, ultimoInbound?.texto || "");
+      if (!decisao.entregar) {
+        console.log(`[pagina] ${leadId}: não entregue — ${decisao.motivo}`);
+        return { ok: false, motivo: decisao.motivo };
+      }
+    }
+  }
+
   entregando.add(leadId);
   try {
     return await entregarInterno(leadId, opts);
