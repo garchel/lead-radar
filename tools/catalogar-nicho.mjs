@@ -51,11 +51,11 @@ const SERVICOS_POR_NICHO = {
     freios: /\bfreios?\b|\bbrakes?\b|pastilha|disco de freio/i,
     suspensao: /suspens[aã]o|amortecedor|\bshock/i,
     alinhamento: /alinhamento|balanceamento|\bwheel alignment\b|\btire rotation\b/i,
-    injecao: /inje[cç][aã]o eletr[aô]nica|diagn[oó]stico|\bscanner\b|\bobd\b/i,
+    injecao: /inje[cç][aã]o eletr[aô]nica|diagn[oó]stico|\bdiagnostics?\b|\bscanner\b|\bobd\b|check engine|engine light/i,
     ar_condicionado: /ar.?condicionado|\ba\/c\b|recarga de g[aá]s/i,
     pneus: /pneus?|\btires?\b|borracharia/i,
     funilaria: /funilaria|pintura|martelinho|\bbody ?shop\b/i,
-    eletrica: /el[eé]trica (automotiva|do autom[oó]vel)|bateria|alternador|partida/i,
+    eletrica: /el[eé]trica (automotiva|do autom[oó]vel)|\bbateria(s)?\b|\bbattery\b|alternador|\balternator\b|\bstarter\b|partida|wiring|electrical/i,
     transmissao: /c[aâ]mbio|transmiss[aã]o|embreagem|\bclutch\b/i,
     orcamento: /or[cç]amento|\bquote\b|pre[cç]o antes/i,
     multimarcas: /multimarcas?|todas as marcas|all makes/i,
@@ -359,8 +359,16 @@ if (inconclusivos.length) {
   for (const r of inconclusivos) console.log(`  ${r.url} → ${r.nicho.motivo}`);
 }
 console.log("");
+const suspeitos = [];
 for (const [k, v] of ordenado) {
-  console.log(`${String(Math.round((v / validos.length) * 100)).padStart(3)}%  ${k.padEnd(20)} (${v}/${validos.length})`);
+  const p = Math.round((v / validos.length) * 100);
+  // Componente em 0% quase sempre é falha de léxico (idioma, sinônimo), não ausência real.
+  if (p <= 2) suspeitos.push(`${k} (${p}%)`);
+  console.log(`${String(p).padStart(3)}%  ${k.padEnd(20)} (${v}/${validos.length})`);
+}
+if (suspeitos.length) {
+  console.log(`\nSUSPEITOS DE LÉXICO (0-2%): ${suspeitos.join(", ")}`);
+  console.log("Antes de concluir que o nicho não tem, confira sinônimos e o outro idioma.");
 }
 const mediaSecoes = validos.reduce((s, r) => s + (r.qtdSecoes || 0), 0) / (validos.length || 1);
 console.log(`\nmédia de títulos h1-h3 por página: ${mediaSecoes.toFixed(1)}`);

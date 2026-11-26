@@ -207,7 +207,7 @@
     },
     "oficina": {
       "amostra": {
-        "referencias": 77,
+        "referencias": 76,
         "mercado_br": 0,
         "coletado_em": "2026-11-26",
         "fonte": "9 listas de design (colorlib, sitebuilderreport, zarla, ueni, webcitz, sitesthatgetcalls, customershand, mycodeless, cyberoptik)"
@@ -217,6 +217,7 @@
         "freios",
         "telefone_clicavel",
         "depoimentos",
+        "injecao",
         "agendamento_online",
         "horario",
         "equipe",
@@ -225,13 +226,13 @@
       ],
       "estrutura_diferenciador": [
         "galeria",
+        "eletrica",
         "oleo",
         "pagamento",
         "mapa",
         "alinhamento",
         "endereco",
-        "multimarcas",
-        "faq"
+        "multimarcas"
       ],
       "enquadramento_campeao": {
         "id": "confianca",
@@ -268,7 +269,8 @@
       "limites": [
         "contagem é leitura manual dos títulos",
         "amostra 100% dos EUA: 'German auto repair' e 'European' não existem no vocabulário do mecânico brasileiro",
-        "no Brasil o equivalente de confiança é 'orçamento na hora', 'peça com nota' e 'garantia', não 'trusted shop'"
+        "no Brasil o equivalente de confiança é 'orçamento na hora', 'peça com nota' e 'garantia', não 'trusted shop'",
+        "atenção: valor 0% ou <2% em componente deve ser tratado como suspeita de léxico antes de virar conclusão"
       ]
     },
     "otica": {

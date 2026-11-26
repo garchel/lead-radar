@@ -149,6 +149,8 @@
   "limites": [
     "contagem é leitura manual dos títulos",
     "amostra 100% dos EUA: 'German auto repair' e 'European' não existem no vocabulário do mecânico brasileiro",
-    "no Brasil o equivalente de confiança é 'orçamento na hora', 'peça com nota' e 'garantia', não 'trusted shop'"
-  ]
+    "no Brasil o equivalente de confiança é 'orçamento na hora', 'peça com nota' e 'garantia', não 'trusted shop'",
+    "atenção: valor 0% ou <2% em componente deve ser tratado como suspeita de léxico antes de virar conclusão"
+  ],
+  "correcao_de_medicao": "injeção eletrônica foi de 3% para 80% e elétrica de 0% para 63% ao corrigir o léxico (termos em inglês). Serviço técnico é base do nicho; o diferencial segue sendo confiança e orçamento."
 }

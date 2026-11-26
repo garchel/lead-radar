@@ -1,7 +1,7 @@
 {
   "nicho": "oficina",
   "amostra": {
-    "referencias": 77,
+    "referencias": 76,
     "mercado_br": 0,
     "coletado_em": "2026-11-26",
     "fonte": "9 listas de design (colorlib, sitebuilderreport, zarla, ueni, webcitz, sitesthatgetcalls, customershand, mycodeless, cyberoptik)"
@@ -16,96 +16,108 @@
     {
       "componente": "revisao",
       "presenca_pct": 95,
-      "presenca_n": 73,
+      "presenca_n": 72,
       "faixa": "base"
     },
     {
       "componente": "freios",
       "presenca_pct": 86,
-      "presenca_n": 66,
+      "presenca_n": 65,
       "faixa": "base"
     },
     {
       "componente": "telefone_clicavel",
       "presenca_pct": 83,
-      "presenca_n": 64,
+      "presenca_n": 63,
       "faixa": "base"
     },
     {
       "componente": "depoimentos",
       "presenca_pct": 82,
-      "presenca_n": 63,
+      "presenca_n": 62,
+      "faixa": "base"
+    },
+    {
+      "componente": "injecao",
+      "presenca_pct": 80,
+      "presenca_n": 61,
       "faixa": "base"
     },
     {
       "componente": "agendamento_online",
       "presenca_pct": 79,
-      "presenca_n": 61,
+      "presenca_n": 60,
       "faixa": "base"
     },
     {
       "componente": "horario",
       "presenca_pct": 74,
-      "presenca_n": 57,
+      "presenca_n": 56,
       "faixa": "base"
     },
     {
       "componente": "equipe",
       "presenca_pct": 74,
-      "presenca_n": 57,
+      "presenca_n": 56,
       "faixa": "base"
     },
     {
       "componente": "pneus",
-      "presenca_pct": 73,
+      "presenca_pct": 74,
       "presenca_n": 56,
       "faixa": "base"
     },
     {
       "componente": "blog",
       "presenca_pct": 71,
-      "presenca_n": 55,
+      "presenca_n": 54,
       "faixa": "base"
     },
     {
       "componente": "galeria",
       "presenca_pct": 66,
-      "presenca_n": 51,
+      "presenca_n": 50,
+      "faixa": "diferenciador"
+    },
+    {
+      "componente": "eletrica",
+      "presenca_pct": 63,
+      "presenca_n": 48,
       "faixa": "diferenciador"
     },
     {
       "componente": "oleo",
-      "presenca_pct": 61,
+      "presenca_pct": 62,
       "presenca_n": 47,
       "faixa": "diferenciador"
     },
     {
       "componente": "pagamento",
-      "presenca_pct": 52,
+      "presenca_pct": 53,
       "presenca_n": 40,
       "faixa": "diferenciador"
     },
     {
       "componente": "mapa",
-      "presenca_pct": 44,
+      "presenca_pct": 45,
       "presenca_n": 34,
       "faixa": "diferenciador"
     },
     {
       "componente": "alinhamento",
-      "presenca_pct": 40,
+      "presenca_pct": 41,
       "presenca_n": 31,
       "faixa": "diferenciador"
     },
     {
       "componente": "endereco",
-      "presenca_pct": 39,
-      "presenca_n": 30,
+      "presenca_pct": 38,
+      "presenca_n": 29,
       "faixa": "diferenciador"
     },
     {
       "componente": "multimarcas",
-      "presenca_pct": 36,
+      "presenca_pct": 37,
       "presenca_n": 28,
       "faixa": "diferenciador"
     },
@@ -117,14 +129,14 @@
     },
     {
       "componente": "ar_condicionado",
-      "presenca_pct": 31,
-      "presenca_n": 24,
+      "presenca_pct": 30,
+      "presenca_n": 23,
       "faixa": "diferenciador"
     },
     {
       "componente": "concessionaria",
-      "presenca_pct": 30,
-      "presenca_n": 23,
+      "presenca_pct": 29,
+      "presenca_n": 22,
       "faixa": "diferenciador"
     },
     {
@@ -135,7 +147,7 @@
     },
     {
       "componente": "suspensao",
-      "presenca_pct": 19,
+      "presenca_pct": 20,
       "presenca_n": 15,
       "faixa": "diferenciador"
     },
@@ -153,13 +165,13 @@
     },
     {
       "componente": "funilaria",
-      "presenca_pct": 10,
+      "presenca_pct": 11,
       "presenca_n": 8,
       "faixa": "raro"
     },
     {
       "componente": "transmissao",
-      "presenca_pct": 10,
+      "presenca_pct": 11,
       "presenca_n": 8,
       "faixa": "raro"
     },
@@ -177,12 +189,6 @@
     },
     {
       "componente": "planos",
-      "presenca_pct": 3,
-      "presenca_n": 2,
-      "faixa": "raro"
-    },
-    {
-      "componente": "injecao",
       "presenca_pct": 3,
       "presenca_n": 2,
       "faixa": "raro"
@@ -210,12 +216,6 @@
       "presenca_pct": 0,
       "presenca_n": 0,
       "faixa": "raro"
-    },
-    {
-      "componente": "eletrica",
-      "presenca_pct": 0,
-      "presenca_n": 0,
-      "faixa": "raro"
     }
   ],
   "leituras": {
@@ -224,7 +224,8 @@
       "telefone clicável 83% e agendamento 79% — o canal importa mais que o catálogo",
       "depoimentos 82% — prova social altíssima, é o antídoto do medo de golpe",
       "horário 74% e equipe 74%",
-      "pneus 73% — o pneu é o produto-âncora de tráfego"
+      "pneus 73% — o pneu é o produto-âncora de tráfego",
+      "injeção eletrônica 80% e elétrica 63% — diagnóstico e bateria são base do nicho, não especialidade"
     ],
     "onde_da_para_diferenciar": [
       "orçamento explícito 25% (o item mais óbvio do nicho é raro nas referências)",
@@ -233,9 +234,9 @@
       "urgência/plantão 17%",
       "funilaria 10%",
       "transmissão 10%",
-      "injeção eletrônica 3%",
       "garantia de serviço por escrito"
     ],
     "contraste_com_os_outros_nichos": "é o único nicho em que a prova social (depoimentos 82%) vence o preço e o serviço. A objeção central não é 'é bom?', é 'vou ser enganado?'"
-  }
+  },
+  "correcao": "a primeira medição dizia injeção eletrônica 3% e elétrica 0%. Era defeito de léxico: a amostra é 100% dos EUA e as regexes só tinham termos em português. Depois de incluir diagnostic/check engine/battery/alternator/starter, os números reais são injeção 80% e elétrica 63% — os dois são BASE, não diferencial."
 }
