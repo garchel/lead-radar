@@ -7,6 +7,10 @@ import {
 import { upsertLead, setSetting } from "../server/store/db";
 import type { StoredLead } from "../server/store/types";
 
+// Este arquivo testa TRANSPORTE (gateway, WhatsMiau, payload), não a barreira de
+// nicho. A barreira tem teste próprio em tests/nichoGate.test.ts.
+process.env.LEADRADAR_NICHO_GATE = "off";
+
 const leadWithPhone: StoredLead = {
   id: "contact-1",
   name: "Empresa A",

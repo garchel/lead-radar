@@ -1,10 +1,11 @@
 import nodemailer from "nodemailer";
 import { StoredLead } from "../store/types";
 import { whatsAppify } from "./messageStyle";
-import { recordCommunication, getSetting, getCommunicationsByLead } from "../store/db";
+import { recordCommunication, getSetting, getCommunicationsByLead, getLeadById } from "../store/db";
 import { primaryAuditHook } from "./siteAuditService";
 import { effectiveWebsiteStatus } from "./presenceService";
 import { runPaced, type SendPurpose } from "./humanizeService";
+import { avaliarNicho } from "./nichoGate";
 
 /* ------------------------------------------------------------------ */
 /*  Contact dispatch — só confirma sucesso após um envio real.         */
@@ -540,6 +541,13 @@ export async function sendWhatsApp(
     return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: "Lead sem telefone válido." };
   }
 
+  // Barreira de nicho: só contata quem está em nicho com pool medido.
+  const veredito = avaliarNicho({ name: lead.name, category: lead.category }, purpose);
+  if (!veredito.liberado) {
+    const id = recordCommunication({ leadId: lead.id, channel: "whatsapp", status: "failed", message, hook });
+    return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: veredito.motivo!, blocked: true };
+  }
+
   return deliverWhatsApp(lead.id, to, message, hook ?? defaultHookForLead(lead), purpose);
 }
 
@@ -559,6 +567,15 @@ export async function sendWhatsAppToNumber(input: {
   if (!to) {
     throw new Error("Telefone inválido: informe DDD + número (10 a 13 dígitos).");
   }
+
+  // Mesma barreira do sendWhatsApp, mas aqui o lead vem pelo id.
+  const leadDoVinculo = getLeadById(input.leadId);
+  const veredito = avaliarNicho({ name: leadDoVinculo?.name, category: leadDoVinculo?.category }, input.purpose);
+  if (!veredito.liberado) {
+    const id = recordCommunication({ leadId: input.leadId, channel: "whatsapp", status: "failed", message: input.message, hook: input.hook });
+    return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: veredito.motivo!, blocked: true };
+  }
+
   return deliverWhatsApp(input.leadId, to, input.message, input.hook, input.purpose ?? "prospect");
 }
 

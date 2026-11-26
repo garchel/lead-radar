@@ -26,6 +26,7 @@ import {
 } from "../services/salesAgentService";
 import { generateLeadPreview, generateLeadPreviewCached, previewExists, previewSlug, previewsDir, resolvePreviewUrl, resolvePublicBaseUrl } from "../services/previewService";
 import { gerarPaginaUnica } from "../services/aiPreviewService";
+import { bloqueioHttp } from "../services/nichoGate";
 import { pagesConfigured, publishPreviews } from "../services/pagesService";
 import { buildPalettePreview, publishPaletteCard, sendPalettePreview } from "../services/paletteService";
 import { generateProposalPdf, proposalFileName, publishProposal } from "../services/proposalService";
@@ -423,6 +424,11 @@ export function registerAgentRoutes(app: Express) {
   app.post("/api/leads/:id/preview", async (req: Request, res: Response) => {
     const lead = getLeadById(req.params.id);
     if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
+
+    // Barreira de nicho: não gera prévia para nicho sem pool medido.
+    const bloqueio = bloqueioHttp(lead);
+    if (bloqueio) return res.status(bloqueio.status).json(bloqueio.body);
+
     try {
       // Página única por lead: a IA escreve do zero; se o portão reprovar, cai
       // no template fixo para não entregar página quebrada ao dono.

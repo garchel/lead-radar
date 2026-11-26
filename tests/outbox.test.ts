@@ -4,6 +4,9 @@ import { getDb } from "../server/store/schema";
 import { listOutbox, retryOutbound } from "../server/services/outboxService";
 import type { StoredLead } from "../server/store/types";
 
+// Testa reenvio pelo gateway; a barreira de nicho tem teste próprio.
+process.env.LEADRADAR_NICHO_GATE = "off";
+
 function makeLead(id: string, overrides: Partial<StoredLead> = {}): StoredLead {
   const now = new Date().toISOString();
   return {
