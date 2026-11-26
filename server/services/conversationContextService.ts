@@ -33,8 +33,10 @@ export type FatosDaConversa = {
   respostasDoLead: number;
   /** Já elogiou a página depois de receber ("achei legal", "gostei"). */
   elogiouDepoisDeVer: boolean;
-  /** Última mensagem da conversa é do lead (ela está devendo resposta). */
+  /** Última FALA da conversa é do lead (ela está devendo resposta). */
   aguardandoResposta: boolean;
+  /** A última mensagem no histórico é um aviso automático nosso, e não uma fala. */
+  travadaPorAviso: boolean;
   /** Horas desde a última mensagem do lead. */
   silencioHoras: number | null;
 };
@@ -123,7 +125,22 @@ export function contextoDaConversa(leadId: string, opts: { limite?: number } = {
 
   const inbound = todas.filter((c: any) => c.direction === "inbound");
   const ultimoInbound = inbound[inbound.length - 1];
-  const ultimaMensagem = todas[todas.length - 1];
+
+  // Aviso automático ("dá um minutinho que eu já te mando o link") NÃO é fala da
+  // conversa. Contá-lo como resposta nossa travou a thread de verdade: o lead disse
+  // "achei legal", o app soltou o aviso duplicado, e a Clara concluiu que a última
+  // mensagem era dela e ficou calada para sempre.
+  // Aviso de espera e REENVIO de link são artefato automático, não fala. A primeira
+  // entrega conta como fala (ela termina perguntando "o que você achou?"); a segunda
+  // em diante não, senão um reenvio acidental enterra a resposta que o lead espera.
+  const primeiraEntregaId = (todas.find((c: any) => String(c.hook || "") === "pagina_unica") || {}).id;
+  const falas = todas.filter((c: any) => {
+    const hook = String(c.hook || "");
+    if (hook === "pagina_aviso") return false;
+    if (hook === "pagina_unica" && c.id !== primeiraEntregaId) return false;
+    return true;
+  });
+  const ultimaMensagem = falas[falas.length - 1] || todas[todas.length - 1];
 
   // Referência é a PRIMEIRA entrega: se o link foi reenviado por engano, medir a
   // partir da última esconderia o elogio (ele veio antes do reenvio).
@@ -145,6 +162,9 @@ export function contextoDaConversa(leadId: string, opts: { limite?: number } = {
     respostasDoLead: inbound.length,
     elogiouDepoisDeVer,
     aguardandoResposta: Boolean(ultimaMensagem && ultimaMensagem.direction === "inbound"),
+    travadaPorAviso: Boolean(
+      ultimaMensagem && ultimaMensagem.direction === "inbound" && todas[todas.length - 1] !== ultimaMensagem,
+    ),
     silencioHoras: horasDesde(ultimoInbound ? ultimoInbound.createdAt || null : null),
   };
 
@@ -159,6 +179,11 @@ export function contextoDaConversa(leadId: string, opts: { limite?: number } = {
     linhas.push("Página ainda NÃO foi entregue.");
   }
   if (fatos.silencioHoras !== null) linhas.push(`Última mensagem do lead: ${fatos.silencioHoras}h atrás.`);
+  if (fatos.travadaPorAviso) {
+    linhas.push(
+      "A última mensagem do histórico é um AVISO AUTOMÁTICO nosso, não uma resposta. O lead está esperando: responda a fala dele.",
+    );
+  }
 
   const recentes = turnos.slice(-limite);
   const transcricao = recentes

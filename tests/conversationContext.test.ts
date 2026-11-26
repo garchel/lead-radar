@@ -13,7 +13,9 @@ function makeLead(id: string, overrides: Partial<StoredLead> = {}): StoredLead {
   return {
     id,
     name: "Barbearia Teste",
-    phone: "5561999990000",
+    // telefone único por lead: o CRM deduplica por telefone e o lead novo herdaria
+    // o id antigo, quebrando a FK do teste seguinte.
+    phone: `55619${String(Date.now()).slice(-8)}${Math.floor(Math.random() * 90 + 10)}`,
     city: "Três Lagoas",
     websiteStatus: "none",
     savedAt: now,
@@ -75,6 +77,7 @@ describe("memória da conversa", () => {
       respostasDoLead: 1,
       elogiouDepoisDeVer: false,
       aguardandoResposta: true,
+      travadaPorAviso: false,
       silencioHoras: 0,
     };
 
@@ -129,6 +132,29 @@ describe("memória da conversa", () => {
       expect(ctx.texto).toContain("Página JÁ entregue");
       expect(ctx.texto).toContain("ELOGIOU");
       expect(ctx.texto).not.toContain("[RECEBIDA]");
+    });
+
+    it("reenvio acidental não conta como resposta: a conversa segue devendo", async () => {
+      const id = `teste-ctx-travada-${Date.now()}`;
+      upsertLead(makeLead(id));
+
+      recordCommunication({ leadId: id, channel: "whatsapp", direction: "outbound", status: "sent", message: "Oi, tudo bem?", hook: "sem_site" });
+      await espera();
+      recordCommunication({ leadId: id, channel: "whatsapp", direction: "inbound", status: "sent", message: "[RECEBIDA] Pode mandar sim" });
+      await espera();
+      recordCommunication({ leadId: id, channel: "whatsapp", direction: "outbound", status: "sent", message: "Ficou pronto 👇 https://exemplo.pages.dev/a", hook: "pagina_unica" });
+      await espera();
+      recordCommunication({ leadId: id, channel: "whatsapp", direction: "inbound", status: "sent", message: "[RECEBIDA] Achei legal demais" });
+      await espera();
+      recordCommunication({ leadId: id, channel: "whatsapp", direction: "outbound", status: "sent", message: "Perfeito! Dá um minutinho 💛", hook: "pagina_aviso" });
+      await espera();
+      recordCommunication({ leadId: id, channel: "whatsapp", direction: "outbound", status: "sent", message: "Ficou pronto 👇 https://exemplo.pages.dev/a", hook: "pagina_unica" });
+
+      const ctx = contextoDaConversa(id);
+      expect(ctx.fatos.vezesEntregue).toBe(2);
+      expect(ctx.fatos.aguardandoResposta).toBe(true);
+      expect(ctx.fatos.travadaPorAviso).toBe(true);
+      expect(ctx.texto).toContain("AVISO AUTOMÁTICO");
     });
 
     it("sem histórico: página não entregue e nada de elogio", () => {

@@ -144,7 +144,27 @@ def contexto(lead_id: str) -> dict:
             }
         )
 
+    # Aviso automático não é fala: contá-lo como resposta nossa trava a conversa.
+    # Aviso de espera e REENVIO de link são artefato automático, não fala. A primeira
+    # entrega conta (ela pergunta "o que você achou?"); a segunda em diante não.
+    primeira_entrega = entregas[0]["created_at"] if entregas else None
+    def _eh_fala(l):
+        hook = l["hook"] or ""
+        if hook == "pagina_aviso":
+            return False
+        if hook == "pagina_unica" and str(l["created_at"]) != str(primeira_entrega):
+            return False
+        return True
+
+    falas = [l for l in linhas if _eh_fala(l)]
+    ultima_fala = falas[-1] if falas else (linhas[-1] if linhas else None)
+    ultima_bruta = linhas[-1] if linhas else None
+    aguardando = bool(ultima_fala and ultima_fala["direction"] == "inbound")
+    travada = bool(aguardando and ultima_bruta is not ultima_fala)
+
     return {
+        "aguardando_resposta": aguardando,
+        "travada_por_aviso": travada,
         "pagina_entregue": bool(entregas),
         "pagina_url": url,
         "entregue_em": str(ultima["created_at"]) if ultima else None,
@@ -184,7 +204,11 @@ def main() -> None:
         "already_answered": bool(row["replied_after"]),
         "text": " ".join(str(row["message"] or "").split())[:240],
     }
-    payload.update(contexto(row["lead_id"]))
+    ctx = contexto(row["lead_id"])
+    if "aguardando_resposta" in ctx:
+        # "já respondido" é sobre FALA, não sobre aviso automático
+        payload["already_answered"] = not ctx["aguardando_resposta"]
+    payload.update(ctx)
     print("inbox_last_inbound " + json.dumps(payload, ensure_ascii=False, sort_keys=True))
 
 
