@@ -1,0 +1,163 @@
+{
+  "nicho": "psicologia",
+  "gerado_em": "2026-11-26",
+  "n_lido": 80,
+  "n_util": 48,
+  "metodo": "leitura manual dos títulos de abertura das 80 páginas com título. Descartados ~32 que não são herói: buscas ('search ellie'), telefone solto, 'featured in', 'próximos eventos', blog e dois fora do nicho (um SaaS de horas de formação, uma clínica de fonoaudiologia).",
+  "principio": "cataloga a ESCOLHA (público -> promessa -> prova), nunca a frase.",
+  "enquadramentos": [
+    {
+      "id": "nome_proprio",
+      "nome": "só o nome da terapeuta",
+      "ocorrencias": 12,
+      "de": 48,
+      "pergunta_que_responde": "quem é a pessoa que vai me atender?",
+      "exemplos_observados": [
+        "Jessica Meiman Psychotherapy",
+        "Colette Cassidy, LMHC",
+        "Lori Granger, LMFT",
+        "Dr. Carrie L. Jones, PhD",
+        "Zoe Riggs"
+      ],
+      "porque_funciona": "psicoterapia é vínculo entre duas pessoas; a marca é a pessoa, não a clínica",
+      "limite": "só funciona quando já existe reputação; para lead novo, o nome sozinho não diz nada"
+    },
+    {
+      "id": "lugar_modalidade",
+      "nome": "lugar + modalidade",
+      "ocorrencias": 10,
+      "de": 48,
+      "pergunta_que_responde": "atende onde e como?",
+      "exemplos_observados": [
+        "evidence-based therapy in Boulder, Colorado",
+        "online therapy Virginia & Washington DC",
+        "virtual therapy in Texas, Ohio, California & Michigan",
+        "psicólogo em São Paulo, presencial e online"
+      ],
+      "prova_obrigatoria": [
+        "cidade/bairro",
+        "se atende online, para quais estados"
+      ],
+      "leitura": "no Brasil é o par obrigatório: 'presencial e online' aparece em quase todo site de consultório"
+    },
+    {
+      "id": "dor_nomeada",
+      "nome": "dor nomeada com precisão",
+      "ocorrencias": 10,
+      "de": 48,
+      "pergunta_que_responde": "é exatamente sobre isso que eu estou passando?",
+      "exemplos_observados": [
+        "therapy for women who are stuck",
+        "modern therapy for anxious, high-achieving women",
+        "difficulty regulating emotions",
+        "relationships are hard",
+        "family time shouldn't suck",
+        "beachfront anxiety specialists"
+      ],
+      "prova_obrigatoria": [
+        "a especialidade tem que ser real no consultório",
+        "a dor precisa aparecer nas seções, não só no título"
+      ],
+      "leitura": "é o enquadramento mais forte e o mais específico dos quatro nichos: a segmentação é estreitíssima (mulheres, alta performance, maternidade, casais). Genérico aqui não converte"
+    },
+    {
+      "id": "resultado",
+      "nome": "estado desejado",
+      "ocorrencias": 8,
+      "de": 48,
+      "pergunta_que_responde": "como vou me sentir depois?",
+      "exemplos_observados": [
+        "you deserve peace of mind",
+        "healing happens when you feel heard",
+        "get unstuck. find more ease. feel more alive",
+        "hope starts here",
+        "we can do hard things, one step at a time"
+      ],
+      "prova_obrigatoria": [
+        "tornar concreto: o que muda na semana da pessoa, não 'felicidade'"
+      ],
+      "risco": "vira frase de calendário motivacional se não descer ao concreto"
+    },
+    {
+      "id": "metodo",
+      "nome": "método / abordagem",
+      "ocorrencias": 5,
+      "de": 48,
+      "pergunta_que_responde": "como vocês trabalham?",
+      "exemplos_observados": [
+        "cognitive behavioral therapy Los Angeles",
+        "embodied counseling",
+        "affirmative depth psychotherapy",
+        "emotion-focused therapy",
+        "therapy rooted in cultura, connection, and collective healing"
+      ],
+      "prova_obrigatoria": [
+        "nomear a abordagem com o termo correto (TCC, psicanálise, EMDR, humanista)"
+      ],
+      "leitura": "no Brasil isso vira diferencial: 36% dos sites brasileiros citam psicanálise contra 0% da amostra internacional"
+    },
+    {
+      "id": "pratico",
+      "nome": "prático (cobertura, primeira conversa)",
+      "ocorrencias": 3,
+      "de": 48,
+      "pergunta_que_responde": "quanto custa e como começo?",
+      "exemplos_observados": [
+        "therapy and psychiatry covered by insurance",
+        "book a free fifteen minute telephone consultation",
+        "com mais de 600 avaliações"
+      ],
+      "prova_obrigatoria": [
+        "valor da sessão, duração, se aceita convênio, se há primeira conversa gratuita"
+      ],
+      "leitura": "é raro (3 de 48) e é justamente o que o cliente brasileiro mais quer saber. Oportunidade clara"
+    }
+  ],
+  "ausentes": [
+    {
+      "enquadramento": "preço em destaque",
+      "ocorrencias": 0,
+      "leitura": "nenhum dos 48 abre com valor de sessão; o preço fica escondido ou ausente — a maior lacuna do nicho"
+    },
+    {
+      "enquadramento": "urgência / crise",
+      "ocorrencias": 2,
+      "leitura": "só 2 falam de atendimento imediato; 28% citam urgência em algum lugar da página"
+    }
+  ],
+  "lista_negra": [
+    "cuide da sua saúde mental",
+    "bem-estar",
+    "qualidade de vida",
+    "autoconhecimento (sozinho, sem contexto)",
+    "atendimento humanizado",
+    "escuta acolhedora (como título, não como processo)",
+    "transforme sua vida",
+    "seja a melhor versão de você",
+    "bem-vindo ao consultório"
+  ],
+  "padroes_de_titulo_proibidos": [
+    "começa com 'O que'",
+    "começa com 'Conheça a'",
+    "começa com 'Nossos atendimentos'"
+  ],
+  "teste_de_troca": {
+    "regra": "trocar o nome do profissional por outro de ramo diferente; se continuar verdadeira, reprovar",
+    "exemplos_de_troca": [
+      "Ótica Central",
+      "Barbearia Dom Corte"
+    ]
+  },
+  "regra_de_dado_ausente": "sem preço e sem CRP/abordagem declarados, a página não inventa: mostra o que existe (modalidade, primeira conversa, tempo de sessão) e deixa a pendência explícita",
+  "comparacao_com_os_outros_nichos": {
+    "odontologia": "experiência/conforto (4 de 7)",
+    "barbearia": "lugar (15 de 54)",
+    "otica": "preço visível (11 de 34)",
+    "psicologia": "nome próprio (12 de 48) e dor nomeada (10 de 48)"
+  },
+  "limites": [
+    "contagem é leitura manual",
+    "amostra majoritariamente norte-americana; o BR difere em preço, psicanálise e WhatsApp",
+    "apenas 7 sites .com.br com h1 na anatomia — base brasileira pequena"
+  ]
+}

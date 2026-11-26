@@ -45,6 +45,17 @@ const SERVICOS_POR_NICHO = {
     harmonizacao: /harmoniza[cç][aã]o facial|botox|preenchimento|cosmetic/i,
     convenios: /conv[eê]nio|plano de sa[uú]de|unimed|amil|bradesco sa[uú]de|sulamerica|odontoprev|\binsurance\b|in-network/i,
   },
+  psicologia: {
+    terapia_individual: /terapia individual|atendimento individual|psicoterapia individual|\bindividual therapy\b|one-to-one/i,
+    terapia_casal: /terapia de casal|casal|relacionamento|\bcouples?\b|marriage/i,
+    infantil: /infantil|crian[cç]a|adolescente|\bkids\b|\bchild\b|\bteen\b/i,
+    online: /online|remot[oa]|videochamada|\btelehealth\b/i,
+    presencial: /presencial|consult[oó]rio|\bin-person\b/i,
+    tcc: /terapia cognitivo|\btcc\b|\bcbt\b|cognitivo-comportamental/i,
+    psicanalise: /psican[aá]lise|psicanal[ií]tic|freud|lacan/i,
+    ansiedade: /ansiedade|depress[aã]o|burnout|\bestresse\b|p[aâ]nico|\banxiety\b|\bdepress/i,
+    abordagem: /abordagem|linha te[oó]rica|metodologia|\bapproach\b/i,
+  },
   otica: {
     grau: /\bgrau\b|prescri[cç][aã]o|receita m[eé]dica|\bprescription\b/i,
     sol: /\bsol\b|sunglasses|\bsolar\b|polarizad/i,
@@ -101,6 +112,20 @@ const LEXICO_NICHO = {
       veterinaria: /veterin[aá]ri|castra[cç][aã]o|vacina[cç][aã]o animal/i,
       advocacia: /advogad|\boab\b|jur[ií]dic/i,
       contabilidade: /contabil|contador|imposto de renda/i,
+    },
+  },
+  psicologia: {
+    exige: 3,
+    positivo: /psic[oó]log|psicoterapia|psican[aá]lise|terapia\b|\bcrp\b|\btdah\b|ansiedade|depress[aã]o|sa[uú]de mental|acolhimento|escuta|\btherap(y|ist)\b|\bcounsel(l)?ing\b/i,
+    outrosNichos: {
+      odontologia: /\b(dentista|dentes?|dental|odontolog\w*|ortodont\w*)\b|implante dent[aá]rio/i,
+      barbearia: /barbearia|barbershop|barbeiro|\bnavalha\b|corte masculino/i,
+      otica: /[oó]tica|\b[oó]culos\b|arma[cç][aã]o|optometri|eyewear|sunglasses/i,
+      estetica_facial: /harmoniza[cç][aã]o facial|botox|preenchimento labial|limpeza de pele/i,
+      veterinaria: /veterin[aá]ri|castra[cç][aã]o animal/i,
+      advocacia: /advogad|\boab\b|jur[ií]dic/i,
+      contabilidade: /contabil|contador|imposto de renda/i,
+      psiquiatria: /psiquiatra|medica[cç][aã]o|receita de antidepressivo|\brivotril\b/i,
     },
   },
   otica: {

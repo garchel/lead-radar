@@ -1,0 +1,61 @@
+{
+  "nicho": "psicologia",
+  "medido_em": "2026-11-26",
+  "largura_px": 1440,
+  "amostra": 80,
+  "todos": {
+    "n": 80,
+    "com_h1": 71,
+    "sem_h1": 9,
+    "h1_mediana": 48,
+    "h1_p25": 24,
+    "h1_p75": 64,
+    "corpo_mediana": 18.0,
+    "razao_h1_corpo": 2.67
+  },
+  "brasil": {
+    "n": 7,
+    "com_h1": 7,
+    "sem_h1": 0,
+    "h1_mediana": 40,
+    "h1_p25": 39,
+    "h1_p75": 56,
+    "corpo_mediana": 18,
+    "razao_h1_corpo": 2.22
+  },
+  "internacional": {
+    "n": 73,
+    "com_h1": 64,
+    "sem_h1": 9,
+    "h1_mediana": 48.0,
+    "h1_p25": 22,
+    "h1_p75": 67.84,
+    "corpo_mediana": 18,
+    "razao_h1_corpo": 2.8
+  },
+  "fontes_de_display_observadas": {
+    "Lora": 4,
+    "Montserrat": 3,
+    "Nunito": 3,
+    "Lato": 2,
+    "Playfair Display": 2,
+    "Inter": 2,
+    "Roboto": 2,
+    "proxima-nova": 2,
+    "caudex": 2
+  },
+  "cor": {
+    "fundos_distintos_mediana": 2.0
+  },
+  "densidade": {
+    "degraus_de_texto_mediana": 10.0
+  },
+  "regras_que_saem_da_medicao": [
+    "corpo 18px — o MAIOR entre os quatro nichos (odontologia e ótica 16, barbearia 16). Texto longo e lido com calma",
+    "título mediano 48px no internacional e 40px no Brasil: faixa 39-56 no BR",
+    "razão título/corpo ~2,2 no BR e 2,8 no exterior — mais baixa que odontologia (4-6) e barbearia (3,25). O título não grita",
+    "serifada aparece de verdade aqui: Lora, Playfair, Caudex, junto de Montserrat e Nunito",
+    "2 fundos e 10 degraus, igual aos outros: a paleta é contida em todos os nichos",
+    "11% da amostra sem h1, contra 38% em ótica: consultório individual cuida melhor do básico que varejo"
+  ]
+}

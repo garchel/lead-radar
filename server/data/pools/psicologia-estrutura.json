@@ -1,0 +1,215 @@
+{
+  "nicho": "psicologia",
+  "amostra": {
+    "referencias": 74,
+    "mercado_br": 11,
+    "coletado_em": "2026-11-26",
+    "fonte": "listas de design (flamingo, colorlib, simplepractice, sitebuilderreport, websiteplanet, jesscreatives, azuro, mycodeless) + busca de consultórios brasileiros"
+  },
+  "conferencia_de_nicho": "referencias 70 de 102 confirmadas | mercado 10 de 21 (5 dominios não resolveram, 1 deu 403)",
+  "metodo": "presença de componentes por página; HTML sem <style>/<script>; nenhum texto, imagem ou código copiado.",
+  "componentes": [
+    {
+      "componente": "agendamento_online",
+      "referencia_pct": 76,
+      "mercado_br_pct": 64,
+      "delta": 12
+    },
+    {
+      "componente": "ansiedade",
+      "referencia_pct": 65,
+      "mercado_br_pct": 45,
+      "delta": 20
+    },
+    {
+      "componente": "blog",
+      "referencia_pct": 62,
+      "mercado_br_pct": 64,
+      "delta": -2
+    },
+    {
+      "componente": "online",
+      "referencia_pct": 59,
+      "mercado_br_pct": 45,
+      "delta": 14
+    },
+    {
+      "componente": "galeria",
+      "referencia_pct": 57,
+      "mercado_br_pct": 36,
+      "delta": 21
+    },
+    {
+      "componente": "terapia_casal",
+      "referencia_pct": 57,
+      "mercado_br_pct": 36,
+      "delta": 21
+    },
+    {
+      "componente": "abordagem",
+      "referencia_pct": 50,
+      "mercado_br_pct": 27,
+      "delta": 23
+    },
+    {
+      "componente": "telefone_clicavel",
+      "referencia_pct": 46,
+      "mercado_br_pct": 27,
+      "delta": 19
+    },
+    {
+      "componente": "infantil",
+      "referencia_pct": 43,
+      "mercado_br_pct": 55,
+      "delta": -12
+    },
+    {
+      "componente": "depoimentos",
+      "referencia_pct": 39,
+      "mercado_br_pct": 55,
+      "delta": -16
+    },
+    {
+      "componente": "presencial",
+      "referencia_pct": 39,
+      "mercado_br_pct": 45,
+      "delta": -6
+    },
+    {
+      "componente": "faq",
+      "referencia_pct": 39,
+      "mercado_br_pct": 45,
+      "delta": -6
+    },
+    {
+      "componente": "equipe",
+      "referencia_pct": 36,
+      "mercado_br_pct": 27,
+      "delta": 9
+    },
+    {
+      "componente": "endereco",
+      "referencia_pct": 35,
+      "mercado_br_pct": 73,
+      "delta": -38
+    },
+    {
+      "componente": "terapia_individual",
+      "referencia_pct": 30,
+      "mercado_br_pct": 0,
+      "delta": 30
+    },
+    {
+      "componente": "urgencia",
+      "referencia_pct": 28,
+      "mercado_br_pct": 27,
+      "delta": 1
+    },
+    {
+      "componente": "horario",
+      "referencia_pct": 18,
+      "mercado_br_pct": 27,
+      "delta": -9
+    },
+    {
+      "componente": "mapa",
+      "referencia_pct": 15,
+      "mercado_br_pct": 27,
+      "delta": -12
+    },
+    {
+      "componente": "tcc",
+      "referencia_pct": 14,
+      "mercado_br_pct": 27,
+      "delta": -13
+    },
+    {
+      "componente": "video",
+      "referencia_pct": 11,
+      "mercado_br_pct": 0,
+      "delta": 11
+    },
+    {
+      "componente": "pagamento",
+      "referencia_pct": 9,
+      "mercado_br_pct": 0,
+      "delta": 9
+    },
+    {
+      "componente": "antes_depois",
+      "referencia_pct": 5,
+      "mercado_br_pct": 0,
+      "delta": 5
+    },
+    {
+      "componente": "planos",
+      "referencia_pct": 5,
+      "mercado_br_pct": 0,
+      "delta": 5
+    },
+    {
+      "componente": "contato_whatsapp",
+      "referencia_pct": 3,
+      "mercado_br_pct": 73,
+      "delta": -70
+    },
+    {
+      "componente": "produtos",
+      "referencia_pct": 1,
+      "mercado_br_pct": 0,
+      "delta": 1
+    },
+    {
+      "componente": "tecnologia",
+      "referencia_pct": 1,
+      "mercado_br_pct": 0,
+      "delta": 1
+    },
+    {
+      "componente": "estacionamento",
+      "referencia_pct": 1,
+      "mercado_br_pct": 9,
+      "delta": -8
+    },
+    {
+      "componente": "psicanalise",
+      "referencia_pct": 0,
+      "mercado_br_pct": 36,
+      "delta": -36
+    },
+    {
+      "componente": "gift_card",
+      "referencia_pct": 0,
+      "mercado_br_pct": 0,
+      "delta": 0
+    }
+  ],
+  "leituras": {
+    "nucleo_do_nicho": [
+      "agendamento online 76% — o consultório tem que permitir marcar",
+      "ansiedade 65% — a dor é nomeada no vocabulário do paciente",
+      "blog 62% — conteúdo é canal de aquisição neste nicho",
+      "online 59% e presencial 39% — a modalidade é decisão declarada",
+      "abordagem 50% (TCC 14%, psicanálise 0% na amostra internacional) — o método é argumento"
+    ],
+    "onde_da_para_diferenciar": [
+      "vídeo 11%",
+      "pagamento 9%",
+      "terapia individual 30% (baixo porque é pressuposto)",
+      "depoimentos 39%"
+    ],
+    "o_que_o_mercado_br_faz_e_a_referencia_nao": [
+      "whatsapp 73% vs 3%",
+      "endereço 73% vs 35%",
+      "depoimentos 55% vs 39%",
+      "psicanálise 36% vs 0%"
+    ],
+    "o_que_a_referencia_faz_e_o_mercado_nao": [
+      "ansiedade 65% vs 45%",
+      "blog 62% vs 64% (empate)",
+      "abordagem declarada",
+      "cobertura por convênio"
+    ],
+    "contraste_com_os_outros_nichos": "psicologia é o único nicho em que o herói costuma ser o NOME DA PESSOA, não da clínica: 12 de 48 títulos úteis são só o nome da terapeuta. É venda de confiança pessoal, não de serviço."
+  }
+}
