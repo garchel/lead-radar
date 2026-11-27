@@ -43,6 +43,22 @@ export interface CommercialPolicy {
   discountAllowed: boolean;
   /** Formas de pagamento que o agente pode citar (vazio = não falar de pagamento). */
   payment: string[];
+  /**
+   * Divisão do pagamento em duas parcelas, em %.
+   *
+   * 30/70 com a segunda parcela presa à PUBLICAÇÃO NO DOMÍNIO do cliente — não à
+   * entrega da página. A página entregue não dá alavanca nenhuma (não se recolhe um
+   * site); o domínio dá. E duas transferências doem menos que três: cada pagamento é
+   * um episódio de dor (Prelec & Loewenstein), e num ticket de R$ 899 três Pix pesam
+   * mais que o valor em si.
+   */
+  paymentSplit: { entrada: number; entrega: number };
+  /** Chave Pix real. Vazio = a Clara não passa chave e confirma com o Paulo. */
+  pixKey: string;
+  /** Chave fictícia para testar. Só é usada em lead de simulação, nunca em lead real. */
+  pixKeyTeste: string;
+  /** Nome que aparece na tela do Pix de quem paga (o banco mostra o titular). */
+  pixHolder: string;
   /** Regras extras livres que entram no prompt sem interpretação. */
   extraRules: string[];
 }
@@ -122,6 +138,10 @@ export const DEFAULT_POLICY: CommercialPolicy = {
   previewFree: true,
   discountAllowed: false,
   payment: [],
+  paymentSplit: { entrada: 30, entrega: 70 },
+  pixKey: "",
+  pixKeyTeste: "vertice-teste@exemplo.com",
+  pixHolder: "Vértice Páginas Web",
   extraRules: [
     "Nunca diga que é IA, bot, assistente virtual ou automação.",
     "Nunca prometa prazo menor que o combinado, desconto ou brinde.",
@@ -135,7 +155,7 @@ export const DEFAULT_POLICY: CommercialPolicy = {
 
 const SETTING_KEY = "commercial_policy";
 
-function mergePolicy(base: CommercialPolicy, patch: any): CommercialPolicy {
+export function mergePolicy(base: CommercialPolicy, patch: any): CommercialPolicy {
   if (!patch || typeof patch !== "object") return base;
   const merged: CommercialPolicy = {
     ...base,
@@ -147,6 +167,17 @@ function mergePolicy(base: CommercialPolicy, patch: any): CommercialPolicy {
     ...(typeof patch.previewFree === "boolean" ? { previewFree: patch.previewFree } : {}),
     ...(typeof patch.discountAllowed === "boolean" ? { discountAllowed: patch.discountAllowed } : {}),
     ...(Array.isArray(patch.payment) ? { payment: patch.payment.map((p: unknown) => String(p)).filter(Boolean) } : {}),
+    ...(patch.paymentSplit && typeof patch.paymentSplit === "object"
+      ? {
+          paymentSplit: {
+            entrada: Number((patch.paymentSplit as any).entrada) || base.paymentSplit?.entrada || 30,
+            entrega: Number((patch.paymentSplit as any).entrega) || base.paymentSplit?.entrega || 70,
+          },
+        }
+      : {}),
+    ...(typeof patch.pixKey === "string" ? { pixKey: patch.pixKey.trim() } : {}),
+    ...(typeof patch.pixKeyTeste === "string" ? { pixKeyTeste: patch.pixKeyTeste.trim() } : {}),
+    ...(typeof patch.pixHolder === "string" ? { pixHolder: patch.pixHolder.trim() } : {}),
     ...(Array.isArray(patch.extraRules) ? { extraRules: patch.extraRules.map((r: unknown) => String(r)).filter(Boolean) } : {}),
   };
   return merged;

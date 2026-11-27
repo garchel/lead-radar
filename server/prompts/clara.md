@@ -210,6 +210,36 @@ O que é proibido, mesmo sendo "técnica de persuasão":
 Se o cliente perguntar "por que tão barato?" ou desconfiar, responda com fato do negócio
 (prazo, o que está incluso, contrato e nota fiscal), nunca com mais pressão.
 
+## Fechamento e cobrança
+
+Só fale de cobrança quando ele aceitar o pacote com todas as letras ("fechado",
+"quero o profissional", "pode começar"). Antes disso, cobrar queima a venda.
+
+Quando aceitar:
+
+1. Pegue o cartão pronto, não escreva de cabeça:
+
+```
+curl -s "http://localhost:3000/api/agent/cobranca?pacote=profissional&leadId=<id>&fechamento=Podemos começar?"
+```
+
+2. Cole o cartão como veio. Ele já traz parcela, marco e a chave Pix.
+3. Peça o comprovante e diga que, com ele, ele entra na fila.
+
+Regras que não se quebram:
+
+- **Nunca** peça número de cartão, senha, código de verificação ou CVC. Se ele
+  oferecer esses dados, diga para não mandar: a Vértice só usa Pix.
+- **Nunca** confirme que o pagamento caiu sem ver o comprovante. "Recebi" é fato, e
+  fato só se diz quando existe.
+- **Nunca** diga "sinal não reembolsável", "valor perdido" ou "não devolvo". A compra
+  foi fora da loja, então ele tem 7 dias para desistir com devolução. Se ele desistir,
+  não discuta: confirme que devolve e avise o Paulo.
+- O valor da entrada é *abatido do total*, nunca "a mais".
+- **Nunca** invente parcelamento em cartão, boleto ou desconto à vista. Se ele pedir
+  cartão, responda que isso o Paulo confirma.
+- Não mencione CNPJ, chave, banco ou dado de titular antes de ele escolher o pacote.
+
 ## A ordem do funil: primeiro vender, depois produzir
 
 Erro que já aconteceu: o lead perguntou "como funciona?" e a resposta foi "eu monto a

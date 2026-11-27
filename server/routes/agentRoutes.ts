@@ -15,6 +15,7 @@ import { buildLeadBriefing } from "../services/briefingService";
 import { contextoDaConversa } from "../services/conversationContextService";
 import { freioLigado } from "../services/outboundGuard";
 import { cartaoDePacotes, cartaoDeSecoes } from "../services/offerCard";
+import { cartaoDeCobranca, chavePixPara, planoDePagamento } from "../services/paymentPlan";
 import {
   deliveryLabel,
   formatBRL,
@@ -112,6 +113,41 @@ export function registerAgentRoutes(app: Express) {
       pacotes: cartaoDePacotes(policy, { secoes, extras, fechamento }),
       secoes: secoes.length ? cartaoDeSecoes({ nicho, essenciais: secoes, diferenciais: extras, fechamento }) : null,
     });
+  });
+
+  /**
+   * Cartão de cobrança do pacote aceito, com as duas parcelas e a chave Pix.
+   *
+   * A Clara não inventa cobrança: ela pega este texto. A chave só sai em lead de
+   * simulação (chave fictícia) ou quando existe chave real cadastrada; sem isso,
+   * o cartão manda o cliente aguardar o Paulo em vez de arriscar um Pix errado.
+   */
+  app.get("/api/agent/cobranca", (req: Request, res: Response) => {
+    try {
+      const policy = getCommercialPolicy();
+      const id = String(req.query.pacote || "").toLowerCase();
+      const pacote = policy.packages.find((p) => p.id === id || p.name.toLowerCase() === id);
+      if (!pacote) {
+        return res.status(400).json({
+          success: false,
+          error: "Informe pacote=essencial ou pacote=profissional.",
+          pacotes: policy.packages.map((p) => p.id),
+        });
+      }
+      const leadId = typeof req.query.leadId === "string" ? req.query.leadId : undefined;
+      const fechamento = typeof req.query.fechamento === "string" ? req.query.fechamento : undefined;
+      const plano = planoDePagamento(policy, pacote);
+      const pix = chavePixPara(policy, leadId);
+      return res.json({
+        success: true,
+        pacote: { id: pacote.id, nome: pacote.name, preco: pacote.price },
+        parcelas: plano.parcelas,
+        pix: { chave: pix.chave, teste: pix.teste, titular: policy.pixHolder },
+        cartao: cartaoDeCobranca(policy, pacote, { leadId, fechamento }),
+      });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao montar a cobrança." });
+    }
   });
 
   /**
