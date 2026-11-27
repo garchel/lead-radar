@@ -25,6 +25,7 @@ export type OwnerAlertKind =
   | "bot_cliente" // bot de cliente não respondeu
   | "clara_falhou" // a própria rotina da Clara falhou
   | "relatorio_mensal" // resumo mensal dos clientes para o Paulo encaminhar
+  | "contrato_aceito" // cliente aceitou o contrato: é venda, não falha
   | "teste";
 
 export const ALERT_COOLDOWN_MINUTES = 15;
@@ -137,6 +138,17 @@ export function formatOwnerAlert(input: OwnerAlertInput): string {
     ].join("\n");
   }
 
+  // Contrato aceito é boa notícia: aviso curto, sem linguagem de falha.
+  if (input.kind === "contrato_aceito") {
+    return [
+      "💰 *Contrato aceito*",
+      "",
+      input.detail,
+      "",
+      "O lead já foi para negociando. Mande a chave do Pix da entrada.",
+    ].join("\n");
+  }
+
   // Relatório mensal não é falha: tem mensagem própria, sem alarme.
   if (input.kind === "relatorio_mensal") {
     return [
@@ -155,6 +167,7 @@ export function formatOwnerAlert(input: OwnerAlertInput): string {
     resposta_bloqueada: "o envio foi bloqueado",
     bot_cliente: "o bot do cliente não respondeu",
     clara_falhou: "a Clara não conseguiu responder",
+    contrato_aceito: "o cliente aceitou o contrato",
     relatorio_mensal: "relatórios do mês",
     teste: "este é um teste do aviso",
   };

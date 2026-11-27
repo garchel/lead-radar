@@ -25,6 +25,7 @@ import {
 import { renderizarHtml } from "../services/contractHtml";
 import { rotulosDeSecoes } from "../services/secoesRotulos";
 import { verificarAssinatura } from "../services/contractSignature";
+import { aceitesDoLead, fraseDeAceite, registrarAceite } from "../services/aceiteService";
 import {
   deliveryLabel,
   formatBRL,
@@ -265,6 +266,66 @@ export function registerAgentRoutes(app: Express) {
       return res.json({ success: true, veredito });
     } catch (error: any) {
       return res.status(500).json({ success: false, error: error?.message || "Falha ao verificar a assinatura." });
+    }
+  });
+
+  /**
+   * Registra o aceite do contrato por WhatsApp (assinatura eletrônica simples).
+   *
+   * Só grava quando a frase confere: aceitação explícita + contrato + empresa + pacote
+   * + valor. "Ok" não passa, e a resposta diz o que faltou para a Clara pedir de novo.
+   */
+  app.post("/api/agent/aceite", (req: Request, res: Response) => {
+    try {
+      const policy = getCommercialPolicy();
+      const leadId = String(req.body?.leadId || "");
+      if (!leadId) return res.status(400).json({ success: false, error: "Informe leadId." });
+      const pacoteId = String(req.body?.pacote || "").toLowerCase();
+      const pacote = policy.packages.find((p) => p.id === pacoteId || p.name.toLowerCase() === pacoteId);
+      if (!pacote) return res.status(400).json({ success: false, error: "Informe pacote=essencial ou profissional." });
+      const mensagem = String(req.body?.mensagem || "").trim();
+      if (!mensagem) return res.status(400).json({ success: false, error: "Informe a mensagem (ou a transcrição do áudio)." });
+
+      const r = registrarAceite({
+        leadId,
+        policy,
+        pacote,
+        mensagem,
+        telefone: req.body?.telefone ? String(req.body.telefone) : undefined,
+        canal: req.body?.canal === "audio" ? "audio" : "texto",
+        hashContrato: req.body?.hashContrato ? String(req.body.hashContrato) : undefined,
+      });
+
+      if (!r.registrado) {
+        return res.status(422).json({
+          success: false,
+          registrado: false,
+          faltando: r.faltando,
+          frase: fraseDeAceite(policy, pacote).frase,
+          error: "O aceite não confere com a frase combinada.",
+        });
+      }
+      return res.json({ success: true, registrado: true, registro: r.registro, comprovante: r.comprovante });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao registrar o aceite." });
+    }
+  });
+
+  /** Frase que a Clara deve pedir, e o histórico de aceites do lead. */
+  app.get("/api/agent/aceite/:leadId", (req: Request, res: Response) => {
+    try {
+      const policy = getCommercialPolicy();
+      const leadId = String(req.params.leadId || "");
+      const pacoteId = String(req.query.pacote || "").toLowerCase();
+      const pacote = policy.packages.find((p) => p.id === pacoteId || p.name.toLowerCase() === pacoteId) || policy.packages[0];
+      return res.json({
+        success: true,
+        frase: fraseDeAceite(policy, pacote).frase,
+        pacotes: policy.packages.map((p) => ({ id: p.id, nome: p.name, frase: fraseDeAceite(policy, p).frase })),
+        aceites: aceitesDoLead(leadId),
+      });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao ler os aceites." });
     }
   });
 
