@@ -24,6 +24,7 @@ import { NicheCatalogPage } from './components/NicheCatalogPage';
 import { AutomationSettingsPage } from './components/AutomationSettingsPage';
 import { DatabaseDashboard } from './components/DatabaseDashboard';
 import { OverviewDashboard } from './components/OverviewDashboard';
+import { ContractBuilder } from './components/ContractBuilder';
 
 const MapView = lazy(() => import('./components/MapView').then((m) => ({ default: m.MapView })));
 const GrowthPage = lazy(() => import('./components/GrowthPage').then((m) => ({ default: m.GrowthPage })));
@@ -504,6 +505,7 @@ export default function App() {
         {activeTab === 'overview' && (
           <OverviewDashboard onNavigate={setActiveTab} onOpenProject={setFocusProjectId} />
         )}
+        {activeTab === 'contracts' && <ContractBuilder />}
         {activeTab === 'search' && (
           <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
             {/* Search Header Controls */}

@@ -16,7 +16,14 @@ import { contextoDaConversa } from "../services/conversationContextService";
 import { freioLigado } from "../services/outboundGuard";
 import { cartaoDePacotes, cartaoDeSecoes } from "../services/offerCard";
 import { cartaoDeCobranca, chavePixPara, planoDePagamento } from "../services/paymentPlan";
-import { contratoDeUmaPagina, resumoDoContrato } from "../services/contractService";
+import {
+  documentoDoContrato,
+  renderizarTexto,
+  resumoDoContrato,
+  secoesDoContrato,
+} from "../services/contractService";
+import { renderizarHtml } from "../services/contractHtml";
+import { rotulosDeSecoes } from "../services/secoesRotulos";
 import {
   deliveryLabel,
   formatBRL,
@@ -122,32 +129,118 @@ export function registerAgentRoutes(app: Express) {
    * Texto, não PDF: o dono lê no celular em dois minutos e responde "aceito". O PDF
    * entra só se ele pedir para assinar.
    */
-  app.get("/api/agent/contrato", (req: Request, res: Response) => {
+  /**
+   * Opções para montar o contrato no painel: pacotes e, por nicho, as seções que a
+   * análise de páginas reais indica como base e como diferencial.
+   */
+  app.get("/api/agent/contrato/opcoes", (req: Request, res: Response) => {
     try {
       const policy = getCommercialPolicy();
-      const id = String(req.query.pacote || "").toLowerCase();
-      const pacote = policy.packages.find((p) => p.id === id || p.name.toLowerCase() === id);
-      if (!pacote) {
-        return res.status(400).json({ success: false, error: "Informe pacote=essencial ou pacote=profissional." });
+      const nicho = typeof req.query.nicho === "string" ? req.query.nicho : "";
+      let nichos: Array<{ id: string; titulo: string }> = [];
+      let secoesBase: string[] = [];
+      let secoesDiferencial: string[] = [];
+      try {
+        const catalogo = montarCatalogoDeNichos();
+        nichos = (catalogo.nichos || []).map((n) => ({ id: n.id, titulo: n.titulo }));
+        const alvo = (catalogo.nichos || []).find((n) => n.id === nicho);
+        if (alvo) {
+          // slug vira texto de contrato: "telefone_clicavel" não vai para o Anexo I
+          secoesBase = rotulosDeSecoes(alvo.estrutura?.base || []);
+          secoesDiferencial = rotulosDeSecoes(alvo.estrutura?.diferenciador || []);
+        }
+      } catch {
+        /* catálogo indisponível: o painel ainda consegue gerar com seções livres */
       }
-      const leadId = typeof req.query.leadId === "string" ? req.query.leadId : undefined;
-      const lead = leadId ? getLeadById(leadId) : undefined;
       return res.json({
         success: true,
-        contrato: contratoDeUmaPagina({
-          contratante: lead?.name || "",
-          contratada: policy.companyName,
-          pacote,
-          policy,
-          leadId,
-          data: new Date(),
-        }),
+        pacotes: policy.packages.map((p) => ({
+          id: p.id,
+          nome: p.name,
+          preco: p.price,
+          secoes: p.sections,
+          revisoes: p.revisions,
+        })),
+        nichos,
+        secoesBase,
+        secoesDiferencial,
+      });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao ler as opções." });
+    }
+  });
+
+  /** Helper: monta os dados do contrato a partir do corpo/query. */
+  const dadosDoContrato = (entrada: any) => {
+    const policy = getCommercialPolicy();
+    const id = String(entrada?.pacote || "").toLowerCase();
+    const pacote = policy.packages.find((p) => p.id === id || p.name.toLowerCase() === id);
+    if (!pacote) return { erro: "Informe pacote=essencial ou pacote=profissional." as const };
+    const leadId = entrada?.leadId ? String(entrada.leadId) : undefined;
+    const lead = leadId ? getLeadById(leadId) : undefined;
+    // Separador é `|`, `;` ou quebra de linha — NUNCA vírgula: nome de seção tem
+    // vírgula ("equipe, com quem atende") e o split fatiaria o texto no meio.
+    const secoes = Array.isArray(entrada?.secoes)
+      ? entrada.secoes.map((s: unknown) => String(s)).filter(Boolean)
+      : String(entrada?.secoes || "")
+          .split(/[|;\n]+/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+    return {
+      policy,
+      pacote,
+      leadId,
+      dados: {
+        contratante: String(entrada?.contratante ?? lead?.name ?? ""),
+        contratanteDoc: String(entrada?.contratanteDoc ?? ""),
+        contratanteEndereco: String(entrada?.contratanteEndereco ?? ""),
+        contratanteTelefone: String(entrada?.contratanteTelefone ?? lead?.phone ?? ""),
+        contratanteEmail: String(entrada?.contratanteEmail ?? ""),
+        representante: String(entrada?.representante ?? ""),
+        contratada: String(entrada?.contratada ?? policy.companyName),
+        contratadaCnpj: String(entrada?.contratadaCnpj ?? ""),
+        contratadaEndereco: String(entrada?.contratadaEndereco ?? ""),
+        contratadaEmail: String(entrada?.contratadaEmail ?? ""),
+        contratadaResponsavel: String(entrada?.contratadaResponsavel ?? "Paulo"),
+        nicho: String(entrada?.nicho ?? lead?.category ?? ""),
+        secoes,
+        pacote,
+        policy,
+        leadId,
+        data: new Date(),
+      },
+    };
+  };
+
+  /**
+   * Contrato em texto (para a Clara colar na conversa) ou em HTML (para o painel
+   * imprimir). Aceita GET com query e POST com corpo.
+   */
+  const responderContrato = (entrada: any, res: Response) => {
+    try {
+      const montado = dadosDoContrato(entrada);
+      if ("erro" in montado) return res.status(400).json({ success: false, error: montado.erro });
+      const { dados, policy, pacote, leadId } = montado;
+      const blocos = documentoDoContrato(dados);
+      return res.json({
+        success: true,
+        contrato: renderizarTexto(blocos),
+        html: renderizarHtml(blocos, { marca: policy.companyName }),
         resumo: resumoDoContrato(policy, pacote, leadId),
+        secoes: secoesDoContrato(dados),
+        valores: {
+          total: pacote.price,
+          entrada: planoDePagamento(policy, pacote).parcelas[0].valor,
+          saldo: planoDePagamento(policy, pacote).parcelas[1].valor,
+        },
       });
     } catch (error: any) {
       return res.status(500).json({ success: false, error: error?.message || "Falha ao montar o contrato." });
     }
-  });
+  };
+
+  app.get("/api/agent/contrato", (req: Request, res: Response) => responderContrato(req.query, res));
+  app.post("/api/agent/contrato", (req: Request, res: Response) => responderContrato(req.body, res));
 
   /**
    * Cartão de cobrança do pacote aceito, com as duas parcelas e a chave Pix.

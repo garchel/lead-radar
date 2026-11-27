@@ -72,7 +72,32 @@ describe("contrato de uma página", () => {
 
   it("não promete posição no Google", () => {
     const c = contrato().toLowerCase();
-    expect(c).toMatch(/n[ãa]o garante posi[çc][ãa]o/);
+    expect(c).toMatch(/sem prometer coloca[çc][ãa]o/);
+    expect(c).not.toMatch(/primeiro lugar|topo do google|garantimos posi/);
+  });
+
+  it("o Anexo I usa as seções contratadas, não uma lista fixa", () => {
+    const c = contratoDeUmaPagina({
+      contratante: "Studio Bella",
+      contratada: "Vértice Páginas Web",
+      pacote: PROFISSIONAL,
+      policy,
+      nicho: "estética",
+      secoes: ["procedimentos", "antes e depois", "equipe", "agendamento", "depoimentos"],
+      leadId: "lead-1",
+      data: new Date("2026-11-27T12:00:00-03:00"),
+    });
+    expect(c).toContain("antes e depois");
+    expect(c).toContain("procedimentos");
+    expect(c).toContain("estética");
+    // não pode manter itens do escopo padrão que não foram contratados
+    expect(c).not.toContain("Perguntas frequentes");
+  });
+
+  it("sem seções informadas, cai no escopo do pacote", () => {
+    const c = contrato(PROFISSIONAL);
+    expect(c).toMatch(/Anexo I/);
+    expect(c.length).toBeGreaterThan(500);
   });
 
   it("fala de nota fiscal e LGPD", () => {

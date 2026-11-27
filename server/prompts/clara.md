@@ -220,10 +220,15 @@ Quando aceitar:
 1. Mande o combinado em 5 linhas antes de falar de dinheiro:
 
 ```
-curl -s "http://localhost:3000/api/agent/contrato?pacote=profissional&leadId=<id>"
+curl -s "http://localhost:3000/api/agent/contrato?pacote=profissional&leadId=<id>&nicho=<nicho>&secoes=<seção1|seção2|seção3>"
 ```
 
 Use o campo `resumo`. Se ele pedir o contrato inteiro, mande o campo `contrato`.
+
+As **seções** que você combinou na conversa vão nesse parâmetro, separadas por `|`
+(nunca por vírgula: "equipe, com quem atende" tem vírgula dentro do nome): é o que vira o Anexo I.
+Se você prometeu "antes e depois" e "convênios", tem que estar ali — o contrato não pode
+listar seção que você não ofereceu nem omitir a que ele aprovou.
 
 2. Pegue o cartão de cobrança e cole como veio:
 
