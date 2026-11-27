@@ -40,6 +40,11 @@ export interface VereditoAssinatura {
   assinantes: string[];
   /** O que o arquivo assina, em hash — serve de protocolo. */
   hashDocumento: string | null;
+  /**
+   * O PDF parece digitalização (imagem, sem camada de texto). Serve para explicar por
+   * que não há assinatura digital: assinatura de caneta não deixa rastro verificável.
+   */
+  provavelEscaneado: boolean;
   problemas: string[];
   observacao: string;
 }
@@ -136,9 +141,18 @@ function sha256(buf: Buffer): string {
  * `hashOriginal` é o registro feito na geração do contrato: com ele dá para dizer se o
  * PDF assinado é o mesmo documento, e não uma versão parecida.
  */
+/** Heurística: muitas imagens e nenhuma fonte = página fotografada/digitalizada. */
+function pareceDigitalizacao(pdf: Buffer): boolean {
+  const texto = pdf.toString("latin1");
+  const imagens = (texto.match(/\/Subtype\s*\/Image/g) || []).length + (texto.match(/\/DCTDecode/g) || []).length;
+  const fontes = (texto.match(/\/Type\s*\/Font/g) || []).length;
+  return imagens > 0 && fontes === 0;
+}
+
 export function verificarAssinatura(pdf: Buffer, hashOriginal?: string | null): VereditoAssinatura {
   const assinaturas = assinaturasDoPdf(pdf);
   const problemas: string[] = [];
+  const provavelEscaneado = pareceDigitalizacao(pdf);
 
   if (!assinaturas.length) {
     return {
@@ -148,12 +162,20 @@ export function verificarAssinatura(pdf: Buffer, hashOriginal?: string | null): 
       mesmaVersao: null,
       assinantes: [],
       hashDocumento: sha256(pdf),
-      problemas: [
-        "Nenhuma assinatura digital encontrada: o PDF voltou sem assinatura embutida.",
-        "Se ele respondeu \"aceito\" no WhatsApp, isso vale como assinatura simples — mas então guarde a mensagem, não o PDF.",
-      ],
-      observacao:
-        "Assinatura digital em PDF precisa ser gerada por um assinador (gov.br, plataforma ou certificado). Abrir, digitar o nome e salvar não assina.",
+      provavelEscaneado,
+      problemas: provavelEscaneado
+        ? [
+            "O PDF parece uma digitalização (imagem, sem camada de texto): assinatura de caneta não é detectável por software.",
+            "Assinatura à mão vale como prova, mas não prova que o arquivo não foi alterado depois. Guarde a foto do documento na mesa, o envelope e a mensagem em que ele confirma o envio.",
+          ]
+        : [
+            "Nenhuma assinatura digital encontrada: o PDF voltou sem assinatura embutida.",
+            "Se ele respondeu \"aceito\" no WhatsApp, isso vale como assinatura simples — mas então guarde a mensagem, não o PDF.",
+            "Assinar no Adobe com assinatura desenhada também não conta: vira imagem dentro do PDF.",
+          ],
+      observacao: provavelEscaneado
+        ? "Para ter rastro verificável, o caminho é o assinador gov.br (grátis) ou aceite por mensagem com data e telefone."
+        : "Assinatura digital em PDF precisa ser gerada por um assinador (gov.br, plataforma ou certificado). Abrir, digitar o nome e salvar não assina.",
     };
   }
 
@@ -193,6 +215,7 @@ export function verificarAssinatura(pdf: Buffer, hashOriginal?: string | null): 
     mesmaVersao,
     assinantes,
     hashDocumento: sha256(assinaturas[0].trechoAssinado),
+    provavelEscaneado,
     problemas,
     observacao:
       "Integridade verificada aqui. Para confirmar o certificado e a conta gov.br, valide o mesmo PDF em validar.iti.gov.br (gratuito e oficial).",

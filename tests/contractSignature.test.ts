@@ -66,6 +66,29 @@ describe("assinatura de PDF", () => {
     expect(v.problemas.join(" ")).toMatch(/alterado|hash/i);
   });
 
+  it("reconhece PDF digitalizado e explica que caneta não é verificável", () => {
+    // página fotografada: tem imagem, não tem fonte
+    const scan = Buffer.from(
+      "%PDF-1.4\n1 0 obj\n<< /Type /XObject /Subtype /Image /Filter /DCTDecode >>\nstream\n...\nendstream\nendobj\n%EOF\n",
+      "latin1",
+    );
+    const v = verificarAssinatura(scan);
+    expect(v.temAssinatura).toBe(false);
+    expect(v.provavelEscaneado).toBe(true);
+    expect(v.problemas.join(" ")).toMatch(/digitaliza|caneta/i);
+  });
+
+  it("PDF de texto sem assinatura não é confundido com digitalização", () => {
+    const texto = Buffer.from(
+      "%PDF-1.4\n1 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n%EOF\n",
+      "latin1",
+    );
+    const v = verificarAssinatura(texto);
+    expect(v.temAssinatura).toBe(false);
+    expect(v.provavelEscaneado).toBe(false);
+    expect(v.problemas.join(" ")).toMatch(/sem assinatura/i);
+  });
+
   it("o veredito sempre manda validar o certificado no ITI", () => {
     const v = verificarAssinatura(pdfAssinado());
     expect(v.observacao).toMatch(/validar\.iti\.gov\.br/);
