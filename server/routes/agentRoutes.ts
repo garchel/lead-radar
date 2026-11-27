@@ -25,6 +25,8 @@ import {
 import { renderizarHtml } from "../services/contractHtml";
 import { rotulosDeSecoes } from "../services/secoesRotulos";
 import { verificarAssinatura } from "../services/contractSignature";
+import { assinafyConfigurado, criarSignatario, pedirAssinatura, subirDocumento } from "../services/assinafyService";
+import { gerarPdfDoContrato } from "../services/contractPdf";
 import {
   aceitesDoLead,
   deveOferecerAssinaturaExterna,
@@ -272,6 +274,78 @@ export function registerAgentRoutes(app: Express) {
       return res.json({ success: true, veredito });
     } catch (error: any) {
       return res.status(500).json({ success: false, error: error?.message || "Falha ao verificar a assinatura." });
+    }
+  });
+
+  /**
+   * Manda o contrato para assinatura no Assinafy e devolve o que foi criado.
+   *
+   * Sem PDF no corpo, o próprio servidor gera (blocos → HTML → Chrome headless).
+   * Sem a API key configurada, responde 409 dizendo exatamente o que falta — não
+   * finge que enviou.
+   */
+  app.post("/api/contracts/assinafy", async (req: Request, res: Response) => {
+    try {
+      if (!assinafyConfigurado()) {
+        return res.status(409).json({
+          success: false,
+          error: "Assinafy não configurado.",
+          falta: [
+            "Criar conta no Assinafy (plano grátis: 10 documentos/mês)",
+            "Gerar a API key em Configurações → API",
+            "Salvar assinafy_api_key e assinafy_account_id nas configurações do LeadRadar",
+          ],
+          alternativa: "Enquanto isso, o aceite por WhatsApp e o assinador do gov.br (assinador.iti.br) cobrem o caso.",
+        });
+      }
+
+      const leadId = String(req.body?.leadId || "");
+      if (!leadId) return res.status(400).json({ success: false, error: "Informe leadId." });
+      const lead = getLeadById(leadId);
+      if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
+
+      const email = String(req.body?.email || lead.email || "").trim();
+      if (!email) {
+        return res.status(422).json({
+          success: false,
+          error: "O Assinafy verifica a identidade por e-mail; informe o e-mail do cliente.",
+          conferirCom: "o cliente pode assinar pelo gov.br (assinador.iti.br), que não pede e-mail",
+        });
+      }
+
+      const montado = dadosDoContrato({ ...req.body, leadId, contratanteEmail: email });
+      if ("erro" in montado) return res.status(400).json({ success: false, error: montado.erro });
+
+      let pdf: Buffer;
+      if (req.body?.pdfBase64) {
+        pdf = Buffer.from(String(req.body.pdfBase64), "base64");
+        if (pdf.subarray(0, 5).toString("latin1") !== "%PDF-") {
+          return res.status(400).json({ success: false, error: "pdfBase64 não é um PDF." });
+        }
+      } else {
+        pdf = gerarPdfDoContrato(montado.dados, { marca: montado.policy.companyName });
+      }
+
+      const nomeArquivo = `contrato-${leadId}.pdf`;
+      const documentId = await subirDocumento(pdf, nomeArquivo);
+      const signerId = await criarSignatario({
+        nome: lead.name,
+        email,
+        whatsapp: lead.phone,
+        cpf: req.body?.cpf ? String(req.body.cpf) : undefined,
+      });
+      const assignment = await pedirAssinatura(documentId, signerId);
+
+      return res.json({
+        success: true,
+        documentId,
+        signerId,
+        assignment,
+        pdfBytes: pdf.length,
+        aviso: "O cliente recebe o e-mail com o código de verificação; o link também pode ser mandado no WhatsApp.",
+      });
+    } catch (error: any) {
+      return res.status(502).json({ success: false, error: error?.message || "Falha ao criar a assinatura no Assinafy." });
     }
   });
 
