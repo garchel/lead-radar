@@ -13,6 +13,7 @@ import { Express, Request, Response } from "express";
 import { getLeadById, getProjects, getSetting, setSetting, upsertLead } from "../store/db";
 import { buildLeadBriefing } from "../services/briefingService";
 import { contextoDaConversa } from "../services/conversationContextService";
+import { freioLigado } from "../services/outboundGuard";
 import {
   deliveryLabel,
   formatBRL,
@@ -156,6 +157,22 @@ export function registerAgentRoutes(app: Express) {
     const settings = saveWarmupSettings(body);
     const state = getWarmupState();
     return res.json({ success: true, settings, state, description: describeWarmup(state) });
+  });
+
+  /**
+   * Freio de mão dos envios: `{"on": true}` congela TODO envio de WhatsApp
+   * (webhook, agente, MCP, cadência) sem desligar a IA. É o botão de pânico para o
+   * caso de mensagem fixa saindo para várias pessoas.
+   */
+  app.put("/api/agent/freeze", (req: Request, res: Response) => {
+    const on = req.body?.on;
+    if (typeof on !== "boolean") return res.status(400).json({ success: false, error: "Informe `on` (true/false)." });
+    setSetting("automation_outbound_freeze", on ? "true" : "false");
+    return res.json({ success: true, frozen: on });
+  });
+
+  app.get("/api/agent/freeze", (_req: Request, res: Response) => {
+    return res.json({ success: true, frozen: freioLigado() });
   });
 
   app.put("/api/agent/settings", (req: Request, res: Response) => {
