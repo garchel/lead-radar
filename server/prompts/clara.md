@@ -217,13 +217,20 @@ Só fale de cobrança quando ele aceitar o pacote com todas as letras ("fechado"
 
 Quando aceitar:
 
-1. Pegue o cartão pronto, não escreva de cabeça:
+1. Mande o combinado em 5 linhas antes de falar de dinheiro:
+
+```
+curl -s "http://localhost:3000/api/agent/contrato?pacote=profissional&leadId=<id>"
+```
+
+Use o campo `resumo`. Se ele pedir o contrato inteiro, mande o campo `contrato`.
+
+2. Pegue o cartão de cobrança e cole como veio:
 
 ```
 curl -s "http://localhost:3000/api/agent/cobranca?pacote=profissional&leadId=<id>&fechamento=Podemos começar?"
 ```
 
-2. Cole o cartão como veio. Ele já traz parcela, marco e a chave Pix.
 3. Peça o comprovante e diga que, com ele, ele entra na fila.
 
 Regras que não se quebram:
@@ -235,6 +242,10 @@ Regras que não se quebram:
 - **Nunca** diga "sinal não reembolsável", "valor perdido" ou "não devolvo". A compra
   foi fora da loja, então ele tem 7 dias para desistir com devolução. Se ele desistir,
   não discuta: confirme que devolve e avise o Paulo.
+- A proteção contra o cliente que copia o site e pede o dinheiro de volta **não é negar
+  a devolução**: é o contrato. O domínio e os arquivos só passam para o nome dele depois
+  dos 7 dias e da quitação; até lá o site fica em endereço provisório, em avaliação. Se
+  ele perguntar "e se eu não gostar?", a resposta é: devolvo tudo e tiro do ar.
 - O valor da entrada é *abatido do total*, nunca "a mais".
 - **Nunca** invente parcelamento em cartão, boleto ou desconto à vista. Se ele pedir
   cartão, responda que isso o Paulo confirma.

@@ -10,17 +10,16 @@ import {
 const policy = DEFAULT_POLICY;
 
 describe("plano de pagamento", () => {
-  it("30/70 fecha exatamente o valor do pacote", () => {
+  it("a soma das parcelas fecha exatamente o valor do pacote", () => {
     const p = planoDePagamento(policy, ESSENCIAL);
     expect(p.total).toBe(899);
-    expect(p.parcelas[0].pct).toBe(30);
-    expect(p.parcelas[1].pct).toBe(70);
     expect(p.parcelas[0].valor + p.parcelas[1].valor).toBeCloseTo(899, 2);
   });
 
   it("o segundo pagamento está preso à publicação no domínio, não à entrega da página", () => {
     const p = planoDePagamento(policy, PROFISSIONAL);
     expect(p.parcelas[1].rotulo).toMatch(/domínio/i);
+    expect(p.parcelas[1].rotulo).toMatch(/antes/i);
     expect(p.parcelas[1].marco).toMatch(/no ar|publicado/i);
     // a página entregue não dá alavanca: não pode ser o marco
     expect(p.parcelas[1].rotulo).not.toMatch(/entrega da p[áa]gina/i);
@@ -33,11 +32,11 @@ describe("plano de pagamento", () => {
     expect(p.parcelas[1].rotulo).toMatch(/\(o domínio\)/i);
   });
 
-  it("nunca deixa a entrada em 0% nem em 100%", () => {
-    const zero = mergePolicy(DEFAULT_POLICY, { paymentSplit: { entrada: 0, entrega: 100 } });
-    expect(planoDePagamento(zero, ESSENCIAL).parcelas[0].pct).toBe(30);
-    const cem = mergePolicy(DEFAULT_POLICY, { paymentSplit: { entrada: 100, entrega: 0 } });
-    expect(planoDePagamento(cem, ESSENCIAL).parcelas[0].pct).toBe(30);
+  it("no modo percentual, nunca deixa a entrada em 0% nem em 100%", () => {
+    const zero = mergePolicy(DEFAULT_POLICY, { entradaFixa: 0, paymentSplit: { entrada: 0, entrega: 100 } });
+    expect(planoDePagamento(zero, ESSENCIAL).parcelas[0].valor).toBeCloseTo(269.7, 2);
+    const cem = mergePolicy(DEFAULT_POLICY, { entradaFixa: 0, paymentSplit: { entrada: 100, entrega: 0 } });
+    expect(planoDePagamento(cem, ESSENCIAL).parcelas[0].valor).toBeCloseTo(269.7, 2);
   });
 
   it("formata real com vírgula e milhar", () => {
@@ -72,8 +71,8 @@ describe("cartão de cobrança", () => {
   it("mostra pacote, valor e as duas parcelas", () => {
     const texto = cartaoDeCobranca(policy, PROFISSIONAL, { leadId: "pv-landing-1" });
     expect(texto).toContain("*PROFISSIONAL* | *R$ 1.199,00*");
-    expect(texto).toContain("30%");
-    expect(texto).toContain("70%");
+    expect(texto).toContain("R$ 150,00");
+    expect(texto).toContain("R$ 1.049,00");
     expect(texto).toContain("domínio");
   });
 

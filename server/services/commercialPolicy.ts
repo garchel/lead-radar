@@ -53,6 +53,21 @@ export interface CommercialPolicy {
    * mais que o valor em si.
    */
   paymentSplit: { entrada: number; entrega: number };
+  /**
+   * Entrada em REAIS, abatida do total. Quando > 0 tem prioridade sobre `paymentSplit`.
+   *
+   * Percentual assusta: 30% de R$ 899 são R$ 270 pedidos antes de ver nada. Um valor
+   * fixo e pequeno sinaliza compromisso sem virar barreira e serve de triagem — quem
+   * não topa R$ 150 não ia fechar de qualquer forma.
+   */
+  entradaFixa: number;
+  /**
+   * Dias de garantia após a publicação. O mínimo legal (CDC art. 49) é 7 para compra
+   * fora da loja; mais que isso é argumento de venda, não obrigação.
+   */
+  garantiaDias: number;
+  /** Manutenção mensal opcional. 0 = não oferecer. */
+  manutencaoMensal: number;
   /** Chave Pix real. Vazio = a Clara não passa chave e confirma com o Paulo. */
   pixKey: string;
   /** Chave fictícia para testar. Só é usada em lead de simulação, nunca em lead real. */
@@ -139,6 +154,9 @@ export const DEFAULT_POLICY: CommercialPolicy = {
   discountAllowed: false,
   payment: [],
   paymentSplit: { entrada: 30, entrega: 70 },
+  entradaFixa: 150,
+  garantiaDias: 7,
+  manutencaoMensal: 0,
   pixKey: "",
   pixKeyTeste: "vertice-teste@exemplo.com",
   pixHolder: "Vértice Páginas Web",
@@ -175,6 +193,9 @@ export function mergePolicy(base: CommercialPolicy, patch: any): CommercialPolic
           },
         }
       : {}),
+    ...(Number.isFinite(Number(patch.entradaFixa)) ? { entradaFixa: Math.max(0, Number(patch.entradaFixa)) } : {}),
+    ...(Number.isFinite(Number(patch.garantiaDias)) ? { garantiaDias: Math.max(0, Math.round(Number(patch.garantiaDias))) } : {}),
+    ...(Number.isFinite(Number(patch.manutencaoMensal)) ? { manutencaoMensal: Math.max(0, Number(patch.manutencaoMensal)) } : {}),
     ...(typeof patch.pixKey === "string" ? { pixKey: patch.pixKey.trim() } : {}),
     ...(typeof patch.pixKeyTeste === "string" ? { pixKeyTeste: patch.pixKeyTeste.trim() } : {}),
     ...(typeof patch.pixHolder === "string" ? { pixHolder: patch.pixHolder.trim() } : {}),

@@ -54,14 +54,25 @@ function percentualDeEntrada(policy: CommercialPolicy): number {
   return Math.round(bruto);
 }
 
-export function planoDePagamento(policy: CommercialPolicy, pacote: CommercialPackage): PlanoDePagamento {
-  const entradaPct = percentualDeEntrada(policy);
-  const entregaPct = 100 - entradaPct;
-  const total = centavos(pacote.price);
+/**
+ * Quanto entra na aprovação, em centavos.
+ *
+ * `entradaFixa` (R$ 150) tem prioridade: valor redondo e pequeno triagem melhor que
+ * percentual. Nunca passa de metade do pacote — entrada que vira o grosso do preço
+ * deixa de ser sinal e vira barreira.
+ */
+function entradaEmCentavos(policy: CommercialPolicy, totalCent: number): number {
+  const fixa = Math.round(Number(policy.entradaFixa || 0) * 100);
+  if (fixa > 0) return Math.min(fixa, Math.floor(totalCent / 2));
+  return Math.floor((totalCent * percentualDeEntrada(policy)) / 100);
+}
 
-  // A entrada arredonda para baixo em centavos inteiros; o resto fecha o total exato.
-  const entrada = Math.floor((total * entradaPct) / 100);
+export function planoDePagamento(policy: CommercialPolicy, pacote: CommercialPackage): PlanoDePagamento {
+  const total = centavos(pacote.price);
+  const entrada = entradaEmCentavos(policy, total);
   const restante = total - entrada;
+  const entradaPct = Math.round((entrada / total) * 100);
+  const entregaPct = 100 - entradaPct;
 
   return {
     pacote: pacote.name,
@@ -69,7 +80,7 @@ export function planoDePagamento(policy: CommercialPolicy, pacote: CommercialPac
     parcelas: [
       {
         rotulo: "na aprovação",
-        marco: "para reservar a sua vaga na fila",
+        marco: "reserva a vaga na fila; o valor é abatido do total e devolvido se você desistir antes de eu começar",
         pct: entradaPct,
         valor: deCentavos(entrada),
       },
@@ -77,7 +88,7 @@ export function planoDePagamento(policy: CommercialPolicy, pacote: CommercialPac
         // Quem compra página não sabe o que é "domínio". O rótulo diz, em palavra de
         // gente: o site pronto, no ar, no endereço dele. O termo técnico fica entre
         // parênteses para quem já conhece reconhecer.
-        rotulo: "quando o site estiver pronto no ar, no seu endereço (o domínio)",
+        rotulo: "quando o site estiver pronto no ar, antes de ir para o seu endereço (o domínio)",
         marco: "quando o site estiver publicado no endereço próprio dele, e não no link provisório da Vértice",
         pct: entregaPct,
         valor: deCentavos(restante),
@@ -109,14 +120,21 @@ export function cartaoDeCobranca(
 ): string {
   const plano = planoDePagamento(policy, pacote);
   const { chave, teste } = chavePixPara(policy, opts.leadId);
+  const [entrada, saldo] = plano.parcelas;
   const linhas: string[] = [];
 
   linhas.push(`*${pacote.name.toUpperCase()}* | *${brl(pacote.price)}*`);
   linhas.push("");
-  linhas.push(`• *${plano.parcelas[0].pct}%* ${plano.parcelas[0].rotulo} — ${brl(plano.parcelas[0].valor)}`);
-  linhas.push(`• *${plano.parcelas[1].pct}%* ${plano.parcelas[1].rotulo} — ${brl(plano.parcelas[1].valor)}`);
-  linhas.push(`• o site entra no ar em ${policy.deliveryDays[0]} a ${policy.deliveryDays[1]} dias úteis`);
+  linhas.push(`• *${brl(entrada.valor)}* na aprovação, abatido do total`);
+  linhas.push(`• *${brl(saldo.valor)}* quando o site estiver pronto no ar, antes de ir para o seu domínio`);
+  linhas.push(`• o site fica pronto em ${policy.deliveryDays[0]} a ${policy.deliveryDays[1]} dias úteis`);
   linhas.push(`• ${pacote.revisions} rodada${pacote.revisions > 1 ? "s" : ""} de ajuste incluída${pacote.revisions > 1 ? "s" : ""}`);
+  if (policy.garantiaDias > 0) {
+    linhas.push(`• *${policy.garantiaDias} dias de garantia* depois de publicado: não gostou, devolvo tudo e tiro do ar`);
+  }
+  if (policy.manutencaoMensal > 0) {
+    linhas.push(`• manutenção opcional: *${brl(policy.manutencaoMensal)}*/mês, sem fidelidade`);
+  }
 
   if (chave) {
     linhas.push("");

@@ -16,6 +16,7 @@ import { contextoDaConversa } from "../services/conversationContextService";
 import { freioLigado } from "../services/outboundGuard";
 import { cartaoDePacotes, cartaoDeSecoes } from "../services/offerCard";
 import { cartaoDeCobranca, chavePixPara, planoDePagamento } from "../services/paymentPlan";
+import { contratoDeUmaPagina, resumoDoContrato } from "../services/contractService";
 import {
   deliveryLabel,
   formatBRL,
@@ -113,6 +114,39 @@ export function registerAgentRoutes(app: Express) {
       pacotes: cartaoDePacotes(policy, { secoes, extras, fechamento }),
       secoes: secoes.length ? cartaoDeSecoes({ nicho, essenciais: secoes, diferenciais: extras, fechamento }) : null,
     });
+  });
+
+  /**
+   * Contrato de uma página, pronto para copiar e mandar no WhatsApp.
+   *
+   * Texto, não PDF: o dono lê no celular em dois minutos e responde "aceito". O PDF
+   * entra só se ele pedir para assinar.
+   */
+  app.get("/api/agent/contrato", (req: Request, res: Response) => {
+    try {
+      const policy = getCommercialPolicy();
+      const id = String(req.query.pacote || "").toLowerCase();
+      const pacote = policy.packages.find((p) => p.id === id || p.name.toLowerCase() === id);
+      if (!pacote) {
+        return res.status(400).json({ success: false, error: "Informe pacote=essencial ou pacote=profissional." });
+      }
+      const leadId = typeof req.query.leadId === "string" ? req.query.leadId : undefined;
+      const lead = leadId ? getLeadById(leadId) : undefined;
+      return res.json({
+        success: true,
+        contrato: contratoDeUmaPagina({
+          contratante: lead?.name || "",
+          contratada: policy.companyName,
+          pacote,
+          policy,
+          leadId,
+          data: new Date(),
+        }),
+        resumo: resumoDoContrato(policy, pacote, leadId),
+      });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao montar o contrato." });
+    }
   });
 
   /**
