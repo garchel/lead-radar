@@ -3,7 +3,9 @@ import { ESSENCIAL, PROFISSIONAL, DEFAULT_POLICY } from "../server/services/comm
 import {
   aceitesDoLead,
   comprovanteDeAceite,
+  deveOferecerAssinaturaExterna,
   garantirTabelaDeAceites,
+  tentativasDoAceite,
   conferirFrase,
   fraseDeAceite,
   normalizarFala,
@@ -128,6 +130,40 @@ describe("registro do aceite", () => {
     expect(c).toContain("+55 61 98888-7777");
     expect(c).toContain("14.063/2020");
     expect(c).toContain("2.200-2/2001");
+  });
+});
+
+describe("é difícil? oferece assinatura externa", () => {
+  const LEAD2 = "lead-tentativas";
+  const frase = fraseDeAceite(POLICY, ESSENCIAL).frase;
+  const errar = () => registrarAceite({ leadId: LEAD2, policy: POLICY, pacote: ESSENCIAL, mensagem: "ok" });
+
+  beforeEach(() => {
+    // zera o contador do lead de teste
+    registrarAceite({ leadId: LEAD2, policy: POLICY, pacote: ESSENCIAL, mensagem: frase });
+  });
+
+  it("primeiro erro: só repete a frase, sem oferecer nada", () => {
+    const r = errar();
+    expect(r.registrado).toBe(false);
+    expect(r.erros).toBe(1);
+    expect(r.oferecerAssinaturaExterna).toBe(false);
+  });
+
+  it("segundo erro: passa a oferecer assinatura fora do WhatsApp", () => {
+    errar();
+    const r = errar();
+    expect(r.erros).toBe(2);
+    expect(r.oferecerAssinaturaExterna).toBe(true);
+    expect(deveOferecerAssinaturaExterna(LEAD2)).toBe(true);
+  });
+
+  it("acertar zera a contagem", () => {
+    errar();
+    errar();
+    const ok = registrarAceite({ leadId: LEAD2, policy: POLICY, pacote: ESSENCIAL, mensagem: frase });
+    expect(ok.registrado).toBe(true);
+    expect(tentativasDoAceite(LEAD2).erros).toBe(0);
   });
 });
 

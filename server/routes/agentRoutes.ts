@@ -25,7 +25,13 @@ import {
 import { renderizarHtml } from "../services/contractHtml";
 import { rotulosDeSecoes } from "../services/secoesRotulos";
 import { verificarAssinatura } from "../services/contractSignature";
-import { aceitesDoLead, fraseDeAceite, registrarAceite } from "../services/aceiteService";
+import {
+  aceitesDoLead,
+  deveOferecerAssinaturaExterna,
+  fraseDeAceite,
+  registrarAceite,
+  tentativasDoAceite,
+} from "../services/aceiteService";
 import {
   deliveryLabel,
   formatBRL,
@@ -301,6 +307,8 @@ export function registerAgentRoutes(app: Express) {
           success: false,
           registrado: false,
           faltando: r.faltando,
+          erros: r.erros,
+          oferecerAssinaturaExterna: r.oferecerAssinaturaExterna,
           frase: fraseDeAceite(policy, pacote).frase,
           error: "O aceite não confere com a frase combinada.",
         });
@@ -318,11 +326,20 @@ export function registerAgentRoutes(app: Express) {
       const leadId = String(req.params.leadId || "");
       const pacoteId = String(req.query.pacote || "").toLowerCase();
       const pacote = policy.packages.find((p) => p.id === pacoteId || p.name.toLowerCase() === pacoteId) || policy.packages[0];
+      const t = tentativasDoAceite(leadId);
       return res.json({
         success: true,
         frase: fraseDeAceite(policy, pacote).frase,
         pacotes: policy.packages.map((p) => ({ id: p.id, nome: p.name, frase: fraseDeAceite(policy, p).frase })),
         aceites: aceitesDoLead(leadId),
+        erros: t.erros,
+        oferecerAssinaturaExterna: deveOferecerAssinaturaExterna(leadId),
+        assinaturaExterna: {
+          // Enquanto não houver conta no Assinafy, o caminho é o assinador do gov.br:
+          // gratuito para o cliente e válido como assinatura avançada.
+          url: String(req.query.assinatura || "https://assinador.iti.br"),
+          texto: "Se você preferir, pode assinar o contrato por aqui.",
+        },
       });
     } catch (error: any) {
       return res.status(500).json({ success: false, error: error?.message || "Falha ao ler os aceites." });

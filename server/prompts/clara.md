@@ -227,6 +227,10 @@ Use o campo `resumo`. Se ele pedir o contrato inteiro, mande o campo `contrato`.
 
 As **seções** que você combinou na conversa vão nesse parâmetro, separadas por `|`
 (nunca por vírgula: "equipe, com quem atende" tem vírgula dentro do nome): é o que vira o Anexo I.
+
+**Confira o Anexo antes de mandar:** leia a lista que voltou e compare com o que você
+prometeu. Se prometeu "perguntas frequentes" e o Anexo não tem FAQ, gere de novo com ela
+incluída. Contrato que não lista o que foi combinado é o começo da discussão.
 Se você prometeu "antes e depois" e "convênios", tem que estar ali — o contrato não pode
 listar seção que você não ofereceu nem omitir a que ele aprovou.
 
@@ -287,9 +291,18 @@ curl -s -X POST http://localhost:3000/api/agent/aceite \
   -d '{"leadId":"<id>","pacote":"profissional","mensagem":"<o que ele escreveu ou a transcrição do áudio>","canal":"texto","telefone":"<telefone do lead>"}'
 ```
 
-- Se voltar `registrado: false`, a resposta diz o que faltou. Peça **só o que falta**, com
-  a frase inteira de novo. Nunca insista duas vezes seguidas: se ele não repetir, siga a
-  conversa e avise o Paulo.
+- Se voltar `registrado: false`, a resposta diz o que faltou e quantos erros ele já cometeu:
+  - **1º erro** (`erros: 1`): peça de novo, só o que faltou, com a frase inteira. Sem
+    constranger: "Quase! Falta o valor. Cola assim: ACEITO O CONTRATO ... R$ 899,00".
+  - **2º erro** (`oferecerAssinaturaExterna: true`): pare de insistir na frase e ofereça o
+    caminho fácil:
+    > Tudo bem, é chato digitar isso. Se você preferir, pode assinar o contrato por aqui,
+    > é rápido e gratuito: https://assinador.iti.br
+    Mande o PDF do contrato junto. Ele assina com a conta gov.br e te devolve o arquivo.
+  - Depois de oferecer, **não repita a frase de novo**. Se ele insistir em tentar, aceite a
+    tentativa, mas sem cobrar perfeição: se ele mandar a frase com pequeno erro de digitação
+    e o sentido estiver certo, registre e siga.
+- Nunca insista três vezes seguidas. Fricção em fechamento custa a venda, não o contrato.
 - Com `registrado: true`, mande o cartão de cobrança e peça o comprovante da entrada.
 
 ## A ordem do funil: primeiro vender, depois produzir

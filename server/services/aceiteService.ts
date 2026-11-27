@@ -108,6 +108,40 @@ export interface RegistroDeAceite {
   aceitoEm: string;
 }
 
+/**
+ * Quantas vezes o cliente errou a frase, por lead.
+ *
+ * Serve para decidir quando oferecer assinatura externa: insistir duas vezes é ensinar;
+ * a partir da segunda falha é fricção, e fricção em fechamento custa a venda.
+ */
+interface Tentativas {
+  erros: number;
+  ultimaEm: string | null;
+}
+
+const tentativasPorLead = new Map<string, Tentativas>();
+const ERROS_ATE_OFERECER = 2;
+
+export function tentativasDoAceite(leadId: string): Tentativas {
+  return tentativasPorLead.get(leadId) || { erros: 0, ultimaEm: null };
+}
+
+/** Já errou o suficiente para valer a pena oferecer assinatura fora do WhatsApp. */
+export function deveOferecerAssinaturaExterna(leadId: string): boolean {
+  return tentativasDoAceite(leadId).erros >= ERROS_ATE_OFERECER;
+}
+
+function marcarErro(leadId: string): Tentativas {
+  const atual = tentativasDoAceite(leadId);
+  const novo = { erros: atual.erros + 1, ultimaEm: new Date().toISOString() };
+  tentativasPorLead.set(leadId, novo);
+  return novo;
+}
+
+function limparErros(leadId: string): void {
+  tentativasPorLead.delete(leadId);
+}
+
 let tabelaPronta = false;
 
 export function garantirTabelaDeAceites(): void {
@@ -145,14 +179,25 @@ export interface EntradaAceite {
 export function registrarAceite(entrada: EntradaAceite): {
   registrado: boolean;
   faltando: string[];
+  /** Quantos erros seguidos este lead já cometeu. */
+  erros?: number;
+  /** A partir do segundo erro: ofereça a assinatura fora do WhatsApp. */
+  oferecerAssinaturaExterna?: boolean;
   registro?: RegistroDeAceite;
   comprovante?: string;
 } {
   const { leadId, policy, pacote, mensagem } = entrada;
   const conferencia = conferirFrase(mensagem, policy, pacote);
   if (!conferencia.confere) {
-    return { registrado: false, faltando: conferencia.faltando };
+    const t = marcarErro(leadId);
+    return {
+      registrado: false,
+      faltando: conferencia.faltando,
+      erros: t.erros,
+      oferecerAssinaturaExterna: t.erros >= ERROS_ATE_OFERECER,
+    };
   }
+  limparErros(leadId);
 
   garantirTabelaDeAceites();
   const lead = getLeadById(leadId);
