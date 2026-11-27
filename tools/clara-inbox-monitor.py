@@ -112,6 +112,45 @@ def nicho_do_lead(category: str):
     return None
 
 
+
+SECOES = re.compile(r"\b(secoes|servicos|equipe|galeria|agendamento|depoimentos|faq|horario|endereco)\b", re.IGNORECASE)
+PRECO = re.compile(r"(R\$\s*899|899|1\.?199)")
+ACEITE = re.compile(r"\b(fechado|fechou|vamos fechar|quero contratar|pode fazer|aceito|combinado|bora|vamos nessa)\b", re.IGNORECASE)
+DOR = re.compile(r"\b(indicacao|google|instagram|whatsapp|cliente|chega|procura)\b", re.IGNORECASE)
+
+ACOES = {
+    1: ("entender a dor", "Perguntar como o cliente chega hoje (indicacao, Google, Instagram) e conectar com o que ele responder."),
+    2: ("o que a pagina tera", "Mostrar, com as secoes do nicho dele, o que uma pagina que converte precisa ter. Sem preco ainda."),
+    3: ("pacotes e valor", "Dizer o preco: Essencial R$ 899 e Profissional R$ 1.199, com o que muda entre os dois."),
+    4: ("fechar", "Tirar a duvida que ficou e propor o proximo passo comercial (pacote, prazo, pagamento com o Paulo, contrato e nota)."),
+    5: ("producao", "Combinar o que produzir: qual servico destacar, fotos, textos e aprovacao."),
+}
+
+
+def etapa_do_funil(linhas, pagina_entregue: bool) -> dict:
+    """Onde a venda esta, medido pelo que ja foi dito — nao adivinhado pelo modelo."""
+    da_clara = []
+    do_lead = []
+    for l in linhas:
+        texto = _sem_acento(str(l["message"] or ""))
+        texto = " ".join(texto.split())
+        if l["direction"] == "inbound":
+            do_lead.append(texto)
+        else:
+            da_clara.append(texto)
+
+    # pagina ja entregue prova interesse: nao se volta a perguntar como chega cliente
+    dor = bool(pagina_entregue) or any(DOR.search(t) for t in do_lead)
+    secoes = any(SECOES.search(t) for t in da_clara)
+    preco = any(PRECO.search(t) for t in da_clara)
+    aceite = bool(preco and any(ACEITE.search(t) for t in do_lead))
+
+    cumpridas = [n for n, ok in ((1, dor), (2, secoes), (3, preco), (4, aceite)) if ok]
+    numero = 5 if aceite else 4 if preco else 3 if secoes else 2 if dor else 1
+    nome, acao = ACOES[numero]
+    return {"numero": numero, "nome": nome, "proxima_acao": acao, "cumpridas": cumpridas}
+
+
 def clara_pausada() -> bool:
     """O dono pode calar a Clara pelo WhatsApp (`/pausar`)."""
     try:
@@ -231,6 +270,7 @@ def contexto(lead_id: str) -> dict:
 
     return {
         "fallback_falou": any((l["hook"] or "").startswith("fallback") for l in linhas),
+        "etapa": etapa_do_funil(linhas, bool(entregas)),
         "aguardando_resposta": aguardando,
         "travada_por_aviso": travada,
         "pagina_entregue": bool(entregas),

@@ -1,3 +1,4 @@
+import { contextoDaConversa } from "./conversationContextService";
 import { telefoneDeEnvio } from "./decisionMakerService";
 import { contactLead, ContactOptions, ContactResult, sendEmail, sendWhatsApp } from "./contactService";
 import {
@@ -201,6 +202,21 @@ export async function dispatchLeadContact(
  */
 const enviandoPorLead = new Set<string>();
 
+/** Mesma regra de memória: aviso e fallback não fecham o turno. */
+function turnoAbertoParaResposta(leadId: string): boolean {
+  try {
+    const ctx = contextoDaConversa(leadId);
+    if (ctx.turnos.length > 0) return ctx.fatos.aguardandoResposta;
+    // Sem histórico: quem nunca foi contatado está com o turno aberto (primeiro envio);
+    // quem já foi contatado antes não tem conversa para responder.
+    const lead = getLeadById(leadId);
+    return !lead?.lastContactAt;
+  } catch {
+    const h = getCommunicationsByLead(leadId);
+    return h[0]?.direction === "inbound";
+  }
+}
+
 export async function dispatchLeadReply(
   lead: StoredLead,
   options: ContactOptions = {}
@@ -247,12 +263,13 @@ async function dispatchLeadReplyInterno(
   const history = getCommunicationsByLead(lead.id);
   // A conversa está aberta quando a ÚLTIMA mensagem do lead foi recebida.
   const latest = history[0];
-  const hasOpenReply = latest?.direction === "inbound";
+  const hasOpenReply = turnoAbertoParaResposta(lead.id);
 
   // Duas nossas seguidas quebram a conversa. O chamador pode ter lido o estado
   // antes de outra rota responder (foi o que gerou mensagem dupla na simulação),
   // então quem decide é o banco AGORA, não o `already_answered` do monitor.
-  if (latest?.direction === "outbound" && !options.force) {
+  const turnoAberto = turnoAbertoParaResposta(lead.id);
+  if (!turnoAberto && !options.force) {
     return {
       channel,
       status: "failed",

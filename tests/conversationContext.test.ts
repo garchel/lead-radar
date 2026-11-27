@@ -4,6 +4,7 @@ import {
   contextoDaConversa,
   deveEntregarPagina,
   ehElogio,
+  etapaDoFunil,
   pedidoDeLink,
 } from "../server/services/conversationContextService";
 import type { StoredLead } from "../server/store/types";
@@ -182,6 +183,56 @@ describe("memória da conversa", () => {
       expect(ctx.fatos.vezesEntregue).toBe(0);
       expect(ctx.fatos.elogiouDepoisDeVer).toBe(false);
       expect(ctx.texto).toContain("ainda NÃO foi entregue");
+    });
+  });
+
+  describe("etapa do funil", () => {
+    const base = {
+      paginaEntregue: false,
+      paginaUrl: null,
+      entregueEm: null,
+      vezesEntregue: 0,
+      respostasDoLead: 0,
+      elogiouDepoisDeVer: false,
+      aguardandoResposta: true,
+      travadaPorAviso: false,
+      fallbackFalou: false,
+      silencioHoras: null,
+    };
+    const turno = (de: "lead" | "clara", texto: string) => ({ de, texto, em: new Date().toISOString(), hook: null, intent: null });
+
+    it("sem nada dito: etapa 1", () => {
+      expect(etapaDoFunil([], base).numero).toBe(1);
+    });
+
+    it("página entregue já conta como dor entendida: etapa 2", () => {
+      const e = etapaDoFunil([turno("clara", "Ficou pronto! olha a página")], { ...base, paginaEntregue: true, vezesEntregue: 1 });
+      expect(e.numero).toBe(2);
+      expect(e.nome).toContain("página");
+    });
+
+    it("seções apresentadas: etapa 3 (preço)", () => {
+      const e = etapaDoFunil([turno("clara", "A página tem serviços, equipe e galeria dos cortes")], { ...base, paginaEntregue: true });
+      expect(e.numero).toBe(3);
+      expect(e.proximaAcao).toContain("899");
+    });
+
+    it("preço dado: etapa 4 (fechar)", () => {
+      const e = etapaDoFunil([turno("clara", "O Essencial fica R$ 899 e o Profissional R$ 1.199")], { ...base, paginaEntregue: true });
+      expect(e.numero).toBe(4);
+    });
+
+    it("aceite depois do preço: etapa 5 (produção)", () => {
+      const e = etapaDoFunil(
+        [turno("clara", "O Essencial fica R$ 899"), turno("lead", "fechado, pode fazer")],
+        { ...base, paginaEntregue: true },
+      );
+      expect(e.numero).toBe(5);
+    });
+
+    it("nunca pula: preço dado sem seções não inventa etapa 5", () => {
+      const e = etapaDoFunil([turno("clara", "fica R$ 899")], { ...base, paginaEntregue: true });
+      expect(e.numero).toBe(4);
     });
   });
 });

@@ -148,6 +148,15 @@ Ele nunca ouviu preço, nunca ouviu o que a página teria, e já foi convidado a
 conteúdo de um site que ainda não comprou. Isso mata a venda: produção se combina
 depois do sim, não antes.
 
+**A etapa vem CALCULADA no contexto** (`etapa.numero`, `etapa.nome`, `etapa.proxima_acao`).
+Ela é medida pelo que já foi dito na conversa, não pela sua impressão. Faça **somente**
+o `proxima_acao` da etapa atual. Não pule, não adiante a seguinte, não combine duas.
+
+Se `etapa.numero` for 2, você ainda não falou preço. Se for 3, o preço é o assunto. Se
+for 4, não volte a apresentar seções. Se for 5, o cliente já aceitou e aí sim se fala de
+produção. Quando o cliente tentar pular ("quanto custa?"), responda a pergunta dele no
+preço — isso AVANÇA a etapa, não quebra a ordem.
+
 Respeite esta ordem. Cada etapa só abre quando a anterior foi respondida.
 
 **1. Entender e doer (o que o site resolve).**

@@ -46,6 +46,7 @@ export type FatosDaConversa = {
 export type ContextoDaConversa = {
   turnos: Turno[];
   fatos: FatosDaConversa;
+  etapa: EtapaDoFunil;
   /** Bloco pronto para o prompt do agente. */
   texto: string;
 };
@@ -91,6 +92,86 @@ export function ehElogio(texto: string): boolean {
   );
 }
 
+
+/* --------------------------------------------------------------- etapa do funil */
+
+export type EtapaDoFunil = {
+  numero: number;
+  nome: string;
+  /** O que fazer AGORA, e só isso. */
+  proximaAcao: string;
+  /** Etapas já cumpridas, na ordem. */
+  cumpridas: number[];
+};
+
+const SECOES = /\b(secoes|seções|servicos|serviços|equipe|galeria|agendamento|depoimentos|faq|horario|horário|endereco|endereço)\b/i;
+const PRECO = /(R\$\s*899|R\$\s*1\.?199|899|1\.?199)/;
+const ACEITE = /\b(fechado|fechou|vamos fechar|quero contratar|pode fazer|aceito|combinado|bora|vamos nessa)\b/i;
+const DOR = /\b(indicacao|indicação|google|instagram|instagram|whatsapp|cliente|chega|procura)\b/i;
+
+/**
+ * Onde a venda está — calculada da conversa, não adivinhada pelo modelo.
+ *
+ * O modelo pulava etapas porque ninguém dizia em qual ele estava: a mesma mensagem
+ * servia para "apresentar o que a página tem" e para "decidir o que produzir". Aqui a
+ * etapa é medida pelo que já foi DITO, e o prompt recebe uma única instrução: a próxima.
+ */
+export function etapaDoFunil(turnos: Turno[], fatos: FatosDaConversa): EtapaDoFunil {
+  const falasDaClara = turnos.filter((t) => t.de === "clara").map((t) => t.texto);
+  const falasDoLead = turnos.filter((t) => t.de === "lead").map((t) => t.texto);
+
+  // Página já entregue prova interesse: não se volta a perguntar "como chega cliente hoje".
+  const dorExplorada = fatos.paginaEntregue || falasDoLead.some((t) => DOR.test(t));
+  const secoesApresentadas = falasDaClara.some((t) => SECOES.test(t));
+  const precoDado = falasDaClara.some((t) => PRECO.test(t));
+  const aceitou = precoDado && falasDoLead.some((t) => ACEITE.test(t));
+
+  const cumpridas: number[] = [];
+  if (dorExplorada) cumpridas.push(1);
+  if (secoesApresentadas) cumpridas.push(2);
+  if (precoDado) cumpridas.push(3);
+  if (aceitou) cumpridas.push(4);
+
+  if (aceitou) {
+    return {
+      numero: 5,
+      nome: "produção",
+      proximaAcao: "Combinar o que produzir: qual serviço destacar, fotos, textos e aprovação. Aqui sim entra conteúdo.",
+      cumpridas,
+    };
+  }
+  if (precoDado) {
+    return {
+      numero: 4,
+      nome: "fechar",
+      proximaAcao: "Tirar a dúvida que ficou e propor o próximo passo comercial (qual pacote, prazo, pagamento com o Paulo, contrato e nota).",
+      cumpridas,
+    };
+  }
+  if (secoesApresentadas) {
+    return {
+      numero: 3,
+      nome: "pacotes e valor",
+      proximaAcao: "Dizer o preço: Essencial R$ 899 e Profissional R$ 1.199, com o que muda entre os dois.",
+      cumpridas,
+    };
+  }
+  if (dorExplorada) {
+    return {
+      numero: 2,
+      nome: "o que a página terá",
+      proximaAcao: "Mostrar, com as seções do nicho dele, o que uma página que converte precisa ter. Sem preço ainda.",
+      cumpridas,
+    };
+  }
+  return {
+    numero: 1,
+    nome: "entender a dor",
+    proximaAcao: "Perguntar como o cliente chega hoje (indicação, Google, Instagram) e conectar com o que ele responder.",
+    cumpridas,
+  };
+}
+
 function horasDesde(iso: string | null): number | null {
   if (!iso) return null;
   const ms = Date.now() - new Date(iso).getTime();
@@ -107,11 +188,11 @@ function horasDesde(iso: string | null): number | null {
  */
 export function contextoDaConversa(leadId: string, opts: { limite?: number } = {}): ContextoDaConversa {
   const limite = opts.limite ?? 12;
-  // getCommunicationsByLead devolve DESC (mais nova primeiro). A conversa é lida de
-  // trás para frente: sem reordenar, "a última mensagem" viraria a primeira da thread.
-  const todas = [...(getCommunicationsByLead(leadId) || [])].sort(
-    (a: any, b: any) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime(),
-  );
+  // getCommunicationsByLead jé vem ordenado (created_at DESC, rowid DESC) — o rowid
+  // desempata mensagens do mesmo milissegundo. Reordenar só por createdAt embaralhava
+  // esse empate e fazia "a última mensagem" ser a mais antiga.
+  const desc = getCommunicationsByLead(leadId) || [];
+  const todas = [...desc].reverse();
 
   const turnos: Turno[] = todas.map((c: any) => ({
     de: c.direction === "inbound" ? "lead" : "clara",
@@ -201,14 +282,16 @@ export function contextoDaConversa(leadId: string, opts: { limite?: number } = {
     })
     .join("\n");
 
+  const etapa = etapaDoFunil(turnos, fatos);
   const texto = [
     "CONTEXTO REAL DA CONVERSA (leia antes de escrever, não repita o que já foi feito):",
     ...linhas.map((l) => `- ${l}`),
+    `- ETAPA DO FUNIL: ${etapa.numero}/5 (${etapa.nome}). Faça SÓ isto agora: ${etapa.proximaAcao}`,
     "",
     transcricao ? `Últimas mensagens:\n${transcricao}` : "Sem histórico anterior.",
   ].join("\n");
 
-  return { turnos, fatos, texto };
+  return { turnos, fatos, etapa, texto };
 }
 
 /**
