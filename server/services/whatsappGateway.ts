@@ -46,6 +46,36 @@ export function isGatewayConfigured(): boolean {
   return getGatewayConfig() !== null;
 }
 
+/**
+ * Freio de última instância, no único ponto que fala com a rede.
+ *
+ * Todas as travas anteriores ficam no caminho da conversa (deliverWhatsApp). Quem
+ * chama `sendGatewayText` direto — alerta do dono, bot, MCP — passava por fora delas.
+ * Aqui não tem como passar por fora: ou a chamada sai daqui, ou não sai.
+ */
+const enviosRecentes: number[] = [];
+const JANELA_MS = 60_000;
+const TETO_POR_MINUTO = Number(process.env.WHATSAPP_TETO_POR_MINUTO || 20);
+
+function freioDeSaida(path: string): void {
+  // 1) Teste sem stub de rede nunca fala com o gateway real.
+  const f: any = (globalThis as any).fetch;
+  const stubado = Boolean(f && (f._isMockFunction || f.__vitest_mock || f.mock));
+  const emTeste = Boolean(process.env.VITEST) || process.env.NODE_ENV === "test";
+  if (emTeste && !stubado) {
+    throw new GatewayError("Ambiente de teste sem stub de rede: chamada ao gateway bloqueada.");
+  }
+  // 2) Rajada global: qualquer laço que escape das outras travas para aqui.
+  if (!/\/message\/send/.test(path)) return;
+  const agora = Date.now();
+  while (enviosRecentes.length && agora - enviosRecentes[0] > JANELA_MS) enviosRecentes.shift();
+  if (enviosRecentes.length >= TETO_POR_MINUTO) {
+    console.warn(`[guarda] teto de ${TETO_POR_MINUTO} envios/minuto atingido — chamada bloqueada`);
+    throw new GatewayError(`Teto de ${TETO_POR_MINUTO} envios por minuto atingido: envio bloqueado por segurança.`);
+  }
+  enviosRecentes.push(agora);
+}
+
 const GATEWAY_TIMEOUT_MS = Number(
   process.env.WHATSMIAU_FETCH_TIMEOUT_MS || process.env.WHATSAPP_FETCH_TIMEOUT_MS || 15000
 );
@@ -55,6 +85,8 @@ export async function gatewayRequest<T = any>(
   path: string,
   init: { method?: string; body?: unknown } = {}
 ): Promise<T> {
+  freioDeSaida(path);
+
   const config = getGatewayConfig();
   if (!config) {
     throw new GatewayError(
