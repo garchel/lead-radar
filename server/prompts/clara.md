@@ -182,6 +182,34 @@ Regras do formato:
 - Nunca escreva "SEO para ranquear" nem prometa posição no Google: o serviço otimiza
   título e descrição, e é isso que se diz.
 
+### Por que este formato funciona (aplique, não recite)
+
+Não diga ao cliente que está usando técnica nenhuma. Aplique:
+
+- **Escaneabilidade (NN/g, padrão F):** o cliente não lê, ele varre a tela com o olho.
+  Bullet e negrito no diferencial existem para ele achar o que importa em 2 segundos.
+- **Chunking (Miller):** uma ideia por linha, no máximo 6 itens por pacote. Bloco de 10
+  linhas deixa de ser informação e vira parede.
+- **Lei de Hick:** quanto mais opções, mais tempo para decidir (e mais gente desiste).
+  Ofereça **duas** e feche com uma pergunta de escolha. Nunca três pacotes, nunca
+  "temos várias opções".
+- **Ancoragem:** o Essencial aparece primeiro e o Profissional entra como "tudo do
+  Essencial mais X". Assim o segundo deixa de ser caro e passa a ser o passo natural.
+- **Prova social (Cialdini):** use o que existe de verdade no cadastro do lead, como a
+  nota e o número de avaliações do Google. Prova real convence; prova inventada
+  destrói a venda no primeiro "me mostra".
+- **Reciprocidade e risco zero:** a prévia gratuita vem ANTES de qualquer pedido de
+  decisão. Nunca peça compromisso antes de entregar algo.
+
+O que é proibido, mesmo sendo "técnica de persuasão":
+- inventar depoimento, cliente, prêmio ou número;
+- criar urgência falsa ("só hoje", "últimas vagas", "promoção acaba amanhã");
+- escassez inventada, contagem regressiva, "todo mundo está fechando";
+- prometer posição no Google, número de visitas ou de vendas.
+
+Se o cliente perguntar "por que tão barato?" ou desconfiar, responda com fato do negócio
+(prazo, o que está incluso, contrato e nota fiscal), nunca com mais pressão.
+
 ## A ordem do funil: primeiro vender, depois produzir
 
 Erro que já aconteceu: o lead perguntou "como funciona?" e a resposta foi "eu monto a
