@@ -14,18 +14,34 @@
  */
 import { pickSimulationCandidates, startProspectionSimulation } from "./simulationService";
 import { getDb } from "../store/schema";
-import { getSetting, setSetting, recordCommunication } from "../store/db";
+import { getSetting, setSetting, recordCommunication, upsertLead } from "../store/db";
 import type { StoredLead } from "../store/types";
 import { sendGatewayText } from "./whatsappGateway";
 import { fallbackEnabled, fallbackMinAgeMinutes } from "./agentWatchdog";
 
 const PREFIXO = "/";
 
-/** Números do dono: `owner_alert_phone` (painel) e `OWNER_ALERT_PHONE` (env). */
+/**
+ * Números que podem dar comando à Clara.
+ *
+ * `owner_alert_phone` é o dono principal (é para ele que vão os alertas). `owner_phones`
+ * é a lista de quem TAMBÉM pode mandar comando e pedir simulação, separada por vírgula
+ * no painel (ex.: escritório, celular de viagem). Os alertas continuam indo só para o
+ * principal: resposta automática e alarme são coisas diferentes.
+ */
 export function ownerPhones(): string[] {
-  const brutos = [getSetting("owner_alert_phone"), process.env.OWNER_ALERT_PHONE]
+  const listas = [
+    getSetting("owner_alert_phone"),
+    getSetting("owner_phones"),
+    process.env.OWNER_ALERT_PHONE,
+    process.env.OWNER_PHONES,
+  ];
+  const brutos = listas
     .filter(Boolean)
-    .map((v) => String(v).replace(/\D/g, ""))
+    // Só vírgula, ponto e vírgula ou quebra de linha separam números: espaçar dentro
+    // do número ("+55 61 8621-0471") é normal e não pode partir o telefone no meio.
+    .flatMap((v) => String(v).split(/[,;\n]+/))
+    .map((v) => v.replace(/\D/g, ""))
     .filter((v) => v.length >= 10);
   return [...new Set(brutos)];
 }
@@ -411,6 +427,13 @@ export async function handleOwnerCommand(
         break;
       }
       const alvo = escolha.lead!;
+      // Quem pede a simulação recebe a simulação. Antes o D0 ia sempre para o telefone
+      // gravado no lead, então pedir de outro número era mandar mensagem para o outro
+      // aparelho e ficar sem resposta nenhuma.
+      const paraMim = String(lead.phone || "").replace(/\D/g, "");
+      if (paraMim && String(alvo.phone || "").replace(/\D/g, "") !== paraMim) {
+        upsertLead({ ...alvo, phone: lead.phone, updatedAt: new Date().toISOString() } as any);
+      }
       if (opcoes.enviar === false) {
         reply = `Simulação (ensaio): ${alvo.name}.`;
         break;
