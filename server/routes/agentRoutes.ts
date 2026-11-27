@@ -14,6 +14,7 @@ import { getLeadById, getProjects, getSetting, setSetting, upsertLead } from "..
 import { buildLeadBriefing } from "../services/briefingService";
 import { contextoDaConversa } from "../services/conversationContextService";
 import { freioLigado } from "../services/outboundGuard";
+import { cartaoDePacotes, cartaoDeSecoes } from "../services/offerCard";
 import {
   deliveryLabel,
   formatBRL,
@@ -86,6 +87,31 @@ export function registerAgentRoutes(app: Express) {
 
   app.get("/api/agent/policy", (_req: Request, res: Response) => {
     return res.json({ success: true, policy: getCommercialPolicy() });
+  });
+
+  /**
+   * Cartão de oferta pronto para colar no WhatsApp: pacotes em lista comparável.
+   *
+   * Existe porque listar pacote em prosa é ilegível no celular. O agente pede o texto
+   * pronto em vez de reescrever, e o formato fica igual em toda conversa.
+   */
+  app.get("/api/agent/oferta", (req: Request, res: Response) => {
+    const policy = getCommercialPolicy();
+    const nicho = typeof req.query.nicho === "string" ? req.query.nicho : undefined;
+    const secoes = String(req.query.secoes || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const extras = String(req.query.extras || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const fechamento = typeof req.query.fechamento === "string" ? req.query.fechamento : undefined;
+    return res.json({
+      success: true,
+      pacotes: cartaoDePacotes(policy, { secoes, extras, fechamento }),
+      secoes: secoes.length ? cartaoDeSecoes({ nicho, essenciais: secoes, diferenciais: extras, fechamento }) : null,
+    });
   });
 
   /**

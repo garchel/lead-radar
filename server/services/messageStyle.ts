@@ -161,6 +161,7 @@ export const WHATSAPP_STYLE_RULES = [
   "- Quando falar da prévia, diga explicitamente que é grátis, sem custo nenhum.",
   "- Quando falar de pacote, diga o nome, o valor fechado e liste de 4 a 8 benefícios curtos, um por linha, cada um concreto (não só o preço).",
   "- Nada de bloco único corrido, de markdown com # ou de link.",
+  "- Lista de pacote e lista de seção são EXCEÇÃO: aí vale boletim, um item por linha, começando com \"• \", negrito só no que diferencia (preço, nº de seções, rodada de ajuste, o que o outro pacote não tem), linha em branco entre pacotes e pergunta no fim.",
 ].join("\n");
 
 /**
