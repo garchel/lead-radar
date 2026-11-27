@@ -21,9 +21,16 @@ describe("plano de pagamento", () => {
   it("o segundo pagamento está preso à publicação no domínio, não à entrega da página", () => {
     const p = planoDePagamento(policy, PROFISSIONAL);
     expect(p.parcelas[1].rotulo).toMatch(/domínio/i);
-    expect(p.parcelas[1].marco).toMatch(/no ar/i);
+    expect(p.parcelas[1].marco).toMatch(/no ar|publicado/i);
     // a página entregue não dá alavanca: não pode ser o marco
     expect(p.parcelas[1].rotulo).not.toMatch(/entrega da p[áa]gina/i);
+  });
+
+  it("explica o domínio para quem não sabe o que é", () => {
+    const p = planoDePagamento(policy, PROFISSIONAL);
+    // rótulo tem que fazer sentido para leigo: "site pronto no ar", não só o jargão
+    expect(p.parcelas[1].rotulo).toMatch(/site.*pronto|pronto.*site/i);
+    expect(p.parcelas[1].rotulo).toMatch(/\(o domínio\)/i);
   });
 
   it("nunca deixa a entrada em 0% nem em 100%", () => {

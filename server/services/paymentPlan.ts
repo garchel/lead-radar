@@ -74,8 +74,11 @@ export function planoDePagamento(policy: CommercialPolicy, pacote: CommercialPac
         valor: deCentavos(entrada),
       },
       {
-        rotulo: "na publicação no seu domínio",
-        marco: "quando o site estiver no ar com o endereço no seu nome",
+        // Quem compra página não sabe o que é "domínio". O rótulo diz, em palavra de
+        // gente: o site pronto, no ar, no endereço dele. O termo técnico fica entre
+        // parênteses para quem já conhece reconhecer.
+        rotulo: "quando o site estiver pronto no ar, no seu endereço (o domínio)",
+        marco: "quando o site estiver publicado no endereço próprio dele, e não no link provisório da Vértice",
         pct: entregaPct,
         valor: deCentavos(restante),
       },
