@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FileText, Loader2, Printer, Copy, Check, RefreshCw, Wand2, AlertTriangle } from 'lucide-react';
+import { FileText, Loader2, Printer, Copy, Check, RefreshCw, Wand2, AlertTriangle, ShieldCheck, ShieldX, Upload } from 'lucide-react';
 
 /**
  * Gerador de contrato.
@@ -19,6 +19,16 @@ interface Opcoes {
   nichos: Array<{ id: string; titulo: string }>;
   secoesBase: string[];
   secoesDiferencial: string[];
+}
+
+interface Veredito {
+  temAssinatura: boolean;
+  quantidade: number;
+  integro: boolean;
+  assinantes: string[];
+  hashDocumento: string | null;
+  problemas: string[];
+  observacao: string;
 }
 
 interface Resposta {
@@ -60,6 +70,9 @@ export const ContractBuilder: React.FC = () => {
   const [copiado, setCopiado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [veredito, setVeredito] = useState<Veredito | null>(null);
+  const [verificando, setVerificando] = useState(false);
+  const [nomeArquivo, setNomeArquivo] = useState('');
 
   const carregarOpcoes = useCallback(async (chaveNicho?: string) => {
     setCarregandoOpcoes(true);
@@ -121,6 +134,33 @@ export const ContractBuilder: React.FC = () => {
       setErro(e?.message || 'Falha ao gerar o contrato.');
     } finally {
       setGerando(false);
+    }
+  };
+
+  const verificar = async (arquivo: File) => {
+    setVerificando(true);
+    setErro(null);
+    setVeredito(null);
+    setNomeArquivo(arquivo.name);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result || ''));
+        r.onerror = () => reject(new Error('falha ao ler o arquivo'));
+        r.readAsDataURL(arquivo);
+      });
+      const resp = await fetch('/api/contracts/verificar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfBase64: base64 }),
+      });
+      const d = await resp.json();
+      if (!d.success) throw new Error(d.error || 'Falha ao verificar');
+      setVeredito(d.veredito as Veredito);
+    } catch (e: any) {
+      setErro(e?.message || 'Não consegui verificar o arquivo.');
+    } finally {
+      setVerificando(false);
     }
   };
 
@@ -343,6 +383,78 @@ export const ContractBuilder: React.FC = () => {
           )}
         </section>
       </div>
+
+      {/* ---------------- Verificar assinatura devolvida ---------------- */}
+      <section className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-indigo-600" />
+              Contrato assinado voltou?
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Envie o PDF que o cliente devolveu. Verificamos se a assinatura existe, se o arquivo foi alterado depois e de quem é.
+            </p>
+          </div>
+          <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm cursor-pointer">
+            {verificando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            {verificando ? 'Verificando…' : 'Enviar PDF assinado'}
+            <input
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void verificar(f);
+              }}
+            />
+          </label>
+        </div>
+
+        {nomeArquivo && !veredito && !verificando && (
+          <p className="text-xs text-slate-500">{nomeArquivo}</p>
+        )}
+
+        {veredito && (
+          <div className={`rounded-lg border p-3 text-sm space-y-2 ${
+            veredito.temAssinatura && veredito.integro
+              ? 'bg-emerald-50 border-emerald-200'
+              : 'bg-rose-50 border-rose-200'
+          }`}>
+            <div className="flex items-center gap-2 font-semibold">
+              {veredito.temAssinatura && veredito.integro ? (
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              ) : (
+                <ShieldX className="w-4 h-4 text-rose-600" />
+              )}
+              <span className={veredito.temAssinatura && veredito.integro ? 'text-emerald-800' : 'text-rose-800'}>
+                {veredito.temAssinatura && veredito.integro
+                  ? `Assinado e íntegro${veredito.assinantes.length ? ` — ${veredito.assinantes.join(', ')}` : ''}`
+                  : veredito.temAssinatura
+                    ? 'Assinatura encontrada, mas o arquivo não está íntegro'
+                    : 'Sem assinatura digital'}
+              </span>
+              {veredito.quantidade > 0 && (
+                <span className="text-[11px] font-normal text-slate-500">({veredito.quantidade} assinatura{veredito.quantidade > 1 ? 's' : ''})</span>
+              )}
+            </div>
+
+            {veredito.problemas.length > 0 && (
+              <ul className="list-disc pl-5 text-xs text-rose-700 space-y-0.5">
+                {veredito.problemas.map((p) => <li key={p}>{p}</li>)}
+              </ul>
+            )}
+
+            {veredito.hashDocumento && (
+              <p className="text-[10px] font-mono text-slate-500 break-all">
+                hash do que foi assinado: {veredito.hashDocumento}
+              </p>
+            )}
+
+            <p className="text-[11px] text-slate-600">{veredito.observacao}</p>
+          </div>
+        )}
+      </section>
     </div>
   );
 };

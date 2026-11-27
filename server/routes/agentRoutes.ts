@@ -24,6 +24,7 @@ import {
 } from "../services/contractService";
 import { renderizarHtml } from "../services/contractHtml";
 import { rotulosDeSecoes } from "../services/secoesRotulos";
+import { verificarAssinatura } from "../services/contractSignature";
 import {
   deliveryLabel,
   formatBRL,
@@ -241,6 +242,31 @@ export function registerAgentRoutes(app: Express) {
 
   app.get("/api/agent/contrato", (req: Request, res: Response) => responderContrato(req.query, res));
   app.post("/api/agent/contrato", (req: Request, res: Response) => responderContrato(req.body, res));
+
+  /**
+   * Confere a assinatura digital de um PDF devolvido pelo cliente.
+   *
+   * Responde três coisas e é honesto sobre a quarta: existe assinatura? o arquivo foi
+   * alterado depois? quantas assinaturas e de quem? A confiança do certificado (cadeia
+   * ICP-Brasil, conta gov.br) NÃO se resolve aqui — o relatório manda validar no ITI.
+   */
+  app.post("/api/contracts/verificar", (req: Request, res: Response) => {
+    try {
+      const base64 = String(req.body?.pdfBase64 || "");
+      if (!base64 || base64.length < 100) {
+        return res.status(400).json({ success: false, error: "Envie o PDF assinado em pdfBase64." });
+      }
+      const limpo = base64.includes(",") ? base64.slice(base64.indexOf(",") + 1) : base64;
+      const pdf = Buffer.from(limpo, "base64");
+      if (pdf.subarray(0, 5).toString() !== "%PDF-") {
+        return res.status(400).json({ success: false, error: "O arquivo enviado não é um PDF." });
+      }
+      const veredito = verificarAssinatura(pdf, req.body?.hashOriginal ? String(req.body.hashOriginal) : null);
+      return res.json({ success: true, veredito });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao verificar a assinatura." });
+    }
+  });
 
   /**
    * Cartão de cobrança do pacote aceito, com as duas parcelas e a chave Pix.
