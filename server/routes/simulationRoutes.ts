@@ -1,6 +1,7 @@
 import { Express, Request, Response } from "express";
 import {
   SIMULATION_LEAD_ID,
+  ensureSimulationLead,
   pickSimulationCandidates,
   resetSimulationCard,
   startProspectionSimulation,
@@ -44,10 +45,29 @@ export function registerSimulationRoutes(app: Express) {
     }
   });
 
+  /**
+   * Prepara o lead de simulação de um dono, sem mandar nada no WhatsApp.
+   * Cada telefone tem o seu lead (o principal segue no pv-landing-1).
+   */
+  app.post("/api/simulate/lead", (req: Request, res: Response) => {
+    try {
+      const paraTelefone = String(req.body?.paraTelefone || "").trim();
+      if (!paraTelefone) {
+        return res.status(400).json({ success: false, error: "Informe paraTelefone." });
+      }
+      const lead = ensureSimulationLead(paraTelefone);
+      return res.json({ success: true, ...lead });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error?.message || "Falha ao preparar a simulação." });
+    }
+  });
+
   app.post("/api/simulate/prospect", async (req: Request, res: Response) => {
     try {
+      const paraTelefone = req.body?.paraTelefone ? String(req.body.paraTelefone) : undefined;
       const resultado = await startProspectionSimulation({
         leadId: req.body?.leadId ? String(req.body.leadId) : undefined,
+        paraTelefone,
       });
       const enviado = resultado.dispatch.status === "sent";
       return res.status(enviado ? 200 : 502).json({ success: enviado, ...resultado });

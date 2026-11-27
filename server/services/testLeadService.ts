@@ -15,7 +15,7 @@ import { buildProspectMessage } from "./autoProspectingService";
 import { dispatchLeadReply } from "./interactionService";
 import { previewExists } from "./previewService";
 import { whatsAppify } from "./messageStyle";
-import { SIMULATION_LEAD_ID } from "./simulationService";
+import { ehLeadDeSimulacao } from "./simulationService";
 
 /** Este lead é um número de teste? */
 export function isTestLead(lead: Pick<StoredLead, "isTest"> | null | undefined): boolean {
@@ -41,7 +41,7 @@ export function shouldPitchTestLead(lead: StoredLead): boolean {
   // O lead de simulação tem fluxo próprio: quem manda o D0 é a simulação, com o
   // nome da empresa escolhida. Deixar o gancho de número de teste entrar aqui já
   // gerou duas mensagens nossas seguidas e um texto fora do padrão aprovado.
-  if (lead.id === SIMULATION_LEAD_ID) return false;
+  if (ehLeadDeSimulacao(lead.id)) return false;
   return isTestLead(lead) && !lead.doNotContact && !hasPriorOutbound(lead.id);
 }
 

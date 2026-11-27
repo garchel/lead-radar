@@ -60,39 +60,7 @@ function chaveTelefone(phone?: string): string {
   return `${digitos.slice(0, 2)}${digitos.slice(-8)}`;
 }
 
-/**
- * Trava de simulação: só existe UM lead de simulação (`pv-landing-1`).
- *
- * Com dois donos, dois `/simulacao` ao mesmo tempo escrevem no mesmo lead: o segundo
- * apaga a conversa do primeiro e troca o telefone, então o primeiro fica falando
- * sozinho com um lead que já não é dele. Até existir um lead por número, quem chega
- * depois espera.
- */
-export function simulacaoAtiva(): { phone: string | null; desde: string | null } {
-  const phone = String(getSetting("simulation_active_phone") || "").replace(/\D/g, "");
-  const desde = getSetting("simulation_started_at");
-  return { phone: phone || null, desde: desde || null };
-}
-
-/** Quanto tempo uma simulação esquecida segura a vaga (horas). */
-const SIMULACAO_VALIDADE_H = 4;
-
-export function simulacaoPresa(outroPhone?: string): { presa: boolean; quem?: string; desde?: string } {
-  const { phone, desde } = simulacaoAtiva();
-  if (!phone || !desde) return { presa: false };
-  const horas = (Date.now() - new Date(desde).getTime()) / 3_600_000;
-  if (!Number.isFinite(horas) || horas > SIMULACAO_VALIDADE_H) return { presa: false };
-  const meu = String(outroPhone || "").replace(/\D/g, "");
-  if (meu && phone === meu) return { presa: false }; // o mesmo dono pode recomeçar
-  return { presa: true, quem: phone, desde };
-}
-
-export function marcarSimulacao(phone: string): void {
-  const d = String(phone || "").replace(/\D/g, "");
-  setSetting("simulation_active_phone", d);
-  setSetting("simulation_started_at", new Date().toISOString());
-}
-
+/** Limpa resíduo de simulação antiga (a trava por vaga saiu: cada dono tem a sua). */
 export function encerrarSimulacao(): void {
   setSetting("simulation_active_phone", "");
   setSetting("simulation_started_at", "");
@@ -285,7 +253,7 @@ const AJUDA = [
   "/lead nome — ficha rápida de um lead",
   "/status — como está a automação",
   "/simulacao — roda uma simulação nova no meu número (ou /simulacao <cidade ou nome>)",
-  "/encerrar — termina a simulação e libera a vaga",
+  "/encerrar — encerra a simulação deste número",
   "/pausar e /retomar — liga/desliga as respostas automáticas",
 ].join("\n");
 
@@ -461,50 +429,32 @@ export async function handleOwnerCommand(
     case "simulacao":
     case "simular":
     case "simulação": {
-      const trava = simulacaoPresa(lead.phone);
-      if (trava.presa) {
-        const quem = trava.quem ? `+${trava.quem}` : "outro número";
-        reply = [
-          `Já tem uma simulação rodando no *${quem}*.`,
-          "",
-          "O lead de simulação é um só, então duas ao mesmo tempo apagariam a conversa da outra.",
-          "Termine a que está aberta com /encerrar, ou peça de novo daqui a pouco.",
-        ].join("\n");
-        break;
-      }
+      // Cada dono tem o seu lead de simulação: não há mais disputa de vaga.
       const escolha = escolherLeadDaSimulacao(argumento);
       if (escolha.erro) {
         reply = escolha.erro;
         break;
       }
       const alvo = escolha.lead!;
-      // Quem pede a simulação recebe a simulação. Antes o D0 ia sempre para o telefone
-      // gravado no lead, então pedir de outro número era mandar mensagem para o outro
-      // aparelho e ficar sem resposta nenhuma.
-      const paraMim = String(lead.phone || "").replace(/\D/g, "");
-      if (paraMim && String(alvo.phone || "").replace(/\D/g, "") !== paraMim) {
-        upsertLead({ ...alvo, phone: lead.phone, updatedAt: new Date().toISOString() } as any);
-      }
       if (opcoes.enviar === false) {
         reply = `Simulação (ensaio): ${alvo.name}.`;
         break;
       }
       // Em segundo plano: o envio do D0 é da própria simulação.
-      void startProspectionSimulation({ leadId: alvo.id })
+      void startProspectionSimulation({ leadId: alvo.id, paraTelefone: lead.phone })
         .then((r) => {
           if (r.dispatch?.status !== "sent") {
             console.error(`[comando /simulacao] envio não saiu: ${r.dispatch?.detail || "sem detalhe"}`);
           }
         })
         .catch((erro: any) => console.error("[comando /simulacao]", erro?.message || erro));
-      marcarSimulacao(lead.phone);
-      reply = `Rodando a simulação com *${alvo.name}*.\n\nEm instantes chega o primeiro contato da Clara aqui na conversa.\nQuando terminar, mande /encerrar.`;
+      reply = `Rodando a simulação com *${alvo.name}*.\n\nEm instantes chega o primeiro contato da Clara aqui na conversa. Cada número de dono tem a sua própria simulação, então não atrapalha a do outro.`;
       break;
     }
     case "encerrar":
     case "fim":
       encerrarSimulacao();
-      reply = "Simulação encerrada. A vaga está livre para o outro número.";
+      reply = "Simulação encerrada. Você pode começar outra quando quiser com /simulacao.";
       break;
     case "pausar":
     case "parar":

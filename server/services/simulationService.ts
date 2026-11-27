@@ -16,7 +16,7 @@ import { getDb } from "../store/schema";
 import { generateLeadPreview, generateLeadPreviewCached, previewsDir, slugifyPreview } from "./previewService";
 import { publishPreviews } from "./pagesService";
 import { researchLeadBrand } from "./brandResearchService";
-import { getLeadById, getProjectsByLead, getSetting, setLeadBrandSnapshot, setSetting, upsertProject } from "../store/db";
+import { getLeadById, getProjectsByLead, getSetting, setLeadBrandSnapshot, setSetting, upsertLead, upsertProject } from "../store/db";
 import { normalizeText } from "./leadIdentity";
 import { buildProspectMessage } from "./autoProspectingService";
 import { dispatchLeadReply } from "./interactionService";
@@ -80,6 +80,65 @@ async function publicarEConfirmar(url: string | null): Promise<boolean> {
 
 /** Lead que faz o papel de Paulo nas simulações. */
 export const SIMULATION_LEAD_ID = "pv-landing-1";
+
+/** Dígitos do telefone, sem país/máscara. */
+function soDigitos(phone?: string): string {
+  return String(phone || "").replace(/\D/g, "");
+}
+
+/**
+ * Lead de simulação de cada dono.
+ *
+ * Existe UM número de simulação por telefone de dono: dois donos simulando ao mesmo
+ * tempo escreviam no mesmo lead e a segunda simulação apagava a conversa da primeira
+ * (o reset reescreve o registro e troca o telefone).
+ *
+ * O dono principal continua no id histórico `pv-landing-1`, para não perder página,
+ * slug e histórico já publicados.
+ */
+export function simulationLeadIdFor(phone?: string): string {
+  const d = soDigitos(phone);
+  if (!d) return SIMULATION_LEAD_ID;
+  // O principal pode estar só no banco (painel), não no .env.
+  const principal = soDigitos(process.env.OWNER_ALERT_PHONE || getSetting("owner_alert_phone") || "");
+  if (principal && d === principal) return SIMULATION_LEAD_ID;
+  return `pv-landing-${d}`;
+}
+
+/**
+ * Garante o lead de simulação do dono, sem mandar nada no WhatsApp.
+ *
+ * Idempotente: se o lead já existe, só acerta o telefone. É o que o painel usa para
+ * "preparar a simulação" e é a peça que o `/simulacao` reaproveita.
+ */
+export function ensureSimulationLead(paraTelefone: string): { leadId: string; phone: string; nome: string } {
+  const simId = simulationLeadIdFor(paraTelefone);
+  const telefone = String(paraTelefone || "").trim();
+  const existente = getLeadById(simId);
+  if (!existente) {
+    const agora = new Date().toISOString();
+    upsertLead({
+      id: simId,
+      name: "Simulação",
+      phone: telefone,
+      pipelineStatus: "prospect",
+      notes: "[Simulação] Lead criado para o dono simular a conversa.",
+      savedAt: agora,
+      updatedAt: agora,
+    } as any, { skipDedup: true }, // lead sintético: nunca pode ser fundido com um prospect real
+    );
+    return { leadId: simId, phone: telefone, nome: "Simulação" };
+  }
+  if (telefone && String(existente.phone || "") !== telefone) {
+    upsertLead({ ...existente, phone: telefone, updatedAt: new Date().toISOString() } as any);
+  }
+  return { leadId: simId, phone: telefone, nome: existente.name };
+}
+
+/** Todo lead de simulação (o histórico e os por dono). */
+export function ehLeadDeSimulacao(id?: string): boolean {
+  return /^pv-landing-(\d+|\d+)$/.test(String(id || ""));
+}
 /** Etapa inicial do Kanban de Projetos. */
 export const FIRST_PROJECT_STAGE: ProjectStage = "briefing";
 
@@ -237,14 +296,15 @@ export function resetSimulationCard(
     instagramHandle?: string;
     googlePlaceId?: string;
     opportunityScore?: number;
-  }
+  },
+  leadId: string = SIMULATION_LEAD_ID,
 ): SimulationCard {
   const db = getDb();
   const nome = String(companyName || "").trim().slice(0, 80) || "Simulação";
   // Nome do negócio que está saindo: o cartão de paleta e a proposta dele levam o
   // nome bonito no arquivo, não o slug — sem isso ficam publicados com preço e cor
   // de outra empresa.
-  const nomeAnterior = String(getLeadById(SIMULATION_LEAD_ID)?.name || "").trim();
+  const nomeAnterior = String(getLeadById(leadId)?.name || "").trim();
 
   // O card precisa parecer a empresa simulada por inteiro: nome, categoria e
   // cidade. Sem isso o cartão diz "Dra. Carmen Pitol · Brasília", que denuncia a
@@ -306,11 +366,11 @@ export function resetSimulationCard(
     origem?.googlePlaceId || null,
     origem?.opportunityScore ?? null,
     new Date().toISOString(),
-    SIMULATION_LEAD_ID
+    leadId
   );
 
   const agora = new Date().toISOString();
-  const existente = getProjectsByLead(SIMULATION_LEAD_ID).find((p) => !p.archived);
+  const existente = getProjectsByLead(leadId).find((p) => !p.archived);
 
   let projeto: Project;
   if (existente) {
@@ -352,7 +412,7 @@ export function resetSimulationCard(
   } else {
     projeto = {
       id: `proj_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
-      leadId: SIMULATION_LEAD_ID,
+      leadId: leadId,
       name: `${nome} — Landing Page`,
       stage: FIRST_PROJECT_STAGE,
       status: "em_andamento",
@@ -373,8 +433,8 @@ export function resetSimulationCard(
   // thread inteiro sobrevivia — a Clara lia mensagens de outras empresas.
   try {
     const limpar = db.transaction(() => {
-      db.prepare("DELETE FROM interactions WHERE lead_id = ?").run(SIMULATION_LEAD_ID);
-      db.prepare("DELETE FROM communications WHERE lead_id = ?").run(SIMULATION_LEAD_ID);
+      db.prepare("DELETE FROM interactions WHERE lead_id = ?").run(leadId);
+      db.prepare("DELETE FROM communications WHERE lead_id = ?").run(leadId);
     });
     limpar();
   } catch (erro: any) {
@@ -389,8 +449,8 @@ export function resetSimulationCard(
   // negócio, outra cidade). Apaga o mapeamento para o endereço nascer do nome novo.
   let slugAnterior: string | undefined;
   try {
-    slugAnterior = (db.prepare("SELECT slug FROM preview_slugs WHERE lead_id = ?").get(SIMULATION_LEAD_ID) as any)?.slug;
-    db.prepare("DELETE FROM preview_slugs WHERE lead_id = ?").run(SIMULATION_LEAD_ID);
+    slugAnterior = (db.prepare("SELECT slug FROM preview_slugs WHERE lead_id = ?").get(leadId) as any)?.slug;
+    db.prepare("DELETE FROM preview_slugs WHERE lead_id = ?").run(leadId);
   } catch {
     /* tabela ainda não existe (banco antigo): nada a limpar, a geração cria */
   }
@@ -398,7 +458,7 @@ export function resetSimulationCard(
   // ainda tem que sair do disco
   try {
     const dir = previewsDir();
-    for (const nome of [slugAnterior, SIMULATION_LEAD_ID]) {
+    for (const nome of [slugAnterior, leadId]) {
       if (!nome) continue;
       for (const sufixo of [".html", "-logo.svg"]) {
         const arquivo = path.join(dir, `${nome}${sufixo}`);
@@ -409,7 +469,7 @@ export function resetSimulationCard(
     // Cartão de paleta e proposta em PDF também são do negócio anterior, e os dois
     // são PUBLICADOS no link público: ficavam acessíveis com preço e cor de outra
     // empresa. Apaga pelo slug/prefixo do que acabou de sair.
-    const restos = ([slugAnterior, SIMULATION_LEAD_ID, nomeAnterior && slugifyPreview(nomeAnterior)]
+    const restos = ([slugAnterior, leadId, nomeAnterior && slugifyPreview(nomeAnterior)]
       .filter(Boolean) as string[]).map((n) => n.toLowerCase());
     for (const arquivo of fs.readdirSync(dir)) {
       if (!/\.(png|pdf)$/i.test(arquivo)) continue;
@@ -424,7 +484,7 @@ export function resetSimulationCard(
     // podia ser lida como se fosse do negócio novo (nome e cidade trocados).
     const fichasDir = path.join(process.env.LEADRADAR_DATA_DIR || path.join(process.cwd(), "data"), "clientes");
     if (fs.existsSync(fichasDir)) {
-      const alvos = restos.filter((alvo) => alvo && alvo !== SIMULATION_LEAD_ID);
+      const alvos = restos.filter((alvo) => alvo && alvo !== leadId);
       for (const arquivo of fs.readdirSync(fichasDir)) {
         if (!arquivo.toLowerCase().endsWith(".md")) continue;
         const nome = arquivo.toLowerCase();
@@ -460,7 +520,7 @@ export function resetSimulationCard(
     console.error("[simulação] limpeza de artefatos falhou:", erro?.message || erro);
   }
 
-  const lead = getLeadById(SIMULATION_LEAD_ID)!;
+  const lead = getLeadById(leadId)!;
   return {
     leadId: lead.id,
     leadName: lead.name,
@@ -478,7 +538,9 @@ export function resetSimulationCard(
  * Nunca lança por falha de envio: devolve `dispatch.status` para quem chamou
  * decidir o que mostrar.
  */
-export async function startProspectionSimulation(opts: { leadId?: string } = {}): Promise<SimulationResult> {
+export async function startProspectionSimulation(
+  opts: { leadId?: string; paraTelefone?: string } = {},
+): Promise<SimulationResult> {
   let candidato: StoredLead | undefined;
   if (opts.leadId) {
     candidato = getLeadById(opts.leadId);
@@ -487,6 +549,9 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
     candidato = pickSimulationCandidates(1)[0];
   }
   if (!candidato) throw new Error("Nenhum lead bom disponível para simular (sem site, nota e avaliações suficientes).");
+
+  // Cada dono tem o seu lead de simulação: dois ao mesmo tempo não se atropelam.
+  const { leadId: simId } = ensureSimulationLead(String(opts.paraTelefone || ""));
 
   try {
     setSetting("last_simulation_lead_id", candidato.id);
@@ -508,7 +573,7 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
     instagramHandle: candidato.instagramHandle,
     googlePlaceId: candidato.googlePlaceId,
     opportunityScore: candidato.opportunityScore,
-  });
+  }, simId);
 
   // Assets do cliente: pesquisa a identidade visual com o nome NOVO (o card já é a
   // empresa simulada) e regenera a prévia com a foto e a cor da marca.
@@ -518,8 +583,8 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
   // sai oferecendo a prévia, nunca dizendo que ela já existe.
   let previewNoAr = false;
   try {
-    const research = await researchLeadBrand(SIMULATION_LEAD_ID, { force: true, maxImages: 6, maxSearches: 2 });
-    const atualizado = getLeadById(SIMULATION_LEAD_ID)!;
+    const research = await researchLeadBrand(simId, { force: true, maxImages: 6, maxSearches: 2 });
+    const atualizado = getLeadById(simId)!;
     assets = {
       ok: true,
       images: atualizado.brandSnapshot?.imagery?.length || 0,
@@ -540,7 +605,7 @@ export async function startProspectionSimulation(opts: { leadId?: string } = {})
     }
   }
 
-  const paulo = getLeadById(SIMULATION_LEAD_ID)!;
+  const paulo = getLeadById(simId)!;
   const mensagem = buildProspectMessage(candidato, { previewPronta: false });
 
   const dispatch = await dispatchLeadReply(paulo, {
