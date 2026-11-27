@@ -12,7 +12,33 @@
 import { getDb } from "../store/schema";
 import { getSetting } from "../store/db";
 
-export type VereditoEnvio = { liberado: boolean; motivo?: string; bloqueadoPor?: "freio" | "rajada" | "repeticao" };
+export type VereditoEnvio = { liberado: boolean; motivo?: string; bloqueadoPor?: "freio" | "rajada" | "repeticao" | "teste" | "numero-ficticio" };
+
+/**
+ * Ambiente de teste. O `tests/setup.ts` apaga as credenciais, mas `dotenv` recarrega o
+ * `.env` quando um módulo importa "dotenv/config" DEPOIS do setup — a suíte voltava a
+ * falar com o WhatsApp real e mandou "Dá um minutinho" para os números fictícios
+ * 5511999990002/4/9 em toda execução. Isso não pode depender de env: é regra.
+ */
+function redeStubada(): boolean {
+  const f: any = (globalThis as any).fetch;
+  // vitest.stubGlobal("fetch") marca a função; sem isso, o teste usaria a rede real.
+  return Boolean(f && (f._isMockFunction || f.__vitest_mock || f.mock));
+}
+
+export function ambienteDeTeste(): boolean {
+  const ehTeste = Boolean(process.env.VITEST) || process.env.NODE_ENV === "test" || process.env.LEADRADAR_TEST_MODE === "1";
+  // Teste COM fetch stubado é seguro (nada sai). Teste SEM stub é o vazamento real:
+  // foi assim que a suíte mandou "Dá um minutinho" para 5511999990002/4/9.
+  return ehTeste && !redeStubada();
+}
+
+/** Número de mentira de fixture: 55 11 99999-000X, 55 62 99999-000X e afins. */
+export function numeroFicticio(to: string): boolean {
+  const d = String(to || "").replace(/\D/g, "");
+  if (d.length < 12) return false;
+  return /9{5}0{2,3}\d?$/.test(d) || /0{6,}\d*$/.test(d.slice(-9));
+}
 
 /** Chave de comparação do texto: sem emoji, sem espaço duplo, minúsculo, 60 chars. */
 export function chaveDoTexto(mensagem: string): string {
@@ -63,7 +89,16 @@ export function repeticaoParaOutroLead(leadId: string, mensagem: string, janelaM
   return igual ? { repetiu: true, paraQuem: String(igual.lead_id) } : { repetiu: false };
 }
 
-export function avaliarEnvio(input: { leadId: string; mensagem: string; limiteRajada?: number }): VereditoEnvio {
+export function avaliarEnvio(input: { leadId: string; mensagem: string; to?: string; limiteRajada?: number }): VereditoEnvio {
+  // 1) Nenhum teste fala com WhatsApp real. Nunca.
+  if (ambienteDeTeste()) {
+    return { liberado: false, bloqueadoPor: "teste", motivo: "Ambiente de teste: envio real de WhatsApp bloqueado." };
+  }
+  // 2) Número de fixture (99999-000X) não recebe nada em produção. Em teste com fetch
+  //    stubado o número é irrelevante (nada sai), e a suíte usa esses números de propósito.
+  if (input.to && numeroFicticio(input.to) && !process.env.VITEST && process.env.NODE_ENV !== "test") {
+    return { liberado: false, bloqueadoPor: "numero-ficticio", motivo: `Número fictício (${input.to}): envio bloqueado.` };
+  }
   if (freioLigado()) {
     return { liberado: false, bloqueadoPor: "freio", motivo: "Envio congelado pelo dono (automation_outbound_freeze)." };
   }

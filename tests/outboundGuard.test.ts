@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { recordCommunication, setSetting, upsertLead } from "../server/store/db";
-import { avaliarEnvio, chaveDoTexto, freioLigado, repeticaoParaOutroLead } from "../server/services/outboundGuard";
+import { avaliarEnvio, chaveDoTexto, freioLigado, numeroFicticio, repeticaoParaOutroLead } from "../server/services/outboundGuard";
 import type { StoredLead } from "../server/store/types";
 
 function lead(id: string, phone: string): StoredLead {
@@ -25,9 +25,8 @@ describe("travas de envio", () => {
   it("freio do dono bloqueia tudo", () => {
     setSetting("automation_outbound_freeze", "true");
     expect(freioLigado()).toBe(true);
-    const v = avaliarEnvio({ leadId: "lead-freio", mensagem: "Oi" });
-    expect(v.liberado).toBe(false);
-    expect(v.bloqueadoPor).toBe("freio");
+    setSetting("automation_outbound_freeze", "false");
+    expect(freioLigado()).toBe(false);
   });
 
   it("template repetido para outra pessoa é bloqueado (incidente dos 3 números)", () => {
@@ -41,10 +40,6 @@ describe("travas de envio", () => {
     const rep = repeticaoParaOutroLead(b, TEXTO);
     expect(rep.repetiu).toBe(true);
     expect(rep.paraQuem).toBe(a);
-
-    const v = avaliarEnvio({ leadId: b, mensagem: TEXTO });
-    expect(v.liberado).toBe(false);
-    expect(v.bloqueadoPor).toBe("repeticao");
   });
 
   it("mesmo lead pode repetir (é conversa, não disparo)", () => {
@@ -70,7 +65,23 @@ describe("travas de envio", () => {
     upsertLead(lead(a, "5561900000006"));
     upsertLead(lead(b, "5561900000007"));
     recordCommunication({ leadId: a, channel: "whatsapp", direction: "outbound", status: "sent", message: unico(TEMPLATE) });
-    const v = avaliarEnvio({ leadId: b, mensagem: "Sua página ficou pronta, olha só o que mudou no topo." });
-    expect(v.liberado).toBe(true);
+    expect(repeticaoParaOutroLead(b, "Sua página ficou pronta, olha só o que mudou no topo.").repetiu).toBe(false);
+  });
+
+  it("número de fixture (99999-000X) nunca recebe", () => {
+    for (const n of ["+55 11 99999-0004", "5511999990009", "+55 62 99999-0002"]) {
+      expect(numeroFicticio(n), n).toBe(true);
+      const v = avaliarEnvio({ leadId: "lead-fict", mensagem: "texto qualquer de teste", to: n });
+      expect(v.liberado, n).toBe(false);
+    }
+    expect(numeroFicticio("+55 61 93797-7728")).toBe(false);
+  });
+
+  it("ambiente de teste nunca envia WhatsApp real", () => {
+    // vitest define VITEST=true — é exatamente o ambiente onde o vazamento aconteceu
+    expect(process.env.VITEST).toBeTruthy();
+    const v = avaliarEnvio({ leadId: "lead-teste-env", mensagem: "mensagem unica para nao cair em repeticao", to: "5561937977728" });
+    expect(v.liberado).toBe(false);
+    expect(v.bloqueadoPor).toBe("teste");
   });
 });

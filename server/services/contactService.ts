@@ -296,23 +296,6 @@ async function deliverWhatsApp(
 ): Promise<ContactResult> {
   // Texto com bytes perdidos (U+FFFD): melhor recusar do que mandar "�" ao cliente.
   if (hasLostCharacters(message)) {
-    // Travas de saída: freio do dono, rajada e texto de template repetido para outra
-    // pessoa. Roda antes de qualquer provider e vale para todo caminho (webhook,
-    // agente, MCP, cadência). Incidente: "Dá um minutinho" saiu para 3 números.
-    const vereditoEnvio = avaliarEnvio({ leadId, mensagem: message });
-    if (!vereditoEnvio.liberado) {
-      const id = recordCommunication({
-        leadId,
-        channel: "whatsapp",
-        status: "failed",
-        toAddress: to,
-        message,
-        hook,
-        errorDetail: vereditoEnvio.motivo,
-      });
-      return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: vereditoEnvio.motivo, blocked: true };
-    }
-
     const lostText = "Texto com caracteres inválidos (encoding quebrado — contém \"�\"): nada foi enviado. Reenvie a mensagem em UTF-8.";
     const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message, hook, errorDetail: lostText });
     return {
@@ -328,6 +311,24 @@ async function deliverWhatsApp(
   const encoding = repairMojibake(message);
   // Estilo único de saída: sem travessão (marca de IA) e em blocos legíveis.
   const text = whatsAppify(encoding.text);
+
+  // Travas de saída: ambiente de teste, número fictício, freio do dono, rajada e texto
+  // de template repetido para outra pessoa. Fica antes de qualquer provider e vale para
+  // todo caminho (webhook, agente, MCP, cadência). Incidente: "Dá um minutinho" saiu
+  // para 3 números fictícios em toda execução da suíte de testes.
+  const vereditoEnvio = avaliarEnvio({ leadId, mensagem: text, to });
+  if (!vereditoEnvio.liberado) {
+    const id = recordCommunication({
+      leadId,
+      channel: "whatsapp",
+      status: "failed",
+      toAddress: to,
+      message: text,
+      hook,
+      errorDetail: vereditoEnvio.motivo,
+    });
+    return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: vereditoEnvio.motivo, blocked: true };
+  }
 
   const { provider, reason } = resolveWhatsappProvider();
   if (!provider) {
@@ -451,7 +452,7 @@ export async function deliverWhatsAppMedia(
   // Porteiro de direção: imagem também é mensagem. Se a última foi nossa, o lead
   // ainda não respondeu e esta enviaria duas seguidas (foi o que aconteceu com a
   // paleta depois de a IA de segurança responder).
-  const vereditoMidia = avaliarEnvio({ leadId, mensagem: `${media?.fileName || ""} ${caption || ""}` });
+  const vereditoMidia = avaliarEnvio({ leadId, mensagem: `${media?.fileName || ""} ${caption || ""}`, to });
   if (!vereditoMidia.liberado) {
     const id = recordCommunication({ leadId, channel: "whatsapp", status: "failed", toAddress: to, message: registroDeImagem(media, caption), hook, errorDetail: vereditoMidia.motivo });
     return { channel: "whatsapp", status: "failed", communicationId: id, to, detail: vereditoMidia.motivo, blocked: true };
