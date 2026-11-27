@@ -4,8 +4,10 @@ import {
   configAssinafy,
   criarSignatario,
   pedirAssinatura,
+  resolverConta,
   situacaoDoDocumento,
   subirDocumento,
+  usoDaConta,
 } from "../server/services/assinafyService";
 
 /**
@@ -79,6 +81,37 @@ describe("cliente do Assinafy", () => {
       method: "virtual",
       signers: [{ id: "sig-9", verification_method: "Email" }],
     });
+  });
+
+  it("descobre o account id pela própria chave (sem ASSINAFY_ACCOUNT_ID)", async () => {
+    delete process.env.ASSINAFY_ACCOUNT_ID;
+    const espiao = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(resposta({ status: 200, data: [{ id: "conta-descoberta", name: "PO" }] }));
+
+    const config = await resolverConta();
+    expect(config.accountId).toBe("conta-descoberta");
+    const [url, init] = espiao.mock.calls[0];
+    expect(String(url)).toBe("https://api.assinafy.com.br/v1/accounts");
+    expect((init!.headers as any)["X-Api-Key"]).toBe("chave-de-teste");
+    // Cloudflare responde 403 (erro 1010) sem User-Agent de navegador
+    expect((init!.headers as any)["User-Agent"]).toMatch(/Mozilla/);
+  });
+
+  it("lê o uso do plano para saber se ainda cabe contrato", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      resposta({
+        data: {
+          plan: "Free",
+          documents_renewal_date: "2026-12-27",
+          balances: { documents: { balance: 10, limit: 10, spent: 0 }, credits: { balance: 0 } },
+        },
+      }),
+    );
+    const uso = await usoDaConta();
+    expect(uso.plano).toBe("Free");
+    expect(uso.documentosRestantes).toBe(10);
+    expect(uso.creditos).toBe(0);
   });
 
   it("reconhece documento assinado pelo status", async () => {

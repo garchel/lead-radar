@@ -16,10 +16,19 @@ import { getDb } from "../store/schema";
 
 const BASE = process.env.ASSINAFY_BASE_URL || "https://api.assinafy.com.br";
 
+/**
+ * A API fica atrás do Cloudflare: sem User-Agent de navegador ela responde 403 com
+ * "error code: 1010" (bot check) — não é erro de chave. Constatado na prática.
+ */
+const AGENTE = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) LeadRadar/1.0";
+
 export interface ConfigAssinafy {
   apiKey: string;
+  /** Vazio quando ainda não descoberto: GET /v1/accounts resolve. */
   accountId: string;
 }
+
+let contaDescoberta: string | null = null;
 
 function lerSetting(chave: string): string {
   try {
@@ -32,13 +41,56 @@ function lerSetting(chave: string): string {
 
 export function configAssinafy(): ConfigAssinafy | null {
   const apiKey = (process.env.ASSINAFY_API_KEY || lerSetting("assinafy_api_key")).trim();
-  const accountId = (process.env.ASSINAFY_ACCOUNT_ID || lerSetting("assinafy_account_id")).trim();
-  if (!apiKey || !accountId) return null;
+  if (!apiKey) return null;
+  const accountId = (process.env.ASSINAFY_ACCOUNT_ID || lerSetting("assinafy_account_id") || contaDescoberta || "").trim();
   return { apiKey, accountId };
 }
 
 export function assinafyConfigurado(): boolean {
   return configAssinafy() !== null;
+}
+
+/**
+ * Descobre o account id a partir da própria chave (GET /v1/accounts).
+ *
+ * Assim basta a ASSINAFY_API_KEY no .env: o dono da conta não precisa caçar o id.
+ */
+export async function resolverConta(): Promise<ConfigAssinafy> {
+  const config = configAssinafy();
+  if (!config) throw new AssinafyError("Assinafy não configurado: falta a ASSINAFY_API_KEY.");
+  if (config.accountId) return config;
+
+  const json = await chamar("/v1/accounts", { method: "GET" }, config);
+  const contas = Array.isArray(json?.data) ? json.data : [];
+  const id = contas[0]?.id;
+  if (!id) throw new AssinafyError("A chave não tem nenhuma conta associada.", 200, json);
+  contaDescoberta = String(id);
+  return { ...config, accountId: contaDescoberta };
+}
+
+export interface UsoDaConta {
+  plano: string;
+  documentosRestantes: number;
+  documentosLimite: number;
+  documentosUsados: number;
+  creditos: number;
+  renovaEm: string | null;
+}
+
+/** Uso do mês — para saber se ainda cabe mais contrato no plano grátis. */
+export async function usoDaConta(): Promise<UsoDaConta> {
+  const config = await resolverConta();
+  const json = await chamar(`/v1/accounts/${config.accountId}/usage`, { method: "GET" }, config);
+  const d = json?.data || {};
+  const docs = d?.balances?.documents || {};
+  return {
+    plano: String(d.plan || "?"),
+    documentosRestantes: Number(docs.balance ?? 0),
+    documentosLimite: Number(docs.limit ?? 0),
+    documentosUsados: Number(docs.spent ?? 0),
+    creditos: Number(d?.balances?.credits?.balance ?? 0),
+    renovaEm: d.documents_renewal_date || null,
+  };
 }
 
 export class AssinafyError extends Error {
@@ -57,7 +109,7 @@ async function chamar(
   config = configAssinafy(),
 ): Promise<any> {
   if (!config) throw new AssinafyError("Assinafy não configurado: falta a API key ou o account id.");
-  const headers: Record<string, string> = { "X-Api-Key": config.apiKey };
+  const headers: Record<string, string> = { "X-Api-Key": config.apiKey, "User-Agent": AGENTE };
   let body = init.body as any;
   if (init.corpoJson !== undefined) {
     headers["Content-Type"] = "application/json";
@@ -81,8 +133,7 @@ async function chamar(
 
 /** Sobe o PDF do contrato. Devolve o id do documento no Assinafy. */
 export async function subirDocumento(pdf: Buffer, nomeArquivo: string): Promise<string> {
-  const config = configAssinafy();
-  if (!config) throw new AssinafyError("Assinafy não configurado.");
+  const config = await resolverConta();
   const form = new FormData();
   form.append("file", new Blob([new Uint8Array(pdf)], { type: "application/pdf" }), nomeArquivo);
   const json = await chamar(`/v1/accounts/${config.accountId}/documents`, { method: "POST", body: form }, config);
@@ -99,8 +150,7 @@ export interface DadosSignatario {
 }
 
 export async function criarSignatario(dados: DadosSignatario): Promise<string> {
-  const config = configAssinafy();
-  if (!config) throw new AssinafyError("Assinafy não configurado.");
+  const config = await resolverConta();
   const corpo: Record<string, string> = { full_name: dados.nome, email: dados.email };
   if (dados.whatsapp) corpo.whatsapp_phone_number = dados.whatsapp;
   if (dados.cpf) corpo.government_id = dados.cpf;
@@ -131,24 +181,33 @@ export interface SituacaoDocumento {
   id: string;
   status: string;
   assinado: boolean;
+  /** Ainda preparando o arquivo: aguardar antes de cobrar status do cliente. */
+  processando?: boolean;
   bruto: unknown;
 }
 
 const STATUS_ASSINADO = ["signed", "completed", "finished", "concluded"];
+/** A API devolve isso logo após o upload; não é erro, é preparo do arquivo. */
+const STATUS_PROCESSANDO = ["metadata_processing", "processing", "pending"];
 
 export async function situacaoDoDocumento(documentId: string): Promise<SituacaoDocumento> {
   const json = await chamar(`/v1/documents/${documentId}`, { method: "GET" });
   const dados = json?.data || json;
   const status = String(dados?.status || dados?.assignment?.status || "desconhecido").toLowerCase();
-  return { id: documentId, status, assinado: STATUS_ASSINADO.includes(status), bruto: dados };
+  return {
+    id: documentId,
+    status,
+    assinado: STATUS_ASSINADO.includes(status),
+    processando: STATUS_PROCESSANDO.includes(status),
+    bruto: dados,
+  };
 }
 
 /** Baixa o PDF assinado. `pades` = com assinatura embutida; `bundle` = pacote completo. */
 export async function baixarAssinado(documentId: string, artefato: "pades" | "certificated" | "bundle" = "pades"): Promise<Buffer> {
-  const config = configAssinafy();
-  if (!config) throw new AssinafyError("Assinafy não configurado.");
+  const config = await resolverConta();
   const res = await fetch(`${BASE}/v1/documents/${documentId}/download/${artefato}`, {
-    headers: { "X-Api-Key": config.apiKey },
+    headers: { "X-Api-Key": config.apiKey, "User-Agent": AGENTE },
   });
   if (!res.ok) throw new AssinafyError(`Assinafy: falha ao baixar o assinado (HTTP ${res.status}).`, res.status);
   return Buffer.from(await res.arrayBuffer());

@@ -304,12 +304,16 @@ export function registerAgentRoutes(app: Express) {
       const lead = getLeadById(leadId);
       if (!lead) return res.status(404).json({ success: false, error: "Lead não encontrado." });
 
-      const email = String(req.body?.email || lead.email || "").trim();
+      // Constatado na API: o assignment recusa signatário sem e-mail no método Email
+      // ("O e-mail é obrigatório para signatários quando usando o método de verificação
+      // de e-mail"), e WhatsApp exige crédito de plano pago. Sem e-mail, não há como.
+      const email = String(req.body?.email || (lead as any).email || "").trim();
       if (!email) {
         return res.status(422).json({
           success: false,
-          error: "O Assinafy verifica a identidade por e-mail; informe o e-mail do cliente.",
-          conferirCom: "o cliente pode assinar pelo gov.br (assinador.iti.br), que não pede e-mail",
+          error: "O Assinafy verifica a identidade por e-mail; preciso do e-mail do cliente.",
+          falta: "email do cliente (campo email no corpo ou no cadastro do lead)",
+          alternativa: "Sem e-mail, use o aceite por WhatsApp ou o assinador do gov.br (assinador.iti.br).",
         });
       }
 
